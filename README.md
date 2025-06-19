@@ -1,6 +1,6 @@
 <div align="center">
-  <img src="https://github.com/user-attachments/assets/0d546ecd-1227-4732-ac38-40542b6491e2" alt="Claudia Logo" width="120" height="120">
-  
+  <img src="https://github.com/user-attachments/assets/92fd93ed-e71b-4b94-b270-50684323dd00" alt="Claudia Logo" width="120" height="120">
+
   <h1>Claudia</h1>
   
   <p>
@@ -18,9 +18,9 @@
   </p>
 </div>
 
-[![Screenshot 2025-06-19 at 7 10 37 PM](https://github.com/user-attachments/assets/6133a738-d0cb-4d3e-8746-c6768c82672c)](https://x.com/getAsterisk)
+![457013521-6133a738-d0cb-4d3e-8746-c6768c82672c](https://github.com/user-attachments/assets/a028de9e-d881-44d8-bae5-7326ab3558b9)
 
-[https://github.com/user-attachments/assets/17d25c36-1b53-4f7e-9d56-7713e6eb425e](https://github.com/user-attachments/assets/17d25c36-1b53-4f7e-9d56-7713e6eb425e)
+https://github.com/user-attachments/assets/bf0bdf9d-ba91-45af-9ac4-7274f57075cf
 
 > [!TIP]
 > **⭐ Star the repo and follow [@getAsterisk](https://x.com/getAsterisk) on X for early access to `asteria-swe-v0`**.
