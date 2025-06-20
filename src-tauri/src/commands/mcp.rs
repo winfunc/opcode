@@ -27,6 +27,19 @@ fn create_command_with_env(program: &str) -> Command {
         }
     }
     
+    // If the program path contains .nvm, ensure the corresponding Node.js bin is in PATH
+    if program.contains(".nvm/versions/node/") {
+        if let Some(node_bin_dir) = std::path::Path::new(program).parent() {
+            let current_path = std::env::var("PATH").unwrap_or_default();
+            let node_bin_str = node_bin_dir.to_string_lossy();
+            if !current_path.contains(&node_bin_str.as_ref()) {
+                let new_path = format!("{}:{}", node_bin_str, current_path);
+                log::info!("Adding NVM node bin to PATH: {}", node_bin_str);
+                cmd.env("PATH", new_path);
+            }
+        }
+    }
+    
     cmd
 }
 
@@ -89,6 +102,33 @@ fn find_claude_binary(app_handle: &AppHandle) -> Result<String> {
         }
     }
     
+    // Check NVM paths if available
+    if let Ok(home) = std::env::var("HOME") {
+        let nvm_dir = std::path::PathBuf::from(&home).join(".nvm").join("versions").join("node");
+        if nvm_dir.exists() {
+            log::info!("Checking NVM directory: {:?}", nvm_dir);
+            // Read all node versions and check each one
+            if let Ok(entries) = std::fs::read_dir(&nvm_dir) {
+                let mut versions: Vec<std::path::PathBuf> = entries
+                    .filter_map(|e| e.ok())
+                    .map(|e| e.path())
+                    .filter(|p| p.is_dir())
+                    .collect();
+                
+                // Sort versions to check newest first
+                versions.sort_by(|a, b| b.file_name().cmp(&a.file_name()));
+                
+                for version_dir in versions {
+                    let claude_path = version_dir.join("bin").join("claude");
+                    if claude_path.exists() && claude_path.is_file() {
+                        log::info!("Found claude in NVM at: {:?}", claude_path);
+                        return Ok(claude_path.to_string_lossy().to_string());
+                    }
+                }
+            }
+        }
+    }
+    
     // Fallback: try using 'which' command
     log::info!("Trying 'which claude' to find binary...");
     if let Ok(output) = std::process::Command::new("which")
@@ -117,7 +157,7 @@ fn find_claude_binary(app_handle: &AppHandle) -> Result<String> {
     }
     
     log::error!("Could not find claude binary in any common location");
-    Err(anyhow::anyhow!("Claude Code not found. Please ensure it's installed and in one of these locations: /usr/local/bin, /opt/homebrew/bin, ~/.claude/local, ~/.local/bin, or in your PATH"))
+    Err(anyhow::anyhow!("Claude Code not found. Please ensure it's installed and in one of these locations: /usr/local/bin, /opt/homebrew/bin, ~/.nvm/versions/node/*/bin, ~/.claude/local, ~/.local/bin, or in your PATH"))
 }
 
 /// Represents an MCP server configuration
@@ -200,8 +240,26 @@ fn execute_claude_mcp_command(app_handle: &AppHandle, args: Vec<&str>) -> Result
     info!("Executing claude mcp command with args: {:?}", args);
     
     let claude_path = find_claude_binary(app_handle)?;
-    let mut cmd = create_command_with_env(&claude_path);
-    cmd.arg("mcp");
+    
+    // If claude is installed via NVM, we need to use node directly
+    let mut cmd = if claude_path.contains(".nvm/versions/node/") {
+        // Extract the node binary path from the claude path
+        let node_path = claude_path.replace("/bin/claude", "/bin/node");
+        info!("Using node directly for NVM-installed claude: {}", node_path);
+        
+        // Use node to run the claude script
+        let mut cmd = create_command_with_env(&node_path);
+        cmd.arg(&claude_path);
+        cmd.arg("mcp");
+        cmd
+    } else {
+        // Use claude directly
+        let mut cmd = create_command_with_env(&claude_path);
+        cmd.arg("mcp");
+        cmd
+    };
+    
+    // Add the rest of the arguments
     for arg in args {
         cmd.arg(arg);
     }
