@@ -78,6 +78,16 @@ fn find_claude_binary(app_handle: &AppHandle) -> Result<String> {
             format!("{}/node_modules/.bin/claude", home),
             format!("{}/.config/yarn/global/node_modules/.bin/claude", home),
         ]);
+        
+        // Check NVM paths
+        if let Ok(nvm_dirs) = std::fs::read_dir(format!("{}/.nvm/versions/node", home)) {
+            for entry in nvm_dirs.flatten() {
+                if entry.file_type().map(|t| t.is_dir()).unwrap_or(false) {
+                    let nvm_claude_path = format!("{}/bin/claude", entry.path().display());
+                    paths_to_check.push(nvm_claude_path);
+                }
+            }
+        }
     }
     
     // Check each path
