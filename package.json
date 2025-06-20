@@ -7,7 +7,10 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "lint": "oxlint src/ --config oxlint.json",
+    "lint:fix": "oxlint src/ --config oxlint.json --fix",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
@@ -56,7 +59,8 @@
     "@vitejs/plugin-react": "^4.3.4",
     "sharp": "^0.34.2",
     "typescript": "~5.6.2",
-    "vite": "^6.0.3"
+    "vite": "^6.0.3",
+    "oxlint": "^1.2.0"
   },
   "trustedDependencies": [
     "@parcel/watcher",

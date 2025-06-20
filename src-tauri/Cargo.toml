@@ -37,14 +37,14 @@ chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "1.11", features = ["v4", "serde"] }
 sha2 = "0.10"
 zstd = "0.13"
+tempfile = "3"
+notify = "6.0"
 
 [dev-dependencies]
 # Testing utilities
-tempfile = "3"
 serial_test = "3"  # For tests that need to run serially
 test-case = "3"  # For parameterized tests
 once_cell = "1"  # For test fixture initialization
 proptest = "1"  # For property-based testing
 pretty_assertions = "1"  # Better assertion output
 parking_lot = "0.12"  # Non-poisoning mutex for tests
-

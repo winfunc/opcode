@@ -6,8 +6,20 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
-use log::{info, error, warn};
+use log::{info, error};
 use dirs;
+
+/// Parameters for adding an MCP server
+#[derive(Debug, Deserialize, Serialize)]
+pub struct MCPAddParams {
+    pub name: String,
+    pub transport: String,
+    pub command: Option<String>,
+    pub args: Vec<String>,
+    pub env: HashMap<String, String>,
+    pub url: Option<String>,
+    pub scope: String,
+}
 
 /// Helper function to create a std::process::Command with proper environment variables
 /// This ensures commands like Claude can find Node.js and other dependencies
@@ -221,18 +233,12 @@ fn execute_claude_mcp_command(app_handle: &AppHandle, args: Vec<&str>) -> Result
 #[tauri::command]
 pub async fn mcp_add(
     app: AppHandle,
-    name: String,
-    transport: String,
-    command: Option<String>,
-    args: Vec<String>,
-    env: HashMap<String, String>,
-    url: Option<String>,
-    scope: String,
+    params: MCPAddParams,
 ) -> Result<AddServerResult, String> {
-    info!("Adding MCP server: {} with transport: {}", name, transport);
+    info!("Adding MCP server: {} with transport: {}", params.name, params.transport);
     
     // Prepare owned strings for environment variables
-    let env_args: Vec<String> = env.iter()
+    let env_args: Vec<String> = params.env.iter()
         .map(|(key, value)| format!("{}={}", key, value))
         .collect();
     
@@ -240,33 +246,33 @@ pub async fn mcp_add(
     
     // Add scope flag
     cmd_args.push("-s");
-    cmd_args.push(&scope);
+    cmd_args.push(&params.scope);
     
     // Add transport flag for SSE
-    if transport == "sse" {
+    if params.transport == "sse" {
         cmd_args.push("--transport");
         cmd_args.push("sse");
     }
     
     // Add environment variables
-    for (i, _) in env.iter().enumerate() {
+    for (i, _) in params.env.iter().enumerate() {
         cmd_args.push("-e");
         cmd_args.push(&env_args[i]);
     }
     
     // Add name
-    cmd_args.push(&name);
+    cmd_args.push(&params.name);
     
     // Add command/URL based on transport
-    if transport == "stdio" {
-        if let Some(cmd) = &command {
+    if params.transport == "stdio" {
+        if let Some(cmd) = &params.command {
             // Add "--" separator before command to prevent argument parsing issues
-            if !args.is_empty() || cmd.contains('-') {
+            if !params.args.is_empty() || cmd.contains('-') {
                 cmd_args.push("--");
             }
             cmd_args.push(cmd);
             // Add arguments
-            for arg in &args {
+            for arg in &params.args {
                 cmd_args.push(arg);
             }
         } else {
@@ -276,8 +282,8 @@ pub async fn mcp_add(
                 server_name: None,
             });
         }
-    } else if transport == "sse" {
-        if let Some(url_str) = &url {
+    } else if params.transport == "sse" {
+        if let Some(url_str) = &params.url {
             cmd_args.push(url_str);
         } else {
             return Ok(AddServerResult {
@@ -290,11 +296,11 @@ pub async fn mcp_add(
     
     match execute_claude_mcp_command(&app, cmd_args) {
         Ok(output) => {
-            info!("Successfully added MCP server: {}", name);
+            info!("Successfully added MCP server: {}", params.name);
             Ok(AddServerResult {
                 success: true,
                 message: output.trim().to_string(),
-                server_name: Some(name),
+                server_name: Some(params.name),
             })
         }
         Err(e) => {
@@ -783,4 +789,4 @@ pub async fn mcp_save_project_config(
         .map_err(|e| format!("Failed to write .mcp.json: {}", e))?;
     
     Ok("Project MCP configuration saved".to_string())
-} 
+}

@@ -60,9 +60,9 @@ export const MCPImportExport: React.FC<MCPImportExportProps> = ({
       } else {
         onImportCompleted(result.imported_count, result.failed_count);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to import from Claude Desktop:", error);
-      onError(error.toString() || "Failed to import from Claude Desktop");
+      onError(error instanceof Error ? error.message : "Failed to import from Claude Desktop");
     } finally {
       setImportingDesktop(false);
     }
@@ -83,7 +83,7 @@ export const MCPImportExport: React.FC<MCPImportExportProps> = ({
       let jsonData;
       try {
         jsonData = JSON.parse(content);
-      } catch (e) {
+      } catch (_e) {
         onError("Invalid JSON file. Please check the format.");
         return;
       }
@@ -98,9 +98,9 @@ export const MCPImportExport: React.FC<MCPImportExportProps> = ({
           try {
             const serverConfig = {
               type: "stdio",
-              command: (config as any).command,
-              args: (config as any).args || [],
-              env: (config as any).env || {}
+              command: (config as Record<string, unknown>).command,
+              args: (config as Record<string, unknown>).args || [],
+              env: (config as Record<string, unknown>).env || {}
             };
             
             const result = await api.mcpAddJson(name, JSON.stringify(serverConfig), importScope);
@@ -109,7 +109,7 @@ export const MCPImportExport: React.FC<MCPImportExportProps> = ({
             } else {
               failed++;
             }
-          } catch (e) {
+          } catch (_e) {
             failed++;
           }
         }
@@ -366,4 +366,4 @@ export const MCPImportExport: React.FC<MCPImportExportProps> = ({
       </Card>
     </div>
   );
-}; 
+};

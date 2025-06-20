@@ -93,7 +93,8 @@ impl SandboxExecutor {
                 warn!("Gaol started the process but we can't get the Child handle - using fallback");
                 
                 // Drop the process to avoid zombie
-                drop(process);
+                // Process doesn't implement Drop, so explicit drop is unnecessary
+                let _ = process;
                 
                 // Fall through to fallback
             }
@@ -381,4 +382,4 @@ fn create_minimal_profile(project_path: PathBuf) -> Result<gaol::profile::Profil
             error!("Failed to create minimal profile: {:?}", e);
             anyhow::anyhow!("Failed to create minimal sandbox profile: {:?}", e)
         })
-} 
+}

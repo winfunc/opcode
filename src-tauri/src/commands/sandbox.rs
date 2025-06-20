@@ -1,5 +1,5 @@
 use crate::{
-    commands::agents::AgentDb,
+    agents::types::AgentDb,
     sandbox::{
         platform::PlatformCapabilities,
         profile::{SandboxProfile, SandboxRule},
@@ -8,6 +8,18 @@ use crate::{
 use rusqlite::params;
 use serde::{Deserialize, Serialize};
 use tauri::State;
+
+/// Parameters for logging a sandbox violation
+#[derive(Debug, Deserialize, Serialize)]
+pub struct LogViolationParams {
+    pub profile_id: Option<i64>,
+    pub agent_id: Option<i64>,
+    pub agent_run_id: Option<i64>,
+    pub operation_type: String,
+    pub pattern_value: Option<String>,
+    pub process_name: Option<String>,
+    pub pid: Option<i32>,
+}
 
 /// Represents a sandbox violation event
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -686,20 +698,14 @@ pub async fn list_sandbox_violations(
 #[tauri::command]
 pub async fn log_sandbox_violation(
     db: State<'_, AgentDb>,
-    profile_id: Option<i64>,
-    agent_id: Option<i64>,
-    agent_run_id: Option<i64>,
-    operation_type: String,
-    pattern_value: Option<String>,
-    process_name: Option<String>,
-    pid: Option<i32>,
+    params: LogViolationParams,
 ) -> Result<(), String> {
     let conn = db.0.lock().map_err(|e| e.to_string())?;
     
     conn.execute(
         "INSERT INTO sandbox_violations (profile_id, agent_id, agent_run_id, operation_type, pattern_value, process_name, pid) 
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
-        params![profile_id, agent_id, agent_run_id, operation_type, pattern_value, process_name, pid],
+        rusqlite::params![params.profile_id, params.agent_id, params.agent_run_id, params.operation_type, params.pattern_value, params.process_name, params.pid],
     )
     .map_err(|e| e.to_string())?;
     
@@ -916,4 +922,4 @@ pub async fn import_sandbox_profiles(
     }
     
     Ok(results)
-} 
+}

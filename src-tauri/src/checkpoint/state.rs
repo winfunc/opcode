@@ -92,6 +92,7 @@ impl CheckpointState {
         managers.get(session_id).map(Arc::clone)
     }
     
+    
     /// Removes a CheckpointManager for a session
     /// 
     /// This should be called when a session ends to free resources
@@ -183,4 +184,4 @@ mod tests {
         
         assert!(!Arc::ptr_eq(&manager1, &manager3));
     }
-} 
+}

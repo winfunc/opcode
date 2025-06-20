@@ -7,6 +7,30 @@ pub mod manager;
 pub mod storage;
 pub mod state;
 
+// Re-export commonly used types
+
+// Define CheckpointInfo type that was referenced in agents.rs
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct CheckpointInfo {
+    pub id: String,
+    pub session_id: String,
+    pub description: Option<String>,
+    pub timestamp: chrono::DateTime<chrono::Utc>,
+    pub message_index: usize,
+}
+
+impl From<Checkpoint> for CheckpointInfo {
+    fn from(checkpoint: Checkpoint) -> Self {
+        Self {
+            id: checkpoint.id,
+            session_id: checkpoint.session_id,
+            description: checkpoint.description,
+            timestamp: checkpoint.timestamp,
+            message_index: checkpoint.message_index,
+        }
+    }
+}
+
 /// Represents a checkpoint in the session timeline
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -98,6 +122,7 @@ pub struct SessionTimeline {
 /// Strategy for automatic checkpoint creation
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[derive(Default)]
 pub enum CheckpointStrategy {
     /// Only create checkpoints manually
     Manual,
@@ -106,6 +131,7 @@ pub enum CheckpointStrategy {
     /// Create checkpoint after each tool use
     PerToolUse,
     /// Create checkpoint after destructive operations
+    #[default]
     Smart,
 }
 
@@ -170,11 +196,6 @@ pub struct FileDiff {
     pub diff_content: Option<String>,
 }
 
-impl Default for CheckpointStrategy {
-    fn default() -> Self {
-        CheckpointStrategy::Smart
-    }
-}
 
 impl SessionTimeline {
     /// Create a new empty timeline
@@ -218,7 +239,7 @@ pub struct CheckpointPaths {
 }
 
 impl CheckpointPaths {
-    pub fn new(claude_dir: &PathBuf, project_id: &str, session_id: &str) -> Self {
+    pub fn new(claude_dir: &std::path::Path, project_id: &str, session_id: &str) -> Self {
         let base_dir = claude_dir
             .join("projects")
             .join(project_id)
@@ -253,4 +274,4 @@ impl CheckpointPaths {
         // References are stored per checkpoint
         self.files_dir.join("refs").join(checkpoint_id).join(format!("{}.json", safe_filename))
     }
-} 
+}

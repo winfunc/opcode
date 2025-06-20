@@ -5,6 +5,8 @@ mod commands;
 mod sandbox;
 mod checkpoint;
 mod process;
+mod agents;
+mod usage;
 
 use tauri::Manager;
 use commands::claude::{
@@ -21,12 +23,12 @@ use commands::claude::{
 };
 use commands::agents::{
     init_database, list_agents, create_agent, update_agent, delete_agent, 
-    get_agent, execute_agent, list_agent_runs, get_agent_run, 
+    get_agent, execute_agent_command, list_agent_runs, get_agent_run, 
     get_agent_run_with_real_time_metrics, list_agent_runs_with_metrics, 
     migrate_agent_runs_to_session_ids, list_running_sessions, kill_agent_session,
     get_session_status, cleanup_finished_processes, get_session_output, 
     get_live_session_output, stream_session_output, get_claude_binary_path,
-    set_claude_binary_path, AgentDb
+    set_claude_binary_path, get_running_processes, get_process_info, AgentDb
 };
 use commands::sandbox::{
     list_sandbox_profiles, create_sandbox_profile, update_sandbox_profile, delete_sandbox_profile,
@@ -37,11 +39,16 @@ use commands::sandbox::{
 };
 use commands::usage::{
     get_usage_stats, get_usage_by_date_range, get_usage_details, get_session_stats,
+    get_usage_stats_progressive, process_usage_batch, get_cached_usage_stats, clear_usage_cache,
 };
 use commands::mcp::{
     mcp_add, mcp_list, mcp_get, mcp_remove, mcp_add_json, mcp_add_from_claude_desktop,
     mcp_serve, mcp_test_connection, mcp_reset_project_choices, mcp_get_server_status,
     mcp_read_project_config, mcp_save_project_config,
+};
+use commands::checkpoint::{
+    get_checkpoint_manager, clear_all_checkpoint_managers, has_active_checkpoint_manager,
+    clear_all_checkpoint_managers_and_count, get_file_snapshot_path, get_file_reference_path,
 };
 use std::sync::Mutex;
 use checkpoint::state::CheckpointState;
@@ -65,7 +72,7 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             // Initialize agents database
-            let conn = init_database(&app.handle()).expect("Failed to initialize agents database");
+            let conn = init_database(app.handle()).expect("Failed to initialize agents database");
             app.manage(AgentDb(Mutex::new(conn)));
             
             // Initialize checkpoint state
@@ -73,7 +80,7 @@ fn main() {
             
             // Set the Claude directory path
             if let Ok(claude_dir) = dirs::home_dir()
-                .ok_or_else(|| "Could not find home directory")
+                .ok_or("Could not find home directory")
                 .and_then(|home| {
                     let claude_path = home.join(".claude");
                     claude_path.canonicalize()
@@ -89,6 +96,13 @@ fn main() {
             
             // Initialize process registry
             app.manage(ProcessRegistryState::default());
+            
+            // Initialize usage watcher in background
+            tauri::async_runtime::spawn(async {
+                if let Err(e) = usage::watcher::init_usage_watcher() {
+                    log::error!("Failed to initialize usage watcher: {}", e);
+                }
+            });
             
             Ok(())
         })
@@ -130,7 +144,7 @@ fn main() {
             update_agent,
             delete_agent,
             get_agent,
-            execute_agent,
+            execute_agent_command,
             list_agent_runs,
             get_agent_run,
             get_agent_run_with_real_time_metrics,
@@ -145,6 +159,8 @@ fn main() {
             stream_session_output,
             get_claude_binary_path,
             set_claude_binary_path,
+            get_running_processes,
+            get_process_info,
             list_sandbox_profiles,
             get_sandbox_profile,
             create_sandbox_profile,
@@ -167,6 +183,10 @@ fn main() {
             get_usage_by_date_range,
             get_usage_details,
             get_session_stats,
+            get_usage_stats_progressive,
+            process_usage_batch,
+            get_cached_usage_stats,
+            clear_usage_cache,
             mcp_add,
             mcp_list,
             mcp_get,
@@ -178,7 +198,13 @@ fn main() {
             mcp_reset_project_choices,
             mcp_get_server_status,
             mcp_read_project_config,
-            mcp_save_project_config
+            mcp_save_project_config,
+            get_checkpoint_manager,
+            clear_all_checkpoint_managers,
+            has_active_checkpoint_manager,
+            clear_all_checkpoint_managers_and_count,
+            get_file_snapshot_path,
+            get_file_reference_path
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

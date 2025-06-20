@@ -1,8 +1,10 @@
+import React from 'react';
+
 /**
  * Claude-themed syntax highlighting theme
  * Features orange, purple, and violet colors to match Claude's aesthetic
  */
-export const claudeSyntaxTheme: any = {
+export const claudeSyntaxTheme: { [key: string]: React.CSSProperties } = {
   'code[class*="language-"]': {
     color: '#e3e8f0',
     background: 'transparent',
@@ -172,4 +174,4 @@ export const claudeSyntaxTheme: any = {
   'module': {
     color: '#8b5cf6', // Violet
   },
-}; 
+};
