@@ -40,12 +40,51 @@ fn find_claude_binary(app_handle: &AppHandle) -> Result<String, String> {
         }
     }
     
+    // First try 'which claude' to find the binary path
+    log::info!("Trying 'which claude' to find binary...");
+    if let Ok(output) = std::process::Command::new("which")
+        .arg("claude")
+        .output()
+    {
+        if output.status.success() {
+            let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            if !path.is_empty() {
+                log::info!("'which' found claude at: {}", path);
+                return Ok(path);
+            }
+        }
+    }
+    
+    // Check NVM paths if available
+    if let Ok(home) = std::env::var("HOME") {
+        let nvm_dir = std::path::PathBuf::from(&home).join(".nvm").join("versions").join("node");
+        if nvm_dir.exists() {
+            // Read all node versions and check each one
+            if let Ok(entries) = std::fs::read_dir(&nvm_dir) {
+                let mut versions: Vec<std::path::PathBuf> = entries
+                    .filter_map(|e| e.ok())
+                    .map(|e| e.path())
+                    .filter(|p| p.is_dir())
+                    .collect();
+                
+                // Sort versions to check newest first
+                versions.sort_by(|a, b| b.cmp(a));
+                
+                for version_dir in versions {
+                    let claude_path = version_dir.join("bin").join("claude");
+                    if claude_path.exists() && claude_path.is_file() {
+                        log::info!("Found claude in NVM at: {}", claude_path.display());
+                        return Ok(claude_path.to_string_lossy().to_string());
+                    }
+                }
+            }
+        }
+    }
+    
     // Common installation paths for claude
     let mut paths_to_check: Vec<String> = vec![
         "/usr/local/bin/claude".to_string(),
         "/opt/homebrew/bin/claude".to_string(),
-        "/usr/bin/claude".to_string(),
-        "/bin/claude".to_string(),
     ];
     
     // Also check user-specific paths
@@ -72,48 +111,8 @@ fn find_claude_binary(app_handle: &AppHandle) -> Result<String, String> {
         }
     }
     
-    // In production builds, skip the 'which' command as it's blocked by Tauri
-    #[cfg(not(debug_assertions))]
-    {
-        log::warn!("Cannot use 'which' command in production build, checking if claude is in PATH");
-        // In production, just return "claude" and let the execution fail with a proper error
-        // if it's not actually available. The user can then set the path manually.
-        return Ok("claude".to_string());
-    }
-    
-    // Only try 'which' in development builds
-    #[cfg(debug_assertions)]
-    {
-        // Fallback: try using 'which' command
-        log::info!("Trying 'which claude' to find binary...");
-        if let Ok(output) = std::process::Command::new("which")
-            .arg("claude")
-            .output()
-        {
-            if output.status.success() {
-                let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
-                if !path.is_empty() {
-                    log::info!("'which' found claude at: {}", path);
-                    return Ok(path);
-                }
-            }
-        }
-        
-        // Additional fallback: check if claude is in the current PATH
-        // This might work in dev mode
-        if let Ok(output) = std::process::Command::new("claude")
-            .arg("--version")
-            .output()
-        {
-            if output.status.success() {
-                log::info!("claude is available in PATH (dev mode?)");
-                return Ok("claude".to_string());
-            }
-        }
-    }
-    
     log::error!("Could not find claude binary in any common location");
-    Err("Claude Code not found. Please ensure it's installed and in one of these locations: /usr/local/bin, /opt/homebrew/bin, ~/.claude/local, ~/.local/bin, or in your PATH".to_string())
+    Err("Claude Code not found. Please ensure it's installed and in one of these locations: /usr/local/bin, /opt/homebrew/bin, ~/.nvm/versions/node/*/bin, ~/.claude/local, ~/.local/bin, or in your PATH".to_string())
 }
 
 /// Represents a CC Agent stored in the database
