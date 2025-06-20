@@ -72,12 +72,56 @@ impl SandboxExecutor {
         gaol_command.env("GAOL_SANDBOX_ACTIVE", "1");
         gaol_command.env("GAOL_PROJECT_PATH", self.project_path.to_string_lossy().as_ref());
         
-        // Inherit specific parent environment variables that are safe
-        for (key, value) in env::vars() {
-            // Only pass through safe environment variables
-            if key.starts_with("PATH") || key.starts_with("HOME") || key.starts_with("USER") 
-                || key == "SHELL" || key == "LANG" || key == "LC_ALL" || key.starts_with("LC_") {
-                gaol_command.env(&key, &value);
+        // Apply NVM-aware environment setup
+        // Create a temporary command to get the enhanced environment
+        let mut temp_cmd = std::process::Command::new(command);
+        crate::claude_detection::setup_command_env_for_claude_path(&mut temp_cmd, command);
+        
+        // Extract environment variables from the temp command and apply to gaol command
+        // This is a workaround since we can't directly access gaol's environment setup
+        // We'll manually set the key environment variables that NVM setup would provide
+        if command.contains("/.nvm/versions/node/") {
+            if let Some(start) = command.find("/.nvm/versions/node/") {
+                let after_node = &command[start + "/.nvm/versions/node/".len()..];
+                if let Some(end) = after_node.find('/') {
+                    let node_version = &after_node[..end];
+                    if let Ok(home) = env::var("HOME") {
+                        let nvm_node_bin = format!("{}/.nvm/versions/node/{}/bin", home, node_version);
+                        let nvm_node_lib = format!("{}/.nvm/versions/node/{}/lib/node_modules", home, node_version);
+                        
+                        gaol_command.env("NVM_BIN", &nvm_node_bin);
+                        gaol_command.env("NODE_PATH", &nvm_node_lib);
+                        gaol_command.env("NODE_VERSION", node_version);
+                        
+                        // Build enhanced PATH with NVM binary first
+                        let mut paths = vec![nvm_node_bin];
+                        if let Ok(existing_path) = env::var("PATH") {
+                            for path in existing_path.split(':') {
+                                if !path.is_empty() {
+                                    paths.push(path.to_string());
+                                }
+                            }
+                        }
+                        // Add standard paths
+                        for p in ["/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "/bin"].iter() {
+                            if !paths.contains(&p.to_string()) {
+                                paths.push(p.to_string());
+                            }
+                        }
+                        gaol_command.env("PATH", paths.join(":"));
+                        
+                        info!("🔧 Applied NVM environment to gaol command: {}", node_version);
+                    }
+                }
+            }
+        } else {
+            // For non-NVM installations, inherit essential environment variables
+            for (key, value) in env::vars() {
+                if key == "PATH" || key == "HOME" || key == "USER" 
+                    || key == "SHELL" || key == "LANG" || key == "LC_ALL" || key.starts_with("LC_")
+                    || key == "NODE_PATH" || key == "NVM_DIR" || key == "NVM_BIN" {
+                    gaol_command.env(&key, &value);
+                }
             }
         }
         
@@ -124,6 +168,10 @@ impl SandboxExecutor {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
         
+        // Apply NVM-aware environment setup for Claude commands
+        crate::claude_detection::setup_command_env_for_claude_path(&mut std_command, command);
+        info!("🔧 Applied NVM-aware environment setup to fallback sandboxed command");
+        
         std_command.spawn()
             .context("Failed to spawn process with sandbox environment")
     }
@@ -137,17 +185,10 @@ impl SandboxExecutor {
         cmd.args(args)
             .current_dir(cwd);
         
-        // Inherit essential environment variables from parent process
-        // This is crucial for commands like Claude that need to find Node.js
-        for (key, value) in env::vars() {
-            // Pass through PATH and other essential environment variables
-            if key == "PATH" || key == "HOME" || key == "USER" 
-                || key == "SHELL" || key == "LANG" || key == "LC_ALL" || key.starts_with("LC_")
-                || key == "NODE_PATH" || key == "NVM_DIR" || key == "NVM_BIN" {
-                debug!("Inheriting env var: {}={}", key, value);
-                cmd.env(&key, &value);
-            }
-        }
+        // Use NVM-aware environment setup for Claude commands
+        crate::claude_detection::setup_tokio_command_env_for_claude_path(&mut cmd, command);
+        
+        info!("🔧 Applied NVM-aware environment setup to sandboxed command");
         
         // Serialize the sandbox rules for the child process
         let rules_json = if let Some(ref serialized) = self.serialized_profile {

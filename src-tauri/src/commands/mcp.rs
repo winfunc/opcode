@@ -1,134 +1,14 @@
 use tauri::AppHandle;
-use tauri::Manager;
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
-use log::{info, error, warn};
+use log::{info, error};
 use dirs;
+use crate::claude_detection::{find_claude_binary, create_command_with_env};
 
-/// Helper function to create a std::process::Command with proper environment variables
-/// This ensures commands like Claude can find Node.js and other dependencies
-fn create_command_with_env(program: &str) -> Command {
-    let mut cmd = Command::new(program);
-    
-    // Inherit essential environment variables from parent process
-    // This is crucial for commands like Claude that need to find Node.js
-    for (key, value) in std::env::vars() {
-        // Pass through PATH and other essential environment variables
-        if key == "PATH" || key == "HOME" || key == "USER" 
-            || key == "SHELL" || key == "LANG" || key == "LC_ALL" || key.starts_with("LC_")
-            || key == "NODE_PATH" || key == "NVM_DIR" || key == "NVM_BIN" 
-            || key == "HOMEBREW_PREFIX" || key == "HOMEBREW_CELLAR" {
-            log::debug!("Inheriting env var: {}={}", key, value);
-            cmd.env(&key, &value);
-        }
-    }
-    
-    cmd
-}
-
-/// Finds the full path to the claude binary
-/// This is necessary because macOS apps have a limited PATH environment
-fn find_claude_binary(app_handle: &AppHandle) -> Result<String> {
-    log::info!("Searching for claude binary...");
-    
-    // First check if we have a stored path in the database
-    if let Ok(app_data_dir) = app_handle.path().app_data_dir() {
-        let db_path = app_data_dir.join("agents.db");
-        if db_path.exists() {
-            if let Ok(conn) = rusqlite::Connection::open(&db_path) {
-                if let Ok(stored_path) = conn.query_row(
-                    "SELECT value FROM app_settings WHERE key = 'claude_binary_path'",
-                    [],
-                    |row| row.get::<_, String>(0),
-                ) {
-                    log::info!("Found stored claude path in database: {}", stored_path);
-                    let path_buf = std::path::PathBuf::from(&stored_path);
-                    if path_buf.exists() && path_buf.is_file() {
-                        return Ok(stored_path);
-                    } else {
-                        log::warn!("Stored claude path no longer exists: {}", stored_path);
-                    }
-                }
-            }
-        }
-    }
-    
-    // Common installation paths for claude
-    let mut paths_to_check: Vec<String> = vec![
-        "/usr/local/bin/claude".to_string(),
-        "/opt/homebrew/bin/claude".to_string(),
-        "/usr/bin/claude".to_string(),
-        "/bin/claude".to_string(),
-    ];
-    
-    // Also check user-specific paths
-    if let Ok(home) = std::env::var("HOME") {
-        paths_to_check.extend(vec![
-            format!("{}/.claude/local/claude", home),
-            format!("{}/.local/bin/claude", home),
-            format!("{}/.npm-global/bin/claude", home),
-            format!("{}/.yarn/bin/claude", home),
-            format!("{}/.bun/bin/claude", home),
-            format!("{}/bin/claude", home),
-            // Check common node_modules locations
-            format!("{}/node_modules/.bin/claude", home),
-            format!("{}/.config/yarn/global/node_modules/.bin/claude", home),
-        ]);
-        
-        // Check NVM paths
-        if let Ok(nvm_dirs) = std::fs::read_dir(format!("{}/.nvm/versions/node", home)) {
-            for entry in nvm_dirs.flatten() {
-                if entry.file_type().map(|t| t.is_dir()).unwrap_or(false) {
-                    let nvm_claude_path = format!("{}/bin/claude", entry.path().display());
-                    paths_to_check.push(nvm_claude_path);
-                }
-            }
-        }
-    }
-    
-    // Check each path
-    for path in paths_to_check {
-        let path_buf = std::path::PathBuf::from(&path);
-        if path_buf.exists() && path_buf.is_file() {
-            log::info!("Found claude at: {}", path);
-            return Ok(path);
-        }
-    }
-    
-    // Fallback: try using 'which' command
-    log::info!("Trying 'which claude' to find binary...");
-    if let Ok(output) = std::process::Command::new("which")
-        .arg("claude")
-        .output()
-    {
-        if output.status.success() {
-            let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            if !path.is_empty() {
-                log::info!("'which' found claude at: {}", path);
-                return Ok(path);
-            }
-        }
-    }
-    
-    // Additional fallback: check if claude is in the current PATH
-    // This might work in dev mode
-    if let Ok(output) = std::process::Command::new("claude")
-        .arg("--version")
-        .output()
-    {
-        if output.status.success() {
-            log::info!("claude is available in PATH (dev mode?)");
-            return Ok("claude".to_string());
-        }
-    }
-    
-    log::error!("Could not find claude binary in any common location");
-    Err(anyhow::anyhow!("Claude Code not found. Please ensure it's installed and in one of these locations: /usr/local/bin, /opt/homebrew/bin, ~/.claude/local, ~/.local/bin, or in your PATH"))
-}
 
 /// Represents an MCP server configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -205,12 +85,18 @@ pub struct ImportServerResult {
     pub error: Option<String>,
 }
 
-/// Executes a claude mcp command
+/// Executes a claude mcp command using shared detection logic
 fn execute_claude_mcp_command(app_handle: &AppHandle, args: Vec<&str>) -> Result<String> {
     info!("Executing claude mcp command with args: {:?}", args);
     
-    let claude_path = find_claude_binary(app_handle)?;
-    let mut cmd = create_command_with_env(&claude_path);
+    let claude_path = find_claude_binary(app_handle)
+        .map_err(|e| anyhow::anyhow!("{}", e))?;
+    
+    let mut cmd = Command::new(&claude_path);
+    
+    // Use enhanced environment setup from shared module
+    crate::claude_detection::setup_command_env(&mut cmd);
+    
     cmd.arg("mcp");
     for arg in args {
         cmd.arg(arg);

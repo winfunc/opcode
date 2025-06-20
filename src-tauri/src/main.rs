@@ -5,6 +5,7 @@ mod commands;
 mod sandbox;
 mod checkpoint;
 mod process;
+mod claude_detection;
 
 use tauri::Manager;
 use commands::claude::{
@@ -18,6 +19,10 @@ use commands::claude::{
     track_checkpoint_message, track_session_messages, check_auto_checkpoint, cleanup_old_checkpoints,
     get_checkpoint_settings, clear_checkpoint_manager, get_checkpoint_state_stats,
     get_recently_modified_files,
+};
+use claude_detection::{
+    discover_claude_installations, set_selected_claude_installation, 
+    get_selected_claude_installation, clear_selected_claude_installation,
 };
 use commands::agents::{
     init_database, list_agents, create_agent, update_agent, delete_agent, 
@@ -178,7 +183,11 @@ fn main() {
             mcp_reset_project_choices,
             mcp_get_server_status,
             mcp_read_project_config,
-            mcp_save_project_config
+            mcp_save_project_config,
+            discover_claude_installations,
+            set_selected_claude_installation,
+            get_selected_claude_installation,
+            clear_selected_claude_installation
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

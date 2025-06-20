@@ -16,7 +16,7 @@ import { ClaudeCodeSession } from "@/components/ClaudeCodeSession";
 import { UsageDashboard } from "@/components/UsageDashboard";
 import { MCPManager } from "@/components/MCPManager";
 import { NFOCredits } from "@/components/NFOCredits";
-import { ClaudeBinaryDialog } from "@/components/ClaudeBinaryDialog";
+import { ClaudeVersionPicker } from "@/components/ClaudeVersionPicker";
 import { Toast, ToastContainer } from "@/components/ui/toast";
 
 type View = "welcome" | "projects" | "agents" | "editor" | "settings" | "claude-file-editor" | "claude-code-session" | "usage-dashboard" | "mcp";
@@ -376,14 +376,13 @@ function App() {
         {/* NFO Credits Modal */}
         {showNFO && <NFOCredits onClose={() => setShowNFO(false)} />}
         
-        {/* Claude Binary Dialog */}
-        <ClaudeBinaryDialog
+        {/* Claude Version Picker */}
+        <ClaudeVersionPicker
           open={showClaudeBinaryDialog}
           onOpenChange={setShowClaudeBinaryDialog}
           onSuccess={() => {
-            setToast({ message: "Claude binary path saved successfully", type: "success" });
-            // Trigger a refresh of the Claude version check
-            window.location.reload();
+            setToast({ message: "Claude installation selection saved successfully", type: "success" });
+            // No need to reload - the event will trigger updates
           }}
           onError={(message) => setToast({ message, type: "error" })}
         />

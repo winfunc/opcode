@@ -1,5 +1,6 @@
 use crate::sandbox::profile::{ProfileBuilder, SandboxRule};
 use crate::sandbox::executor::{SerializedProfile, SerializedOperation};
+use crate::claude_detection::{find_claude_binary, create_tokio_command_with_env, create_tokio_command_with_nvm_env};
 use anyhow::Result;
 use chrono;
 use log::{debug, error, info, warn};
@@ -13,118 +14,6 @@ use tauri::{AppHandle, Manager, State, Emitter};
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 
-/// Finds the full path to the claude binary
-/// This is necessary because macOS apps have a limited PATH environment
-fn find_claude_binary(app_handle: &AppHandle) -> Result<String, String> {
-    log::info!("Searching for claude binary...");
-    
-    // First check if we have a stored path in the database
-    if let Ok(app_data_dir) = app_handle.path().app_data_dir() {
-        let db_path = app_data_dir.join("agents.db");
-        if db_path.exists() {
-            if let Ok(conn) = rusqlite::Connection::open(&db_path) {
-                if let Ok(stored_path) = conn.query_row(
-                    "SELECT value FROM app_settings WHERE key = 'claude_binary_path'",
-                    [],
-                    |row| row.get::<_, String>(0),
-                ) {
-                    log::info!("Found stored claude path in database: {}", stored_path);
-                    let path_buf = std::path::PathBuf::from(&stored_path);
-                    if path_buf.exists() && path_buf.is_file() {
-                        return Ok(stored_path);
-                    } else {
-                        log::warn!("Stored claude path no longer exists: {}", stored_path);
-                    }
-                }
-            }
-        }
-    }
-    
-    // Common installation paths for claude
-    let mut paths_to_check: Vec<String> = vec![
-        "/usr/local/bin/claude".to_string(),
-        "/opt/homebrew/bin/claude".to_string(),
-        "/usr/bin/claude".to_string(),
-        "/bin/claude".to_string(),
-    ];
-    
-    // Also check user-specific paths
-    if let Ok(home) = std::env::var("HOME") {
-        paths_to_check.extend(vec![
-            format!("{}/.claude/local/claude", home),
-            format!("{}/.local/bin/claude", home),
-            format!("{}/.npm-global/bin/claude", home),
-            format!("{}/.yarn/bin/claude", home),
-            format!("{}/.bun/bin/claude", home),
-            format!("{}/bin/claude", home),
-            // Check common node_modules locations
-            format!("{}/node_modules/.bin/claude", home),
-            format!("{}/.config/yarn/global/node_modules/.bin/claude", home),
-        ]);
-        
-        // Check NVM paths
-        if let Ok(nvm_dirs) = std::fs::read_dir(format!("{}/.nvm/versions/node", home)) {
-            for entry in nvm_dirs.flatten() {
-                if entry.file_type().map(|t| t.is_dir()).unwrap_or(false) {
-                    let nvm_claude_path = format!("{}/bin/claude", entry.path().display());
-                    paths_to_check.push(nvm_claude_path);
-                }
-            }
-        }
-    }
-    
-    // Check each path
-    for path in paths_to_check {
-        let path_buf = std::path::PathBuf::from(&path);
-        if path_buf.exists() && path_buf.is_file() {
-            log::info!("Found claude at: {}", path);
-            return Ok(path);
-        }
-    }
-    
-    // In production builds, skip the 'which' command as it's blocked by Tauri
-    #[cfg(not(debug_assertions))]
-    {
-        log::warn!("Cannot use 'which' command in production build, checking if claude is in PATH");
-        // In production, just return "claude" and let the execution fail with a proper error
-        // if it's not actually available. The user can then set the path manually.
-        return Ok("claude".to_string());
-    }
-    
-    // Only try 'which' in development builds
-    #[cfg(debug_assertions)]
-    {
-        // Fallback: try using 'which' command
-        log::info!("Trying 'which claude' to find binary...");
-        if let Ok(output) = std::process::Command::new("which")
-            .arg("claude")
-            .output()
-        {
-            if output.status.success() {
-                let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
-                if !path.is_empty() {
-                    log::info!("'which' found claude at: {}", path);
-                    return Ok(path);
-                }
-            }
-        }
-        
-        // Additional fallback: check if claude is in the current PATH
-        // This might work in dev mode
-        if let Ok(output) = std::process::Command::new("claude")
-            .arg("--version")
-            .output()
-        {
-            if output.status.success() {
-                log::info!("claude is available in PATH (dev mode?)");
-                return Ok("claude".to_string());
-            }
-        }
-    }
-    
-    log::error!("Could not find claude binary in any common location");
-    Err("Claude Code not found. Please ensure it's installed and in one of these locations: /usr/local/bin, /opt/homebrew/bin, ~/.claude/local, ~/.local/bin, or in your PATH".to_string())
-}
 
 /// Represents a CC Agent stored in the database
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -1050,7 +939,9 @@ pub async fn execute_agent(
                 return Err(e);
             }
         };
-        match std::process::Command::new(&claude_path).arg("--version").output() {
+        let mut version_cmd = std::process::Command::new(&claude_path);
+        crate::claude_detection::setup_command_env_for_claude_path(&mut version_cmd, &claude_path);
+        match version_cmd.arg("--version").output() {
             Ok(output) => {
                 if output.status.success() {
                     info!("✅ Claude command works: {}", String::from_utf8_lossy(&output.stdout).trim());
@@ -1068,11 +959,18 @@ pub async fn execute_agent(
         
         // Test if Claude can actually start a session (this might reveal auth issues)
         info!("🧪 Testing Claude with exact same arguments as agent (without sandbox env vars)...");
+        
+        // Note: Current Claude Code doesn't support --system-prompt, so we'll prepend it to the task
+        let combined_prompt = if agent.system_prompt.trim().is_empty() {
+            task.clone()
+        } else {
+            format!("{}\n\n{}", agent.system_prompt, task)
+        };
+        
         let mut test_cmd = std::process::Command::new(&claude_path);
+        crate::claude_detection::setup_command_env_for_claude_path(&mut test_cmd, &claude_path);
         test_cmd.arg("-p")
-            .arg(&task)
-            .arg("--system-prompt")
-            .arg(&agent.system_prompt)
+            .arg(&combined_prompt)
             .arg("--model")
             .arg(&execution_model)
             .arg("--output-format")
@@ -1081,8 +979,8 @@ pub async fn execute_agent(
             .arg("--dangerously-skip-permissions")
             .current_dir(&project_path);
         
-        info!("🧪 Testing command: claude -p \"{}\" --system-prompt \"{}\" --model {} --output-format stream-json --verbose --dangerously-skip-permissions", 
-              task, agent.system_prompt, execution_model);
+        info!("🧪 Testing command: claude -p \"{}\" --model {} --output-format stream-json --verbose --dangerously-skip-permissions", 
+              combined_prompt, execution_model);
         
         // Start the test process and give it 5 seconds to produce output
         match test_cmd.spawn() {
@@ -1148,9 +1046,15 @@ pub async fn execute_agent(
                         );
                         
                         // Prepare the sandboxed command
+                        // Note: Current Claude Code doesn't support --system-prompt, so we'll prepend it to the task
+                        let combined_prompt = if agent.system_prompt.trim().is_empty() {
+                            task.clone()
+                        } else {
+                            format!("{}\n\n{}", agent.system_prompt, task)
+                        };
+                        
                         let args = vec![
-                            "-p", &task,
-                            "--system-prompt", &agent.system_prompt,
+                            "-p", &combined_prompt,
                             "--model", &execution_model,
                             "--output-format", "stream-json",
                             "--verbose",
@@ -1175,11 +1079,16 @@ pub async fn execute_agent(
                                 return Err(e);
                             }
                         };
-                        let mut cmd = create_command_with_env(&claude_path);
+                        // Note: Current Claude Code doesn't support --system-prompt, so we'll prepend it to the task
+                        let combined_prompt = if agent.system_prompt.trim().is_empty() {
+                            task.clone()
+                        } else {
+                            format!("{}\n\n{}", agent.system_prompt, task)
+                        };
+                        
+                        let mut cmd = create_tokio_command_with_nvm_env(&claude_path);
                         cmd.arg("-p")
-                            .arg(&task)
-                            .arg("--system-prompt")
-                            .arg(&agent.system_prompt)
+                            .arg(&combined_prompt)
                             .arg("--model")
                             .arg(&execution_model)
                             .arg("--output-format")
@@ -1204,11 +1113,16 @@ pub async fn execute_agent(
                         return Err(e);
                     }
                 };
-                let mut cmd = create_command_with_env(&claude_path);
+                // Note: Current Claude Code doesn't support --system-prompt, so we'll prepend it to the task
+                let combined_prompt = if agent.system_prompt.trim().is_empty() {
+                    task.clone()
+                } else {
+                    format!("{}\n\n{}", agent.system_prompt, task)
+                };
+                
+                let mut cmd = create_tokio_command_with_nvm_env(&claude_path);
                 cmd.arg("-p")
-                    .arg(&task)
-                    .arg("--system-prompt")
-                    .arg(&agent.system_prompt)
+                    .arg(&combined_prompt)
                     .arg("--model")
                     .arg(&execution_model)
                     .arg("--output-format")
@@ -1231,11 +1145,16 @@ pub async fn execute_agent(
                 return Err(e);
             }
         };
-        let mut cmd = create_command_with_env(&claude_path);
+        // Note: Current Claude Code doesn't support --system-prompt, so we'll prepend it to the task
+        let combined_prompt = if agent.system_prompt.trim().is_empty() {
+            task.clone()
+        } else {
+            format!("{}\n\n{}", agent.system_prompt, task)
+        };
+        
+        let mut cmd = create_tokio_command_with_nvm_env(&claude_path);
         cmd.arg("-p")
-            .arg(&task)
-            .arg("--system-prompt")
-            .arg(&agent.system_prompt)
+            .arg(&combined_prompt)
             .arg("--model")
             .arg(&execution_model)
             .arg("--output-format")
@@ -1830,37 +1749,4 @@ pub async fn set_claude_binary_path(db: State<'_, AgentDb>, path: String) -> Res
     Ok(())
 }
 
-/// Helper function to create a tokio Command with proper environment variables
-/// This ensures commands like Claude can find Node.js and other dependencies
-fn create_command_with_env(program: &str) -> Command {
-    let mut cmd = Command::new(program);
-
-    // Inherit essential environment variables from parent process
-    for (key, value) in std::env::vars() {
-        if key == "PATH" || key == "HOME" || key == "USER" 
-            || key == "SHELL" || key == "LANG" || key == "LC_ALL" || key.starts_with("LC_")
-            || key == "NODE_PATH" || key == "NVM_DIR" || key == "NVM_BIN" 
-            || key == "HOMEBREW_PREFIX" || key == "HOMEBREW_CELLAR" {
-            cmd.env(&key, &value);
-        }
-    }
-
-    // Ensure PATH contains common Homebrew locations so that `/usr/bin/env node` resolves
-    // when the application is launched from the macOS GUI (PATH is very minimal there).
-    if let Ok(existing_path) = std::env::var("PATH") {
-        let mut paths: Vec<&str> = existing_path.split(':').collect();
-        for p in ["/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "/bin"].iter() {
-            if !paths.contains(p) {
-                paths.push(p);
-            }
-        }
-        let joined = paths.join(":");
-        cmd.env("PATH", joined);
-    } else {
-        // Fallback: set a reasonable default PATH
-        cmd.env("PATH", "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin");
-    }
-
-    cmd
-}
  

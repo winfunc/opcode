@@ -9,6 +9,7 @@ use tauri::{AppHandle, Emitter, Manager};
 use tokio::process::Command;
 use crate::process::ProcessHandle;
 use crate::checkpoint::{CheckpointResult, CheckpointDiff, SessionTimeline, Checkpoint};
+use crate::claude_detection::{find_claude_binary, ClaudeVersionStatus};
 
 /// Represents a project in the ~/.claude/projects directory
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -74,16 +75,6 @@ impl Default for ClaudeSettings {
     }
 }
 
-/// Represents the Claude Code version status
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClaudeVersionStatus {
-    /// Whether Claude Code is installed and working
-    pub is_installed: bool,
-    /// The version string if available
-    pub version: Option<String>,
-    /// The full output from the command
-    pub output: String,
-}
 
 /// Represents a CLAUDE.md file found in the project
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -113,118 +104,6 @@ pub struct FileEntry {
     pub extension: Option<String>,
 }
 
-/// Finds the full path to the claude binary
-/// This is necessary because macOS apps have a limited PATH environment
-fn find_claude_binary(app_handle: &AppHandle) -> Result<String, String> {
-    log::info!("Searching for claude binary...");
-    
-    // First check if we have a stored path in the database
-    if let Ok(app_data_dir) = app_handle.path().app_data_dir() {
-        let db_path = app_data_dir.join("agents.db");
-        if db_path.exists() {
-            if let Ok(conn) = rusqlite::Connection::open(&db_path) {
-                if let Ok(stored_path) = conn.query_row(
-                    "SELECT value FROM app_settings WHERE key = 'claude_binary_path'",
-                    [],
-                    |row| row.get::<_, String>(0),
-                ) {
-                    log::info!("Found stored claude path in database: {}", stored_path);
-                    let path_buf = PathBuf::from(&stored_path);
-                    if path_buf.exists() && path_buf.is_file() {
-                        return Ok(stored_path);
-                    } else {
-                        log::warn!("Stored claude path no longer exists: {}", stored_path);
-                    }
-                }
-            }
-        }
-    }
-    
-    // Common installation paths for claude
-    let mut paths_to_check: Vec<String> = vec![
-        "/usr/local/bin/claude".to_string(),
-        "/opt/homebrew/bin/claude".to_string(),
-        "/usr/bin/claude".to_string(),
-        "/bin/claude".to_string(),
-    ];
-    
-    // Also check user-specific paths
-    if let Ok(home) = std::env::var("HOME") {
-        paths_to_check.extend(vec![
-            format!("{}/.claude/local/claude", home),
-            format!("{}/.local/bin/claude", home),
-            format!("{}/.npm-global/bin/claude", home),
-            format!("{}/.yarn/bin/claude", home),
-            format!("{}/.bun/bin/claude", home),
-            format!("{}/bin/claude", home),
-            // Check common node_modules locations
-            format!("{}/node_modules/.bin/claude", home),
-            format!("{}/.config/yarn/global/node_modules/.bin/claude", home),
-        ]);
-        
-        // Check NVM paths
-        if let Ok(nvm_dirs) = std::fs::read_dir(format!("{}/.nvm/versions/node", home)) {
-            for entry in nvm_dirs.flatten() {
-                if entry.file_type().map(|t| t.is_dir()).unwrap_or(false) {
-                    let nvm_claude_path = format!("{}/bin/claude", entry.path().display());
-                    paths_to_check.push(nvm_claude_path);
-                }
-            }
-        }
-    }
-    
-    // Check each path
-    for path in paths_to_check {
-        let path_buf = PathBuf::from(&path);
-        if path_buf.exists() && path_buf.is_file() {
-            log::info!("Found claude at: {}", path);
-            return Ok(path);
-        }
-    }
-    
-    // In production builds, skip the 'which' command as it's blocked by Tauri
-    #[cfg(not(debug_assertions))]
-    {
-        log::warn!("Cannot use 'which' command in production build, checking if claude is in PATH");
-        // In production, just return "claude" and let the execution fail with a proper error
-        // if it's not actually available. The user can then set the path manually.
-        return Ok("claude".to_string());
-    }
-    
-    // Only try 'which' in development builds
-    #[cfg(debug_assertions)]
-    {
-        // Fallback: try using 'which' command
-        log::info!("Trying 'which claude' to find binary...");
-        if let Ok(output) = std::process::Command::new("which")
-            .arg("claude")
-            .output()
-        {
-            if output.status.success() {
-                let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
-                if !path.is_empty() {
-                    log::info!("'which' found claude at: {}", path);
-                    return Ok(path);
-                }
-            }
-        }
-        
-        // Additional fallback: check if claude is in the current PATH
-        // This might work in dev mode
-        if let Ok(output) = std::process::Command::new("claude")
-            .arg("--version")
-            .output()
-        {
-            if output.status.success() {
-                log::info!("claude is available in PATH (dev mode?)");
-                return Ok("claude".to_string());
-            }
-        }
-    }
-    
-    log::error!("Could not find claude binary in any common location");
-    Err("Claude Code not found. Please ensure it's installed and in one of these locations: /usr/local/bin, /opt/homebrew/bin, ~/.claude/local, ~/.local/bin, or in your PATH".to_string())
-}
 
 /// Gets the path to the ~/.claude directory
 fn get_claude_dir() -> Result<PathBuf> {
@@ -570,83 +449,10 @@ pub async fn get_system_prompt() -> Result<String, String> {
 }
 
 /// Checks if Claude Code is installed and gets its version
+/// This function now uses the shared implementation with enhanced validation
 #[tauri::command]
 pub async fn check_claude_version(app: AppHandle) -> Result<ClaudeVersionStatus, String> {
-    log::info!("Checking Claude Code version");
-    
-    let claude_path = match find_claude_binary(&app) {
-        Ok(path) => path,
-        Err(e) => {
-            return Ok(ClaudeVersionStatus {
-                is_installed: false,
-                version: None,
-                output: e,
-            });
-        }
-    };
-    
-    // In production builds, we can't check the version directly
-    #[cfg(not(debug_assertions))]
-    {
-        log::warn!("Cannot check claude version in production build");
-        // If we found a path (either stored or in common locations), assume it's installed
-        if claude_path != "claude" && PathBuf::from(&claude_path).exists() {
-            return Ok(ClaudeVersionStatus {
-                is_installed: true,
-                version: None,
-                output: "Claude binary found at: ".to_string() + &claude_path,
-            });
-        } else {
-            return Ok(ClaudeVersionStatus {
-                is_installed: false,
-                version: None,
-                output: "Cannot verify Claude installation in production build. Please ensure Claude Code is installed.".to_string(),
-            });
-        }
-    }
-    
-    #[cfg(debug_assertions)]
-    {
-        let output = std::process::Command::new(claude_path)
-            .arg("--version")
-            .output();
-        
-        match output {
-            Ok(output) => {
-                let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-                let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-                let full_output = if stderr.is_empty() { stdout.clone() } else { format!("{}\n{}", stdout, stderr) };
-                
-                // Check if the output matches the expected format
-                // Expected format: "1.0.17 (Claude Code)" or similar
-                let is_valid = stdout.contains("(Claude Code)") || stdout.contains("Claude Code");
-                
-                // Extract version number if valid
-                let version = if is_valid {
-                    // Try to extract just the version number
-                    stdout.split_whitespace()
-                        .next()
-                        .map(|s| s.to_string())
-                } else {
-                    None
-                };
-                
-                Ok(ClaudeVersionStatus {
-                    is_installed: is_valid && output.status.success(),
-                    version,
-                    output: full_output.trim().to_string(),
-                })
-            }
-            Err(e) => {
-                log::error!("Failed to run claude command: {}", e);
-                Ok(ClaudeVersionStatus {
-                    is_installed: false,
-                    version: None,
-                    output: format!("Command not found: {}", e),
-                })
-            }
-        }
-    }
+    crate::claude_detection::check_claude_version(app).await
 }
 
 /// Saves the CLAUDE.md system prompt file

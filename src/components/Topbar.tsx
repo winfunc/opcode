@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Circle, FileText, Settings, ExternalLink, BarChart3, Network, Info } from "lucide-react";
+import { Circle, FileText, Settings, ExternalLink, BarChart3, Network, Info, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover } from "@/components/ui/popover";
-import { api, type ClaudeVersionStatus } from "@/lib/api";
+import { api, type ClaudeVersionStatus, type ClaudeInstallation } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 interface TopbarProps {
@@ -54,17 +54,40 @@ export const Topbar: React.FC<TopbarProps> = ({
 }) => {
   const [versionStatus, setVersionStatus] = useState<ClaudeVersionStatus | null>(null);
   const [checking, setChecking] = useState(true);
+  const [multipleVersionsAvailable, setMultipleVersionsAvailable] = useState(false);
+  const [installations, setInstallations] = useState<ClaudeInstallation[]>([]);
   
-  // Check Claude version on mount
+  // Check Claude version on mount and when installation changes
   useEffect(() => {
     checkVersion();
+    
+    // Listen for Claude installation changes
+    const handleInstallationChange = () => {
+      console.log("Claude installation changed, refreshing version check...");
+      checkVersion();
+    };
+    
+    window.addEventListener('claude-installation-changed', handleInstallationChange);
+    
+    return () => {
+      window.removeEventListener('claude-installation-changed', handleInstallationChange);
+    };
   }, []);
   
   const checkVersion = async () => {
     try {
       setChecking(true);
-      const status = await api.checkClaudeVersion();
+      const [status, discoveredInstallations] = await Promise.all([
+        api.checkClaudeVersion(),
+        api.discoverClaudeInstallations()
+      ]);
+      
       setVersionStatus(status);
+      setInstallations(discoveredInstallations);
+      
+      // Check if multiple versions are available
+      const verifiedInstallations = discoveredInstallations.filter(inst => inst.is_verified);
+      setMultipleVersionsAvailable(verifiedInstallations.length > 1);
       
       // If Claude is not installed and the error indicates it wasn't found
       if (!status.is_installed && status.output.includes("No such file or directory")) {
@@ -77,6 +100,8 @@ export const Topbar: React.FC<TopbarProps> = ({
         is_installed: false,
         output: "Failed to check version",
       });
+      setInstallations([]);
+      setMultipleVersionsAvailable(false);
     } finally {
       setChecking(false);
     }
@@ -109,6 +134,9 @@ export const Topbar: React.FC<TopbarProps> = ({
             ? `Claude Code ${versionStatus.version}`
             : "Claude Code"}
         </span>
+        {multipleVersionsAvailable && (
+          <AlertTriangle className="h-3 w-3 text-orange-500" />
+        )}
       </div>
     );
     
@@ -133,6 +161,57 @@ export const Topbar: React.FC<TopbarProps> = ({
                 <span>Install Claude Code</span>
                 <ExternalLink className="h-3 w-3" />
               </a>
+            </div>
+          }
+          align="start"
+        />
+      );
+    }
+    
+    // Show popover with multiple versions info if applicable
+    if (multipleVersionsAvailable) {
+      const verifiedInstallations = installations.filter(inst => inst.is_verified);
+      return (
+        <Popover
+          trigger={statusContent}
+          content={
+            <div className="space-y-3 max-w-sm">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-orange-500" />
+                <p className="text-sm font-medium">Multiple Claude Versions Available</p>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Found {verifiedInstallations.length} verified Claude Code installations. 
+                Consider reviewing your installation selection for consistency.
+              </p>
+              <div className="space-y-2">
+                <p className="text-xs font-medium">Available versions:</p>
+                <div className="space-y-1">
+                  {verifiedInstallations.slice(0, 3).map((installation, index) => (
+                    <div key={index} className="text-xs bg-muted p-2 rounded border-l-2 border-blue-500">
+                      <div className="font-mono truncate">{installation.source}</div>
+                      <div className="text-muted-foreground truncate text-[10px]">{installation.path}</div>
+                      {installation.version && (
+                        <div className="text-muted-foreground text-[10px]">v{installation.version}</div>
+                      )}
+                    </div>
+                  ))}
+                  {verifiedInstallations.length > 3 && (
+                    <div className="text-xs text-muted-foreground">
+                      ...and {verifiedInstallations.length - 3} more
+                    </div>
+                  )}
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onSettingsClick}
+                className="w-full gap-2 text-xs"
+              >
+                <Settings className="h-3 w-3" />
+                Manage Installations
+              </Button>
             </div>
           }
           align="start"

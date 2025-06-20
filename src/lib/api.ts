@@ -54,6 +54,26 @@ export interface ClaudeVersionStatus {
 }
 
 /**
+ * Information about a discovered Claude installation
+ */
+export interface ClaudeInstallation {
+  /** Path to the Claude binary */
+  path: string;
+  /** Source of installation (e.g., "NVM v22.15.0", "Global", "Homebrew", etc.) */
+  source: string;
+  /** Version string if available */
+  version?: string;
+  /** Whether it's verified to be Claude Code */
+  is_verified: boolean;
+  /** Whether Node.js is available for this installation */
+  node_available: boolean;
+  /** Whether this is the currently active/default installation */
+  is_active: boolean;
+  /** Priority score for auto-selection (higher = better) */
+  priority: number;
+}
+
+/**
  * Represents a CLAUDE.md file found in the project
  */
 export interface ClaudeMdFile {
@@ -1757,6 +1777,59 @@ export const api = {
       return await invoke<void>("set_claude_binary_path", { path });
     } catch (error) {
       console.error("Failed to set Claude binary path:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Discovers all Claude installations on the system
+   * @returns Promise resolving to an array of found installations with their sources and verification status
+   */
+  async discoverClaudeInstallations(): Promise<ClaudeInstallation[]> {
+    try {
+      return await invoke<ClaudeInstallation[]>("discover_claude_installations");
+    } catch (error) {
+      console.error("Failed to discover Claude installations:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Sets the user's selected Claude installation path
+   * @param path - The absolute path to the Claude binary to use
+   * @returns Promise resolving when the selection is saved
+   */
+  async setSelectedClaudeInstallation(path: string): Promise<void> {
+    try {
+      return await invoke<void>("set_selected_claude_installation", { path });
+    } catch (error) {
+      console.error("Failed to set selected Claude installation:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Gets the currently selected Claude installation (if any)
+   * @returns Promise resolving to the path if set, null for auto-detection
+   */
+  async getSelectedClaudeInstallation(): Promise<string | null> {
+    try {
+      return await invoke<string | null>("get_selected_claude_installation");
+    } catch (error) {
+      console.error("Failed to get selected Claude installation:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Clears the selected Claude installation, reverting to auto-detection
+   * @returns Promise resolving when the selection is cleared
+   */
+  async clearSelectedClaudeInstallation(): Promise<void> {
+    try {
+      return await invoke<void>("clear_selected_claude_installation");
+    } catch (error) {
+      console.error("Failed to clear selected Claude installation:", error);
       throw error;
     }
   },

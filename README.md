@@ -58,6 +58,14 @@ Think of Claudia as your command center for Claude Code - bridging the gap betwe
 
 ## ✨ Features
 
+### 🔧 **Smart Claude Code Detection & Management**
+- **Multi-Version Support**: Automatically detects and manages multiple Claude Code installations
+- **NVM Integration**: Full support for NVM-managed Claude Code installations with proper Node.js environment setup
+- **Installation Picker**: Visual interface to select and switch between different Claude versions
+- **Version Verification**: Validates installations to ensure they're genuine Claude Code binaries
+- **Global Consistency**: Ensures all app components use the same selected Claude installation
+- **Multiple Version Warning**: Visual alerts when multiple versions are available with detailed management options
+
 ### 🗂️ **Project & Session Management**
 - **Visual Project Browser**: Navigate through all your Claude Code projects in `~/.claude/projects/`
 - **Session History**: View and resume past coding sessions with full context
@@ -68,6 +76,7 @@ Think of Claudia as your command center for Claude Code - bridging the gap betwe
 - **Custom AI Agents**: Create specialized agents with custom system prompts and behaviors
 - **Agent Library**: Build a collection of purpose-built agents for different tasks
 - **Secure Execution**: Run agents in sandboxed environments with fine-grained permissions
+- **NVM-Aware Execution**: Proper Node.js environment setup for agents using NVM-based Claude installations
 - **Execution History**: Track all agent runs with detailed logs and performance metrics
 
 ### 🛡️ **Advanced Sandboxing**
@@ -130,6 +139,8 @@ CC Agents → Create Agent → Configure → Execute
 3. **Set Sandbox Profile**: Apply security restrictions
 4. **Execute Tasks**: Run your agent on any project
 
+> **Note**: Agents automatically use the selected Claude Code installation and work seamlessly with NVM-managed installations.
+
 ### Tracking Usage
 
 ```
@@ -149,6 +160,19 @@ Menu → MCP Manager → Add Server → Configure
 - Add servers manually or via JSON
 - Import from Claude Desktop configuration
 - Test connections before using
+
+### Managing Claude Code Installations
+
+```
+Topbar → Version Selector → Choose Installation
+```
+
+- **Auto-Detection**: Claudia automatically finds all Claude Code installations
+- **Version Display**: Current version shown in the topbar with source information
+- **Multi-Version Warning**: Orange warning icon when multiple versions are available
+- **Quick Switching**: Click to open the installation picker and switch versions
+- **NVM Support**: Full compatibility with Node Version Manager installations
+- **Global Sync**: All app components automatically use the selected installation
 
 ## 🚀 Installation
 

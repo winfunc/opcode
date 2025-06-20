@@ -5,6 +5,7 @@ pub mod commands;
 pub mod sandbox;
 pub mod checkpoint;
 pub mod process;
+pub mod claude_detection;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {

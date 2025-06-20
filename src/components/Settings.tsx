@@ -10,7 +10,9 @@ import {
   Code,
   Settings2,
   Terminal,
-  Loader2
+  Loader2,
+  Download,
+  RefreshCw
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +24,7 @@ import {
   api, 
   type ClaudeSettings
 } from "@/lib/api";
+import { ClaudeVersionPicker } from "@/components/ClaudeVersionPicker";
 import { cn } from "@/lib/utils";
 import { Toast, ToastContainer } from "@/components/ui/toast";
 
@@ -55,12 +58,13 @@ export const Settings: React.FC<SettingsProps> = ({
   onBack,
   className,
 }) => {
-  const [activeTab, setActiveTab] = useState("general");
+  const [activeTab, setActiveTab] = useState("installation");
   const [settings, setSettings] = useState<ClaudeSettings>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [showVersionPicker, setShowVersionPicker] = useState(false);
 
   // Permission rules state
   const [allowRules, setAllowRules] = useState<PermissionRule[]>([]);
@@ -318,6 +322,10 @@ export const Settings: React.FC<SettingsProps> = ({
         <div className="flex-1 overflow-y-auto p-4">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="mb-6">
+              <TabsTrigger value="installation" className="gap-2">
+                <Download className="h-4 w-4 text-green-500" />
+                Installation
+              </TabsTrigger>
               <TabsTrigger value="general" className="gap-2">
                 <Settings2 className="h-4 w-4 text-slate-500" />
                 General
@@ -335,6 +343,54 @@ export const Settings: React.FC<SettingsProps> = ({
                 Advanced
               </TabsTrigger>
             </TabsList>
+            
+            {/* Installation Settings */}
+            <TabsContent value="installation" className="space-y-6">
+              <Card className="p-6 space-y-6">
+                <div>
+                  <h3 className="text-base font-semibold mb-4">Claude Code Installation</h3>
+                  <p className="text-sm text-muted-foreground mb-6">
+                    Manage which Claude Code installation is used by the application. 
+                    This affects all agent executions, MCP operations, and Claude Code sessions.
+                  </p>
+                  
+                  <div className="space-y-4">
+                    <Button
+                      onClick={() => setShowVersionPicker(true)}
+                      variant="default"
+                      className="gap-2"
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                      Choose Claude Installation
+                    </Button>
+                    
+                    <div className="text-sm text-muted-foreground">
+                      <p className="mb-2"><strong>What this affects:</strong></p>
+                      <ul className="list-disc list-inside space-y-1 ml-4">
+                        <li>Agent execution with custom models and sandbox settings</li>
+                        <li>Interactive Claude Code sessions</li>
+                        <li>MCP server operations and connections</li>
+                        <li>Version detection throughout the application</li>
+                      </ul>
+                    </div>
+                    
+                    <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-md border border-blue-200 dark:border-blue-800">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5" />
+                        <div className="text-sm text-blue-800 dark:text-blue-200">
+                          <p className="font-medium mb-1">Multiple Versions?</p>
+                          <p>
+                            If you have Claude Code installed in multiple Node.js versions (via NVM) or 
+                            different locations, use this tool to select the correct one. The app will 
+                            remember your choice and use it consistently.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            </TabsContent>
             
             {/* General Settings */}
             <TabsContent value="general" className="space-y-6">
@@ -644,6 +700,18 @@ export const Settings: React.FC<SettingsProps> = ({
           />
         )}
       </ToastContainer>
+      
+      {/* Claude Version Picker */}
+      <ClaudeVersionPicker
+        open={showVersionPicker}
+        onOpenChange={setShowVersionPicker}
+        settingsMode={true}
+        onSuccess={() => {
+          setToast({ message: "Claude installation selection saved successfully", type: "success" });
+          // The ClaudeVersionPicker will emit the global event automatically
+        }}
+        onError={(message) => setToast({ message, type: "error" })}
+      />
     </div>
   );
 }; 
