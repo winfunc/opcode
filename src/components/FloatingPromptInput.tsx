@@ -575,6 +575,7 @@ export const FloatingPromptInput: React.FC<FloatingPromptInputProps> = ({
             <div className="mt-2 text-xs text-muted-foreground">
               Press Enter to send, Shift+Enter for new line{projectPath?.trim() && ", @ to mention files, drag & drop images"}
             </div>
+          </div>
         </div>
       </div>
     </>
