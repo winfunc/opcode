@@ -245,6 +245,13 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         setError(event.payload);
       });
 
+      const cancelledUnlisten = await listen<boolean>("claude-cancelled", (event) => {
+        console.log('[ClaudeCodeSession] Received claude-cancelled:', event.payload);
+        setIsLoading(false);
+        hasActiveSessionRef.current = false;
+        setError("Execution cancelled by user");
+      });
+
       const completeUnlisten = await listen<boolean>("claude-complete", async (event) => {
         console.log('[ClaudeCodeSession] Received claude-complete:', event.payload);
         setIsLoading(false);
@@ -299,7 +306,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         unlistenRefs.current = [];
       });
 
-      unlistenRefs.current = [outputUnlisten, errorUnlisten, completeUnlisten];
+      unlistenRefs.current = [outputUnlisten, errorUnlisten, cancelledUnlisten, completeUnlisten];
 
       // Execute the appropriate command
       if (isFirstPrompt && !session) {
@@ -319,6 +326,17 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       setError("Failed to execute Claude Code");
       setIsLoading(false);
       hasActiveSessionRef.current = false;
+    }
+  };
+
+  const handleCancel = async () => {
+    try {
+      console.log('[ClaudeCodeSession] Cancelling Claude Code process');
+      const result = await api.cancelClaudeCode();
+      console.log('[ClaudeCodeSession] Cancel result:', result);
+    } catch (err) {
+      console.error('[ClaudeCodeSession] Error cancelling:', err);
+      setError(err instanceof Error ? err.message : 'Failed to cancel process');
     }
   };
 
@@ -669,6 +687,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         disabled={!projectPath && !session}
         defaultModel={currentModel}
         projectPath={projectPath}
+        onCancel={handleCancel}
       />
       
       {/* Token Counter */}

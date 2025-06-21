@@ -84,13 +84,6 @@ impl CheckpointState {
         Ok(manager_arc)
     }
     
-    /// Gets an existing CheckpointManager for a session
-    /// 
-    /// Returns None if no manager exists for the session
-    pub async fn get_manager(&self, session_id: &str) -> Option<Arc<CheckpointManager>> {
-        let managers = self.managers.read().await;
-        managers.get(session_id).map(Arc::clone)
-    }
     
     /// Removes a CheckpointManager for a session
     /// 
@@ -100,13 +93,6 @@ impl CheckpointState {
         managers.remove(session_id)
     }
     
-    /// Clears all managers
-    /// 
-    /// This is useful for cleanup during application shutdown
-    pub async fn clear_all(&self) {
-        let mut managers = self.managers.write().await;
-        managers.clear();
-    }
     
     /// Gets the number of active managers
     pub async fn active_count(&self) -> usize {
@@ -120,17 +106,6 @@ impl CheckpointState {
         managers.keys().cloned().collect()
     }
     
-    /// Checks if a session has an active manager
-    pub async fn has_active_manager(&self, session_id: &str) -> bool {
-        self.get_manager(session_id).await.is_some()
-    }
-    
-    /// Clears all managers and returns the count that were cleared
-    pub async fn clear_all_and_count(&self) -> usize {
-        let count = self.active_count().await;
-        self.clear_all().await;
-        count
-    }
 }
 
 #[cfg(test)]

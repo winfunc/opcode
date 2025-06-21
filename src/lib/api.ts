@@ -919,6 +919,13 @@ export const api = {
   },
 
   /**
+   * Cancel the currently running Claude Code process
+   */
+  async cancelClaudeCode(): Promise<boolean> {
+    return invoke("cancel_claude_code", {});
+  },
+
+  /**
    * Lists files and directories in a given path
    */
   async listDirectoryContents(directoryPath: string): Promise<FileEntry[]> {

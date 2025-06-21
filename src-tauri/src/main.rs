@@ -17,7 +17,7 @@ use commands::claude::{
     get_session_timeline, update_checkpoint_settings, get_checkpoint_diff,
     track_checkpoint_message, track_session_messages, check_auto_checkpoint, cleanup_old_checkpoints,
     get_checkpoint_settings, clear_checkpoint_manager, get_checkpoint_state_stats,
-    get_recently_modified_files,
+    get_recently_modified_files, cancel_claude_code, ClaudeProcessState,
 };
 use commands::agents::{
     init_database, list_agents, create_agent, update_agent, delete_agent, 
@@ -90,6 +90,9 @@ fn main() {
             // Initialize process registry
             app.manage(ProcessRegistryState::default());
             
+            // Initialize Claude process state
+            app.manage(ClaudeProcessState::default());
+            
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -125,6 +128,7 @@ fn main() {
             clear_checkpoint_manager,
             get_checkpoint_state_stats,
             get_recently_modified_files,
+            cancel_claude_code,
             list_agents,
             create_agent,
             update_agent,

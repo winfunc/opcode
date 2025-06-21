@@ -1,5 +1,4 @@
-use crate::sandbox::profile::{ProfileBuilder, SandboxRule};
-use crate::sandbox::executor::{SerializedProfile, SerializedOperation};
+use crate::sandbox::profile::ProfileBuilder;
 use anyhow::Result;
 use chrono;
 use log::{debug, error, info, warn};
@@ -8,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use std::path::PathBuf;
 use std::process::Stdio;
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
 use tauri::{AppHandle, Manager, State, Emitter};
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;

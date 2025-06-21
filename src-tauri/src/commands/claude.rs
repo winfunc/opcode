@@ -5,10 +5,9 @@ use std::path::PathBuf;
 use std::time::SystemTime;
 use std::io::{BufRead, BufReader};
 use std::process::Stdio;
-use tauri::{AppHandle, Emitter, Manager};
-use tokio::process::Command;
-use crate::process::ProcessHandle;
-use crate::checkpoint::{CheckpointResult, CheckpointDiff, SessionTimeline, Checkpoint};
+use std::sync::{Arc, Mutex};
+use tauri::{AppHandle, Emitter, Manager, State};
+use tokio::process::{Command, Child};
 
 /// Represents a project in the ~/.claude/projects directory
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -111,6 +110,52 @@ pub struct FileEntry {
     pub size: u64,
     /// File extension (if applicable)
     pub extension: Option<String>,
+}
+
+/// State for tracking the current Claude Code process
+pub struct ClaudeProcessState {
+    current_process: Arc<Mutex<Option<Child>>>,
+}
+
+impl ClaudeProcessState {
+    pub fn new() -> Self {
+        Self {
+            current_process: Arc::new(Mutex::new(None)),
+        }
+    }
+    
+    pub fn set_process(&self, child: Child) {
+        let mut process = self.current_process.lock().unwrap();
+        *process = Some(child);
+    }
+    
+    pub async fn kill_current_process(&self) -> Result<bool, String> {
+        // Take the process out of the mutex to avoid holding the lock across await
+        let child_opt = {
+            let mut process = self.current_process.lock().unwrap();
+            process.take()
+        };
+        
+        if let Some(mut child) = child_opt {
+            match child.kill().await {
+                Ok(_) => Ok(true),
+                Err(e) => {
+                    // If kill failed, put the process back
+                    let mut process = self.current_process.lock().unwrap();
+                    *process = Some(child);
+                    Err(format!("Failed to kill process: {}", e))
+                }
+            }
+        } else {
+            Ok(false) // No process running
+        }
+    }
+}
+
+impl Default for ClaudeProcessState {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 /// Finds the full path to the claude binary
@@ -820,6 +865,7 @@ pub async fn load_session_history(session_id: String, project_id: String) -> Res
 #[tauri::command]
 pub async fn execute_claude_code(
     app: AppHandle,
+    state: State<'_, ClaudeProcessState>,
     project_path: String,
     prompt: String,
     model: String,
@@ -848,13 +894,14 @@ pub async fn execute_claude_code(
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
     
-    spawn_claude_process(app, cmd).await
+    spawn_claude_process(app, state, cmd).await
 }
 
 /// Continue an existing Claude Code conversation with streaming output
 #[tauri::command]
 pub async fn continue_claude_code(
     app: AppHandle,
+    state: State<'_, ClaudeProcessState>,
     project_path: String,
     prompt: String,
     model: String,
@@ -884,19 +931,33 @@ pub async fn continue_claude_code(
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
     
-    spawn_claude_process(app, cmd).await
+    spawn_claude_process(app, state, cmd).await
 }
 
 /// Resume an existing Claude Code session by ID with streaming output
 #[tauri::command]
 pub async fn resume_claude_code(
     app: AppHandle,
+    state: State<'_, ClaudeProcessState>,
     project_path: String,
     session_id: String,
     prompt: String,
     model: String,
 ) -> Result<(), String> {
     log::info!("Resuming Claude Code session: {} in: {} with model: {}", session_id, project_path, model);
+    
+    // First, validate the session file to ensure it doesn't have unpaired tool_use blocks
+    match validate_session_file(&session_id, &project_path).await {
+        Ok(_) => {
+            log::info!("Session validation passed for session: {}", session_id);
+        }
+        Err(e) => {
+            log::warn!("Session validation failed for session {}: {}. Starting fresh conversation instead.", session_id, e);
+            // If validation fails, start a fresh conversation instead of resuming
+            // This prevents the tool_use/tool_result mismatch error
+            return execute_claude_code(app, state, project_path, prompt, model).await;
+        }
+    }
     
     // Check if sandboxing should be used
     let use_sandbox = should_use_sandbox(&app)?;
@@ -922,7 +983,68 @@ pub async fn resume_claude_code(
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
     
-    spawn_claude_process(app, cmd).await
+    spawn_claude_process(app, state, cmd).await
+}
+
+/// Validates a session file to ensure it doesn't have unpaired tool_use blocks
+async fn validate_session_file(session_id: &str, project_path: &str) -> Result<(), String> {
+    // Claude encodes project paths by replacing "/" with "-"
+    let project_id = project_path.replace("/", "-");
+    
+    let claude_dir = get_claude_dir().map_err(|e| e.to_string())?;
+    let session_path = claude_dir.join("projects").join(&project_id).join(format!("{}.jsonl", session_id));
+    
+    if !session_path.exists() {
+        return Err(format!("Session file not found: {}", session_id));
+    }
+    
+    let file = fs::File::open(&session_path)
+        .map_err(|e| format!("Failed to open session file: {}", e))?;
+    
+    let reader = BufReader::new(file);
+    let mut pending_tool_use_ids: Vec<String> = Vec::new();
+    
+    log::debug!("Validating session file: {:?}", session_path);
+    
+    for (line_num, line) in reader.lines().enumerate() {
+        if let Ok(line) = line {
+            if let Ok(json) = serde_json::from_str::<serde_json::Value>(&line) {
+                // Check if this is a message with content
+                if let Some(message) = json.get("message") {
+                    if let Some(content_array) = message.get("content").and_then(|c| c.as_array()) {
+                        for content in content_array {
+                            if let Some(content_type) = content.get("type").and_then(|t| t.as_str()) {
+                                match content_type {
+                                    "tool_use" => {
+                                        if let Some(id) = content.get("id").and_then(|i| i.as_str()) {
+                                            log::debug!("Line {}: Found tool_use with id: {}", line_num, id);
+                                            pending_tool_use_ids.push(id.to_string());
+                                        }
+                                    }
+                                    "tool_result" => {
+                                        if let Some(tool_use_id) = content.get("tool_use_id").and_then(|i| i.as_str()) {
+                                            log::debug!("Line {}: Found tool_result for id: {}", line_num, tool_use_id);
+                                            pending_tool_use_ids.retain(|id| id != tool_use_id);
+                                        }
+                                    }
+                                    _ => {}
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    if !pending_tool_use_ids.is_empty() {
+        return Err(format!(
+            "Session has {} unpaired tool_use blocks. This can cause API errors.",
+            pending_tool_use_ids.len()
+        ));
+    }
+    
+    Ok(())
 }
 
 /// Helper function to check if sandboxing should be used based on settings
@@ -1087,7 +1209,7 @@ fn get_claude_settings_sync(_app: &AppHandle) -> Result<ClaudeSettings, String> 
 }
 
 /// Helper function to spawn Claude process and handle streaming
-async fn spawn_claude_process(app: AppHandle, mut cmd: Command) -> Result<(), String> {
+async fn spawn_claude_process(app: AppHandle, state: State<'_, ClaudeProcessState>, mut cmd: Command) -> Result<(), String> {
     use tokio::io::{AsyncBufReadExt, BufReader};
     
     // Spawn the process
@@ -1122,28 +1244,105 @@ async fn spawn_claude_process(app: AppHandle, mut cmd: Command) -> Result<(), St
         }
     });
     
+    // Clone the Arc<Mutex<Option<Child>>> before storing the child
+    let process_handle = state.current_process.clone();
+    
+    // Store the child process in state
+    state.set_process(child);
+    
     // Wait for the process to complete
+    let app_completion = app.clone();
     tokio::spawn(async move {
         let _ = stdout_task.await;
         let _ = stderr_task.await;
         
-        match child.wait().await {
-            Ok(status) => {
-                log::info!("Claude process exited with status: {}", status);
-                // Add a small delay to ensure all messages are processed
-                tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-                let _ = app.emit("claude-complete", status.success());
+        // Wait for the process without taking it from state
+        // This allows the cancel function to still access it
+        loop {
+            // Check if process is still running
+            let should_wait = {
+                let process_guard = process_handle.lock().unwrap();
+                process_guard.is_some()
+            };
+            
+            if !should_wait {
+                // Process was removed (likely by cancel or kill)
+                log::info!("Claude process was removed from state");
+                break;
             }
-            Err(e) => {
-                log::error!("Failed to wait for Claude process: {}", e);
-                // Add a small delay to ensure all messages are processed
-                tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-                let _ = app.emit("claude-complete", false);
+            
+            // Try to check process status without removing it
+            let status_opt = {
+                let mut process_guard = process_handle.lock().unwrap();
+                if let Some(ref mut child) = process_guard.as_mut() {
+                    match child.try_wait() {
+                        Ok(Some(status)) => {
+                            log::info!("Claude process exited with status: {}", status);
+                            let success = status.success();
+                            // Now we can take it since it's done
+                            process_guard.take();
+                            Some((true, success))
+                        }
+                        Ok(None) => None, // Still running
+                        Err(e) => {
+                            log::error!("Failed to check Claude process status: {}", e);
+                            // Remove the failed process
+                            process_guard.take();
+                            Some((false, false))
+                        }
+                    }
+                } else {
+                    None
+                }
+            };
+            
+            if let Some((completed, success)) = status_opt {
+                if completed {
+                    // Add a small delay to ensure all messages are processed
+                    tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+                    let _ = app_completion.emit("claude-complete", success);
+                }
+                break;
             }
+            
+            // Sleep a bit before checking again
+            tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
         }
     });
     
     Ok(())
+}
+
+/// Cancel the currently running Claude Code process
+#[tauri::command]
+pub async fn cancel_claude_code(
+    app: AppHandle,
+    state: State<'_, ClaudeProcessState>,
+) -> Result<bool, String> {
+    log::info!("Cancel Claude Code process requested");
+    
+    // Check if there's a process before trying to kill
+    let has_process = {
+        let process_guard = state.current_process.lock().unwrap();
+        process_guard.is_some()
+    };
+    
+    log::info!("Current process exists: {}", has_process);
+    
+    let killed = state.kill_current_process().await?;
+    
+    if killed {
+        log::info!("Claude Code process killed successfully");
+        // Emit a cancellation event to the frontend
+        let _ = app.emit("claude-cancelled", true);
+        // Also emit a completion event to ensure UI updates
+        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+        let _ = app.emit("claude-complete", false);
+    } else {
+        log::info!("No Claude Code process was running to cancel");
+    }
+    
+    Ok(killed)
 }
 
 /// Lists files and directories in a given path

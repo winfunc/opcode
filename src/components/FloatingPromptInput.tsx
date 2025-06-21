@@ -6,7 +6,8 @@ import {
   Minimize2,
   ChevronUp,
   Sparkles,
-  Zap
+  Zap,
+  X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,10 @@ interface FloatingPromptInputProps {
    * Optional className for styling
    */
   className?: string;
+  /**
+   * Optional callback to cancel current operation
+   */
+  onCancel?: () => void;
 }
 
 type Model = {
@@ -82,6 +87,7 @@ export const FloatingPromptInput: React.FC<FloatingPromptInputProps> = ({
   defaultModel = "sonnet",
   projectPath,
   className,
+  onCancel,
 }) => {
   const [prompt, setPrompt] = useState("");
   const [selectedModel, setSelectedModel] = useState<"sonnet" | "opus">(defaultModel);
@@ -540,25 +546,35 @@ export const FloatingPromptInput: React.FC<FloatingPromptInputProps> = ({
                 </AnimatePresence>
               </div>
               
-              {/* Send Button */}
-              <Button
-                onClick={handleSend}
-                disabled={!prompt.trim() || isLoading || disabled}
-                size="default"
-                className="min-w-[60px]"
-              >
-                {isLoading ? (
-                  <div className="rotating-symbol text-primary-foreground"></div>
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
-              </Button>
+              {/* Send/Cancel Button */}
+              {isLoading && onCancel ? (
+                <Button
+                  onClick={onCancel}
+                  variant="destructive"
+                  size="default"
+                  className="min-w-[60px]"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleSend}
+                  disabled={!prompt.trim() || isLoading || disabled}
+                  size="default"
+                  className="min-w-[60px]"
+                >
+                  {isLoading ? (
+                    <div className="rotating-symbol text-primary-foreground"></div>
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                </Button>
+              )}
             </div>
             
             <div className="mt-2 text-xs text-muted-foreground">
               Press Enter to send, Shift+Enter for new line{projectPath?.trim() && ", @ to mention files, drag & drop images"}
             </div>
-          </div>
         </div>
       </div>
     </>
