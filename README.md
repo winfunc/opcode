@@ -420,3 +420,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
     <a href="https://github.com/getAsterisk/claudia/issues">Request Feature</a>
   </p>
 </div>
+
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=getAsterisk/claudia&type=Date)](https://www.star-history.com/#getAsterisk/claudia&Date)
