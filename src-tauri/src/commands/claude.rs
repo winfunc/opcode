@@ -6,9 +6,24 @@ use std::time::SystemTime;
 use std::io::{BufRead, BufReader};
 use std::process::Stdio;
 use tauri::{AppHandle, Emitter, Manager};
-use tokio::process::Command;
+use tokio::process::{Command, Child};
+use tokio::sync::Mutex;
+use std::sync::Arc;
 use crate::process::ProcessHandle;
 use crate::checkpoint::{CheckpointResult, CheckpointDiff, SessionTimeline, Checkpoint};
+
+/// Global state to track current Claude process
+pub struct ClaudeProcessState {
+    pub current_process: Arc<Mutex<Option<Child>>>,
+}
+
+impl Default for ClaudeProcessState {
+    fn default() -> Self {
+        Self {
+            current_process: Arc::new(Mutex::new(None)),
+        }
+    }
+}
 
 /// Represents a project in the ~/.claude/projects directory
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -925,6 +940,41 @@ pub async fn resume_claude_code(
     spawn_claude_process(app, cmd).await
 }
 
+/// Cancel the currently running Claude Code execution
+#[tauri::command]
+pub async fn cancel_claude_execution(app: AppHandle) -> Result<(), String> {
+    log::info!("Cancelling Claude Code execution");
+    
+    let claude_state = app.state::<ClaudeProcessState>();
+    let mut current_process = claude_state.current_process.lock().await;
+    
+    if let Some(mut child) = current_process.take() {
+        // Try to get the PID before killing
+        let pid = child.id();
+        log::info!("Attempting to kill Claude process with PID: {:?}", pid);
+        
+        // Kill the process
+        match child.kill().await {
+            Ok(_) => {
+                log::info!("Successfully killed Claude process");
+                // Emit cancellation event
+                let _ = app.emit("claude-cancelled", true);
+                // Also emit complete with false to indicate failure
+                tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+                let _ = app.emit("claude-complete", false);
+                Ok(())
+            }
+            Err(e) => {
+                log::error!("Failed to kill Claude process: {}", e);
+                Err(format!("Failed to kill Claude process: {}", e))
+            }
+        }
+    } else {
+        log::warn!("No active Claude process to cancel");
+        Ok(())
+    }
+}
+
 /// Helper function to check if sandboxing should be used based on settings
 fn should_use_sandbox(app: &AppHandle) -> Result<bool, String> {
     // First check if sandboxing is even available on this platform
@@ -1097,9 +1147,20 @@ async fn spawn_claude_process(app: AppHandle, mut cmd: Command) -> Result<(), St
     let stdout = child.stdout.take().ok_or("Failed to get stdout")?;
     let stderr = child.stderr.take().ok_or("Failed to get stderr")?;
     
+    // Get the child PID for logging
+    let pid = child.id();
+    log::info!("Spawned Claude process with PID: {:?}", pid);
+    
     // Create readers
     let stdout_reader = BufReader::new(stdout);
     let stderr_reader = BufReader::new(stderr);
+    
+    // Store the child process in the global state
+    let claude_state = app.state::<ClaudeProcessState>();
+    {
+        let mut current_process = claude_state.current_process.lock().await;
+        *current_process = Some(child);
+    }
     
     // Spawn tasks to read stdout and stderr
     let app_handle = app.clone();
@@ -1123,24 +1184,33 @@ async fn spawn_claude_process(app: AppHandle, mut cmd: Command) -> Result<(), St
     });
     
     // Wait for the process to complete
+    let app_handle_wait = app.clone();
+    let claude_state_wait = claude_state.current_process.clone();
     tokio::spawn(async move {
         let _ = stdout_task.await;
         let _ = stderr_task.await;
         
-        match child.wait().await {
-            Ok(status) => {
-                log::info!("Claude process exited with status: {}", status);
-                // Add a small delay to ensure all messages are processed
-                tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-                let _ = app.emit("claude-complete", status.success());
-            }
-            Err(e) => {
-                log::error!("Failed to wait for Claude process: {}", e);
-                // Add a small delay to ensure all messages are processed
-                tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-                let _ = app.emit("claude-complete", false);
+        // Get the child from the state to wait on it
+        let mut current_process = claude_state_wait.lock().await;
+        if let Some(mut child) = current_process.take() {
+            match child.wait().await {
+                Ok(status) => {
+                    log::info!("Claude process exited with status: {}", status);
+                    // Add a small delay to ensure all messages are processed
+                    tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+                    let _ = app_handle_wait.emit("claude-complete", status.success());
+                }
+                Err(e) => {
+                    log::error!("Failed to wait for Claude process: {}", e);
+                    // Add a small delay to ensure all messages are processed
+                    tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+                    let _ = app_handle_wait.emit("claude-complete", false);
+                }
             }
         }
+        
+        // Clear the process from state
+        *current_process = None;
     });
     
     Ok(())

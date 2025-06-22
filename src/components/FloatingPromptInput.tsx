@@ -1,12 +1,13 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Send, 
-  Maximize2, 
+import {
+  Send,
+  Maximize2,
   Minimize2,
   ChevronUp,
   Sparkles,
-  Zap
+  Zap,
+  Square
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,10 @@ interface FloatingPromptInputProps {
    * Optional className for styling
    */
   className?: string;
+  /**
+   * Callback when cancel is clicked (only during loading)
+   */
+  onCancel?: () => void;
 }
 
 export interface FloatingPromptInputRef {
@@ -81,14 +86,18 @@ const MODELS: Model[] = [
  *   isLoading={false}
  * />
  */
-export const FloatingPromptInput = React.forwardRef<FloatingPromptInputRef, FloatingPromptInputProps>(({
-  onSend,
-  isLoading = false,
-  disabled = false,
-  defaultModel = "sonnet",
-  projectPath,
-  className,
-}, ref) => {
+const FloatingPromptInputInner = (
+  {
+    onSend,
+    isLoading = false,
+    disabled = false,
+    defaultModel = "sonnet",
+    projectPath,
+    className,
+    onCancel,
+  }: FloatingPromptInputProps,
+  ref: React.Ref<FloatingPromptInputRef>,
+) => {
   const [prompt, setPrompt] = useState("");
   const [selectedModel, setSelectedModel] = useState<"sonnet" | "opus">(defaultModel);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -98,11 +107,11 @@ export const FloatingPromptInput = React.forwardRef<FloatingPromptInputRef, Floa
   const [cursorPosition, setCursorPosition] = useState(0);
   const [embeddedImages, setEmbeddedImages] = useState<string[]>([]);
   const [dragActive, setDragActive] = useState(false);
-  
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const expandedTextareaRef = useRef<HTMLTextAreaElement>(null);
   const unlistenDragDropRef = useRef<(() => void) | null>(null);
-  
+
   // Expose a method to add images programmatically
   React.useImperativeHandle(
     ref,
@@ -113,17 +122,17 @@ export const FloatingPromptInput = React.forwardRef<FloatingPromptInputRef, Floa
           if (existingPaths.includes(imagePath)) {
             return currentPrompt; // Image already added
           }
-          
+
           const mention = `@${imagePath}`;
           const newPrompt = currentPrompt + (currentPrompt.endsWith(' ') || currentPrompt === '' ? '' : ' ') + mention + ' ';
-          
+
           // Focus the textarea
           setTimeout(() => {
             const target = isExpanded ? expandedTextareaRef.current : textareaRef.current;
             target?.focus();
             target?.setSelectionRange(newPrompt.length, newPrompt.length);
           }, 0);
-          
+
           return newPrompt;
         });
       }
@@ -144,7 +153,7 @@ export const FloatingPromptInput = React.forwardRef<FloatingPromptInputRef, Floa
     const matches = Array.from(text.matchAll(regex));
     console.log('[extractImagePaths] Regex matches:', matches.map(m => m[0]));
     const pathsSet = new Set<string>(); // Use Set to ensure uniqueness
-    
+
     for (const match of matches) {
       const path = match[1];
       console.log('[extractImagePaths] Processing path:', path);
@@ -155,7 +164,7 @@ export const FloatingPromptInput = React.forwardRef<FloatingPromptInputRef, Floa
         pathsSet.add(fullPath); // Add to Set (automatically handles duplicates)
       }
     }
-    
+
     const uniquePaths = Array.from(pathsSet); // Convert Set back to Array
     console.log('[extractImagePaths] Final extracted paths (unique):', uniquePaths);
     return uniquePaths;
@@ -212,7 +221,7 @@ export const FloatingPromptInput = React.forwardRef<FloatingPromptInputRef, Floa
 
                 const mentionsToAdd = newPaths.map(p => `@${p}`).join(' ');
                 const newPrompt = currentPrompt + (currentPrompt.endsWith(' ') || currentPrompt === '' ? '' : ' ') + mentionsToAdd + ' ';
-                
+
                 setTimeout(() => {
                   const target = isExpanded ? expandedTextareaRef.current : textareaRef.current;
                   target?.focus();
@@ -260,7 +269,7 @@ export const FloatingPromptInput = React.forwardRef<FloatingPromptInputRef, Floa
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = e.target.value;
     const newCursorPosition = e.target.selectionStart || 0;
-    
+
     // Check if @ was just typed
     if (projectPath?.trim() && newValue.length > prompt.length && newValue[newCursorPosition - 1] === '@') {
       console.log('[FloatingPromptInput] @ detected, projectPath:', projectPath);
@@ -268,7 +277,7 @@ export const FloatingPromptInput = React.forwardRef<FloatingPromptInputRef, Floa
       setFilePickerQuery("");
       setCursorPosition(newCursorPosition);
     }
-    
+
     // Check if we're typing after @ (for search query)
     if (showFilePicker && newCursorPosition >= cursorPosition) {
       // Find the @ position before cursor
@@ -283,7 +292,7 @@ export const FloatingPromptInput = React.forwardRef<FloatingPromptInputRef, Floa
           break;
         }
       }
-      
+
       if (atPosition !== -1) {
         const query = newValue.substring(atPosition + 1, newCursorPosition);
         setFilePickerQuery(query);
@@ -293,7 +302,7 @@ export const FloatingPromptInput = React.forwardRef<FloatingPromptInputRef, Floa
         setFilePickerQuery("");
       }
     }
-    
+
     setPrompt(newValue);
     setCursorPosition(newCursorPosition);
   };
@@ -304,15 +313,15 @@ export const FloatingPromptInput = React.forwardRef<FloatingPromptInputRef, Floa
       const textarea = textareaRef.current;
       const beforeAt = prompt.substring(0, cursorPosition - 1);
       const afterCursor = prompt.substring(cursorPosition + filePickerQuery.length);
-      const relativePath = entry.path.startsWith(projectPath || '') 
+      const relativePath = entry.path.startsWith(projectPath || '')
         ? entry.path.slice((projectPath || '').length + 1)
         : entry.path;
-      
+
       const newPrompt = `${beforeAt}@${relativePath} ${afterCursor}`;
       setPrompt(newPrompt);
       setShowFilePicker(false);
       setFilePickerQuery("");
-      
+
       // Focus back on textarea and set cursor position after the inserted path
       setTimeout(() => {
         textarea.focus();
@@ -321,7 +330,7 @@ export const FloatingPromptInput = React.forwardRef<FloatingPromptInputRef, Floa
       }, 0);
     }
   };
-  
+
   const handleFilePickerClose = () => {
     setShowFilePicker(false);
     setFilePickerQuery("");
@@ -338,7 +347,7 @@ export const FloatingPromptInput = React.forwardRef<FloatingPromptInputRef, Floa
       setFilePickerQuery("");
       return;
     }
-    
+
     if (e.key === "Enter" && !e.shiftKey && !isExpanded && !showFilePicker) {
       e.preventDefault();
       handleSend();
@@ -366,12 +375,12 @@ export const FloatingPromptInput = React.forwardRef<FloatingPromptInputRef, Floa
       new RegExp(`@${imagePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s?`, 'g'),
       new RegExp(`@${imagePath.replace(projectPath + '/', '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s?`, 'g')
     ];
-    
+
     let newPrompt = prompt;
     for (const pattern of patterns) {
       newPrompt = newPrompt.replace(pattern, '');
     }
-    
+
     setPrompt(newPrompt.trim());
   };
 
@@ -407,7 +416,7 @@ export const FloatingPromptInput = React.forwardRef<FloatingPromptInputRef, Floa
                   <Minimize2 className="h-4 w-4" />
                 </Button>
               </div>
-              
+
               {/* Image previews in expanded mode */}
               {embeddedImages.length > 0 && (
                 <ImagePreview
@@ -416,7 +425,7 @@ export const FloatingPromptInput = React.forwardRef<FloatingPromptInputRef, Floa
                   className="border-t border-border pt-2"
                 />
               )}
-              
+
               <Textarea
                 ref={expandedTextareaRef}
                 value={prompt}
@@ -429,7 +438,7 @@ export const FloatingPromptInput = React.forwardRef<FloatingPromptInputRef, Floa
                 onDragOver={handleDrag}
                 onDrop={handleDrop}
               />
-              
+
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-muted-foreground">Model:</span>
@@ -443,22 +452,19 @@ export const FloatingPromptInput = React.forwardRef<FloatingPromptInputRef, Floa
                     {selectedModelData.name}
                   </Button>
                 </div>
-                
-                {isLoading ? (
-                  <div className="flex items-center justify-center min-w-[60px] h-10">
-                    <div className="rotating-symbol text-primary text-2xl"></div>
-                  </div>
-                ) : (
-                  <Button
-                    onClick={handleSend}
-                    disabled={!prompt.trim() || disabled}
-                    size="sm"
-                    className="min-w-[80px]"
-                  >
-                    <Send className="mr-2 h-4 w-4" />
-                    Send
-                  </Button>
-                )}
+
+                <Button
+                  onClick={handleSend}
+                  disabled={!prompt.trim() || isLoading || disabled}
+                  size="default"
+                  className="min-w-[60px]"
+                >
+                  {isLoading ? (
+                    <div className="rotating-symbol text-primary-foreground" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                </Button>
               </div>
             </motion.div>
           </motion.div>
@@ -466,7 +472,7 @@ export const FloatingPromptInput = React.forwardRef<FloatingPromptInputRef, Floa
       </AnimatePresence>
 
       {/* Fixed Position Input Bar */}
-      <div 
+      <div
         className={cn(
           "fixed bottom-0 left-0 right-0 z-40 bg-background border-t border-border",
           dragActive && "ring-2 ring-primary ring-offset-2",
@@ -486,7 +492,7 @@ export const FloatingPromptInput = React.forwardRef<FloatingPromptInputRef, Floa
               className="border-b border-border"
             />
           )}
-          
+
           <div className="p-4">
             <div className="flex items-end gap-3">
               {/* Model Picker */}
@@ -534,7 +540,7 @@ export const FloatingPromptInput = React.forwardRef<FloatingPromptInputRef, Floa
                 align="start"
                 side="top"
               />
-              
+
               {/* Prompt Input */}
               <div className="flex-1 relative">
                 <Textarea
@@ -550,7 +556,7 @@ export const FloatingPromptInput = React.forwardRef<FloatingPromptInputRef, Floa
                   )}
                   rows={1}
                 />
-                
+
                 <Button
                   variant="ghost"
                   size="icon"
@@ -560,7 +566,7 @@ export const FloatingPromptInput = React.forwardRef<FloatingPromptInputRef, Floa
                 >
                   <Maximize2 className="h-4 w-4" />
                 </Button>
-                
+
                 {/* File Picker */}
                 <AnimatePresence>
                   {showFilePicker && projectPath && projectPath.trim() && (
@@ -573,24 +579,26 @@ export const FloatingPromptInput = React.forwardRef<FloatingPromptInputRef, Floa
                   )}
                 </AnimatePresence>
               </div>
-              
-              {/* Send Button */}
-              {isLoading ? (
-                <div className="flex items-center justify-center min-w-[60px] h-10">
-                  <div className="rotating-symbol text-primary text-2xl"></div>
-                </div>
-              ) : (
-                <Button
-                  onClick={handleSend}
-                  disabled={!prompt.trim() || disabled}
-                  size="default"
-                  className="min-w-[60px]"
-                >
+
+              {/* Send/Stop Button */}
+              <Button
+                onClick={isLoading ? onCancel : handleSend}
+                disabled={isLoading ? false : (!prompt.trim() || disabled)}
+                variant={isLoading ? "destructive" : "default"}
+                size="default"
+                className="min-w-[60px]"
+              >
+                {isLoading ? (
+                  <>
+                    <Square className="h-4 w-4 mr-1" />
+                    Stop
+                  </>
+                ) : (
                   <Send className="h-4 w-4" />
-                </Button>
-              )}
+                )}
+              </Button>
             </div>
-            
+
             <div className="mt-2 text-xs text-muted-foreground">
               Press Enter to send, Shift+Enter for new line{projectPath?.trim() && ", @ to mention files, drag & drop images"}
             </div>
@@ -599,6 +607,11 @@ export const FloatingPromptInput = React.forwardRef<FloatingPromptInputRef, Floa
       </div>
     </>
   );
-});
+};
 
-FloatingPromptInput.displayName = 'FloatingPromptInput'; 
+export const FloatingPromptInput = React.forwardRef<
+  FloatingPromptInputRef,
+  FloatingPromptInputProps
+>(FloatingPromptInputInner);
+
+FloatingPromptInput.displayName = 'FloatingPromptInput';
