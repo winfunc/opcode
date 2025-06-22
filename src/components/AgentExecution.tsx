@@ -580,7 +580,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
         <div className="flex-1 flex flex-col min-h-0">
           <div 
             ref={scrollContainerRef}
-            className="h-[600px] w-full overflow-y-auto p-6 space-y-8"
+            className="flex-1 w-full overflow-y-auto p-6 space-y-8"
             onScroll={() => {
               // Mark that user has scrolled manually
               if (!hasUserScrolled) {
