@@ -24,6 +24,7 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { StreamMessage } from "./StreamMessage";
 import { ExecutionControlBar } from "./ExecutionControlBar";
 import { ErrorBoundary } from "./ErrorBoundary";
+import { enhanceMessages, type EnhancedMessage } from "@/types/enhanced-messages";
 
 interface AgentExecutionProps {
   /**
@@ -73,6 +74,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
   const [model, setModel] = useState(agent.model || "sonnet");
   const [isRunning, setIsRunning] = useState(false);
   const [messages, setMessages] = useState<ClaudeStreamMessage[]>([]);
+  const [enhancedMessages, setEnhancedMessages] = useState<EnhancedMessage[]>([]);
   const [rawJsonlOutput, setRawJsonlOutput] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [copyPopoverOpen, setCopyPopoverOpen] = useState(false);
@@ -157,6 +159,12 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
       return total;
     }, 0);
     setTotalTokens(tokens);
+  }, [messages]);
+
+  // Enhance messages whenever they change
+  useEffect(() => {
+    const enhanced = enhanceMessages(messages);
+    setEnhancedMessages(enhanced);
   }, [messages]);
 
   const handleSelectPath = async () => {
@@ -594,7 +602,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
             }}
           >
             <div ref={messagesContainerRef}>
-            {messages.length === 0 && !isRunning && (
+            {enhancedMessages.length === 0 && !isRunning && (
               <div className="flex flex-col items-center justify-center h-full text-center">
                 <Terminal className="h-16 w-16 text-muted-foreground mb-4" />
                 <h3 className="text-lg font-medium mb-2">Ready to Execute</h3>
@@ -604,7 +612,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
               </div>
             )}
 
-            {isRunning && messages.length === 0 && (
+            {isRunning && enhancedMessages.length === 0 && (
               <div className="flex items-center justify-center h-full">
                 <div className="flex items-center gap-3">
                   <Loader2 className="h-6 w-6 animate-spin" />
@@ -614,7 +622,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
             )}
 
             <AnimatePresence>
-              {messages.map((message, index) => (
+              {enhancedMessages.map((message, index) => (
                 <motion.div
                   key={index}
                   initial={{ opacity: 0, y: 10 }}
@@ -623,7 +631,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
                   className="mb-4"
                 >
                   <ErrorBoundary>
-                    <StreamMessage message={message} streamMessages={messages} />
+                    <StreamMessage message={message} streamMessages={enhancedMessages} />
                   </ErrorBoundary>
                 </motion.div>
               ))}
@@ -724,7 +732,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
                 }
               }}
             >
-              {messages.length === 0 && !isRunning && (
+              {enhancedMessages.length === 0 && !isRunning && (
                 <div className="flex flex-col items-center justify-center h-full text-center">
                   <Terminal className="h-16 w-16 text-muted-foreground mb-4" />
                   <h3 className="text-lg font-medium mb-2">Ready to Execute</h3>
@@ -734,7 +742,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
                 </div>
               )}
 
-              {isRunning && messages.length === 0 && (
+              {isRunning && enhancedMessages.length === 0 && (
                 <div className="flex items-center justify-center h-full">
                   <div className="flex items-center gap-3">
                     <Loader2 className="h-6 w-6 animate-spin" />
@@ -744,7 +752,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
               )}
 
               <AnimatePresence>
-                {messages.map((message, index) => (
+                {enhancedMessages.map((message, index) => (
                   <motion.div
                     key={index}
                     initial={{ opacity: 0, y: 10 }}
@@ -753,7 +761,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
                     className="mb-4"
                   >
                     <ErrorBoundary>
-                      <StreamMessage message={message} streamMessages={messages} />
+                      <StreamMessage message={message} streamMessages={enhancedMessages} />
                     </ErrorBoundary>
                   </motion.div>
                 ))}

@@ -13,6 +13,8 @@ import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { claudeSyntaxTheme } from "@/lib/claudeSyntaxTheme";
 import type { ClaudeStreamMessage } from "./AgentExecution";
+import { CollapsibleToolResult } from "./CollapsibleToolResult";
+import type { EnhancedMessage } from "@/types/enhanced-messages";
 import {
   TodoWidget,
   LSWidget,
@@ -37,9 +39,9 @@ import {
 } from "./ToolWidgets";
 
 interface StreamMessageProps {
-  message: ClaudeStreamMessage;
+  message: ClaudeStreamMessage | EnhancedMessage;
   className?: string;
-  streamMessages: ClaudeStreamMessage[];
+  streamMessages: (ClaudeStreamMessage | EnhancedMessage)[];
 }
 
 /**
@@ -72,6 +74,9 @@ export const StreamMessage: React.FC<StreamMessageProps> = ({ message, className
     // Assistant message
     if (message.type === "assistant" && message.message) {
       const msg = message.message;
+      const enhancedMsg = message as EnhancedMessage;
+      const hasToolCalls = enhancedMsg.toolCalls && enhancedMsg.toolCalls.length > 0;
+      
       return (
         <Card className={cn("border-primary/20 bg-primary/5", className)}>
           <CardContent className="p-4">
@@ -121,62 +126,91 @@ export const StreamMessage: React.FC<StreamMessageProps> = ({ message, className
                     const toolName = content.name?.toLowerCase();
                     const input = content.input;
                     
-                    // Task tool - for sub-agent tasks
-                    if (toolName === "task" && input) {
-                      return <TaskWidget key={idx} description={input.description} prompt={input.prompt} />;
+                    // Function to render the appropriate tool widget
+                    const renderToolWidget = () => {
+                      // Task tool - for sub-agent tasks
+                      if (toolName === "task" && input) {
+                        return <TaskWidget description={input.description} prompt={input.prompt} />;
+                      }
+                      
+                      // Edit tool
+                      if (toolName === "edit" && input?.file_path) {
+                        return <EditWidget {...input} />;
+                      }
+                      
+                      // MultiEdit tool
+                      if (toolName === "multiedit" && input?.file_path && input?.edits) {
+                        return <MultiEditWidget {...input} />;
+                      }
+                      
+                      // MCP tools (starting with mcp__)
+                      if (content.name?.startsWith("mcp__")) {
+                        return <MCPWidget toolName={content.name} input={input} />;
+                      }
+                      
+                      // TodoWrite tool
+                      if (toolName === "todowrite" && input?.todos) {
+                        return <TodoWidget todos={input.todos} />;
+                      }
+                      
+                      // LS tool
+                      if (toolName === "ls" && input?.path) {
+                        return <LSWidget path={input.path} />;
+                      }
+                      
+                      // Read tool
+                      if (toolName === "read" && input?.file_path) {
+                        return <ReadWidget filePath={input.file_path} />;
+                      }
+                      
+                      // Glob tool
+                      if (toolName === "glob" && input?.pattern) {
+                        return <GlobWidget pattern={input.pattern} />;
+                      }
+                      
+                      // Bash tool
+                      if (toolName === "bash" && input?.command) {
+                        return <BashWidget command={input.command} description={input.description} />;
+                      }
+                      
+                      // Write tool
+                      if (toolName === "write" && input?.file_path && input?.content) {
+                        return <WriteWidget filePath={input.file_path} content={input.content} />;
+                      }
+                      
+                      // Grep tool
+                      if (toolName === "grep" && input?.pattern) {
+                        return <GrepWidget pattern={input.pattern} include={input.include} path={input.path} exclude={input.exclude} />;
+                      }
+                      
+                      // Default - return null, will be handled by CollapsibleToolResult
+                      return null;
+                    };
+                    
+                    // Check if we have enhanced message with tool results
+                    if (hasToolCalls && enhancedMsg.toolResults && content.id) {
+                      const toolCall = enhancedMsg.toolCalls?.find(tc => tc.id === content.id);
+                      const toolResult = enhancedMsg.toolResults.get(content.id);
+                      
+                      if (toolCall && toolResult) {
+                        // Only use collapsible widget when we have both tool call AND result
+                        return (
+                          <CollapsibleToolResult
+                            key={idx}
+                            toolCall={toolCall}
+                            toolResult={toolResult}
+                          />
+                        );
+                      }
                     }
                     
-                    // Edit tool
-                    if (toolName === "edit" && input?.file_path) {
-                      return <EditWidget key={idx} {...input} />;
+                    // Render the normal tool widget (for pending tool calls or non-enhanced messages)
+                    const widget = renderToolWidget();
+                    if (widget) {
+                      return <div key={idx}>{widget}</div>;
                     }
                     
-                    // MultiEdit tool
-                    if (toolName === "multiedit" && input?.file_path && input?.edits) {
-                      return <MultiEditWidget key={idx} {...input} />;
-                    }
-                    
-                    // MCP tools (starting with mcp__)
-                    if (content.name?.startsWith("mcp__")) {
-                      return <MCPWidget key={idx} toolName={content.name} input={input} />;
-                    }
-                    
-                    // TodoWrite tool
-                    if (toolName === "todowrite" && input?.todos) {
-                      return <TodoWidget key={idx} todos={input.todos} />;
-                    }
-                    
-                    // LS tool
-                    if (toolName === "ls" && input?.path) {
-                      return <LSWidget key={idx} path={input.path} />;
-                    }
-                    
-                    // Read tool
-                    if (toolName === "read" && input?.file_path) {
-                      return <ReadWidget key={idx} filePath={input.file_path} />;
-                    }
-                    
-                    // Glob tool
-                    if (toolName === "glob" && input?.pattern) {
-                      return <GlobWidget key={idx} pattern={input.pattern} />;
-                    }
-                    
-                    // Bash tool
-                    if (toolName === "bash" && input?.command) {
-                      return <BashWidget key={idx} command={input.command} description={input.description} />;
-                    }
-                    
-                    // Write tool
-                    if (toolName === "write" && input?.file_path && input?.content) {
-                      return <WriteWidget key={idx} filePath={input.file_path} content={input.content} />;
-                    }
-                    
-                    // Grep tool
-                    if (toolName === "grep" && input?.pattern) {
-                      return <GrepWidget key={idx} pattern={input.pattern} include={input.include} path={input.path} exclude={input.exclude} />;
-                    }
-                    
-                    // Default tool display
+                    // Fallback to basic tool display
                     return (
                       <div key={idx} className="space-y-2">
                         <div className="flex items-center gap-2">

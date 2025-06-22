@@ -12,6 +12,7 @@ import type { AgentRun } from '@/lib/api';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { StreamMessage } from './StreamMessage';
 import { ErrorBoundary } from './ErrorBoundary';
+import { enhanceMessages, type EnhancedMessage } from '@/types/enhanced-messages';
 
 interface SessionOutputViewerProps {
   session: AgentRun;
@@ -39,6 +40,7 @@ export interface ClaudeStreamMessage {
 
 export function SessionOutputViewer({ session, onClose, className }: SessionOutputViewerProps) {
   const [messages, setMessages] = useState<ClaudeStreamMessage[]>([]);
+  const [enhancedMessages, setEnhancedMessages] = useState<EnhancedMessage[]>([]);
   const [rawJsonlOutput, setRawJsonlOutput] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -88,6 +90,12 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
       scrollToBottom();
     }
   }, [messages, hasUserScrolled, isFullscreen]);
+
+  // Enhance messages whenever they change
+  useEffect(() => {
+    const enhanced = enhanceMessages(messages);
+    setEnhancedMessages(enhanced);
+  }, [messages]);
 
   const loadOutput = async (skipCache = false) => {
     if (!session.id) return;
@@ -309,13 +317,13 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
                       </Badge>
                     )}
                     <span className="text-xs text-muted-foreground">
-                      {messages.length} messages
+                      {enhancedMessages.length} messages
                     </span>
                   </div>
                 </div>
               </div>
               <div className="flex items-center space-x-2">
-                {messages.length > 0 && (
+                {enhancedMessages.length > 0 && (
                   <>
                     <Button
                       variant="outline"
@@ -402,7 +410,7 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
                   }
                 }}
               >
-                {messages.length === 0 ? (
+                {enhancedMessages.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-center">
                     {session.status === 'running' ? (
                       <>
@@ -431,7 +439,7 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
                 ) : (
                   <>
                     <AnimatePresence>
-                      {messages.map((message, index) => (
+                      {enhancedMessages.map((message, index) => (
                         <motion.div
                           key={index}
                           initial={{ opacity: 0, y: 10 }}
@@ -439,7 +447,7 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
                           transition={{ duration: 0.2 }}
                         >
                           <ErrorBoundary>
-                            <StreamMessage message={message} streamMessages={messages} />
+                            <StreamMessage message={message} streamMessages={enhancedMessages} />
                           </ErrorBoundary>
                         </motion.div>
                       ))}
@@ -536,7 +544,7 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
                 }
               }}
             >
-              {messages.length === 0 ? (
+              {enhancedMessages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center">
                   {session.status === 'running' ? (
                     <>
@@ -555,7 +563,7 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
               ) : (
                 <>
                   <AnimatePresence>
-                    {messages.map((message, index) => (
+                    {enhancedMessages.map((message, index) => (
                       <motion.div
                         key={index}
                         initial={{ opacity: 0, y: 10 }}
@@ -563,7 +571,7 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
                         transition={{ duration: 0.2 }}
                       >
                         <ErrorBoundary>
-                          <StreamMessage message={message} streamMessages={messages} />
+                          <StreamMessage message={message} streamMessages={enhancedMessages} />
                         </ErrorBoundary>
                       </motion.div>
                     ))}
