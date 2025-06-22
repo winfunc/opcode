@@ -24,6 +24,8 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { StreamMessage } from "./StreamMessage";
 import { ExecutionControlBar } from "./ExecutionControlBar";
 import { ErrorBoundary } from "./ErrorBoundary";
+import { enhanceMessages, type EnhancedMessage } from "@/types/enhanced-messages";
+import { useVirtualizer } from "@tanstack/react-virtual";
 
 interface AgentExecutionProps {
   /**
@@ -73,6 +75,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
   const [model, setModel] = useState(agent.model || "sonnet");
   const [isRunning, setIsRunning] = useState(false);
   const [messages, setMessages] = useState<ClaudeStreamMessage[]>([]);
+  const [enhancedMessages, setEnhancedMessages] = useState<EnhancedMessage[]>([]);
   const [rawJsonlOutput, setRawJsonlOutput] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [copyPopoverOpen, setCopyPopoverOpen] = useState(false);
@@ -91,6 +94,21 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
   const fullscreenMessagesEndRef = useRef<HTMLDivElement>(null);
   const unlistenRefs = useRef<UnlistenFn[]>([]);
   const elapsedTimeIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Virtualizers for efficient, smooth scrolling of potentially very long outputs
+  const rowVirtualizer = useVirtualizer({
+    count: enhancedMessages.length,
+    getScrollElement: () => scrollContainerRef.current,
+    estimateSize: () => 150, // fallback estimate; dynamically measured afterwards
+    overscan: 5,
+  });
+
+  const fullscreenRowVirtualizer = useVirtualizer({
+    count: enhancedMessages.length,
+    getScrollElement: () => fullscreenScrollRef.current,
+    estimateSize: () => 150,
+    overscan: 5,
+  });
 
   useEffect(() => {
     // Clean up listeners on unmount
@@ -114,17 +132,19 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
   };
 
   useEffect(() => {
-    // Only auto-scroll if user hasn't manually scrolled OR if they're at the bottom
+    if (enhancedMessages.length === 0) return;
+
+    // Auto-scroll only if the user has not manually scrolled OR they are still at the bottom
     const shouldAutoScroll = !hasUserScrolled || isAtBottom();
-    
+
     if (shouldAutoScroll) {
-      const endRef = isFullscreenModalOpen ? fullscreenMessagesEndRef.current : messagesEndRef.current;
-      if (endRef) {
-        endRef.scrollIntoView({ behavior: "smooth" });
+      if (isFullscreenModalOpen) {
+        fullscreenRowVirtualizer.scrollToIndex(enhancedMessages.length - 1, { align: "end", behavior: "smooth" });
+      } else {
+        rowVirtualizer.scrollToIndex(enhancedMessages.length - 1, { align: "end", behavior: "smooth" });
       }
     }
-  }, [messages, hasUserScrolled, isFullscreenModalOpen]);
-
+  }, [enhancedMessages.length, hasUserScrolled, isFullscreenModalOpen, rowVirtualizer, fullscreenRowVirtualizer]);
 
   // Update elapsed time while running
   useEffect(() => {
@@ -157,6 +177,12 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
       return total;
     }, 0);
     setTotalTokens(tokens);
+  }, [messages]);
+
+  // Enhance messages whenever they change
+  useEffect(() => {
+    const enhanced = enhanceMessages(messages);
+    setEnhancedMessages(enhanced);
   }, [messages]);
 
   const handleSelectPath = async () => {
@@ -580,7 +606,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
         <div className="flex-1 flex flex-col min-h-0">
           <div 
             ref={scrollContainerRef}
-            className="h-[600px] w-full overflow-y-auto p-6 space-y-8"
+            className="flex-1 w-full overflow-y-auto p-6 space-y-8"
             onScroll={() => {
               // Mark that user has scrolled manually
               if (!hasUserScrolled) {
@@ -594,7 +620,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
             }}
           >
             <div ref={messagesContainerRef}>
-            {messages.length === 0 && !isRunning && (
+            {enhancedMessages.length === 0 && !isRunning && (
               <div className="flex flex-col items-center justify-center h-full text-center">
                 <Terminal className="h-16 w-16 text-muted-foreground mb-4" />
                 <h3 className="text-lg font-medium mb-2">Ready to Execute</h3>
@@ -604,7 +630,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
               </div>
             )}
 
-            {isRunning && messages.length === 0 && (
+            {isRunning && enhancedMessages.length === 0 && (
               <div className="flex items-center justify-center h-full">
                 <div className="flex items-center gap-3">
                   <Loader2 className="h-6 w-6 animate-spin" />
@@ -613,21 +639,32 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
               </div>
             )}
 
-            <AnimatePresence>
-              {messages.map((message, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="mb-4"
-                >
-                  <ErrorBoundary>
-                    <StreamMessage message={message} streamMessages={messages} />
-                  </ErrorBoundary>
-                </motion.div>
-              ))}
-            </AnimatePresence>
+            <div
+              className="relative w-full max-w-5xl mx-auto"
+              style={{ height: `${rowVirtualizer.getTotalSize()}px` }}
+            >
+              <AnimatePresence>
+                {rowVirtualizer.getVirtualItems().map((virtualItem) => {
+                  const message = enhancedMessages[virtualItem.index];
+                  return (
+                    <motion.div
+                      key={virtualItem.key}
+                      data-index={virtualItem.index}
+                      ref={(el) => el && rowVirtualizer.measureElement(el)}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="absolute inset-x-4 pb-4"
+                      style={{ top: virtualItem.start }}
+                    >
+                      <ErrorBoundary>
+                        <StreamMessage message={message} streamMessages={enhancedMessages} />
+                      </ErrorBoundary>
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
+            </div>
             
             <div ref={messagesEndRef} />
             </div>
@@ -724,7 +761,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
                 }
               }}
             >
-              {messages.length === 0 && !isRunning && (
+              {enhancedMessages.length === 0 && !isRunning && (
                 <div className="flex flex-col items-center justify-center h-full text-center">
                   <Terminal className="h-16 w-16 text-muted-foreground mb-4" />
                   <h3 className="text-lg font-medium mb-2">Ready to Execute</h3>
@@ -734,7 +771,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
                 </div>
               )}
 
-              {isRunning && messages.length === 0 && (
+              {isRunning && enhancedMessages.length === 0 && (
                 <div className="flex items-center justify-center h-full">
                   <div className="flex items-center gap-3">
                     <Loader2 className="h-6 w-6 animate-spin" />
@@ -743,21 +780,32 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
                 </div>
               )}
 
-              <AnimatePresence>
-                {messages.map((message, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="mb-4"
-                  >
-                    <ErrorBoundary>
-                      <StreamMessage message={message} streamMessages={messages} />
-                    </ErrorBoundary>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
+              <div
+                className="relative w-full max-w-5xl mx-auto"
+                style={{ height: `${fullscreenRowVirtualizer.getTotalSize()}px` }}
+              >
+                <AnimatePresence>
+                  {fullscreenRowVirtualizer.getVirtualItems().map((virtualItem) => {
+                    const message = enhancedMessages[virtualItem.index];
+                    return (
+                      <motion.div
+                        key={virtualItem.key}
+                        data-index={virtualItem.index}
+                        ref={(el) => el && fullscreenRowVirtualizer.measureElement(el)}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="absolute inset-x-4 pb-4"
+                        style={{ top: virtualItem.start }}
+                      >
+                        <ErrorBoundary>
+                          <StreamMessage message={message} streamMessages={enhancedMessages} />
+                        </ErrorBoundary>
+                      </motion.div>
+                    );
+                  })}
+                </AnimatePresence>
+              </div>
               
               <div ref={fullscreenMessagesEndRef} />
             </div>

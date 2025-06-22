@@ -50,6 +50,7 @@ import { Button } from "@/components/ui/button";
 import { createPortal } from "react-dom";
 import * as Diff from 'diff';
 import { Card, CardContent } from "@/components/ui/card";
+import { detectLinks, makeLinksClickable } from "@/lib/linkDetector";
 
 /**
  * Widget for TodoWrite tool - displays a beautiful TODO list
@@ -1139,33 +1140,57 @@ export const CommandWidget: React.FC<{
  */
 export const CommandOutputWidget: React.FC<{ 
   output: string;
-}> = ({ output }) => {
+  onLinkDetected?: (url: string) => void;
+}> = ({ output, onLinkDetected }) => {
+  // Check for links on mount and when output changes
+  React.useEffect(() => {
+    if (output && onLinkDetected) {
+      const links = detectLinks(output);
+      if (links.length > 0) {
+        // Notify about the first detected link
+        onLinkDetected(links[0].fullUrl);
+      }
+    }
+  }, [output, onLinkDetected]);
+
   // Parse ANSI codes for basic styling
   const parseAnsiToReact = (text: string) => {
     // Simple ANSI parsing - handles bold (\u001b[1m) and reset (\u001b[22m)
     const parts = text.split(/(\u001b\[\d+m)/);
     let isBold = false;
+    const elements: React.ReactNode[] = [];
     
-    return parts.map((part, idx) => {
+    parts.forEach((part, idx) => {
       if (part === '\u001b[1m') {
         isBold = true;
-        return null;
+        return;
       } else if (part === '\u001b[22m') {
         isBold = false;
-        return null;
+        return;
       } else if (part.match(/\u001b\[\d+m/)) {
         // Ignore other ANSI codes for now
-        return null;
+        return;
       }
       
-      if (!part) return null;
+      if (!part) return;
       
-      return (
-        <span key={idx} className={isBold ? 'font-bold' : ''}>
-          {part}
+      // Make links clickable within this part
+      const linkElements = makeLinksClickable(part, (url) => {
+        onLinkDetected?.(url);
+      });
+      
+      if (isBold) {
+        elements.push(
+          <span key={idx} className="font-bold">
+            {linkElements}
         </span>
       );
+      } else {
+        elements.push(...linkElements);
+      }
     });
+    
+    return elements;
   };
 
   return (

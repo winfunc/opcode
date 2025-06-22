@@ -378,26 +378,46 @@ button:disabled,
 
 /* Rotating symbol animation */
 @keyframes rotate-symbol {
-  0% { content: "◐"; }
-  25% { content: "◓"; }
-  50% { content: "◑"; }
-  75% { content: "◒"; }
-  100% { content: "◐"; }
+  0%   { content: "◐"; transform: scale(1); }
+  25%  { content: "◓"; transform: scale(10); }
+  50%  { content: "◑"; transform: scale(1); }
+  75%  { content: "◒"; transform: scale(10); }
+  100% { content: "◐"; transform: scale(1); }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .rotating-symbol {
   display: inline-block;
   vertical-align: text-bottom;
   line-height: 1;
+  animation: fade-in 0.2s ease-out;
+  font-weight: normal;
 }
 
 .rotating-symbol::before {
   content: "◐";
-  animation: rotate-symbol 2s linear infinite;
+  animation: rotate-symbol 1.6s steps(4, end) infinite;
   display: inline-block;
   font-size: inherit;
-  line-height: inherit;
+  line-height: 1;
   vertical-align: baseline;
+  transform-origin: center;
+}
+
+/* Make the rotating symbol more prominent at larger sizes */
+.rotating-symbol.text-xl::before,
+.rotating-symbol.text-2xl::before {
+  font-weight: 900;
 }
 
 /* Shimmer hover effect */
@@ -559,4 +579,41 @@ code::-webkit-scrollbar-thumb:hover,
 
 .animate-scanlines {
   animation: scanlines 8s linear infinite;
+}
+
+/* Screenshot Shutter Animation */
+@keyframes shutterFlash {
+  0% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.shutter-flash {
+  animation: shutterFlash 0.5s ease-in-out;
+}
+
+/* Image Move to Input Animation */
+@keyframes moveToInput {
+  0% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(0.3) translateY(50%);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(0.1) translateY(100vh);
+    opacity: 0;
+  }
+}
+
+.image-move-to-input {
+  animation: moveToInput 0.8s ease-in-out forwards;
 } 
