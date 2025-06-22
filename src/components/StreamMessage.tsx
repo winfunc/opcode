@@ -42,12 +42,13 @@ interface StreamMessageProps {
   message: ClaudeStreamMessage | EnhancedMessage;
   className?: string;
   streamMessages: (ClaudeStreamMessage | EnhancedMessage)[];
+  onLinkDetected?: (url: string) => void;
 }
 
 /**
  * Component to render a single Claude Code stream message
  */
-export const StreamMessage: React.FC<StreamMessageProps> = ({ message, className, streamMessages }) => {
+const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, className, streamMessages, onLinkDetected }) => {
   try {
     // Skip rendering for meta messages that don't have meaningful content
     if (message.isMeta && !message.leafUuid && !message.summary) {
@@ -284,7 +285,7 @@ export const StreamMessage: React.FC<StreamMessageProps> = ({ message, className
                     const stdoutMatch = contentStr.match(/<local-command-stdout>([\s\S]*?)<\/local-command-stdout>/);
                     if (stdoutMatch) {
                       const [, output] = stdoutMatch;
-                      return <CommandOutputWidget output={output} />;
+                      return <CommandOutputWidget output={output} onLinkDetected={onLinkDetected} />;
                     }
                     
                     // Otherwise render as plain text
@@ -631,4 +632,6 @@ export const StreamMessage: React.FC<StreamMessageProps> = ({ message, className
       </Card>
     );
   }
-}; 
+};
+
+export const StreamMessage = React.memo(StreamMessageComponent); 
