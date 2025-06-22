@@ -35,6 +35,9 @@ use commands::sandbox::{
     list_sandbox_violations, log_sandbox_violation, clear_sandbox_violations, get_sandbox_violation_stats,
     export_sandbox_profile, export_all_sandbox_profiles, import_sandbox_profiles,
 };
+use commands::screenshot::{
+    capture_url_screenshot, cleanup_screenshot_temp_files,
+};
 use commands::usage::{
     get_usage_stats, get_usage_by_date_range, get_usage_details, get_session_stats,
 };
@@ -178,7 +181,9 @@ fn main() {
             mcp_reset_project_choices,
             mcp_get_server_status,
             mcp_read_project_config,
-            mcp_save_project_config
+            mcp_save_project_config,
+            capture_url_screenshot,
+            cleanup_screenshot_temp_files
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
