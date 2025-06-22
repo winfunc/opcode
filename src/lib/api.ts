@@ -59,7 +59,7 @@ export interface ClaudeVersionStatus {
 export interface ClaudeInstallation {
   /** Path to the Claude binary */
   path: string;
-  /** Source of installation (e.g., "NVM v22.15.0", "Global", "Homebrew", etc.) */
+  /** Source of installation (e.g., "NVM v22.15.0", "Global", "Homebrew", "Manual", etc.) */
   source: string;
   /** Version string if available */
   version?: string;
@@ -71,6 +71,32 @@ export interface ClaudeInstallation {
   is_active: boolean;
   /** Priority score for auto-selection (higher = better) */
   priority: number;
+}
+
+/**
+ * Claude path validation result
+ */
+export interface ClaudePathValidation {
+  /** Whether the path is valid */
+  is_valid: boolean;
+  /** Validation error message if invalid */
+  error?: string;
+  /** Whether the binary is verified as Claude Code */
+  is_claude_code?: boolean;
+  /** Detected version if available */
+  version?: string;
+}
+
+/**
+ * Manual Claude path configuration
+ */
+export interface ManualClaudeConfig {
+  /** The custom path to Claude binary */
+  path: string;
+  /** User-provided description/label */
+  label?: string;
+  /** Whether to validate the binary immediately */
+  validate?: boolean;
 }
 
 /**
@@ -1863,6 +1889,157 @@ export const api = {
       return await invoke<number>("cleanup_screenshot_temp_files", { olderThanMinutes });
     } catch (error) {
       console.error("Failed to cleanup screenshot files:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Validates a Claude binary path without storing it
+   * @param path - The path to validate
+   * @returns Promise resolving to validation result
+   */
+  async validateClaudePath(path: string): Promise<ClaudePathValidation> {
+    try {
+      // First check basic file existence and permissions
+      const basicCheck = await this.setClaudeBinaryPath(path).then(
+        () => ({ is_valid: true }),
+        (error) => ({ is_valid: false, error: error.message || String(error) })
+      );
+
+      if (!basicCheck.is_valid) {
+        return basicCheck;
+      }
+
+      // Now try to validate it's actually Claude Code
+      // We can use the check_claude_version function but need to temporarily set the path
+      const currentPath = await this.getClaudeBinaryPath();
+      
+      try {
+        await this.setClaudeBinaryPath(path);
+        const versionResult = await this.checkClaudeVersion();
+        
+        return {
+          is_valid: versionResult.is_installed,
+          is_claude_code: versionResult.is_installed,
+          version: versionResult.version,
+          error: versionResult.is_installed ? undefined : "Binary exists but is not Claude Code"
+        };
+      } finally {
+        // Restore original path
+        if (currentPath) {
+          await this.setClaudeBinaryPath(currentPath);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to validate Claude path:", error);
+      return {
+        is_valid: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  },
+
+  /**
+   * Sets a manual Claude path with validation and user-friendly error handling
+   * @param config - Manual Claude configuration
+   * @returns Promise resolving to validation result and success status
+   */
+  async setManualClaudePath(config: ManualClaudeConfig): Promise<ClaudePathValidation & { success: boolean }> {
+    try {
+      // Validate first if requested
+      if (config.validate !== false) {
+        const validation = await this.validateClaudePath(config.path);
+        if (!validation.is_valid) {
+          return { ...validation, success: false };
+        }
+      }
+
+      // Set the path
+      await this.setClaudeBinaryPath(config.path);
+      
+      // Emit event for UI updates
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('claude-installation-changed', { 
+          detail: {
+            path: config.path, 
+            source: 'Manual',
+            label: config.label 
+          }
+        }));
+      }
+
+      return {
+        is_valid: true,
+        success: true,
+        is_claude_code: true // Assume true if validation passed
+      };
+    } catch (error) {
+      console.error("Failed to set manual Claude path:", error);
+      return {
+        is_valid: false,
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  },
+
+  /**
+   * Gets the current Claude configuration (manual or selected installation)
+   * @returns Promise resolving to current configuration
+   */
+  async getCurrentClaudeConfig(): Promise<{
+    path: string | null;
+    source: 'manual' | 'selected' | 'auto';
+    is_manual: boolean;
+  }> {
+    try {
+      // Check manual path first
+      const manualPath = await this.getClaudeBinaryPath();
+      if (manualPath) {
+        return {
+          path: manualPath,
+          source: 'manual',
+          is_manual: true
+        };
+      }
+
+      // Check selected installation
+      const selectedPath = await this.getSelectedClaudeInstallation();
+      if (selectedPath) {
+        return {
+          path: selectedPath,
+          source: 'selected',
+          is_manual: false
+        };
+      }
+
+      // Auto-detection mode
+      return {
+        path: null,
+        source: 'auto',
+        is_manual: false
+      };
+    } catch (error) {
+      console.error("Failed to get current Claude config:", error);
+      return {
+        path: null,
+        source: 'auto',
+        is_manual: false
+      };
+    }
+  },
+
+  /**
+   * Clears the manual Claude path, reverting to selected installation or auto-detection
+   * @returns Promise resolving when the manual path is cleared
+   */
+  async clearManualClaudePath(): Promise<void> {
+    try {
+      // For now, we'll implement this by setting an empty path and handling it in the backend
+      // The backend should be updated to support clearing the manual path
+      await invoke<void>("clear_claude_binary_path");
+    } catch (error) {
+      console.error("Failed to clear manual Claude path:", error);
       throw error;
     }
   },

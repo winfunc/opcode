@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { api, ClaudeInstallation } from "@/lib/api";
+import { api, ClaudeInstallation, ClaudePathValidation } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,7 +16,8 @@ import {
   Settings,
   AlertCircle,
   Cpu,
-  HardDrive
+  HardDrive,
+  Loader2
 } from "lucide-react";
 
 interface ClaudeVersionPickerProps {
@@ -39,11 +40,15 @@ export function ClaudeVersionPicker({
   const [selectedPath, setSelectedPath] = useState<string>("");
   const [customPath, setCustomPath] = useState<string>("");
   const [currentSelection, setCurrentSelection] = useState<string | null>(null);
+  const [currentManualPath, setCurrentManualPath] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isDiscovering, setIsDiscovering] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingSelection, setPendingSelection] = useState<string>("");
+  const [customPathValidation, setCustomPathValidation] = useState<ClaudePathValidation | null>(null);
+  const [validationError, setValidationError] = useState<string>("");
 
   // Load installations and current selection when dialog opens
   useEffect(() => {
@@ -73,9 +78,19 @@ export function ClaudeVersionPicker({
 
   const loadCurrentSelection = async () => {
     try {
+      // Check for manual path first (takes precedence)
+      const manualPath = await api.getClaudeBinaryPath();
+      setCurrentManualPath(manualPath);
+      
+      // Then check for selected installation
       const current = await api.getSelectedClaudeInstallation();
       setCurrentSelection(current);
-      if (current) {
+      
+      // Set the display path based on priority
+      if (manualPath) {
+        setCustomPath(manualPath);
+        setShowCustomInput(true);
+      } else if (current) {
         setSelectedPath(current);
       }
     } catch (error) {
@@ -99,6 +114,43 @@ export function ClaudeVersionPicker({
     setPendingSelection("");
   };
 
+  const validateCustomPath = async (path: string) => {
+    if (!path.trim()) {
+      setCustomPathValidation(null);
+      setValidationError("");
+      return;
+    }
+
+    setIsValidating(true);
+    setValidationError("");
+    
+    try {
+      const validation = await api.validateClaudePath(path.trim());
+      setCustomPathValidation(validation);
+      
+      if (!validation.is_valid) {
+        setValidationError(validation.error || "Invalid path");
+      }
+    } catch (error) {
+      console.error("Failed to validate custom path:", error);
+      setValidationError("Failed to validate path");
+      setCustomPathValidation({ is_valid: false, error: "Validation failed" });
+    } finally {
+      setIsValidating(false);
+    }
+  };
+
+  // Debounced validation for custom path
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (customPath && showCustomInput) {
+        validateCustomPath(customPath);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [customPath, showCustomInput]);
+
   const handleSave = async () => {
     const pathToSave = showCustomInput ? customPath.trim() : selectedPath;
     
@@ -107,13 +159,36 @@ export function ClaudeVersionPicker({
       return;
     }
 
+    // If custom path is being used, validate it first
+    if (showCustomInput && customPathValidation && !customPathValidation.is_valid) {
+      onError(validationError || "Please enter a valid Claude binary path");
+      return;
+    }
+
     setIsLoading(true);
     try {
-      await api.setSelectedClaudeInstallation(pathToSave);
+      if (showCustomInput) {
+        // Use manual path API with validation
+        const result = await api.setManualClaudePath({
+          path: pathToSave,
+          label: "Custom Path",
+          validate: true
+        });
+        
+        if (!result.success) {
+          throw new Error(result.error || "Failed to set manual Claude path");
+        }
+      } else {
+        // Use selected installation API
+        await api.setSelectedClaudeInstallation(pathToSave);
+      }
       
       // Emit global event to notify other components of Claude installation change
       window.dispatchEvent(new CustomEvent('claude-installation-changed', { 
-        detail: { path: pathToSave } 
+        detail: { 
+          path: pathToSave,
+          source: showCustomInput ? 'Manual' : 'Selected'
+        } 
       }));
       
       onSuccess();
@@ -127,13 +202,23 @@ export function ClaudeVersionPicker({
   };
 
   const handleClearSelection = async () => {
-    if (!currentSelection) return;
+    if (!currentSelection && !currentManualPath) return;
     
     setIsLoading(true);
     try {
-      await api.clearSelectedClaudeInstallation();
-      setCurrentSelection(null);
-      setSelectedPath("");
+      // Clear manual path first if it exists
+      if (currentManualPath) {
+        await api.clearManualClaudePath();
+        setCurrentManualPath(null);
+        setCustomPath("");
+      }
+      
+      // Clear selected installation if it exists
+      if (currentSelection) {
+        await api.clearSelectedClaudeInstallation();
+        setCurrentSelection(null);
+        setSelectedPath("");
+      }
       
       // Emit global event to notify other components of Claude installation change
       window.dispatchEvent(new CustomEvent('claude-installation-changed', { 
@@ -199,14 +284,19 @@ export function ClaudeVersionPicker({
                 </div>
               )}
 
-              {currentSelection && (
+              {(currentManualPath || currentSelection) && (
                 <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-950/20 rounded-md border border-green-200 dark:border-green-800">
                   <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
                   <div className="text-sm text-green-800 dark:text-green-200">
-                    <span className="font-medium">Currently selected:</span>
+                    <span className="font-medium">
+                      Currently configured:
+                      {currentManualPath && (
+                        <Badge variant="secondary" className="ml-2 text-xs">MANUAL</Badge>
+                      )}
+                    </span>
                     <br />
                     <code className="text-xs bg-green-100 dark:bg-green-900/30 px-1 py-0.5 rounded">
-                      {currentSelection}
+                      {currentManualPath || currentSelection}
                     </code>
                   </div>
                 </div>
@@ -347,14 +437,47 @@ export function ClaudeVersionPicker({
               </div>
               
               {showCustomInput && (
-                <div className="space-y-2">
-                  <Input
-                    type="text"
-                    placeholder="/usr/local/bin/claude or /Users/name/.nvm/versions/node/v22.15.0/bin/claude"
-                    value={customPath}
-                    onChange={(e) => setCustomPath(e.target.value)}
-                    className="font-mono text-sm"
-                  />
+                <div className="space-y-3">
+                  <div className="relative">
+                    <Input
+                      type="text"
+                      placeholder="/usr/local/bin/claude or /Users/name/.nvm/versions/node/v22.15.0/bin/claude"
+                      value={customPath}
+                      onChange={(e) => setCustomPath(e.target.value)}
+                      className={`font-mono text-sm pr-10 ${
+                        customPathValidation?.is_valid === false ? 'border-red-500' : 
+                        customPathValidation?.is_valid === true ? 'border-green-500' : ''
+                      }`}
+                    />
+                    {isValidating && (
+                      <Loader2 className="absolute right-3 top-2.5 w-4 h-4 animate-spin text-muted-foreground" />
+                    )}
+                    {!isValidating && customPathValidation?.is_valid === true && (
+                      <CheckCircle className="absolute right-3 top-2.5 w-4 h-4 text-green-500" />
+                    )}
+                    {!isValidating && customPathValidation?.is_valid === false && (
+                      <AlertTriangle className="absolute right-3 top-2.5 w-4 h-4 text-red-500" />
+                    )}
+                  </div>
+                  
+                  {/* Validation feedback */}
+                  {validationError && (
+                    <div className="flex items-center gap-2 p-2 bg-red-50 dark:bg-red-950/20 rounded-md border border-red-200 dark:border-red-800">
+                      <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400" />
+                      <p className="text-sm text-red-800 dark:text-red-200">{validationError}</p>
+                    </div>
+                  )}
+                  
+                  {customPathValidation?.is_valid && customPathValidation.version && (
+                    <div className="flex items-center gap-2 p-2 bg-green-50 dark:bg-green-950/20 rounded-md border border-green-200 dark:border-green-800">
+                      <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
+                      <p className="text-sm text-green-800 dark:text-green-200">
+                        <span className="font-medium">Verified Claude Code</span>
+                        {customPathValidation.version && ` (${customPathValidation.version})`}
+                      </p>
+                    </div>
+                  )}
+                  
                   <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
                     <Terminal className="w-4 h-4 text-muted-foreground" />
                     <p className="text-sm text-muted-foreground">
@@ -378,7 +501,7 @@ export function ClaudeVersionPicker({
               Installation Guide
             </Button>
             
-            {currentSelection && (
+            {(currentSelection || currentManualPath) && (
               <Button
                 variant="outline"
                 onClick={handleClearSelection}
@@ -398,9 +521,16 @@ export function ClaudeVersionPicker({
             
             <Button 
               onClick={handleSave} 
-              disabled={isLoading || (!selectedPath && !customPath.trim())}
+              disabled={
+                isLoading || 
+                isValidating ||
+                (!selectedPath && !customPath.trim()) ||
+                (showCustomInput && customPathValidation?.is_valid === false)
+              }
             >
-              {isLoading ? "Saving..." : "Save Selection"}
+              {isLoading ? "Saving..." : 
+               isValidating ? "Validating..." :
+               "Save Selection"}
             </Button>
           </DialogFooter>
         </DialogContent>
