@@ -44,6 +44,10 @@ interface FloatingPromptInputProps {
   className?: string;
 }
 
+export interface FloatingPromptInputRef {
+  addImage: (imagePath: string) => void;
+}
+
 type Model = {
   id: "sonnet" | "opus";
   name: string;
@@ -70,19 +74,21 @@ const MODELS: Model[] = [
  * FloatingPromptInput component - Fixed position prompt input with model picker
  * 
  * @example
+ * const promptRef = useRef<FloatingPromptInputRef>(null);
  * <FloatingPromptInput
+ *   ref={promptRef}
  *   onSend={(prompt, model) => console.log('Send:', prompt, model)}
  *   isLoading={false}
  * />
  */
-export const FloatingPromptInput: React.FC<FloatingPromptInputProps> = ({
+export const FloatingPromptInput = React.forwardRef<FloatingPromptInputRef, FloatingPromptInputProps>(({
   onSend,
   isLoading = false,
   disabled = false,
   defaultModel = "sonnet",
   projectPath,
   className,
-}) => {
+}, ref) => {
   const [prompt, setPrompt] = useState("");
   const [selectedModel, setSelectedModel] = useState<"sonnet" | "opus">(defaultModel);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -96,6 +102,34 @@ export const FloatingPromptInput: React.FC<FloatingPromptInputProps> = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const expandedTextareaRef = useRef<HTMLTextAreaElement>(null);
   const unlistenDragDropRef = useRef<(() => void) | null>(null);
+  
+  // Expose a method to add images programmatically
+  React.useImperativeHandle(
+    ref,
+    () => ({
+      addImage: (imagePath: string) => {
+        setPrompt(currentPrompt => {
+          const existingPaths = extractImagePaths(currentPrompt);
+          if (existingPaths.includes(imagePath)) {
+            return currentPrompt; // Image already added
+          }
+          
+          const mention = `@${imagePath}`;
+          const newPrompt = currentPrompt + (currentPrompt.endsWith(' ') || currentPrompt === '' ? '' : ' ') + mention + ' ';
+          
+          // Focus the textarea
+          setTimeout(() => {
+            const target = isExpanded ? expandedTextareaRef.current : textareaRef.current;
+            target?.focus();
+            target?.setSelectionRange(newPrompt.length, newPrompt.length);
+          }, 0);
+          
+          return newPrompt;
+        });
+      }
+    }),
+    [isExpanded]
+  );
 
   // Helper function to check if a file is an image
   const isImageFile = (path: string): boolean => {
@@ -410,21 +444,21 @@ export const FloatingPromptInput: React.FC<FloatingPromptInputProps> = ({
                   </Button>
                 </div>
                 
-                <Button
-                  onClick={handleSend}
-                  disabled={!prompt.trim() || isLoading || disabled}
-                  size="sm"
-                  className="min-w-[80px]"
-                >
-                  {isLoading ? (
-                    <div className="rotating-symbol text-primary-foreground"></div>
-                  ) : (
-                    <>
-                      <Send className="mr-2 h-4 w-4" />
-                      Send
-                    </>
-                  )}
-                </Button>
+                {isLoading ? (
+                  <div className="flex items-center justify-center min-w-[60px] h-10">
+                    <div className="rotating-symbol text-primary text-2xl"></div>
+                  </div>
+                ) : (
+                  <Button
+                    onClick={handleSend}
+                    disabled={!prompt.trim() || disabled}
+                    size="sm"
+                    className="min-w-[80px]"
+                  >
+                    <Send className="mr-2 h-4 w-4" />
+                    Send
+                  </Button>
+                )}
               </div>
             </motion.div>
           </motion.div>
@@ -541,18 +575,20 @@ export const FloatingPromptInput: React.FC<FloatingPromptInputProps> = ({
               </div>
               
               {/* Send Button */}
-              <Button
-                onClick={handleSend}
-                disabled={!prompt.trim() || isLoading || disabled}
-                size="default"
-                className="min-w-[60px]"
-              >
-                {isLoading ? (
-                  <div className="rotating-symbol text-primary-foreground"></div>
-                ) : (
+              {isLoading ? (
+                <div className="flex items-center justify-center min-w-[60px] h-10">
+                  <div className="rotating-symbol text-primary text-2xl"></div>
+                </div>
+              ) : (
+                <Button
+                  onClick={handleSend}
+                  disabled={!prompt.trim() || disabled}
+                  size="default"
+                  className="min-w-[60px]"
+                >
                   <Send className="h-4 w-4" />
-                )}
-              </Button>
+                </Button>
+              )}
             </div>
             
             <div className="mt-2 text-xs text-muted-foreground">
@@ -563,4 +599,6 @@ export const FloatingPromptInput: React.FC<FloatingPromptInputProps> = ({
       </div>
     </>
   );
-}; 
+});
+
+FloatingPromptInput.displayName = 'FloatingPromptInput'; 
