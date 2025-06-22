@@ -25,6 +25,7 @@ import { StreamMessage } from "./StreamMessage";
 import { ExecutionControlBar } from "./ExecutionControlBar";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { enhanceMessages, type EnhancedMessage } from "@/types/enhanced-messages";
+import { useVirtualizer } from "@tanstack/react-virtual";
 
 interface AgentExecutionProps {
   /**
@@ -94,6 +95,21 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
   const unlistenRefs = useRef<UnlistenFn[]>([]);
   const elapsedTimeIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Virtualizers for efficient, smooth scrolling of potentially very long outputs
+  const rowVirtualizer = useVirtualizer({
+    count: enhancedMessages.length,
+    getScrollElement: () => scrollContainerRef.current,
+    estimateSize: () => 150, // fallback estimate; dynamically measured afterwards
+    overscan: 5,
+  });
+
+  const fullscreenRowVirtualizer = useVirtualizer({
+    count: enhancedMessages.length,
+    getScrollElement: () => fullscreenScrollRef.current,
+    estimateSize: () => 150,
+    overscan: 5,
+  });
+
   useEffect(() => {
     // Clean up listeners on unmount
     return () => {
@@ -116,17 +132,19 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
   };
 
   useEffect(() => {
-    // Only auto-scroll if user hasn't manually scrolled OR if they're at the bottom
+    if (enhancedMessages.length === 0) return;
+
+    // Auto-scroll only if the user has not manually scrolled OR they are still at the bottom
     const shouldAutoScroll = !hasUserScrolled || isAtBottom();
-    
+
     if (shouldAutoScroll) {
-      const endRef = isFullscreenModalOpen ? fullscreenMessagesEndRef.current : messagesEndRef.current;
-      if (endRef) {
-        endRef.scrollIntoView({ behavior: "smooth" });
+      if (isFullscreenModalOpen) {
+        fullscreenRowVirtualizer.scrollToIndex(enhancedMessages.length - 1, { align: "end", behavior: "smooth" });
+      } else {
+        rowVirtualizer.scrollToIndex(enhancedMessages.length - 1, { align: "end", behavior: "smooth" });
       }
     }
-  }, [messages, hasUserScrolled, isFullscreenModalOpen]);
-
+  }, [enhancedMessages.length, hasUserScrolled, isFullscreenModalOpen, rowVirtualizer, fullscreenRowVirtualizer]);
 
   // Update elapsed time while running
   useEffect(() => {
@@ -621,21 +639,32 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
               </div>
             )}
 
-            <AnimatePresence>
-              {enhancedMessages.map((message, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="mb-4"
-                >
-                  <ErrorBoundary>
-                    <StreamMessage message={message} streamMessages={enhancedMessages} />
-                  </ErrorBoundary>
-                </motion.div>
-              ))}
-            </AnimatePresence>
+            <div
+              className="relative w-full max-w-5xl mx-auto"
+              style={{ height: `${rowVirtualizer.getTotalSize()}px` }}
+            >
+              <AnimatePresence>
+                {rowVirtualizer.getVirtualItems().map((virtualItem) => {
+                  const message = enhancedMessages[virtualItem.index];
+                  return (
+                    <motion.div
+                      key={virtualItem.key}
+                      data-index={virtualItem.index}
+                      ref={(el) => el && rowVirtualizer.measureElement(el)}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="absolute inset-x-4 pb-4"
+                      style={{ top: virtualItem.start }}
+                    >
+                      <ErrorBoundary>
+                        <StreamMessage message={message} streamMessages={enhancedMessages} />
+                      </ErrorBoundary>
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
+            </div>
             
             <div ref={messagesEndRef} />
             </div>
@@ -751,21 +780,32 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
                 </div>
               )}
 
-              <AnimatePresence>
-                {enhancedMessages.map((message, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="mb-4"
-                  >
-                    <ErrorBoundary>
-                      <StreamMessage message={message} streamMessages={enhancedMessages} />
-                    </ErrorBoundary>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
+              <div
+                className="relative w-full max-w-5xl mx-auto"
+                style={{ height: `${fullscreenRowVirtualizer.getTotalSize()}px` }}
+              >
+                <AnimatePresence>
+                  {fullscreenRowVirtualizer.getVirtualItems().map((virtualItem) => {
+                    const message = enhancedMessages[virtualItem.index];
+                    return (
+                      <motion.div
+                        key={virtualItem.key}
+                        data-index={virtualItem.index}
+                        ref={(el) => el && fullscreenRowVirtualizer.measureElement(el)}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="absolute inset-x-4 pb-4"
+                        style={{ top: virtualItem.start }}
+                      >
+                        <ErrorBoundary>
+                          <StreamMessage message={message} streamMessages={enhancedMessages} />
+                        </ErrorBoundary>
+                      </motion.div>
+                    );
+                  })}
+                </AnimatePresence>
+              </div>
               
               <div ref={fullscreenMessagesEndRef} />
             </div>

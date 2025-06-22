@@ -8,7 +8,8 @@ import {
   Copy,
   ChevronDown,
   GitBranch,
-  Settings
+  Settings,
+  Globe
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,14 +20,19 @@ import { cn } from "@/lib/utils";
 import { open } from "@tauri-apps/plugin-dialog";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { StreamMessage } from "./StreamMessage";
-import { FloatingPromptInput } from "./FloatingPromptInput";
+import { FloatingPromptInput, type FloatingPromptInputRef } from "./FloatingPromptInput";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { TokenCounter } from "./TokenCounter";
 import { TimelineNavigator } from "./TimelineNavigator";
 import { CheckpointSettings } from "./CheckpointSettings";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { SplitPane } from "@/components/ui/split-pane";
+import { WebviewPreview } from "./WebviewPreview";
+import { PreviewPromptDialog } from "./PreviewPromptDialog";
 import type { ClaudeStreamMessage } from "./AgentExecution";
 import { enhanceMessages, type EnhancedMessage } from "@/types/enhanced-messages";
+import { useVirtualizer } from "@tanstack/react-virtual";
 
 interface ClaudeCodeSessionProps {
   /**
@@ -67,7 +73,6 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   const [rawJsonlOutput, setRawJsonlOutput] = useState<string[]>([]);
   const [copyPopoverOpen, setCopyPopoverOpen] = useState(false);
   const [isFirstPrompt, setIsFirstPrompt] = useState(!session);
-  const [currentModel, setCurrentModel] = useState<"sonnet" | "opus">("sonnet");
   const [totalTokens, setTotalTokens] = useState(0);
   const [extractedSessionInfo, setExtractedSessionInfo] = useState<{
     sessionId: string;
@@ -80,9 +85,18 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   const [forkCheckpointId, setForkCheckpointId] = useState<string | null>(null);
   const [forkSessionName, setForkSessionName] = useState("");
   
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  // New state for preview feature
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState("");
+  const [detectedUrl, setDetectedUrl] = useState("");
+  const [showPreviewPrompt, setShowPreviewPrompt] = useState(false);
+  const [splitPosition, setSplitPosition] = useState(50);
+  const [isPreviewMaximized, setIsPreviewMaximized] = useState(false);
+  
+  const parentRef = useRef<HTMLDivElement>(null);
   const unlistenRefs = useRef<UnlistenFn[]>([]);
   const hasActiveSessionRef = useRef(false);
+  const floatingPromptRef = useRef<FloatingPromptInputRef>(null);
 
   // Get effective session info (from prop or extracted) - use useMemo to ensure it updates
   const effectiveSession = useMemo(() => {
@@ -97,6 +111,13 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     }
     return null;
   }, [session, extractedSessionInfo, projectPath]);
+
+  const rowVirtualizer = useVirtualizer({
+    count: enhancedMessages.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 150, // Estimate, will be dynamically measured
+    overscan: 5,
+  });
 
   // Debug logging
   useEffect(() => {
@@ -125,8 +146,10 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [enhancedMessages]);
+    if (enhancedMessages.length > 0) {
+      rowVirtualizer.scrollToIndex(enhancedMessages.length - 1, { align: 'end', behavior: 'smooth' });
+    }
+  }, [enhancedMessages.length, rowVirtualizer]);
 
   // Calculate total tokens from messages
   useEffect(() => {
@@ -195,7 +218,6 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     try {
       setIsLoading(true);
       setError(null);
-      setCurrentModel(model);
       hasActiveSessionRef.current = true;
 
       // Add the user message immediately to the UI
@@ -453,6 +475,51 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     }
   };
 
+  // Handle URL detection from terminal output
+  const handleLinkDetected = (url: string) => {
+    if (!showPreview && !showPreviewPrompt) {
+      setDetectedUrl(url);
+      setShowPreviewPrompt(true);
+    }
+  };
+
+  const handleOpenPreview = () => {
+    setPreviewUrl(detectedUrl);
+    setShowPreview(true);
+    setShowPreviewPrompt(false);
+  };
+
+  const handleClosePreview = () => {
+    setShowPreview(false);
+    setIsPreviewMaximized(false);
+    // Keep the previewUrl so it can be restored when reopening
+  };
+
+  const handlePreviewScreenshot = async (imagePath: string) => {
+    console.log("Screenshot captured:", imagePath);
+    
+    // Add the screenshot to the floating prompt input
+    if (floatingPromptRef.current) {
+      floatingPromptRef.current.addImage(imagePath);
+      
+      // Show a subtle animation/feedback that the image was added
+      // You could add a toast notification here if desired
+    }
+  };
+
+  const handlePreviewUrlChange = (url: string) => {
+    console.log('[ClaudeCodeSession] Preview URL changed to:', url);
+    setPreviewUrl(url);
+  };
+
+  const handleTogglePreviewMaximize = () => {
+    setIsPreviewMaximized(!isPreviewMaximized);
+    // Reset split position when toggling maximize
+    if (isPreviewMaximized) {
+      setSplitPosition(50);
+    }
+  };
+
   // Clean up listeners on component unmount
   useEffect(() => {
     return () => {
@@ -466,9 +533,132 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     };
   }, []);
 
+  const messagesList = (
+    <div
+      ref={parentRef}
+      className="flex-1 overflow-y-auto relative"
+      style={{
+        contain: 'strict',
+      }}
+    >
+      <div
+        className="relative w-full max-w-5xl mx-auto px-4 py-4"
+        style={{
+          height: `${rowVirtualizer.getTotalSize()}px`,
+        }}
+      >
+        <AnimatePresence>
+          {rowVirtualizer.getVirtualItems().map((virtualItem) => {
+            const message = enhancedMessages[virtualItem.index];
+            return (
+              <motion.div
+                key={virtualItem.key}
+                data-index={virtualItem.index}
+                ref={(el) => el && rowVirtualizer.measureElement(el)}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+                className="absolute inset-x-4 pb-4"
+                style={{
+                  top: virtualItem.start,
+                }}
+              >
+                <StreamMessage 
+                  message={message} 
+                  streamMessages={enhancedMessages}
+                  onLinkDetected={handleLinkDetected}
+                />
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
+      </div>
+
+      {/* Loading and Error indicators positioned relative to the scroll container */}
+      <div className="sticky bottom-0 w-full flex flex-col items-center pb-40">
+        {isLoading && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex items-center justify-center py-4 mt-4"
+          >
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          </motion.div>
+        )}
+        
+        {error && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive mt-4 w-full max-w-5xl mx-auto"
+          >
+            {error}
+          </motion.div>
+        )}
+      </div>
+    </div>
+  );
+
+  const projectPathInput = !session && (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ delay: 0.1 }}
+      className="p-4 border-b border-border flex-shrink-0"
+    >
+      <Label htmlFor="project-path" className="text-sm font-medium">
+        Project Directory
+      </Label>
+      <div className="flex items-center gap-2 mt-1">
+        <Input
+          id="project-path"
+          value={projectPath}
+          onChange={(e) => setProjectPath(e.target.value)}
+          placeholder="/path/to/your/project"
+          className="flex-1"
+          disabled={isLoading}
+        />
+        <Button
+          onClick={handleSelectPath}
+          size="icon"
+          variant="outline"
+          disabled={isLoading}
+        >
+          <FolderOpen className="h-4 w-4" />
+        </Button>
+      </div>
+    </motion.div>
+  );
+
+  // If preview is maximized, render only the WebviewPreview in full screen
+  if (showPreview && isPreviewMaximized) {
+    return (
+      <AnimatePresence>
+        <motion.div 
+          className="fixed inset-0 z-50 bg-background"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          <WebviewPreview
+            initialUrl={previewUrl}
+            onClose={handleClosePreview}
+            onScreenshot={handlePreviewScreenshot}
+            isMaximized={isPreviewMaximized}
+            onToggleMaximize={handleTogglePreviewMaximize}
+            onUrlChange={handlePreviewUrlChange}
+            className="h-full"
+          />
+        </motion.div>
+      </AnimatePresence>
+    );
+  }
+
   return (
     <div className={cn("flex flex-col h-full bg-background", className)}>
-      <div className="w-full max-w-5xl mx-auto h-full flex flex-col">
+      <div className="w-full h-full flex flex-col">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -521,6 +711,36 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
               </>
             )}
             
+            {/* Preview Button */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (!showPreview) {
+                        // Open with current URL or empty URL to show the instruction state
+                        setShowPreview(true);
+                      } else {
+                        handleClosePreview();
+                      }
+                    }}
+                    className="flex items-center gap-2"
+                  >
+                    <Globe className="h-4 w-4" />
+                    {showPreview ? "Close Preview" : "Preview"}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {showPreview 
+                    ? "Close the preview pane" 
+                    : "Open a browser preview to test your web applications"
+                  }
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            
             {enhancedMessages.length > 0 && (
               <Popover
                 trigger={
@@ -539,148 +759,98 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                     <Button
                       variant="ghost"
                       size="sm"
+                      onClick={handleCopyAsMarkdown}
                       className="w-full justify-start"
-                      onClick={handleCopyAsJsonl}
                     >
-                      Copy as JSONL
+                      Copy as Markdown
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
+                      onClick={handleCopyAsJsonl}
                       className="w-full justify-start"
-                      onClick={handleCopyAsMarkdown}
                     >
-                      Copy as Markdown
+                      Copy as JSONL
                     </Button>
                   </div>
                 }
                 open={copyPopoverOpen}
                 onOpenChange={setCopyPopoverOpen}
-                align="end"
               />
             )}
+            
+            <TokenCounter tokens={totalTokens} />
           </div>
         </motion.div>
 
-        {/* Timeline Navigator */}
-        {showTimeline && effectiveSession && (
-          <div className="border-b border-border">
-            <div className="p-4">
-              <TimelineNavigator
-                sessionId={effectiveSession.id}
-                projectId={effectiveSession.project_id}
-                projectPath={projectPath}
-                currentMessageIndex={messages.length - 1}
-                onCheckpointSelect={handleCheckpointSelect}
-                refreshVersion={timelineVersion}
-                onFork={handleFork}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Project Path Selection (only for new sessions) */}
-        {!session && (
-          <div className="p-4 border-b border-border space-y-4">
-            {/* Error display */}
-            {error && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-xs text-destructive"
-              >
-                {error}
-              </motion.div>
-            )}
-
-            {/* Project Path */}
-            <div className="space-y-2">
-              <Label>Project Path</Label>
-              <div className="flex gap-2">
-                <Input
-                  value={projectPath}
-                  onChange={(e) => setProjectPath(e.target.value)}
-                  placeholder="Select or enter project path"
-                  disabled={hasActiveSessionRef.current}
-                  className="flex-1"
+        {/* Main Content Area */}
+        <div className="flex-1 overflow-hidden">
+          {showPreview ? (
+            // Split pane layout when preview is active
+            <SplitPane
+              left={
+                <div className="h-full flex flex-col">
+                  {projectPathInput}
+                  {messagesList}
+                </div>
+              }
+              right={
+                <WebviewPreview
+                  initialUrl={previewUrl}
+                  onClose={handleClosePreview}
+                  onScreenshot={handlePreviewScreenshot}
+                  isMaximized={isPreviewMaximized}
+                  onToggleMaximize={handleTogglePreviewMaximize}
+                  onUrlChange={handlePreviewUrlChange}
                 />
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={handleSelectPath}
-                  disabled={hasActiveSessionRef.current}
-                >
-                  <FolderOpen className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Messages Display */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-2 pb-40">
-          {enhancedMessages.length === 0 && !isLoading && (
-            <div className="flex flex-col items-center justify-center h-full text-center">
-              <Terminal className="h-16 w-16 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium mb-2">Ready to Start</h3>
-              <p className="text-sm text-muted-foreground">
-                {session 
-                  ? "Send a message to continue this conversation" 
-                  : "Select a project path and send your first prompt"
-                }
-              </p>
+              }
+              initialSplit={splitPosition}
+              onSplitChange={setSplitPosition}
+              minLeftWidth={400}
+              minRightWidth={400}
+              className="h-full"
+            />
+          ) : (
+            // Original layout when no preview
+            <div className="h-full flex flex-col max-w-5xl mx-auto">
+              {projectPathInput}
+              {messagesList}
             </div>
           )}
-
-          {isLoading && enhancedMessages.length === 0 && (
-            <div className="flex items-center justify-center h-full">
-              <div className="flex items-center gap-3">
-                <Loader2 className="h-6 w-6 animate-spin" />
-                <span className="text-sm text-muted-foreground">
-                  {session ? "Loading session history..." : "Initializing Claude Code..."}
-                </span>
-              </div>
-            </div>
-          )}
-
-          <AnimatePresence>
-            {enhancedMessages.map((message, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2 }}
-              >
-                <ErrorBoundary>
-                  <StreamMessage message={message} streamMessages={enhancedMessages} />
-                </ErrorBoundary>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-          
-          {/* Show loading indicator when processing, even if there are messages */}
-          {isLoading && enhancedMessages.length > 0 && (
-            <div className="flex items-center gap-2 p-4">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span className="text-sm text-muted-foreground">Processing...</span>
-            </div>
-          )}
-          
-          <div ref={messagesEndRef} />
         </div>
+
+        {/* Floating Prompt Input - Always visible */}
+        <ErrorBoundary>
+          <FloatingPromptInput
+            ref={floatingPromptRef}
+            onSend={handleSendPrompt}
+            isLoading={isLoading}
+            disabled={!projectPath}
+            projectPath={projectPath}
+          />
+        </ErrorBoundary>
+
+        {/* Timeline */}
+        {showTimeline && effectiveSession && (
+          <TimelineNavigator
+            sessionId={effectiveSession.id}
+            projectId={effectiveSession.project_id}
+            projectPath={projectPath}
+            currentMessageIndex={messages.length - 1}
+            onCheckpointSelect={handleCheckpointSelect}
+            onFork={handleFork}
+            refreshVersion={timelineVersion}
+          />
+        )}
       </div>
 
-      {/* Floating Prompt Input */}
-      <FloatingPromptInput
-        onSend={handleSendPrompt}
-        isLoading={isLoading}
-        disabled={!projectPath && !session}
-        defaultModel={currentModel}
-        projectPath={projectPath}
+      {/* Preview Prompt Dialog */}
+      <PreviewPromptDialog
+        isOpen={showPreviewPrompt}
+        url={detectedUrl}
+        onConfirm={handleOpenPreview}
+        onCancel={() => setShowPreviewPrompt(false)}
       />
-      
-      {/* Token Counter */}
-      <TokenCounter tokens={totalTokens} />
 
       {/* Fork Dialog */}
       <Dialog open={showForkDialog} onOpenChange={setShowForkDialog}>
