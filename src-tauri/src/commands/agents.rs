@@ -1749,4 +1749,17 @@ pub async fn set_claude_binary_path(db: State<'_, AgentDb>, path: String) -> Res
     Ok(())
 }
 
+#[tauri::command]
+pub async fn clear_claude_binary_path(db: State<'_, AgentDb>) -> Result<(), String> {
+    let conn = db.0.lock().map_err(|e| e.to_string())?;
+    
+    // Delete the setting from the database
+    conn.execute(
+        "DELETE FROM app_settings WHERE key = 'claude_binary_path'",
+        [],
+    ).map_err(|e| format!("Failed to clear Claude binary path: {}", e))?;
+    
+    Ok(())
+}
+
  
