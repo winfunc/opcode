@@ -217,7 +217,7 @@ function App() {
       
       case "projects":
         return (
-          <div className="flex-1 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="flex h-full items-center justify-center p-4 overflow-y-auto">
             <div className="w-full max-w-2xl">
               {/* Header with back button */}
               <motion.div

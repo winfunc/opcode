@@ -1,10 +1,9 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
-  ChevronDown, 
-  ChevronRight, 
-  Loader2, 
-  CheckCircle2, 
+  ChevronRight,
+  Loader2,
+  CheckCircle2,
   AlertCircle,
   Terminal,
   FileText,
@@ -96,8 +95,7 @@ function getToolDescription(toolCall: ToolCall): string {
 export const CollapsibleToolResult: React.FC<CollapsibleToolResultProps> = ({
   toolCall,
   toolResult,
-  className,
-  children
+  className
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const isPending = !toolResult;

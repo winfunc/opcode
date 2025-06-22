@@ -298,7 +298,7 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.2 }}
-                className="space-y-8"
+                className="pt-6 space-y-8"
               >
                 {/* Agents Grid */}
                 <div>
