@@ -1,0 +1,49 @@
+{
+  "rules": {
+    "react/jsx-key": "error",
+    "react/jsx-no-duplicate-props": "error",
+    "react/jsx-no-undef": "error",
+    "react/jsx-uses-react": "error",
+    "react/jsx-uses-vars": "error",
+    "react/no-children-prop": "error",
+    "react/no-danger-with-children": "error",
+    "react/no-deprecated": "error",
+    "react/no-direct-mutation-state": "error",
+    "react/no-find-dom-node": "error",
+    "react/no-is-mounted": "error",
+    "react/no-render-return-value": "error",
+    "react/no-string-refs": "error",
+    "react/no-unescaped-entities": "error",
+    "react/no-unknown-property": "error",
+    "react/no-unsafe": "error",
+    "react/prop-types": "off",
+    "react/react-in-jsx-scope": "off",
+    "typescript/no-unused-vars": "off",
+    "typescript/no-explicit-any": "warn",
+    "import/no-unresolved": "off",
+    "unicorn/filename-case": "off",
+    "unicorn/prevent-abbreviations": "off",
+    "unicorn/no-null": "off",
+    "unicorn/prefer-module": "off",
+    "no-unused-vars": "off",
+    "no-control-regex": "off"
+  },
+  "env": {
+    "browser": true,
+    "es2021": true,
+    "node": true
+  },
+  "settings": {
+    "react": {
+      "version": "detect"
+    }
+  },
+  "ignore": [
+    "dist/**",
+    "build/**",
+    "node_modules/**",
+    "src-tauri/target/**",
+    "src-tauri/gen/**",
+    "*.d.ts"
+  ]
+}

@@ -137,8 +137,7 @@ impl CheckpointStorage {
         // Use a sanitized filename for the reference
         let safe_filename = snapshot.file_path
             .to_string_lossy()
-            .replace('/', "_")
-            .replace('\\', "_");
+            .replace(['/', '\\'], "_");
         let ref_path = checkpoint_refs_dir.join(format!("{}.json", safe_filename));
         
         fs::write(&ref_path, serde_json::to_string_pretty(&ref_metadata)?)
@@ -460,10 +459,8 @@ impl CheckpointStorage {
             let content_file = entry?.path();
             if content_file.is_file() {
                 if let Some(hash) = content_file.file_name().and_then(|n| n.to_str()) {
-                    if !referenced_hashes.contains(hash) {
-                        if fs::remove_file(&content_file).is_ok() {
-                            removed_count += 1;
-                        }
+                    if !referenced_hashes.contains(hash) && fs::remove_file(&content_file).is_ok() {
+                        removed_count += 1;
                     }
                 }
             }

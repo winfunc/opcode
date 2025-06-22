@@ -264,6 +264,14 @@ export interface UsageStats {
   by_project: ProjectUsage[];
 }
 
+export interface UsageProgress {
+  current_file: string;
+  files_processed: number;
+  total_files: number;
+  percentage: number;
+  stage: string; // "scanning", "processing", "aggregating", "complete"
+}
+
 /**
  * Represents a checkpoint in the session timeline
  */
@@ -1277,6 +1285,60 @@ export const api = {
   },
 
   /**
+   * Starts progressive loading of usage statistics
+   * @returns Promise resolving to initial progress information
+   */
+  async getUsageStatsProgressive(): Promise<UsageProgress> {
+    try {
+      return await invoke<UsageProgress>("get_usage_stats_progressive");
+    } catch (error) {
+      console.error("Failed to start progressive usage stats:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Processes a batch of usage files
+   * @param batchSize - Optional batch size (default: 10)
+   * @returns Promise resolving to progress information
+   */
+  async processUsageBatch(batchSize?: number): Promise<UsageProgress> {
+    try {
+      return await invoke<UsageProgress>("process_usage_batch", { batchSize });
+    } catch (error) {
+      console.error("Failed to process usage batch:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Gets cached usage statistics
+   * @param cacheKey - Optional cache key (default: "default")
+   * @returns Promise resolving to cached usage statistics
+   */
+  async getCachedUsageStats(cacheKey?: string): Promise<UsageStats> {
+    try {
+      return await invoke<UsageStats>("get_cached_usage_stats", { cacheKey });
+    } catch (error) {
+      console.error("Failed to get cached usage stats:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Clears the usage cache
+   * @returns Promise resolving to success message
+   */
+  async clearUsageCache(): Promise<string> {
+    try {
+      return await invoke<string>("clear_usage_cache");
+    } catch (error) {
+      console.error("Failed to clear usage cache:", error);
+      throw error;
+    }
+  },
+
+  /**
    * Gets usage statistics filtered by date range
    * @param startDate - Start date (ISO format)
    * @param endDate - End date (ISO format)
@@ -1760,4 +1822,4 @@ export const api = {
       throw error;
     }
   },
-}; 
+};

@@ -1,8 +1,22 @@
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use tokio::process::Child;
+use tokio::sync::Mutex;
 use chrono::{DateTime, Utc};
+
+/// Parameters for registering a new process
+#[derive(Debug)]
+pub struct RegisterProcessParams {
+    pub run_id: i64,
+    pub agent_id: i64,
+    pub agent_name: String,
+    pub pid: u32,
+    pub project_path: String,
+    pub task: String,
+    pub model: String,
+    pub child: Child,
+}
 
 /// Information about a running agent process
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -37,68 +51,61 @@ impl ProcessRegistry {
     }
 
     /// Register a new running process
-    pub fn register_process(
+    pub async fn register_process(
         &self,
-        run_id: i64,
-        agent_id: i64,
-        agent_name: String,
-        pid: u32,
-        project_path: String,
-        task: String,
-        model: String,
-        child: Child,
+        params: RegisterProcessParams,
     ) -> Result<(), String> {
-        let mut processes = self.processes.lock().map_err(|e| e.to_string())?;
+        let mut processes = self.processes.lock().await;
         
         let process_info = ProcessInfo {
-            run_id,
-            agent_id,
-            agent_name,
-            pid,
+            run_id: params.run_id,
+            agent_id: params.agent_id,
+            agent_name: params.agent_name,
+            pid: params.pid,
             started_at: Utc::now(),
-            project_path,
-            task,
-            model,
+            project_path: params.project_path,
+            task: params.task,
+            model: params.model,
         };
 
         let process_handle = ProcessHandle {
             info: process_info,
-            child: Arc::new(Mutex::new(Some(child))),
+            child: Arc::new(Mutex::new(Some(params.child))),
             live_output: Arc::new(Mutex::new(String::new())),
         };
 
-        processes.insert(run_id, process_handle);
+        processes.insert(params.run_id, process_handle);
         Ok(())
     }
 
     /// Unregister a process (called when it completes)
-    pub fn unregister_process(&self, run_id: i64) -> Result<(), String> {
-        let mut processes = self.processes.lock().map_err(|e| e.to_string())?;
+    pub async fn unregister_process(&self, run_id: i64) -> Result<(), String> {
+        let mut processes = self.processes.lock().await;
         processes.remove(&run_id);
         Ok(())
     }
 
     /// Get all running processes
-    pub fn get_running_processes(&self) -> Result<Vec<ProcessInfo>, String> {
-        let processes = self.processes.lock().map_err(|e| e.to_string())?;
+    pub async fn get_running_processes(&self) -> Result<Vec<ProcessInfo>, String> {
+        let processes = self.processes.lock().await;
         Ok(processes.values().map(|handle| handle.info.clone()).collect())
     }
 
     /// Get a specific running process
-    pub fn get_process(&self, run_id: i64) -> Result<Option<ProcessInfo>, String> {
-        let processes = self.processes.lock().map_err(|e| e.to_string())?;
+    pub async fn get_process(&self, run_id: i64) -> Result<Option<ProcessInfo>, String> {
+        let processes = self.processes.lock().await;
         Ok(processes.get(&run_id).map(|handle| handle.info.clone()))
     }
 
     /// Kill a running process
     pub async fn kill_process(&self, run_id: i64) -> Result<bool, String> {
-        let processes = self.processes.lock().map_err(|e| e.to_string())?;
+        let processes = self.processes.lock().await;
         
         if let Some(handle) = processes.get(&run_id) {
             let child_arc = handle.child.clone();
             drop(processes); // Release the lock before async operation
             
-            let mut child_guard = child_arc.lock().map_err(|e| e.to_string())?;
+            let mut child_guard = child_arc.lock().await;
             if let Some(ref mut child) = child_guard.as_mut() {
                 match child.kill().await {
                     Ok(_) => {
@@ -117,13 +124,13 @@ impl ProcessRegistry {
 
     /// Check if a process is still running by trying to get its status
     pub async fn is_process_running(&self, run_id: i64) -> Result<bool, String> {
-        let processes = self.processes.lock().map_err(|e| e.to_string())?;
+        let processes = self.processes.lock().await;
         
         if let Some(handle) = processes.get(&run_id) {
             let child_arc = handle.child.clone();
             drop(processes); // Release the lock before async operation
             
-            let mut child_guard = child_arc.lock().map_err(|e| e.to_string())?;
+            let mut child_guard = child_arc.lock().await;
             if let Some(ref mut child) = child_guard.as_mut() {
                 match child.try_wait() {
                     Ok(Some(_)) => {
@@ -150,10 +157,10 @@ impl ProcessRegistry {
     }
 
     /// Append to live output for a process
-    pub fn append_live_output(&self, run_id: i64, output: &str) -> Result<(), String> {
-        let processes = self.processes.lock().map_err(|e| e.to_string())?;
+    pub async fn append_live_output(&self, run_id: i64, output: &str) -> Result<(), String> {
+        let processes = self.processes.lock().await;
         if let Some(handle) = processes.get(&run_id) {
-            let mut live_output = handle.live_output.lock().map_err(|e| e.to_string())?;
+            let mut live_output = handle.live_output.lock().await;
             live_output.push_str(output);
             live_output.push('\n');
         }
@@ -161,10 +168,10 @@ impl ProcessRegistry {
     }
 
     /// Get live output for a process
-    pub fn get_live_output(&self, run_id: i64) -> Result<String, String> {
-        let processes = self.processes.lock().map_err(|e| e.to_string())?;
+    pub async fn get_live_output(&self, run_id: i64) -> Result<String, String> {
+        let processes = self.processes.lock().await;
         if let Some(handle) = processes.get(&run_id) {
-            let live_output = handle.live_output.lock().map_err(|e| e.to_string())?;
+            let live_output = handle.live_output.lock().await;
             Ok(live_output.clone())
         } else {
             Ok(String::new())
@@ -178,7 +185,7 @@ impl ProcessRegistry {
         
         // First, identify finished processes
         {
-            let processes = processes_lock.lock().map_err(|e| e.to_string())?;
+            let processes = processes_lock.lock().await;
             let run_ids: Vec<i64> = processes.keys().cloned().collect();
             drop(processes);
             
@@ -191,7 +198,7 @@ impl ProcessRegistry {
         
         // Then remove them from the registry
         {
-            let mut processes = processes_lock.lock().map_err(|e| e.to_string())?;
+            let mut processes = processes_lock.lock().await;
             for run_id in &finished_runs {
                 processes.remove(run_id);
             }
