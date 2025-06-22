@@ -138,7 +138,7 @@ function App() {
     switch (view) {
       case "welcome":
         return (
-          <div className="flex-1 flex items-center justify-center p-4">
+          <div className="flex items-center justify-center p-4" style={{ height: "100%" }}>
             <div className="w-full max-w-4xl">
               {/* Welcome Header */}
               <motion.div
@@ -360,7 +360,7 @@ function App() {
 
   return (
     <OutputCacheProvider>
-      <div className="min-h-screen bg-background flex flex-col">
+      <div className="h-screen bg-background flex flex-col">
         {/* Topbar */}
         <Topbar
           onClaudeClick={() => setView("editor")}
@@ -371,7 +371,9 @@ function App() {
         />
         
         {/* Main Content */}
-        {renderContent()}
+        <div className="flex-1 overflow-y-auto">
+          {renderContent()}
+        </div>
         
         {/* NFO Credits Modal */}
         {showNFO && <NFOCredits onClose={() => setShowNFO(false)} />}
