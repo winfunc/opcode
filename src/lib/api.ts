@@ -168,7 +168,7 @@ export interface SandboxProfileWithRules {
   rules: SandboxRule[];
 }
 
-export interface ImportResult {
+export interface SandboxImportResult {
   profile_name: string;
   imported: boolean;
   reason?: string;
@@ -443,7 +443,7 @@ export interface AddServerResult {
 /**
  * Import result for multiple servers
  */
-export interface ImportResult {
+export interface MCPImportResult {
   imported_count: number;
   failed_count: number;
   servers: ImportServerResult[];
@@ -1274,9 +1274,9 @@ export const api = {
    * @param exportData - The export data to import
    * @returns Promise resolving to import results
    */
-  async importSandboxProfiles(exportData: SandboxProfileExport): Promise<ImportResult[]> {
+  async importSandboxProfiles(exportData: SandboxProfileExport): Promise<SandboxImportResult[]> {
     try {
-      return await invoke<ImportResult[]>('import_sandbox_profiles', { export_data: exportData });
+      return await invoke<SandboxImportResult[]>('import_sandbox_profiles', { export_data: exportData });
     } catch (error) {
       console.error("Failed to import sandbox profiles:", error);
       throw error;
@@ -1673,9 +1673,9 @@ export const api = {
   /**
    * Imports MCP servers from Claude Desktop
    */
-  async mcpAddFromClaudeDesktop(scope: string = "local"): Promise<ImportResult> {
+  async mcpAddFromClaudeDesktop(scope: string = "local"): Promise<MCPImportResult> {
     try {
-      return await invoke<ImportResult>("mcp_add_from_claude_desktop", { scope });
+      return await invoke<MCPImportResult>("mcp_add_from_claude_desktop", { scope });
     } catch (error) {
       console.error("Failed to import from Claude Desktop:", error);
       throw error;
