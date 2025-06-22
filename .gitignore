@@ -23,3 +23,20 @@ dist-ssr
 *.sln
 *.sw?
 temp_lib/
+
+# Claude collaboration
+CLAUDE.md
+.claude/
+
+# Tauri build artifacts
+src-tauri/target/
+*.dmg
+*.app/
+
+# macOS
+.DS_Store
+
+# Cleanup ignore
+src-tauri/gen/
+package-lock.json
+.debug.md
