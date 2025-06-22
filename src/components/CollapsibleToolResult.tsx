@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
-  ChevronDown, 
   ChevronRight, 
   Loader2, 
   CheckCircle2, 
@@ -20,7 +19,6 @@ interface CollapsibleToolResultProps {
   toolCall: ToolCall;
   toolResult?: ToolResult;
   className?: string;
-  children?: React.ReactNode;
 }
 
 // Map tool names to icons
@@ -96,8 +94,7 @@ function getToolDescription(toolCall: ToolCall): string {
 export const CollapsibleToolResult: React.FC<CollapsibleToolResultProps> = ({
   toolCall,
   toolResult,
-  className,
-  children
+  className
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const isPending = !toolResult;
