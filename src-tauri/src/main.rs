@@ -18,7 +18,7 @@ use commands::claude::{
     get_session_timeline, update_checkpoint_settings, get_checkpoint_diff,
     track_checkpoint_message, track_session_messages, check_auto_checkpoint, cleanup_old_checkpoints,
     get_checkpoint_settings, clear_checkpoint_manager, get_checkpoint_state_stats,
-    get_recently_modified_files,
+    get_recently_modified_files, cancel_claude_execution, ClaudeProcessState,
 };
 use claude_detection::{
     discover_claude_installations, set_selected_claude_installation, 
@@ -31,7 +31,8 @@ use commands::agents::{
     migrate_agent_runs_to_session_ids, list_running_sessions, kill_agent_session,
     get_session_status, cleanup_finished_processes, get_session_output, 
     get_live_session_output, stream_session_output, get_claude_binary_path,
-    set_claude_binary_path, clear_claude_binary_path, AgentDb
+    set_claude_binary_path, clear_claude_binary_path, export_agent, export_agent_to_file, import_agent,
+    import_agent_from_file, AgentDb
 };
 use commands::sandbox::{
     list_sandbox_profiles, create_sandbox_profile, update_sandbox_profile, delete_sandbox_profile,
@@ -98,6 +99,9 @@ fn main() {
             // Initialize process registry
             app.manage(ProcessRegistryState::default());
             
+            // Initialize Claude process state
+            app.manage(ClaudeProcessState::default());
+            
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -116,6 +120,7 @@ fn main() {
             execute_claude_code,
             continue_claude_code,
             resume_claude_code,
+            cancel_claude_execution,
             list_directory_contents,
             search_files,
             create_checkpoint,
@@ -138,6 +143,10 @@ fn main() {
             update_agent,
             delete_agent,
             get_agent,
+            export_agent,
+            export_agent_to_file,
+            import_agent,
+            import_agent_from_file,
             execute_agent,
             list_agent_runs,
             get_agent_run,

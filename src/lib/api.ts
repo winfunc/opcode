@@ -780,6 +780,48 @@ export const api = {
   },
 
   /**
+   * Exports a single agent to JSON format
+   * @param id - The agent ID to export
+   * @returns Promise resolving to the JSON string
+   */
+  async exportAgent(id: number): Promise<string> {
+    try {
+      return await invoke<string>('export_agent', { id });
+    } catch (error) {
+      console.error("Failed to export agent:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Imports an agent from JSON data
+   * @param jsonData - The JSON string containing the agent export
+   * @returns Promise resolving to the imported agent
+   */
+  async importAgent(jsonData: string): Promise<Agent> {
+    try {
+      return await invoke<Agent>('import_agent', { jsonData });
+    } catch (error) {
+      console.error("Failed to import agent:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Imports an agent from a file
+   * @param filePath - The path to the JSON file
+   * @returns Promise resolving to the imported agent
+   */
+  async importAgentFromFile(filePath: string): Promise<Agent> {
+    try {
+      return await invoke<Agent>('import_agent_from_file', { filePath });
+    } catch (error) {
+      console.error("Failed to import agent from file:", error);
+      throw error;
+    }
+  },
+
+  /**
    * Executes an agent
    * @param agentId - The agent ID to execute
    * @param projectPath - The project path to run the agent in
@@ -962,6 +1004,13 @@ export const api = {
    */
   async resumeClaudeCode(projectPath: string, sessionId: string, prompt: string, model: string): Promise<void> {
     return invoke("resume_claude_code", { projectPath, sessionId, prompt, model });
+  },
+
+  /**
+   * Cancels the currently running Claude Code execution
+   */
+  async cancelClaudeExecution(): Promise<void> {
+    return invoke("cancel_claude_execution");
   },
 
   /**
@@ -2043,4 +2092,4 @@ export const api = {
       throw error;
     }
   },
-}; 
+};
