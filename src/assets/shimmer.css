@@ -87,7 +87,7 @@
     105deg,
     currentColor 0%,
     currentColor 40%,
-    #d97757 50%,
+    var(--shimmer-color) 50%,
     currentColor 60%,
     currentColor 100%
   );
@@ -101,7 +101,7 @@
 
 .rotating-symbol {
   display: inline-block;
-  color: #d97757;
+  color: var(--shimmer-color);
   font-size: inherit;
   margin-right: 0.5rem;
   font-weight: bold;

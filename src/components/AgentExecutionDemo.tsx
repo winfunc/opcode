@@ -103,8 +103,8 @@ export const AgentExecutionDemo: React.FC = () => {
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
     line-height: 1.6;
-    color: #333;
-    background: #f8fafc;
+    color: #cdd6f4;
+    background: #1e1e2e;
     min-height: 100vh;
 }
 
@@ -124,12 +124,12 @@ body {
 .header h1 {
     font-size: 2.5rem;
     font-weight: 700;
-    color: #1a202c;
+    color: #cdd6f4;
     margin-bottom: 8px;
 }
 
 .header p {
-    color: #718096;
+    color: #a6adc8;
     font-size: 1.1rem;
 }
 
@@ -142,22 +142,22 @@ body {
 
 /* Drop Zone */
 .drop-zone {
-    border: 2px dashed #cbd5e0;
+    border: 2px dashed #45475a;
     border-radius: 12px;
     padding: 40px 20px;
     text-align: center;
     cursor: pointer;
     transition: all 0.3s ease;
-    background: white;
+    background: #1e1e2e;
     position: relative;
 }
 
 .drop-zone:hover,
 .drop-zone.drag-over {
-    border-color: #4299e1;
-    background: #ebf8ff;
+    border-color: #89b4fa;
+    background: #313244;
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(66, 153, 225, 0.1);
+    box-shadow: 0 8px 25px rgba(137, 180, 250, 0.1);
 }
 
 /* ... many more lines of CSS ... */
