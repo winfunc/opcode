@@ -9,7 +9,8 @@ import {
   ChevronDown,
   GitBranch,
   Settings,
-  Globe
+  Globe,
+  Square
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -84,6 +85,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   const [showForkDialog, setShowForkDialog] = useState(false);
   const [forkCheckpointId, setForkCheckpointId] = useState<string | null>(null);
   const [forkSessionName, setForkSessionName] = useState("");
+  const [isCancelling, setIsCancelling] = useState(false);
   
   // New state for preview feature
   const [showPreview, setShowPreview] = useState(false);
@@ -278,6 +280,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       const completeUnlisten = await listen<boolean>("claude-complete", async (event) => {
         console.log('[ClaudeCodeSession] Received claude-complete:', event.payload);
         setIsLoading(false);
+        setIsCancelling(false);
         hasActiveSessionRef.current = false;
         if (!event.payload) {
           setError("Claude execution failed");
@@ -435,6 +438,40 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     await loadSessionHistory();
     // Ensure timeline reloads to highlight current checkpoint
     setTimelineVersion((v) => v + 1);
+  };
+
+  const handleCancelExecution = async () => {
+    if (!isLoading || isCancelling) return;
+    
+    try {
+      setIsCancelling(true);
+      
+      // Cancel the Claude execution
+      await api.cancelClaudeExecution();
+      
+      // Clean up listeners
+      unlistenRefs.current.forEach(unlisten => unlisten());
+      unlistenRefs.current = [];
+      
+      // Add a system message indicating cancellation
+      const cancelMessage: ClaudeStreamMessage = {
+        type: "system",
+        subtype: "cancelled",
+        result: "Execution cancelled by user",
+        timestamp: new Date().toISOString()
+      };
+      setMessages(prev => [...prev, cancelMessage]);
+      
+      // Reset states
+      setIsLoading(false);
+      hasActiveSessionRef.current = false;
+      setError(null);
+    } catch (err) {
+      console.error("Failed to cancel execution:", err);
+      setError("Failed to cancel execution");
+    } finally {
+      setIsCancelling(false);
+    }
   };
 
   const handleFork = (checkpointId: string) => {
@@ -817,6 +854,42 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
               {messagesList}
             </div>
           )}
+
+          {isLoading && enhancedMessages.length === 0 && (
+            <div className="flex items-center justify-center h-full">
+              <div className="flex items-center gap-3">
+                <Loader2 className="h-6 w-6 animate-spin" />
+                <span className="text-sm text-muted-foreground">
+                  {session ? "Loading session history..." : "Initializing Claude Code..."}
+                </span>
+              </div>
+            </div>
+          )}
+
+          <AnimatePresence>
+            {enhancedMessages.map((message, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <ErrorBoundary>
+                  <StreamMessage message={message} streamMessages={enhancedMessages} />
+                </ErrorBoundary>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+          
+          {/* Show loading indicator when processing, even if there are messages */}
+          {isLoading && enhancedMessages.length > 0 && (
+            <div className="flex items-center gap-2 p-4">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span className="text-sm text-muted-foreground">
+                {isCancelling ? "Cancelling..." : "Processing..."}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Floating Prompt Input - Always visible */}
@@ -824,6 +897,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
           <FloatingPromptInput
             ref={floatingPromptRef}
             onSend={handleSendPrompt}
+            onCancel={handleCancelExecution}
             isLoading={isLoading}
             disabled={!projectPath}
             projectPath={projectPath}
@@ -843,14 +917,6 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
           />
         )}
       </div>
-
-      {/* Preview Prompt Dialog */}
-      <PreviewPromptDialog
-        isOpen={showPreviewPrompt}
-        url={detectedUrl}
-        onConfirm={handleOpenPreview}
-        onCancel={() => setShowPreviewPrompt(false)}
-      />
 
       {/* Fork Dialog */}
       <Dialog open={showForkDialog} onOpenChange={setShowForkDialog}>
@@ -912,4 +978,4 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       )}
     </div>
   );
-}; 
+};
