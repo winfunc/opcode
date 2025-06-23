@@ -5,6 +5,7 @@ mod commands;
 mod sandbox;
 mod checkpoint;
 mod process;
+mod openrouter;
 
 use tauri::Manager;
 use commands::claude::{
@@ -26,7 +27,7 @@ use commands::agents::{
     migrate_agent_runs_to_session_ids, list_running_sessions, kill_agent_session,
     get_session_status, cleanup_finished_processes, get_session_output, 
     get_live_session_output, stream_session_output, get_claude_binary_path,
-    set_claude_binary_path, AgentDb
+    set_claude_binary_path, get_available_models, validate_engine_setup, AgentDb
 };
 use commands::sandbox::{
     list_sandbox_profiles, create_sandbox_profile, update_sandbox_profile, delete_sandbox_profile,
@@ -145,6 +146,8 @@ fn main() {
             stream_session_output,
             get_claude_binary_path,
             set_claude_binary_path,
+            get_available_models,
+            validate_engine_setup,
             list_sandbox_profiles,
             get_sandbox_profile,
             create_sandbox_profile,

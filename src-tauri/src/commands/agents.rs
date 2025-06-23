@@ -1,5 +1,6 @@
 use crate::sandbox::profile::{ProfileBuilder, SandboxRule};
 use crate::sandbox::executor::{SerializedProfile, SerializedOperation};
+use crate::openrouter::{OpenRouterClient, validate_openrouter_api_key, validate_engine_dependencies, check_binary_exists};
 use anyhow::Result;
 use chrono;
 use log::{debug, error, info, warn};
@@ -12,6 +13,7 @@ use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Manager, State, Emitter};
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
+use std::ffi::OsStr;
 
 /// Finds the full path to the claude binary
 /// This is necessary because macOS apps have a limited PATH environment
@@ -125,6 +127,8 @@ pub struct Agent {
     pub system_prompt: String,
     pub default_task: Option<String>,
     pub model: String,
+    pub engine: String,
+    pub engine_settings: Option<JsonValue>,
     pub sandbox_enabled: bool,
     pub enable_file_read: bool,
     pub enable_file_write: bool,
@@ -294,6 +298,7 @@ pub fn init_database(app: &AppHandle) -> SqliteResult<Connection> {
             system_prompt TEXT NOT NULL,
             default_task TEXT,
             model TEXT NOT NULL DEFAULT 'sonnet',
+            engine TEXT NOT NULL DEFAULT 'claude',
             sandbox_enabled BOOLEAN NOT NULL DEFAULT 1,
             enable_file_read BOOLEAN NOT NULL DEFAULT 1,
             enable_file_write BOOLEAN NOT NULL DEFAULT 1,
@@ -307,6 +312,8 @@ pub fn init_database(app: &AppHandle) -> SqliteResult<Connection> {
     // Add columns to existing table if they don't exist
     let _ = conn.execute("ALTER TABLE agents ADD COLUMN default_task TEXT", []);
     let _ = conn.execute("ALTER TABLE agents ADD COLUMN model TEXT DEFAULT 'sonnet'", []);
+    let _ = conn.execute("ALTER TABLE agents ADD COLUMN engine TEXT NOT NULL DEFAULT 'claude'", []);
+    let _ = conn.execute("ALTER TABLE agents ADD COLUMN engine_settings TEXT", []);
     let _ = conn.execute("ALTER TABLE agents ADD COLUMN sandbox_profile_id INTEGER REFERENCES sandbox_profiles(id)", []);
     let _ = conn.execute("ALTER TABLE agents ADD COLUMN sandbox_enabled BOOLEAN DEFAULT 1", []);
     let _ = conn.execute("ALTER TABLE agents ADD COLUMN enable_file_read BOOLEAN DEFAULT 1", []);
@@ -459,11 +466,15 @@ pub async fn list_agents(db: State<'_, AgentDb>) -> Result<Vec<Agent>, String> {
     let conn = db.0.lock().map_err(|e| e.to_string())?;
     
     let mut stmt = conn
-        .prepare("SELECT id, name, icon, system_prompt, default_task, model, sandbox_enabled, enable_file_read, enable_file_write, enable_network, created_at, updated_at FROM agents ORDER BY created_at DESC")
+        .prepare("SELECT id, name, icon, system_prompt, default_task, model, engine, engine_settings, sandbox_enabled, enable_file_read, enable_file_write, enable_network, created_at, updated_at FROM agents ORDER BY created_at DESC")
         .map_err(|e| e.to_string())?;
     
     let agents = stmt
         .query_map([], |row| {
+            // Parse engine_settings from JSON string
+            let engine_settings: Option<JsonValue> = row.get::<_, Option<String>>(7)?
+                .and_then(|s| if s.is_empty() { None } else { serde_json::from_str(&s).ok() });
+            
             Ok(Agent {
                 id: Some(row.get(0)?),
                 name: row.get(1)?,
@@ -471,12 +482,14 @@ pub async fn list_agents(db: State<'_, AgentDb>) -> Result<Vec<Agent>, String> {
                 system_prompt: row.get(3)?,
                 default_task: row.get(4)?,
                 model: row.get::<_, String>(5).unwrap_or_else(|_| "sonnet".to_string()),
-                sandbox_enabled: row.get::<_, bool>(6).unwrap_or(true),
-                enable_file_read: row.get::<_, bool>(7).unwrap_or(true),
-                enable_file_write: row.get::<_, bool>(8).unwrap_or(true),
-                enable_network: row.get::<_, bool>(9).unwrap_or(false),
-                created_at: row.get(10)?,
-                updated_at: row.get(11)?,
+                engine: row.get::<_, String>(6).unwrap_or_else(|_| "claude".to_string()),
+                engine_settings,
+                sandbox_enabled: row.get::<_, bool>(8).unwrap_or(true),
+                enable_file_read: row.get::<_, bool>(9).unwrap_or(true),
+                enable_file_write: row.get::<_, bool>(10).unwrap_or(true),
+                enable_network: row.get::<_, bool>(11).unwrap_or(false),
+                created_at: row.get(12)?,
+                updated_at: row.get(13)?,
             })
         })
         .map_err(|e| e.to_string())?
@@ -495,6 +508,8 @@ pub async fn create_agent(
     system_prompt: String,
     default_task: Option<String>,
     model: Option<String>,
+    engine: Option<String>,
+    engine_settings: Option<JsonValue>,
     sandbox_enabled: Option<bool>,
     enable_file_read: Option<bool>,
     enable_file_write: Option<bool>,
@@ -502,14 +517,19 @@ pub async fn create_agent(
 ) -> Result<Agent, String> {
     let conn = db.0.lock().map_err(|e| e.to_string())?;
     let model = model.unwrap_or_else(|| "sonnet".to_string());
+    let engine = engine.unwrap_or_else(|| "claude".to_string());
     let sandbox_enabled = sandbox_enabled.unwrap_or(true);
     let enable_file_read = enable_file_read.unwrap_or(true);
     let enable_file_write = enable_file_write.unwrap_or(true);
     let enable_network = enable_network.unwrap_or(false);
     
+    // Serialize engine_settings to JSON string for database storage
+    let engine_settings_str = engine_settings.as_ref()
+        .map(|settings| serde_json::to_string(settings).unwrap_or_default());
+    
     conn.execute(
-        "INSERT INTO agents (name, icon, system_prompt, default_task, model, sandbox_enabled, enable_file_read, enable_file_write, enable_network) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
-        params![name, icon, system_prompt, default_task, model, sandbox_enabled, enable_file_read, enable_file_write, enable_network],
+        "INSERT INTO agents (name, icon, system_prompt, default_task, model, engine, engine_settings, sandbox_enabled, enable_file_read, enable_file_write, enable_network) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+        params![name, icon, system_prompt, default_task, model, engine, engine_settings_str, sandbox_enabled, enable_file_read, enable_file_write, enable_network],
     )
     .map_err(|e| e.to_string())?;
     
@@ -518,9 +538,13 @@ pub async fn create_agent(
     // Fetch the created agent
     let agent = conn
         .query_row(
-            "SELECT id, name, icon, system_prompt, default_task, model, sandbox_enabled, enable_file_read, enable_file_write, enable_network, created_at, updated_at FROM agents WHERE id = ?1",
+            "SELECT id, name, icon, system_prompt, default_task, model, engine, engine_settings, sandbox_enabled, enable_file_read, enable_file_write, enable_network, created_at, updated_at FROM agents WHERE id = ?1",
             params![id],
             |row| {
+                // Parse engine_settings from JSON string
+                let engine_settings: Option<JsonValue> = row.get::<_, Option<String>>(7)?
+                    .and_then(|s| if s.is_empty() { None } else { serde_json::from_str(&s).ok() });
+                
                 Ok(Agent {
                     id: Some(row.get(0)?),
                     name: row.get(1)?,
@@ -528,12 +552,14 @@ pub async fn create_agent(
                     system_prompt: row.get(3)?,
                     default_task: row.get(4)?,
                     model: row.get(5)?,
-                    sandbox_enabled: row.get(6)?,
-                    enable_file_read: row.get(7)?,
-                    enable_file_write: row.get(8)?,
-                    enable_network: row.get(9)?,
-                    created_at: row.get(10)?,
-                    updated_at: row.get(11)?,
+                    engine: row.get(6)?,
+                    engine_settings,
+                    sandbox_enabled: row.get(8)?,
+                    enable_file_read: row.get(9)?,
+                    enable_file_write: row.get(10)?,
+                    enable_network: row.get(11)?,
+                    created_at: row.get(12)?,
+                    updated_at: row.get(13)?,
                 })
             },
         )
@@ -552,6 +578,8 @@ pub async fn update_agent(
     system_prompt: String,
     default_task: Option<String>,
     model: Option<String>,
+    engine: Option<String>,
+    engine_settings: Option<JsonValue>,
     sandbox_enabled: Option<bool>,
     enable_file_read: Option<bool>,
     enable_file_write: Option<bool>,
@@ -559,17 +587,24 @@ pub async fn update_agent(
 ) -> Result<Agent, String> {
     let conn = db.0.lock().map_err(|e| e.to_string())?;
     let model = model.unwrap_or_else(|| "sonnet".to_string());
+    let engine = engine.unwrap_or_else(|| "claude".to_string());
+    
+    // Serialize engine_settings to JSON string for database storage
+    let engine_settings_str = engine_settings.as_ref()
+        .map(|settings| serde_json::to_string(settings).unwrap_or_default());
     
     // Build dynamic query based on provided parameters
-    let mut query = "UPDATE agents SET name = ?1, icon = ?2, system_prompt = ?3, default_task = ?4, model = ?5".to_string();
+    let mut query = "UPDATE agents SET name = ?1, icon = ?2, system_prompt = ?3, default_task = ?4, model = ?5, engine = ?6, engine_settings = ?7".to_string();
     let mut params_vec: Vec<Box<dyn rusqlite::ToSql>> = vec![
         Box::new(name),
         Box::new(icon),
         Box::new(system_prompt),
         Box::new(default_task),
         Box::new(model),
+        Box::new(engine),
+        Box::new(engine_settings_str),
     ];
-    let mut param_count = 5;
+    let mut param_count = 7;
     
     if let Some(se) = sandbox_enabled {
         param_count += 1;
@@ -602,9 +637,13 @@ pub async fn update_agent(
     // Fetch the updated agent
     let agent = conn
         .query_row(
-            "SELECT id, name, icon, system_prompt, default_task, model, sandbox_enabled, enable_file_read, enable_file_write, enable_network, created_at, updated_at FROM agents WHERE id = ?1",
+            "SELECT id, name, icon, system_prompt, default_task, model, engine, engine_settings, sandbox_enabled, enable_file_read, enable_file_write, enable_network, created_at, updated_at FROM agents WHERE id = ?1",
             params![id],
             |row| {
+                // Parse engine_settings from JSON string
+                let engine_settings: Option<JsonValue> = row.get::<_, Option<String>>(7)?
+                    .and_then(|s| if s.is_empty() { None } else { serde_json::from_str(&s).ok() });
+                
                 Ok(Agent {
                     id: Some(row.get(0)?),
                     name: row.get(1)?,
@@ -612,12 +651,14 @@ pub async fn update_agent(
                     system_prompt: row.get(3)?,
                     default_task: row.get(4)?,
                     model: row.get(5)?,
-                    sandbox_enabled: row.get(6)?,
-                    enable_file_read: row.get(7)?,
-                    enable_file_write: row.get(8)?,
-                    enable_network: row.get(9)?,
-                    created_at: row.get(10)?,
-                    updated_at: row.get(11)?,
+                    engine: row.get(6)?,
+                    engine_settings,
+                    sandbox_enabled: row.get(8)?,
+                    enable_file_read: row.get(9)?,
+                    enable_file_write: row.get(10)?,
+                    enable_network: row.get(11)?,
+                    created_at: row.get(12)?,
+                    updated_at: row.get(13)?,
                 })
             },
         )
@@ -644,9 +685,13 @@ pub async fn get_agent(db: State<'_, AgentDb>, id: i64) -> Result<Agent, String>
     
     let agent = conn
         .query_row(
-            "SELECT id, name, icon, system_prompt, default_task, model, sandbox_enabled, enable_file_read, enable_file_write, enable_network, created_at, updated_at FROM agents WHERE id = ?1",
+            "SELECT id, name, icon, system_prompt, default_task, model, engine, engine_settings, sandbox_enabled, enable_file_read, enable_file_write, enable_network, created_at, updated_at FROM agents WHERE id = ?1",
             params![id],
             |row| {
+                // Parse engine_settings from JSON string
+                let engine_settings: Option<JsonValue> = row.get::<_, Option<String>>(7)?
+                    .and_then(|s| if s.is_empty() { None } else { serde_json::from_str(&s).ok() });
+                
                 Ok(Agent {
                     id: Some(row.get(0)?),
                     name: row.get(1)?,
@@ -654,12 +699,14 @@ pub async fn get_agent(db: State<'_, AgentDb>, id: i64) -> Result<Agent, String>
                     system_prompt: row.get(3)?,
                     default_task: row.get(4)?,
                     model: row.get::<_, String>(5).unwrap_or_else(|_| "sonnet".to_string()),
-                    sandbox_enabled: row.get::<_, bool>(6).unwrap_or(true),
-                    enable_file_read: row.get::<_, bool>(7).unwrap_or(true),
-                    enable_file_write: row.get::<_, bool>(8).unwrap_or(true),
-                    enable_network: row.get::<_, bool>(9).unwrap_or(false),
-                    created_at: row.get(10)?,
-                    updated_at: row.get(11)?,
+                    engine: row.get::<_, String>(6).unwrap_or_else(|_| "claude".to_string()),
+                    engine_settings,
+                    sandbox_enabled: row.get::<_, bool>(8).unwrap_or(true),
+                    enable_file_read: row.get::<_, bool>(9).unwrap_or(true),
+                    enable_file_write: row.get::<_, bool>(10).unwrap_or(true),
+                    enable_network: row.get::<_, bool>(11).unwrap_or(false),
+                    created_at: row.get(12)?,
+                    updated_at: row.get(13)?,
                 })
             },
         )
@@ -833,7 +880,7 @@ pub async fn migrate_agent_runs_to_session_ids(db: State<'_, AgentDb>) -> Result
     Ok(message)
 }
 
-/// Execute a CC agent with streaming output
+/// Execute a CC agent with streaming output - dispatches to engine-specific implementations
 #[tauri::command]
 pub async fn execute_agent(
     app: AppHandle,
@@ -845,6 +892,43 @@ pub async fn execute_agent(
     registry: State<'_, crate::process::ProcessRegistryState>,
 ) -> Result<i64, String> {
     info!("Executing agent {} with task: {}", agent_id, task);
+    
+    // Get the agent from database
+    let agent = get_agent(db.clone(), agent_id).await?;
+    let execution_model = model.unwrap_or(agent.model.clone());
+    
+    // Dispatch to engine-specific execution based on agent's engine type
+    match agent.engine.as_str() {
+        "claude" => {
+            execute_claude_agent(
+                app, agent_id, project_path, task, Some(execution_model), db, registry
+            ).await
+        }
+        "aider" => {
+            execute_aider_agent(
+                app, agent_id, project_path, task, Some(execution_model), db, registry
+            ).await
+        }
+        "opencodex" => {
+            execute_opencodex_agent(
+                app, agent_id, project_path, task, Some(execution_model), db, registry
+            ).await
+        }
+        _ => Err(format!("Unsupported engine type: {}", agent.engine))
+    }
+}
+
+/// Execute a Claude agent with streaming output
+async fn execute_claude_agent(
+    app: AppHandle,
+    agent_id: i64,
+    project_path: String,
+    task: String,
+    model: Option<String>,
+    db: State<'_, AgentDb>,
+    registry: State<'_, crate::process::ProcessRegistryState>,
+) -> Result<i64, String> {
+    info!("Executing Claude agent {} with task: {}", agent_id, task);
     
     // Get the agent from database
     let agent = get_agent(db.clone(), agent_id).await?;
@@ -1478,6 +1562,374 @@ pub async fn execute_agent(
     Ok(run_id)
 }
 
+/// Execute an Aider agent with OpenRouter integration
+async fn execute_aider_agent(
+    app: AppHandle,
+    agent_id: i64,
+    project_path: String,
+    task: String,
+    model: Option<String>,
+    db: State<'_, AgentDb>,
+    registry: State<'_, crate::process::ProcessRegistryState>,
+) -> Result<i64, String> {
+    info!("Executing Aider agent {} with task: {}", agent_id, task);
+    
+    // Get the agent from database
+    let agent = get_agent(db.clone(), agent_id).await?;
+    let execution_model = model.unwrap_or(agent.model.clone());
+    
+    // Validate dependencies
+    if let Err(e) = validate_engine_dependencies("aider") {
+        return Err(format!("Aider dependencies not met: {}", e));
+    }
+    
+    // Get OpenRouter API key
+    let api_key = validate_openrouter_api_key()
+        .map_err(|e| format!("OpenRouter API key error: {}", e))?;
+    
+    // Create a new run record
+    let run_id = {
+        let conn = db.0.lock().map_err(|e| e.to_string())?;
+        conn.execute(
+            "INSERT INTO agent_runs (agent_id, agent_name, agent_icon, task, model, project_path, session_id) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            params![agent_id, agent.name, agent.icon, task, execution_model, project_path, ""],
+        )
+        .map_err(|e| e.to_string())?;
+        conn.last_insert_rowid()
+    };
+    
+    // Build Aider command
+    let engine_cmd = build_aider_command(
+        &project_path,
+        &task,
+        &execution_model,
+        &agent.system_prompt,
+        &api_key,
+        agent.engine_settings.as_ref(),
+    )?;
+    
+    info!("🤖 Executing Aider command: {} {:?}", engine_cmd.program, engine_cmd.args);
+    
+    // Create and spawn the command
+    let mut cmd = create_engine_command(&engine_cmd);
+    let mut child = cmd.spawn().map_err(|e| {
+        error!("❌ Failed to spawn Aider process: {}", e);
+        format!("Failed to spawn Aider: {}", e)
+    })?;
+    
+    // Get the PID and register the process
+    let pid = child.id().unwrap_or(0);
+    let now = chrono::Utc::now().to_rfc3339();
+    info!("✅ Aider process spawned successfully with PID: {}", pid);
+    
+    // Update the database with PID and status
+    {
+        let conn = db.0.lock().map_err(|e| e.to_string())?;
+        conn.execute(
+            "UPDATE agent_runs SET status = 'running', pid = ?1, process_started_at = ?2 WHERE id = ?3",
+            params![pid as i64, now, run_id],
+        ).map_err(|e| e.to_string())?;
+        info!("📝 Updated database with running status and PID");
+    }
+    
+    // Get stdout and stderr
+    let stdout = child.stdout.take().ok_or("Failed to get stdout")?;
+    let stderr = child.stderr.take().ok_or("Failed to get stderr")?;
+    info!("📡 Set up stdout/stderr readers");
+    
+    // Create readers
+    let stdout_reader = BufReader::new(stdout);
+    let stderr_reader = BufReader::new(stderr);
+    
+    // Shared state for collecting session ID and live output
+    let live_output = std::sync::Arc::new(Mutex::new(String::new()));
+    let start_time = std::time::Instant::now();
+    
+    // Spawn tasks to read stdout and stderr
+    let app_handle = app.clone();
+    let live_output_clone = live_output.clone();
+    let registry_clone = registry.0.clone();
+    
+    let stdout_task = tokio::spawn(async move {
+        info!("📖 Starting to read Aider stdout...");
+        let mut lines = stdout_reader.lines();
+        let mut line_count = 0;
+        
+        while let Ok(Some(line)) = lines.next_line().await {
+            line_count += 1;
+            
+            if line_count <= 5 {
+                info!("stdout[{}]: {}", line_count, line);
+            } else {
+                debug!("stdout[{}]: {}", line_count, line);
+            }
+            
+            // Store live output
+            if let Ok(mut output) = live_output_clone.lock() {
+                output.push_str(&line);
+                output.push('\n');
+            }
+            
+            // Store in process registry for cross-session access
+            let _ = registry_clone.append_live_output(run_id, &line);
+            
+            // Emit the line to the frontend
+            let _ = app_handle.emit("agent-output", &line);
+        }
+        
+        info!("📖 Finished reading Aider stdout. Total lines: {}", line_count);
+    });
+    
+    let app_handle_stderr = app.clone();
+    
+    let stderr_task = tokio::spawn(async move {
+        info!("📖 Starting to read Aider stderr...");
+        let mut lines = stderr_reader.lines();
+        let mut error_count = 0;
+        
+        while let Ok(Some(line)) = lines.next_line().await {
+            error_count += 1;
+            warn!("stderr[{}]: {}", error_count, line);
+            
+            // Emit error lines to the frontend
+            let _ = app_handle_stderr.emit("agent-error", &line);
+        }
+        
+        if error_count > 0 {
+            warn!("📖 Finished reading Aider stderr. Total error lines: {}", error_count);
+        } else {
+            info!("📖 Finished reading Aider stderr. No errors.");
+        }
+    });
+    
+    // Register the process in the registry
+    registry.0.register_process(
+        run_id,
+        agent_id,
+        agent.name.clone(),
+        pid,
+        project_path.clone(),
+        task.clone(),
+        execution_model.clone(),
+        child,
+    ).map_err(|e| format!("Failed to register process: {}", e))?;
+    info!("📋 Registered Aider process in registry");
+    
+    // Create variables we need for the spawned task
+    let app_dir = app.path().app_data_dir().expect("Failed to get app data dir");
+    let db_path = app_dir.join("agents.db");
+    
+    // Monitor process status and wait for completion
+    tokio::spawn(async move {
+        info!("🕐 Starting Aider process monitoring...");
+        
+        // Wait for reading tasks to complete
+        info!("⏳ Waiting for stdout/stderr reading to complete...");
+        let _ = stdout_task.await;
+        let _ = stderr_task.await;
+        
+        let duration_ms = start_time.elapsed().as_millis() as i64;
+        info!("⏱️ Aider process execution took {} ms", duration_ms);
+        
+        // Update the run record and mark as completed
+        if let Ok(conn) = Connection::open(&db_path) {
+            let _ = conn.execute(
+                "UPDATE agent_runs SET status = 'completed', completed_at = CURRENT_TIMESTAMP WHERE id = ?1",
+                params![run_id],
+            );
+        }
+        
+        let _ = app.emit("agent-complete", true);
+        info!("✅ Aider process execution monitoring complete");
+    });
+    
+    Ok(run_id)
+}
+
+/// Execute an OpenCodex agent with OpenRouter integration
+async fn execute_opencodex_agent(
+    app: AppHandle,
+    agent_id: i64,
+    project_path: String,
+    task: String,
+    model: Option<String>,
+    db: State<'_, AgentDb>,
+    registry: State<'_, crate::process::ProcessRegistryState>,
+) -> Result<i64, String> {
+    info!("Executing OpenCodex agent {} with task: {}", agent_id, task);
+    
+    // Get the agent from database
+    let agent = get_agent(db.clone(), agent_id).await?;
+    let execution_model = model.unwrap_or(agent.model.clone());
+    
+    // Validate dependencies
+    if let Err(e) = validate_engine_dependencies("opencodex") {
+        return Err(format!("OpenCodex dependencies not met: {}", e));
+    }
+    
+    // Get OpenRouter API key
+    let api_key = validate_openrouter_api_key()
+        .map_err(|e| format!("OpenRouter API key error: {}", e))?;
+    
+    // Create a new run record
+    let run_id = {
+        let conn = db.0.lock().map_err(|e| e.to_string())?;
+        conn.execute(
+            "INSERT INTO agent_runs (agent_id, agent_name, agent_icon, task, model, project_path, session_id) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            params![agent_id, agent.name, agent.icon, task, execution_model, project_path, ""],
+        )
+        .map_err(|e| e.to_string())?;
+        conn.last_insert_rowid()
+    };
+    
+    // Build OpenCodex command
+    let engine_cmd = build_opencodex_command(
+        &project_path,
+        &task,
+        &execution_model,
+        &agent.system_prompt,
+        &api_key,
+        agent.engine_settings.as_ref(),
+    )?;
+    
+    info!("🤖 Executing OpenCodex command: {} {:?}", engine_cmd.program, engine_cmd.args);
+    
+    // Create and spawn the command
+    let mut cmd = create_engine_command(&engine_cmd);
+    let mut child = cmd.spawn().map_err(|e| {
+        error!("❌ Failed to spawn OpenCodex process: {}", e);
+        format!("Failed to spawn OpenCodex: {}", e)
+    })?;
+    
+    // Get the PID and register the process
+    let pid = child.id().unwrap_or(0);
+    let now = chrono::Utc::now().to_rfc3339();
+    info!("✅ OpenCodex process spawned successfully with PID: {}", pid);
+    
+    // Update the database with PID and status
+    {
+        let conn = db.0.lock().map_err(|e| e.to_string())?;
+        conn.execute(
+            "UPDATE agent_runs SET status = 'running', pid = ?1, process_started_at = ?2 WHERE id = ?3",
+            params![pid as i64, now, run_id],
+        ).map_err(|e| e.to_string())?;
+        info!("📝 Updated database with running status and PID");
+    }
+    
+    // Get stdout and stderr
+    let stdout = child.stdout.take().ok_or("Failed to get stdout")?;
+    let stderr = child.stderr.take().ok_or("Failed to get stderr")?;
+    info!("📡 Set up stdout/stderr readers");
+    
+    // Create readers
+    let stdout_reader = BufReader::new(stdout);
+    let stderr_reader = BufReader::new(stderr);
+    
+    // Shared state for collecting live output
+    let live_output = std::sync::Arc::new(Mutex::new(String::new()));
+    let start_time = std::time::Instant::now();
+    
+    // Spawn tasks to read stdout and stderr
+    let app_handle = app.clone();
+    let live_output_clone = live_output.clone();
+    let registry_clone = registry.0.clone();
+    
+    let stdout_task = tokio::spawn(async move {
+        info!("📖 Starting to read OpenCodex stdout...");
+        let mut lines = stdout_reader.lines();
+        let mut line_count = 0;
+        
+        while let Ok(Some(line)) = lines.next_line().await {
+            line_count += 1;
+            
+            if line_count <= 5 {
+                info!("stdout[{}]: {}", line_count, line);
+            } else {
+                debug!("stdout[{}]: {}", line_count, line);
+            }
+            
+            // Store live output
+            if let Ok(mut output) = live_output_clone.lock() {
+                output.push_str(&line);
+                output.push('\n');
+            }
+            
+            // Store in process registry for cross-session access
+            let _ = registry_clone.append_live_output(run_id, &line);
+            
+            // Emit the line to the frontend
+            let _ = app_handle.emit("agent-output", &line);
+        }
+        
+        info!("📖 Finished reading OpenCodex stdout. Total lines: {}", line_count);
+    });
+    
+    let app_handle_stderr = app.clone();
+    
+    let stderr_task = tokio::spawn(async move {
+        info!("📖 Starting to read OpenCodex stderr...");
+        let mut lines = stderr_reader.lines();
+        let mut error_count = 0;
+        
+        while let Ok(Some(line)) = lines.next_line().await {
+            error_count += 1;
+            warn!("stderr[{}]: {}", error_count, line);
+            
+            // Emit error lines to the frontend
+            let _ = app_handle_stderr.emit("agent-error", &line);
+        }
+        
+        if error_count > 0 {
+            warn!("📖 Finished reading OpenCodex stderr. Total error lines: {}", error_count);
+        } else {
+            info!("📖 Finished reading OpenCodex stderr. No errors.");
+        }
+    });
+    
+    // Register the process in the registry
+    registry.0.register_process(
+        run_id,
+        agent_id,
+        agent.name.clone(),
+        pid,
+        project_path.clone(),
+        task.clone(),
+        execution_model.clone(),
+        child,
+    ).map_err(|e| format!("Failed to register process: {}", e))?;
+    info!("📋 Registered OpenCodex process in registry");
+    
+    // Create variables we need for the spawned task
+    let app_dir = app.path().app_data_dir().expect("Failed to get app data dir");
+    let db_path = app_dir.join("agents.db");
+    
+    // Monitor process status and wait for completion
+    tokio::spawn(async move {
+        info!("🕐 Starting OpenCodex process monitoring...");
+        
+        // Wait for reading tasks to complete
+        info!("⏳ Waiting for stdout/stderr reading to complete...");
+        let _ = stdout_task.await;
+        let _ = stderr_task.await;
+        
+        let duration_ms = start_time.elapsed().as_millis() as i64;
+        info!("⏱️ OpenCodex process execution took {} ms", duration_ms);
+        
+        // Update the run record and mark as completed
+        if let Ok(conn) = Connection::open(&db_path) {
+            let _ = conn.execute(
+                "UPDATE agent_runs SET status = 'completed', completed_at = CURRENT_TIMESTAMP WHERE id = ?1",
+                params![run_id],
+            );
+        }
+        
+        let _ = app.emit("agent-complete", true);
+        info!("✅ OpenCodex process execution monitoring complete");
+    });
+    
+    Ok(run_id)
+}
+
 /// List all currently running agent sessions
 #[tauri::command]
 pub async fn list_running_sessions(
@@ -1852,5 +2304,454 @@ fn create_command_with_env(program: &str) -> Command {
     }
 
     cmd
+}
+
+/// Command builder configuration for engine execution
+#[derive(Debug, Clone)]
+pub struct EngineCommand {
+    pub program: String,
+    pub args: Vec<String>,
+    pub env_vars: Vec<(String, String)>,
+    pub working_dir: PathBuf,
+}
+
+/// Build Aider command with OpenRouter integration
+fn build_aider_command(
+    project_path: &str,
+    task: &str,
+    model: &str,
+    system_prompt: &str,
+    api_key: &str,
+    engine_settings: Option<&JsonValue>,
+) -> Result<EngineCommand, String> {
+    info!("Building Aider command for model: {}", model);
+
+    // Sanitize inputs
+    let safe_project_path = sanitize_path(project_path)?;
+    let safe_task = sanitize_string(task)?;
+    let safe_model = sanitize_string(model)?;
+    let safe_system_prompt = sanitize_string(system_prompt)?;
+
+    let mut args = Vec::new();
+    let mut env_vars = Vec::new();
+
+    // Set OpenRouter API configuration
+    env_vars.push(("OPENAI_API_KEY".to_string(), api_key.to_string()));
+    env_vars.push(("OPENAI_API_BASE".to_string(), "https://openrouter.ai/api/v1".to_string()));
+
+    // Core Aider arguments
+    args.push("--model".to_string());
+    args.push(safe_model);
+
+    // Set system message if provided
+    if !safe_system_prompt.is_empty() {
+        args.push("--message".to_string());
+        args.push(format!("System: {}\n\nUser: {}", safe_system_prompt, safe_task));
+    } else {
+        args.push("--message".to_string());
+        args.push(safe_task);
+    }
+
+    // Parse engine-specific settings
+    let auto_commit = engine_settings
+        .and_then(|s| s.get("autoCommit"))
+        .and_then(|v| v.as_bool())
+        .unwrap_or(true);
+    
+    let git_repo_path = engine_settings
+        .and_then(|s| s.get("gitRepoPath"))
+        .and_then(|v| v.as_str())
+        .filter(|s| !s.is_empty());
+
+    // Aider configuration for automated execution
+    args.push("--yes".to_string());      // Auto-confirm changes
+    args.push("--stream".to_string());   // Enable streaming output
+    args.push("--no-pretty".to_string()); // Disable pretty printing for cleaner parsing
+
+    // Git configuration based on settings
+    if auto_commit {
+        // Enable git integration with auto-commit
+        if let Some(repo_path) = git_repo_path {
+            args.push("--git-diffs".to_string());
+            args.push("--auto-commits".to_string());
+            args.push("--git".to_string());
+            // Set working directory to the git repo if specified
+            return Ok(EngineCommand {
+                program: "aider".to_string(),
+                args,
+                env_vars,
+                working_dir: PathBuf::from(repo_path),
+            });
+        } else {
+            args.push("--git-diffs".to_string());
+            args.push("--auto-commits".to_string());
+            args.push("--git".to_string());
+        }
+    } else {
+        args.push("--no-git".to_string());   // Disable git integration
+    }
+
+    // Output format for integration
+    args.push("--architect".to_string()); // Use architect mode for better structured output
+
+    Ok(EngineCommand {
+        program: "aider".to_string(),
+        args,
+        env_vars,
+        working_dir: PathBuf::from(safe_project_path),
+    })
+}
+
+/// Build OpenCodex command with OpenRouter integration
+fn build_opencodex_command(
+    project_path: &str,
+    task: &str,
+    model: &str,
+    system_prompt: &str,
+    api_key: &str,
+    engine_settings: Option<&JsonValue>,
+) -> Result<EngineCommand, String> {
+    info!("Building OpenCodex command for model: {}", model);
+
+    // Sanitize inputs
+    let safe_project_path = sanitize_path(project_path)?;
+    let safe_task = sanitize_string(task)?;
+    let safe_model = sanitize_string(model)?;
+    let safe_system_prompt = sanitize_string(system_prompt)?;
+
+    let mut args = Vec::new();
+    let mut env_vars = Vec::new();
+
+    // Parse engine-specific settings
+    let repository_paths = engine_settings
+        .and_then(|s| s.get("repositoryPaths"))
+        .and_then(|v| v.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str())
+                .filter(|s| !s.is_empty())
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_else(|| vec![safe_project_path.as_str()]);
+
+    let endpoint_url = engine_settings
+        .and_then(|s| s.get("endpointUrl"))
+        .and_then(|v| v.as_str())
+        .filter(|s| !s.is_empty());
+
+    let custom_config = engine_settings
+        .and_then(|s| s.get("customConfig"))
+        .and_then(|v| v.as_str())
+        .filter(|s| !s.is_empty());
+
+    // Set API configuration
+    if let Some(endpoint) = endpoint_url {
+        env_vars.push(("OPENAI_API_BASE".to_string(), endpoint.to_string()));
+    } else {
+        env_vars.push(("OPENAI_API_BASE".to_string(), "https://openrouter.ai/api/v1".to_string()));
+    }
+    env_vars.push(("OPENAI_API_KEY".to_string(), api_key.to_string()));
+
+    // Core OpenCodex arguments
+    args.push("--model".to_string());
+    args.push(safe_model);
+
+    // Set the task/prompt
+    args.push("--prompt".to_string());
+    if !safe_system_prompt.is_empty() {
+        args.push(format!("System: {}\n\nUser: {}", safe_system_prompt, safe_task));
+    } else {
+        args.push(safe_task);
+    }
+
+    // Add repository paths for multi-repo analysis
+    for repo_path in &repository_paths {
+        args.push("--repo".to_string());
+        args.push(repo_path.to_string());
+    }
+
+    // OpenCodex configuration for automated execution
+    args.push("--auto".to_string());        // Auto-execute suggested changes
+    args.push("--stream".to_string());      // Enable streaming output
+    args.push("--format".to_string());      // Use structured output format
+    args.push("json".to_string());
+
+    // Working directory (use first repository path if available)
+    let working_dir = repository_paths.first()
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| safe_project_path.clone());
+    
+    args.push("--cwd".to_string());
+    args.push(working_dir.clone());
+
+    // Add custom configuration arguments if provided
+    if let Some(config) = custom_config {
+        // Parse custom config and add as additional arguments
+        let custom_args: Vec<&str> = config.split_whitespace().collect();
+        for arg in custom_args {
+            args.push(arg.to_string());
+        }
+    }
+
+    Ok(EngineCommand {
+        program: "opencodx".to_string(),
+        args,
+        env_vars,
+        working_dir: PathBuf::from(working_dir),
+    })
+}
+
+/// Sanitize string input to prevent command injection
+fn sanitize_string(input: &str) -> Result<String, String> {
+    // Remove or escape potentially dangerous characters
+    let sanitized = input
+        .chars()
+        .filter(|c| {
+            c.is_alphanumeric() 
+                || c.is_whitespace() 
+                || ".,!?:;\"'()[]{}+-=_@#$%&*".contains(*c)
+        })
+        .collect::<String>();
+
+    if sanitized.len() != input.len() {
+        warn!("Input contained potentially unsafe characters and was sanitized");
+    }
+
+    Ok(sanitized)
+}
+
+/// Sanitize path input to ensure it's safe
+fn sanitize_path(path: &str) -> Result<String, String> {
+    let path_buf = PathBuf::from(path);
+    
+    // Check if path exists and is valid
+    if !path_buf.exists() {
+        return Err(format!("Path does not exist: {}", path));
+    }
+
+    // Canonicalize the path to resolve any relative components
+    match path_buf.canonicalize() {
+        Ok(canonical_path) => {
+            canonical_path
+                .to_str()
+                .ok_or_else(|| "Path contains invalid UTF-8".to_string())
+                .map(|s| s.to_string())
+        }
+        Err(e) => Err(format!("Invalid path: {}", e)),
+    }
+}
+
+/// Create a tokio Command from EngineCommand with proper environment setup
+fn create_engine_command(engine_cmd: &EngineCommand) -> Command {
+    let mut cmd = Command::new(&engine_cmd.program);
+    
+    // Add arguments
+    cmd.args(&engine_cmd.args);
+    
+    // Set working directory
+    cmd.current_dir(&engine_cmd.working_dir);
+    
+    // Add environment variables
+    for (key, value) in &engine_cmd.env_vars {
+        cmd.env(key, value);
+    }
+    
+    // Inherit essential environment variables
+    for (key, value) in std::env::vars() {
+        if key == "PATH" || key == "HOME" || key == "USER" 
+            || key == "SHELL" || key == "LANG" || key.starts_with("LC_") {
+            cmd.env(&key, &value);
+        }
+    }
+    
+    // Configure stdio
+    cmd.stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .stdin(Stdio::null());
+    
+    cmd
+}
+
+/// Get available models for a specific engine
+#[tauri::command]
+pub async fn get_available_models(engine: String) -> Result<Vec<String>, String> {
+    match engine.as_str() {
+        "claude" => {
+            // Return hardcoded Claude models for now
+            Ok(vec![
+                "sonnet".to_string(),
+                "haiku".to_string(), 
+                "opus".to_string(),
+                "claude-3-5-sonnet-20241022".to_string(),
+                "claude-3-5-haiku-20241022".to_string(),
+                "claude-3-opus-20240229".to_string(),
+            ])
+        }
+        "aider" | "opencodex" => {
+            // Use OpenRouter API to get available models
+            match get_openrouter_models(engine.clone()).await {
+                Ok(models) => Ok(models),
+                Err(e) => {
+                    warn!("Failed to fetch OpenRouter models for {}: {}", engine, e);
+                    // Fallback to hardcoded models
+                    match engine.as_str() {
+                        "aider" => Ok(vec![
+                            "openai/gpt-4".to_string(),
+                            "openai/gpt-3.5-turbo".to_string(),
+                            "anthropic/claude-3-5-sonnet".to_string(),
+                        ]),
+                        "opencodex" => Ok(vec![
+                            "openai/gpt-4".to_string(),
+                            "openai/gpt-3.5-turbo".to_string(),
+                        ]),
+                        _ => unreachable!(),
+                    }
+                }
+            }
+        }
+        _ => Err(format!("Unsupported engine: {}", engine))
+    }
+}
+
+/// Get available models from OpenRouter API for specific engine
+async fn get_openrouter_models(engine: String) -> Result<Vec<String>, String> {
+    info!("Fetching OpenRouter models for engine: {}", engine);
+
+    // Validate dependencies first
+    if let Err(e) = validate_engine_dependencies(&engine) {
+        return Err(format!("Engine dependencies not met: {}", e));
+    }
+
+    // Get API key
+    let api_key = validate_openrouter_api_key()
+        .map_err(|e| format!("OpenRouter API key error: {}", e))?;
+
+    // Create OpenRouter client
+    let client = OpenRouterClient::new(api_key)
+        .map_err(|e| format!("Failed to create OpenRouter client: {}", e))?;
+
+    // Fetch all models
+    let all_models = client
+        .get_models()
+        .await
+        .map_err(|e| format!("Failed to fetch models from OpenRouter: {}", e))?;
+
+    // Filter models for the specific engine
+    let filtered_models = client.filter_models_for_engine(&all_models, &engine);
+
+    // Convert to model ID strings
+    let model_ids: Vec<String> = filtered_models
+        .into_iter()
+        .map(|model| model.id)
+        .collect();
+
+    info!("Found {} compatible models for engine {}", model_ids.len(), engine);
+    Ok(model_ids)
+}
+
+/// Validate engine dependencies and return detailed status
+#[tauri::command]
+pub async fn validate_engine_setup(engine: String) -> Result<EngineValidationResult, String> {
+    let mut result = EngineValidationResult {
+        engine: engine.clone(),
+        binary_available: false,
+        api_key_valid: false,
+        dependencies_met: false,
+        error_message: None,
+    };
+
+    match engine.as_str() {
+        "claude" => {
+            // For Claude, just check if binary exists
+            result.binary_available = true; // Assuming Claude setup is already validated elsewhere
+            result.api_key_valid = true; // Claude uses its own auth mechanism
+            result.dependencies_met = true;
+        }
+        "aider" => {
+            // Check aider binary
+            result.binary_available = check_binary_exists("aider");
+            if !result.binary_available {
+                result.error_message = Some("Aider binary not found. Install with: pip install aider-chat".to_string());
+                return Ok(result);
+            }
+
+            // Check API key
+            match validate_openrouter_api_key() {
+                Ok(api_key) => {
+                    // Validate API key by creating client and testing
+                    match OpenRouterClient::new(api_key) {
+                        Ok(client) => {
+                            result.api_key_valid = client.validate_api_key().await
+                                .unwrap_or(false);
+                            if !result.api_key_valid {
+                                result.error_message = Some("OpenRouter API key is invalid".to_string());
+                                return Ok(result);
+                            }
+                        }
+                        Err(e) => {
+                            result.error_message = Some(format!("Failed to create OpenRouter client: {}", e));
+                            return Ok(result);
+                        }
+                    }
+                }
+                Err(e) => {
+                    result.error_message = Some(e.to_string());
+                    return Ok(result);
+                }
+            }
+
+            result.dependencies_met = result.binary_available && result.api_key_valid;
+        }
+        "opencodex" => {
+            // Check opencodx binary
+            result.binary_available = check_binary_exists("opencodx");
+            if !result.binary_available {
+                result.error_message = Some("OpenCodex binary not found. Please install opencodx".to_string());
+                return Ok(result);
+            }
+
+            // Check API key (same as aider)
+            match validate_openrouter_api_key() {
+                Ok(api_key) => {
+                    match OpenRouterClient::new(api_key) {
+                        Ok(client) => {
+                            result.api_key_valid = client.validate_api_key().await
+                                .unwrap_or(false);
+                            if !result.api_key_valid {
+                                result.error_message = Some("OpenRouter API key is invalid".to_string());
+                                return Ok(result);
+                            }
+                        }
+                        Err(e) => {
+                            result.error_message = Some(format!("Failed to create OpenRouter client: {}", e));
+                            return Ok(result);
+                        }
+                    }
+                }
+                Err(e) => {
+                    result.error_message = Some(e.to_string());
+                    return Ok(result);
+                }
+            }
+
+            result.dependencies_met = result.binary_available && result.api_key_valid;
+        }
+        _ => {
+            result.error_message = Some(format!("Unsupported engine: {}", engine));
+            return Ok(result);
+        }
+    }
+
+    Ok(result)
+}
+
+/// Engine validation result structure
+#[derive(Debug, Serialize, Deserialize)]
+pub struct EngineValidationResult {
+    pub engine: String,
+    pub binary_available: bool,
+    pub api_key_valid: bool,
+    pub dependencies_met: bool,
+    pub error_message: Option<String>,
 }
  

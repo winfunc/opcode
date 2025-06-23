@@ -163,6 +163,8 @@ export interface Agent {
   system_prompt: string;
   default_task?: string;
   model: string;
+  engine: string;
+  engine_settings?: any;
   sandbox_enabled: boolean;
   enable_file_read: boolean;
   enable_file_write: boolean;
@@ -637,6 +639,8 @@ export const api = {
     system_prompt: string, 
     default_task?: string, 
     model?: string, 
+    engine?: string,
+    engine_settings?: any,
     sandbox_enabled?: boolean,
     enable_file_read?: boolean,
     enable_file_write?: boolean,
@@ -649,6 +653,8 @@ export const api = {
         systemPrompt: system_prompt,
         defaultTask: default_task,
         model,
+        engine,
+        engineSettings: engine_settings,
         sandboxEnabled: sandbox_enabled,
         enableFileRead: enable_file_read,
         enableFileWrite: enable_file_write,
@@ -681,6 +687,8 @@ export const api = {
     system_prompt: string, 
     default_task?: string, 
     model?: string, 
+    engine?: string,
+    engine_settings?: any,
     sandbox_enabled?: boolean,
     enable_file_read?: boolean,
     enable_file_write?: boolean,
@@ -694,6 +702,8 @@ export const api = {
         systemPrompt: system_prompt,
         defaultTask: default_task,
         model,
+        engine,
+        engineSettings: engine_settings,
         sandboxEnabled: sandbox_enabled,
         enableFileRead: enable_file_read,
         enableFileWrite: enable_file_write,
