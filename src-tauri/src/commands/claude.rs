@@ -313,7 +313,13 @@ fn create_command_with_env(program: &str) -> Command {
         if key == "PATH" || key == "HOME" || key == "USER" 
             || key == "SHELL" || key == "LANG" || key == "LC_ALL" || key.starts_with("LC_")
             || key == "NODE_PATH" || key == "NVM_DIR" || key == "NVM_BIN" 
-            || key == "HOMEBREW_PREFIX" || key == "HOMEBREW_CELLAR" {
+            || key == "HOMEBREW_PREFIX" || key == "HOMEBREW_CELLAR"
+            // Pass AWS related environment variables (for Bedrock)
+            || key.starts_with("AWS_") 
+            // Pass Anthropic API related environment variables
+            || key.starts_with("ANTHROPIC_")
+            // Pass Claude Code usage flags
+            || key.starts_with("CLAUDE_CODE_") {
             log::debug!("Inheriting env var: {}={}", key, value);
             cmd.env(&key, &value);
         }
@@ -826,6 +832,10 @@ pub async fn execute_claude_code(
 ) -> Result<(), String> {
     log::info!("Starting new Claude Code session in: {} with model: {}", project_path, model);
     
+    // Check settings to see if AWS Bedrock mode is enabled
+    let settings = get_claude_settings_sync(&app)?;
+    let use_aws_bedrock = settings.data.get("useAwsBedrock").and_then(|v| v.as_bool()).unwrap_or(false);
+    
     // Check if sandboxing should be used
     let use_sandbox = should_use_sandbox(&app)?;
     
@@ -836,11 +846,22 @@ pub async fn execute_claude_code(
         create_command_with_env(&claude_path)
     };
     
+    // Add common arguments
     cmd.arg("-p")
-        .arg(&prompt)
-        .arg("--model")
-        .arg(&model)
-        .arg("--output-format")
+        .arg(&prompt);
+    
+    // Only add model argument if not using AWS Bedrock
+    // When AWS Bedrock is enabled, we rely on the ANTHROPIC_MODEL environment variable
+    if !use_aws_bedrock {
+        log::info!("Using standard model selection: {}", model);
+        cmd.arg("--model")
+           .arg(&model);
+    } else {
+        log::info!("Using AWS Bedrock mode - model parameter omitted to use ANTHROPIC_MODEL from environment");
+    }
+    
+    // Add remaining arguments
+    cmd.arg("--output-format")
         .arg("stream-json")
         .arg("--verbose")
         .arg("--dangerously-skip-permissions")
@@ -861,6 +882,10 @@ pub async fn continue_claude_code(
 ) -> Result<(), String> {
     log::info!("Continuing Claude Code conversation in: {} with model: {}", project_path, model);
     
+    // Check settings to see if AWS Bedrock mode is enabled
+    let settings = get_claude_settings_sync(&app)?;
+    let use_aws_bedrock = settings.data.get("useAwsBedrock").and_then(|v| v.as_bool()).unwrap_or(false);
+    
     // Check if sandboxing should be used
     let use_sandbox = should_use_sandbox(&app)?;
     
@@ -871,12 +896,23 @@ pub async fn continue_claude_code(
         create_command_with_env(&claude_path)
     };
     
+    // Add common arguments
     cmd.arg("-c")  // Continue flag
         .arg("-p")
-        .arg(&prompt)
-        .arg("--model")
-        .arg(&model)
-        .arg("--output-format")
+        .arg(&prompt);
+    
+    // Only add model argument if not using AWS Bedrock
+    // When AWS Bedrock is enabled, we rely on the ANTHROPIC_MODEL environment variable
+    if !use_aws_bedrock {
+        log::info!("Using standard model selection: {}", model);
+        cmd.arg("--model")
+           .arg(&model);
+    } else {
+        log::info!("Using AWS Bedrock mode - model parameter omitted to use ANTHROPIC_MODEL from environment");
+    }
+    
+    // Add remaining arguments
+    cmd.arg("--output-format")
         .arg("stream-json")
         .arg("--verbose")
         .arg("--dangerously-skip-permissions")
@@ -898,6 +934,10 @@ pub async fn resume_claude_code(
 ) -> Result<(), String> {
     log::info!("Resuming Claude Code session: {} in: {} with model: {}", session_id, project_path, model);
     
+    // Check settings to see if AWS Bedrock mode is enabled
+    let settings = get_claude_settings_sync(&app)?;
+    let use_aws_bedrock = settings.data.get("useAwsBedrock").and_then(|v| v.as_bool()).unwrap_or(false);
+    
     // Check if sandboxing should be used
     let use_sandbox = should_use_sandbox(&app)?;
     
@@ -908,13 +948,24 @@ pub async fn resume_claude_code(
         create_command_with_env(&claude_path)
     };
     
+    // Add common arguments
     cmd.arg("--resume")
         .arg(&session_id)
         .arg("-p")
-        .arg(&prompt)
-        .arg("--model")
-        .arg(&model)
-        .arg("--output-format")
+        .arg(&prompt);
+    
+    // Only add model argument if not using AWS Bedrock
+    // When AWS Bedrock is enabled, we rely on the ANTHROPIC_MODEL environment variable
+    if !use_aws_bedrock {
+        log::info!("Using standard model selection: {}", model);
+        cmd.arg("--model")
+           .arg(&model);
+    } else {
+        log::info!("Using AWS Bedrock mode - model parameter omitted to use ANTHROPIC_MODEL from environment");
+    }
+    
+    // Add remaining arguments
+    cmd.arg("--output-format")
         .arg("stream-json")
         .arg("--verbose")
         .arg("--dangerously-skip-permissions")

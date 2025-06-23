@@ -373,6 +373,21 @@ export const Settings: React.FC<SettingsProps> = ({
                       />
                     </div>
                     
+                    {/* Use AWS Bedrock */}
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5 flex-1">
+                        <Label htmlFor="use-aws-bedrock">Use AWS Bedrock</Label>
+                        <p className="text-xs text-muted-foreground">
+                          Use AWS Bedrock for Claude API requests (requires ANTHROPIC_MODEL environment variable)
+                        </p>
+                      </div>
+                      <Switch
+                        id="use-aws-bedrock"
+                        checked={settings?.useAwsBedrock === true}
+                        onCheckedChange={(checked) => updateSetting("useAwsBedrock", checked)}
+                      />
+                    </div>
+                    
                     {/* Cleanup Period */}
                     <div className="space-y-2">
                       <Label htmlFor="cleanup">Chat Transcript Retention (days)</Label>

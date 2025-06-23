@@ -143,7 +143,13 @@ impl SandboxExecutor {
             // Pass through PATH and other essential environment variables
             if key == "PATH" || key == "HOME" || key == "USER" 
                 || key == "SHELL" || key == "LANG" || key == "LC_ALL" || key.starts_with("LC_")
-                || key == "NODE_PATH" || key == "NVM_DIR" || key == "NVM_BIN" {
+                || key == "NODE_PATH" || key == "NVM_DIR" || key == "NVM_BIN"
+                // Pass AWS related environment variables (for Bedrock)
+                || key.starts_with("AWS_") 
+                // Pass Anthropic API related environment variables
+                || key.starts_with("ANTHROPIC_")
+                // Pass Claude Code usage flags
+                || key.starts_with("CLAUDE_CODE_") {
                 debug!("Inheriting env var: {}={}", key, value);
                 cmd.env(&key, &value);
             }
