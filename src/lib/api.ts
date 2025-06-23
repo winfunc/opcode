@@ -748,6 +748,34 @@ export const api = {
   },
 
   /**
+   * Imports an agent from JSON data
+   * @param jsonData - The JSON string containing the agent export
+   * @returns Promise resolving to the imported agent
+   */
+  async importAgent(jsonData: string): Promise<Agent> {
+    try {
+      return await invoke<Agent>('import_agent', { jsonData });
+    } catch (error) {
+      console.error("Failed to import agent:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Imports an agent from a file
+   * @param filePath - The path to the JSON file
+   * @returns Promise resolving to the imported agent
+   */
+  async importAgentFromFile(filePath: string): Promise<Agent> {
+    try {
+      return await invoke<Agent>('import_agent_from_file', { filePath });
+    } catch (error) {
+      console.error("Failed to import agent from file:", error);
+      throw error;
+    }
+  },
+
+  /**
    * Executes an agent
    * @param agentId - The agent ID to execute
    * @param projectPath - The project path to run the agent in

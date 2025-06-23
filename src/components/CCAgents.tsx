@@ -16,12 +16,13 @@ import {
   Terminal,
   ArrowLeft,
   History,
-  Download
+  Download,
+  Upload
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { api, type Agent, type AgentRunWithMetrics } from "@/lib/api";
-import { save } from "@tauri-apps/plugin-dialog";
+import { save, open } from "@tauri-apps/plugin-dialog";
 import { invoke } from "@tauri-apps/api/core";
 import { cn } from "@/lib/utils";
 import { Toast, ToastContainer } from "@/components/ui/toast";
@@ -187,6 +188,34 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
     }
   };
 
+  const handleImportAgent = async () => {
+    try {
+      // Show native open dialog
+      const filePath = await open({
+        multiple: false,
+        filters: [{
+          name: 'Claudia Agent',
+          extensions: ['claudia.json', 'json']
+        }]
+      });
+      
+      if (!filePath) {
+        // User cancelled the dialog
+        return;
+      }
+      
+      // Import the agent from the selected file
+      await api.importAgentFromFile(filePath as string);
+      
+      setToast({ message: "Agent imported successfully", type: "success" });
+      await loadAgents();
+    } catch (err) {
+      console.error("Failed to import agent:", err);
+      const errorMessage = err instanceof Error ? err.message : "Failed to import agent";
+      setToast({ message: errorMessage, type: "error" });
+    }
+  };
+
   // Pagination calculations
   const totalPages = Math.ceil(agents.length / AGENTS_PER_PAGE);
   const startIndex = (currentPage - 1) * AGENTS_PER_PAGE;
@@ -264,14 +293,25 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
                 </p>
               </div>
             </div>
-            <Button
-              onClick={() => setView("create")}
-              size="default"
-              className="flex items-center gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              Create CC Agent
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={handleImportAgent}
+                size="default"
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <Download className="h-4 w-4" />
+                Import
+              </Button>
+              <Button
+                onClick={() => setView("create")}
+                size="default"
+                className="flex items-center gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Create CC Agent
+              </Button>
+            </div>
           </div>
         </motion.div>
 
@@ -402,7 +442,7 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
                                     className="flex items-center gap-1"
                                     title="Export agent to .claudia.json"
                                   >
-                                    <Download className="h-3 w-3" />
+                                    <Upload className="h-3 w-3" />
                                     Export
                                   </Button>
                                   <Button
