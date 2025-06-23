@@ -135,8 +135,6 @@ Claudia supports using Claude models via AWS Bedrock:
    - Use the model specified in your environment variables
    - Skip sending model parameters that could conflict with AWS Bedrock
 
-Full details are available in the [AWS_BEDROCK.md](AWS_BEDROCK.md) documentation.
-
 ### Managing Projects
 
 ```
