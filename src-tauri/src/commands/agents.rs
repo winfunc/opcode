@@ -1771,6 +1771,57 @@ pub async fn stream_session_output(
     Ok(())
 }
 
+/// Export a single agent to JSON format
+#[tauri::command]
+pub async fn export_agent(db: State<'_, AgentDb>, id: i64) -> Result<String, String> {
+    let conn = db.0.lock().map_err(|e| e.to_string())?;
+    
+    // Fetch the agent
+    let agent = conn
+        .query_row(
+            "SELECT name, icon, system_prompt, default_task, model, sandbox_enabled, enable_file_read, enable_file_write, enable_network FROM agents WHERE id = ?1",
+            params![id],
+            |row| {
+                Ok(serde_json::json!({
+                    "name": row.get::<_, String>(0)?,
+                    "icon": row.get::<_, String>(1)?,
+                    "system_prompt": row.get::<_, String>(2)?,
+                    "default_task": row.get::<_, Option<String>>(3)?,
+                    "model": row.get::<_, String>(4)?,
+                    "sandbox_enabled": row.get::<_, bool>(5)?,
+                    "enable_file_read": row.get::<_, bool>(6)?,
+                    "enable_file_write": row.get::<_, bool>(7)?,
+                    "enable_network": row.get::<_, bool>(8)?
+                }))
+            },
+        )
+        .map_err(|e| format!("Failed to fetch agent: {}", e))?;
+    
+    // Create the export wrapper
+    let export_data = serde_json::json!({
+        "version": 1,
+        "exported_at": chrono::Utc::now().to_rfc3339(),
+        "agent": agent
+    });
+    
+    // Convert to pretty JSON string
+    serde_json::to_string_pretty(&export_data)
+        .map_err(|e| format!("Failed to serialize agent: {}", e))
+}
+
+/// Export agent to file with native dialog
+#[tauri::command]
+pub async fn export_agent_to_file(db: State<'_, AgentDb>, id: i64, file_path: String) -> Result<(), String> {
+    // Get the JSON data
+    let json_data = export_agent(db, id).await?;
+    
+    // Write to file
+    std::fs::write(&file_path, json_data)
+        .map_err(|e| format!("Failed to write file: {}", e))?;
+    
+    Ok(())
+}
+
 /// Get the stored Claude binary path from settings
 #[tauri::command]
 pub async fn get_claude_binary_path(db: State<'_, AgentDb>) -> Result<Option<String>, String> {
@@ -1853,4 +1904,3 @@ fn create_command_with_env(program: &str) -> Command {
 
     cmd
 }
- 

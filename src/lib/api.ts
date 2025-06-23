@@ -734,6 +734,20 @@ export const api = {
   },
 
   /**
+   * Exports a single agent to JSON format
+   * @param id - The agent ID to export
+   * @returns Promise resolving to the JSON string
+   */
+  async exportAgent(id: number): Promise<string> {
+    try {
+      return await invoke<string>('export_agent', { id });
+    } catch (error) {
+      console.error("Failed to export agent:", error);
+      throw error;
+    }
+  },
+
+  /**
    * Executes an agent
    * @param agentId - The agent ID to execute
    * @param projectPath - The project path to run the agent in
@@ -1800,4 +1814,4 @@ export const api = {
       throw error;
     }
   },
-}; 
+};

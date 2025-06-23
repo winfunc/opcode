@@ -15,11 +15,14 @@ import {
   Shield,
   Terminal,
   ArrowLeft,
-  History
+  History,
+  Download
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { api, type Agent, type AgentRunWithMetrics } from "@/lib/api";
+import { save } from "@tauri-apps/plugin-dialog";
+import { invoke } from "@tauri-apps/api/core";
 import { cn } from "@/lib/utils";
 import { Toast, ToastContainer } from "@/components/ui/toast";
 import { CreateAgent } from "./CreateAgent";
@@ -153,6 +156,35 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
   const handleExecutionComplete = async () => {
     // Reload runs when returning from execution
     await loadRuns();
+  };
+
+  const handleExportAgent = async (agent: Agent) => {
+    try {
+      // Show native save dialog
+      const filePath = await save({
+        defaultPath: `${agent.name.toLowerCase().replace(/\s+/g, '-')}.claudia.json`,
+        filters: [{
+          name: 'Claudia Agent',
+          extensions: ['claudia.json']
+        }]
+      });
+      
+      if (!filePath) {
+        // User cancelled the dialog
+        return;
+      }
+      
+      // Export the agent to the selected file
+      await invoke('export_agent_to_file', { 
+        id: agent.id!,
+        filePath 
+      });
+      
+      setToast({ message: `Agent "${agent.name}" exported successfully`, type: "success" });
+    } catch (err) {
+      console.error("Failed to export agent:", err);
+      setToast({ message: "Failed to export agent", type: "error" });
+    }
   };
 
   // Pagination calculations
@@ -342,12 +374,13 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
                                     Created: {new Date(agent.created_at).toLocaleDateString()}
                                   </p>
                                 </CardContent>
-                                <CardFooter className="p-4 pt-0 flex justify-center gap-2">
+                                <CardFooter className="p-4 pt-0 flex justify-center gap-1 flex-wrap">
                                   <Button
                                     size="sm"
                                     variant="ghost"
                                     onClick={() => handleExecuteAgent(agent)}
                                     className="flex items-center gap-1"
+                                    title="Execute agent"
                                   >
                                     <Play className="h-3 w-3" />
                                     Execute
@@ -357,6 +390,7 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
                                     variant="ghost"
                                     onClick={() => handleEditAgent(agent)}
                                     className="flex items-center gap-1"
+                                    title="Edit agent"
                                   >
                                     <Edit className="h-3 w-3" />
                                     Edit
@@ -364,8 +398,19 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
                                   <Button
                                     size="sm"
                                     variant="ghost"
+                                    onClick={() => handleExportAgent(agent)}
+                                    className="flex items-center gap-1"
+                                    title="Export agent to .claudia.json"
+                                  >
+                                    <Download className="h-3 w-3" />
+                                    Export
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
                                     onClick={() => handleDeleteAgent(agent.id!)}
                                     className="flex items-center gap-1 text-destructive hover:text-destructive"
+                                    title="Delete agent"
                                   >
                                     <Trash2 className="h-3 w-3" />
                                     Delete
@@ -452,4 +497,4 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
       </ToastContainer>
     </div>
   );
-}; 
+};

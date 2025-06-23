@@ -26,7 +26,7 @@ use commands::agents::{
     migrate_agent_runs_to_session_ids, list_running_sessions, kill_agent_session,
     get_session_status, cleanup_finished_processes, get_session_output, 
     get_live_session_output, stream_session_output, get_claude_binary_path,
-    set_claude_binary_path, AgentDb
+    set_claude_binary_path, export_agent, export_agent_to_file, AgentDb
 };
 use commands::sandbox::{
     list_sandbox_profiles, create_sandbox_profile, update_sandbox_profile, delete_sandbox_profile,
@@ -137,6 +137,8 @@ fn main() {
             update_agent,
             delete_agent,
             get_agent,
+            export_agent,
+            export_agent_to_file,
             execute_agent,
             list_agent_runs,
             get_agent_run,
