@@ -23,9 +23,16 @@ pub fn execute_claude_task(
         cmd.arg("--system-prompt").arg(prompt);
     }
     
-    // Add model if provided
+    // Check if AWS Bedrock mode is enabled
+    let use_aws_bedrock = std::env::var("CLAUDE_CODE_USE_BEDROCK").unwrap_or_default() == "1";
+    
+    // Add model if provided and not using AWS Bedrock
     if let Some(m) = model {
-        cmd.arg("--model").arg(m);
+        if !use_aws_bedrock {
+            cmd.arg("--model").arg(m);
+        } else {
+            log::info!("Test using AWS Bedrock mode - model parameter omitted");
+        }
     }
     
     // Always add these flags for testing

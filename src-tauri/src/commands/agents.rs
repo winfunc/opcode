@@ -1062,17 +1062,37 @@ pub async fn execute_agent(
         test_cmd.arg("-p")
             .arg(&task)
             .arg("--system-prompt")
-            .arg(&agent.system_prompt)
-            .arg("--model")
-            .arg(&execution_model)
-            .arg("--output-format")
+            .arg(&agent.system_prompt);
+            
+        // Check if AWS Bedrock mode is enabled
+        let use_aws_bedrock = std::env::var("CLAUDE_CODE_USE_BEDROCK").unwrap_or_default() == "1";
+        
+        if !use_aws_bedrock {
+            // Only add model parameter if not using AWS Bedrock
+            test_cmd.arg("--model")
+                   .arg(&execution_model);
+        }
+        
+        test_cmd.arg("--output-format")
             .arg("stream-json")
             .arg("--verbose")
             .arg("--dangerously-skip-permissions")
             .current_dir(&project_path);
         
-        info!("🧪 Testing command: claude -p \"{}\" --system-prompt \"{}\" --model {} --output-format stream-json --verbose --dangerously-skip-permissions", 
-              task, agent.system_prompt, execution_model);
+        let model_param = if use_aws_bedrock { 
+            "(using AWS Bedrock, model parameter omitted)" 
+        } else { 
+            &execution_model 
+        };
+        
+        let model_arg = if use_aws_bedrock { 
+            String::new() 
+        } else { 
+            format!("--model {}", model_param)
+        };
+        
+        info!("🧪 Testing command: claude -p \"{}\" --system-prompt \"{}\" {} --output-format stream-json --verbose --dangerously-skip-permissions", 
+              task, agent.system_prompt, model_arg);
         
         // Start the test process and give it 5 seconds to produce output
         match test_cmd.spawn() {
@@ -1138,14 +1158,28 @@ pub async fn execute_agent(
                         );
                         
                         // Prepare the sandboxed command
-                        let args = vec![
-                            "-p", &task,
-                            "--system-prompt", &agent.system_prompt,
-                            "--model", &execution_model,
-                            "--output-format", "stream-json",
-                            "--verbose",
-                            "--dangerously-skip-permissions"
-                        ];
+                        // Check if AWS Bedrock mode is enabled
+                        let use_aws_bedrock = std::env::var("CLAUDE_CODE_USE_BEDROCK").unwrap_or_default() == "1";
+                        
+                        let args = if use_aws_bedrock {
+                            // Skip the model parameter for AWS Bedrock
+                            vec![
+                                "-p", &task,
+                                "--system-prompt", &agent.system_prompt,
+                                "--output-format", "stream-json",
+                                "--verbose",
+                                "--dangerously-skip-permissions"
+                            ]
+                        } else {
+                            vec![
+                                "-p", &task,
+                                "--system-prompt", &agent.system_prompt,
+                                "--model", &execution_model,
+                                "--output-format", "stream-json",
+                                "--verbose",
+                                "--dangerously-skip-permissions"
+                            ]
+                        };
                         
                         let claude_path = match find_claude_binary(&app) {
                             Ok(path) => path,
@@ -1169,10 +1203,18 @@ pub async fn execute_agent(
                         cmd.arg("-p")
                             .arg(&task)
                             .arg("--system-prompt")
-                            .arg(&agent.system_prompt)
-                            .arg("--model")
-                            .arg(&execution_model)
-                            .arg("--output-format")
+                            .arg(&agent.system_prompt);
+                            
+                        // Check if AWS Bedrock mode is enabled
+                        let use_aws_bedrock = std::env::var("CLAUDE_CODE_USE_BEDROCK").unwrap_or_default() == "1";
+                        
+                        if !use_aws_bedrock {
+                            // Only add model parameter if not using AWS Bedrock
+                            cmd.arg("--model")
+                               .arg(&execution_model);
+                        }
+                        
+                        cmd.arg("--output-format")
                             .arg("stream-json")
                             .arg("--verbose")
                             .arg("--dangerously-skip-permissions")
@@ -1225,10 +1267,18 @@ pub async fn execute_agent(
         cmd.arg("-p")
             .arg(&task)
             .arg("--system-prompt")
-            .arg(&agent.system_prompt)
-            .arg("--model")
-            .arg(&execution_model)
-            .arg("--output-format")
+            .arg(&agent.system_prompt);
+            
+        // Check if AWS Bedrock mode is enabled
+        let use_aws_bedrock = std::env::var("CLAUDE_CODE_USE_BEDROCK").unwrap_or_default() == "1";
+        
+        if !use_aws_bedrock {
+            // Only add model parameter if not using AWS Bedrock
+            cmd.arg("--model")
+               .arg(&execution_model);
+        }
+        
+        cmd.arg("--output-format")
             .arg("stream-json")
             .arg("--verbose")
             .arg("--dangerously-skip-permissions")
@@ -1830,7 +1880,13 @@ fn create_command_with_env(program: &str) -> Command {
         if key == "PATH" || key == "HOME" || key == "USER" 
             || key == "SHELL" || key == "LANG" || key == "LC_ALL" || key.starts_with("LC_")
             || key == "NODE_PATH" || key == "NVM_DIR" || key == "NVM_BIN" 
-            || key == "HOMEBREW_PREFIX" || key == "HOMEBREW_CELLAR" {
+            || key == "HOMEBREW_PREFIX" || key == "HOMEBREW_CELLAR"
+            // Pass AWS related environment variables (for Bedrock)
+            || key.starts_with("AWS_") 
+            // Pass Anthropic API related environment variables
+            || key.starts_with("ANTHROPIC_")
+            // Pass Claude Code usage flags
+            || key.starts_with("CLAUDE_CODE_") {
             cmd.env(&key, &value);
         }
     }

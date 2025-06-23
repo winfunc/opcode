@@ -35,8 +35,12 @@ fn test_claude_with_default_sandbox() {
         20, // 20 second timeout
     ).expect("Failed to execute Claude command");
     
+    // Check if AWS Bedrock mode is enabled
+    let use_aws_bedrock = std::env::var("CLAUDE_CODE_USE_BEDROCK").unwrap_or_default() == "1";
+    
     // Debug output
     eprintln!("=== Claude Output (Default Sandbox) ===");
+    eprintln!("AWS Bedrock mode: {}", if use_aws_bedrock { "enabled" } else { "disabled" });
     eprintln!("Exit code: {}", result.exit_code);
     eprintln!("STDOUT:\n{}", result.stdout);
     eprintln!("STDERR:\n{}", result.stderr);
@@ -79,8 +83,12 @@ fn test_claude_sandbox_disabled() {
         20, // 20 second timeout
     ).expect("Failed to execute Claude command");
     
+    // Check if AWS Bedrock mode is enabled
+    let use_aws_bedrock = std::env::var("CLAUDE_CODE_USE_BEDROCK").unwrap_or_default() == "1";
+    
     // Debug output
     eprintln!("=== Claude Output (Inactive Sandbox) ===");
+    eprintln!("AWS Bedrock mode: {}", if use_aws_bedrock { "enabled" } else { "disabled" });
     eprintln!("Exit code: {}", result.exit_code);
     eprintln!("STDOUT:\n{}", result.stdout);
     eprintln!("STDERR:\n{}", result.stderr);
