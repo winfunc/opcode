@@ -263,19 +263,25 @@ fn extract_version_from_output(stdout: &[u8]) -> Option<String> {
 
 /// Select the best installation based on version
 fn select_best_installation(installations: Vec<ClaudeInstallation>) -> Option<ClaudeInstallation> {
+    // In production builds, version information may not be retrievable because
+    // spawning external processes can be restricted. We therefore no longer
+    // discard installations that lack a detected version – the mere presence
+    // of a readable binary on disk is enough to consider it valid. We still
+    // prefer binaries with version information when it is available so that
+    // in development builds we keep the previous behaviour of picking the
+    // most recent version.
     installations.into_iter()
-        .filter(|i| {
-            // Prefer installations with known versions
-            i.version.is_some() || i.path == "claude"
-        })
         .max_by(|a, b| {
-            // First compare by version presence
             match (&a.version, &b.version) {
+                // If both have versions, compare them semantically.
                 (Some(v1), Some(v2)) => compare_versions(v1, v2),
+                // Prefer the entry that actually has version information.
                 (Some(_), None) => Ordering::Greater,
                 (None, Some(_)) => Ordering::Less,
+                // Neither have version info: prefer the one that is not just
+                // the bare "claude" lookup from PATH, because that may fail
+                // at runtime if PATH is sandbox-stripped.
                 (None, None) => {
-                    // Both have no version, prefer non-PATH entries
                     if a.path == "claude" && b.path != "claude" {
                         Ordering::Less
                     } else if a.path != "claude" && b.path == "claude" {
