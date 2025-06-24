@@ -25,12 +25,7 @@
       }
     }
   },
-  "plugins": {
-    "fs": {
-      "scope": ["$HOME/**"],
-      "allow": ["readFile", "writeFile", "readDir", "copyFile", "createDir", "removeDir", "removeFile", "renameFile", "exists"]
-    }
-  },
+  "plugins": {},
   "bundle": {
     "active": true,
     "targets": "all",

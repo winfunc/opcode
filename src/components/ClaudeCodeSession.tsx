@@ -736,8 +736,9 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   }
 
   return (
-    <div className={cn("flex flex-col h-full bg-background", className)}>
-      <div className="w-full h-full flex flex-col">
+    <TooltipProvider>
+      <div className={cn("flex flex-col h-full bg-background", className)}>
+        <div className="w-full h-full flex flex-col">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -993,6 +994,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
           </DialogContent>
         </Dialog>
       )}
-    </div>
+      </div>
+    </TooltipProvider>
   );
 };

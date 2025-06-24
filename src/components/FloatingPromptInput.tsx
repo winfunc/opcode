@@ -17,6 +17,7 @@ import { FilePicker } from "./FilePicker";
 import { ImagePreview } from "./ImagePreview";
 import { type FileEntry } from "@/lib/api";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { writeFile, BaseDirectory, mkdir } from "@tauri-apps/plugin-fs";
 
 interface FloatingPromptInputProps {
   /**
@@ -258,6 +259,91 @@ const FloatingPromptInputInner = (
     }
   }, [isExpanded]);
 
+  // Helper function to save base64 image to temp directory
+  const saveImageFromClipboard = async (blob: Blob): Promise<string | null> => {
+    try {
+      // Convert blob to base64
+      const arrayBuffer = await blob.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+
+      // Generate filename with timestamp
+      const timestamp = Date.now();
+      const fileExtension = blob.type.split('/')[1] || 'png';
+      const filename = `pasted_image_${timestamp}.${fileExtension}`;
+      const filepath = `temp/${filename}`;
+      
+      // Ensure temp directory exists
+      try {
+        await mkdir('temp', { baseDir: BaseDirectory.AppData, recursive: true });
+      } catch (error) {
+        console.log('[saveImageFromClipboard] Temp directory already exists or created');
+      }
+      
+      // Save file to temp directory
+      await writeFile(filepath, uint8Array, { baseDir: BaseDirectory.AppData });
+      
+      // Return absolute path for the temp file
+      const { appDataDir } = await import('@tauri-apps/api/path');
+      const appDataPath = await appDataDir();
+      const fullPath = `${appDataPath}/${filepath}`;
+      
+      console.log('[saveImageFromClipboard] Saved image to:', fullPath);
+      return fullPath;
+      
+    } catch (error) {
+      console.error('[saveImageFromClipboard] Error saving image:', error);
+      return null;
+    }
+  };
+
+  // Handle paste events for clipboard image support
+  const handlePaste = async (e: React.ClipboardEvent) => {
+    console.log('[handlePaste] Paste event triggered');
+    const items = Array.from(e.clipboardData.items);
+    console.log('[handlePaste] Clipboard items:', items);
+    
+    // Look for image items
+    const imageItems = items.filter(item => item.kind === 'file' && item.type.startsWith('image/'));
+    console.log('[handlePaste] Found image items:', imageItems.length);
+    
+    if (imageItems.length > 0) {
+      e.preventDefault(); // Prevent default paste behavior
+      
+      const imageItem = imageItems[0];
+      const blob = imageItem.getAsFile();
+      
+      if (blob) {
+        console.log('[handlePaste] Processing image blob:', blob.type, blob.size);
+        
+        try {
+          const savedPath = await saveImageFromClipboard(blob);
+          
+          if (savedPath) {
+            // Add the image path to prompt (same as drag & drop)
+            setPrompt(currentPrompt => {
+              const mention = `@${savedPath}`;
+              const newPrompt = currentPrompt + (currentPrompt.endsWith(' ') || currentPrompt === '' ? '' : ' ') + mention + ' ';
+              
+              setTimeout(() => {
+                const target = isExpanded ? expandedTextareaRef.current : textareaRef.current;
+                target?.focus();
+                target?.setSelectionRange(newPrompt.length, newPrompt.length);
+              }, 0);
+              
+              return newPrompt;
+            });
+            
+            console.log('[handlePaste] Image path added to prompt:', savedPath);
+          } else {
+            console.error('[handlePaste] Failed to save pasted image');
+          }
+        } catch (error) {
+          console.error('[handlePaste] Error processing pasted image:', error);
+        }
+      }
+    }
+  };
+
   const handleSend = () => {
     if (prompt.trim() && !isLoading && !disabled) {
       onSend(prompt.trim(), selectedModel);
@@ -430,7 +516,9 @@ const FloatingPromptInputInner = (
                 ref={expandedTextareaRef}
                 value={prompt}
                 onChange={handleTextChange}
-                placeholder="Type your prompt here..."
+                onKeyDown={handleKeyDown}
+                onPaste={handlePaste}
+                placeholder="Type your prompt here... Paste images from browser!"
                 className="min-h-[200px] resize-none"
                 disabled={isLoading || disabled}
                 onDragEnter={handleDrag}
@@ -548,7 +636,8 @@ const FloatingPromptInputInner = (
                   value={prompt}
                   onChange={handleTextChange}
                   onKeyDown={handleKeyDown}
-                  placeholder={dragActive ? "Drop images here..." : "Ask Claude anything..."}
+                  onPaste={handlePaste}
+                  placeholder={dragActive ? "Drop images here..." : "Ask Claude anything... Paste images from browser!"}
                   disabled={isLoading || disabled}
                   className={cn(
                     "min-h-[44px] max-h-[120px] resize-none pr-10",
@@ -600,7 +689,7 @@ const FloatingPromptInputInner = (
             </div>
 
             <div className="mt-2 text-xs text-muted-foreground">
-              Press Enter to send, Shift+Enter for new line{projectPath?.trim() && ", @ to mention files, drag & drop images"}
+              Press Enter to send, Shift+Enter for new line{projectPath?.trim() && ", @ to mention files"}, drag & drop or paste images
             </div>
           </div>
         </div>

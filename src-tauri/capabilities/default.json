@@ -23,6 +23,7 @@
     "fs:write-all",
     "fs:scope-app-recursive",
     "fs:scope-home-recursive",
+    "fs:scope-appdata-recursive",
     "http:default",
     "http:allow-fetch",
     "process:default",
