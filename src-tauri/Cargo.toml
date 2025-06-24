@@ -8,48 +8,52 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
-# The `_lib` suffix may seem redundant but it is necessary
-# to make the lib name unique and wouldn't conflict with the bin name.
-# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
 name = "claudia_lib"
-crate-type = ["staticlib", "cdylib", "rlib"]
+crate-type = ["lib", "cdylib", "staticlib"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = ["protocol-asset"] }
-tauri-plugin-opener = "2"
+tauri = { version = "2", features = ["protocol-asset", "tray-icon", "image-png"] }
 tauri-plugin-shell = "2"
-tauri-plugin-dialog = "2.0.3"
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+tauri-plugin-process = "2"
+tauri-plugin-updater = "2"
+tauri-plugin-notification = "2"
+tauri-plugin-clipboard-manager = "2"
 tauri-plugin-global-shortcut = "2"
+tauri-plugin-http = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["full"] }
-anyhow = "1.0"
-dirs = "5.0"
-walkdir = "2"
+rusqlite = { version = "0.32", features = ["bundled"] }
+dirs = "5"
+chrono = { version = "0.4", features = ["serde"] }
+anyhow = "1"
 log = "0.4"
 env_logger = "0.11"
-rusqlite = { version = "0.32", features = ["bundled", "chrono"] }
+regex = "1"
+glob = "0.3"
+base64 = "0.22"
 gaol = "0.2"
-chrono = { version = "0.4", features = ["serde"] }
-uuid = { version = "1.11", features = ["v4", "serde"] }
+libc = "0.2"
+reqwest = { version = "0.12", features = ["json"] }
+futures = "0.3"
+async-trait = "0.1"
+tempfile = "3"
+which = "7"
+headless_chrome = { version = "1.0", features = ["fetch"] }
 sha2 = "0.10"
 zstd = "0.13"
-headless_chrome = { version = "1.0", features = ["fetch"] }
-reqwest = { version = "0.12.20", features = ["json"] }
-image = "0.25.6"
+uuid = { version = "1.6", features = ["v4", "serde"] }
+walkdir = "2"
 
 [target.'cfg(target_os = "macos")'.dependencies]
+cocoa = "0.26"
+objc = "0.2"
 
-[dev-dependencies]
-# Testing utilities
-tempfile = "3"
-serial_test = "3"  # For tests that need to run serially
-test-case = "3"  # For parameterized tests
-once_cell = "1"  # For test fixture initialization
-proptest = "1"  # For property-based testing
-pretty_assertions = "1"  # Better assertion output
-parking_lot = "0.12"  # Non-poisoning mutex for tests
-
+[features]
+# This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!
+custom-protocol = ["tauri/custom-protocol"]

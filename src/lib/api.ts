@@ -171,6 +171,30 @@ export interface Agent {
   updated_at: string;
 }
 
+export interface AgentExport {
+  version: number;
+  exported_at: string;
+  agent: {
+    name: string;
+    icon: string;
+    system_prompt: string;
+    default_task?: string;
+    model: string;
+    sandbox_enabled: boolean;
+    enable_file_read: boolean;
+    enable_file_write: boolean;
+    enable_network: boolean;
+  };
+}
+
+export interface GitHubAgentFile {
+  name: string;
+  path: string;
+  download_url: string;
+  size: number;
+  sha: string;
+}
+
 export interface AgentRun {
   id?: number;
   agent_id: number;
@@ -456,15 +480,56 @@ export const api = {
   },
 
   /**
-   * Gets sessions for a specific project
-   * @param projectId - The project ID to get sessions for
+   * Retrieves sessions for a specific project
+   * @param projectId - The ID of the project to retrieve sessions for
    * @returns Promise resolving to an array of sessions
    */
   async getProjectSessions(projectId: string): Promise<Session[]> {
     try {
-      return await invoke<Session[]>("get_project_sessions", { projectId });
+      return await invoke<Session[]>('get_project_sessions', { projectId });
     } catch (error) {
       console.error("Failed to get project sessions:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Fetch list of agents from GitHub repository
+   * @returns Promise resolving to list of available agents on GitHub
+   */
+  async fetchGitHubAgents(): Promise<GitHubAgentFile[]> {
+    try {
+      return await invoke<GitHubAgentFile[]>('fetch_github_agents');
+    } catch (error) {
+      console.error("Failed to fetch GitHub agents:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Fetch and preview a specific agent from GitHub
+   * @param downloadUrl - The download URL for the agent file
+   * @returns Promise resolving to the agent export data
+   */
+  async fetchGitHubAgentContent(downloadUrl: string): Promise<AgentExport> {
+    try {
+      return await invoke<AgentExport>('fetch_github_agent_content', { downloadUrl });
+    } catch (error) {
+      console.error("Failed to fetch GitHub agent content:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Import an agent directly from GitHub
+   * @param downloadUrl - The download URL for the agent file
+   * @returns Promise resolving to the imported agent
+   */
+  async importAgentFromGitHub(downloadUrl: string): Promise<Agent> {
+    try {
+      return await invoke<Agent>('import_agent_from_github', { downloadUrl });
+    } catch (error) {
+      console.error("Failed to import agent from GitHub:", error);
       throw error;
     }
   },

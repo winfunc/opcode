@@ -17,10 +17,27 @@ import {
   ArrowLeft,
   History,
   Download,
-  Upload
+  Upload,
+  Globe,
+  FileJson,
+  ChevronDown
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { api, type Agent, type AgentRunWithMetrics } from "@/lib/api";
 import { save, open } from "@tauri-apps/plugin-dialog";
 import { invoke } from "@tauri-apps/api/core";
@@ -31,6 +48,7 @@ import { AgentExecution } from "./AgentExecution";
 import { AgentRunsList } from "./AgentRunsList";
 import { AgentRunView } from "./AgentRunView";
 import { RunningSessionsView } from "./RunningSessionsView";
+import { GitHubAgentBrowser } from "./GitHubAgentBrowser";
 
 interface CCAgentsProps {
   /**
@@ -76,6 +94,10 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
   const [activeTab, setActiveTab] = useState<"agents" | "running">("agents");
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const [selectedRunId, setSelectedRunId] = useState<number | null>(null);
+  const [showGitHubBrowser, setShowGitHubBrowser] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [agentToDelete, setAgentToDelete] = useState<Agent | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const AGENTS_PER_PAGE = 9; // 3x3 grid
 
@@ -111,18 +133,44 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
     }
   };
 
-  const handleDeleteAgent = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this agent?")) return;
+  /**
+   * Initiates the delete agent process by showing the confirmation dialog
+   * @param agent - The agent to be deleted
+   */
+  const handleDeleteAgent = (agent: Agent) => {
+    setAgentToDelete(agent);
+    setShowDeleteDialog(true);
+  };
+
+  /**
+   * Confirms and executes the agent deletion
+   * Only called when user explicitly confirms the deletion
+   */
+  const confirmDeleteAgent = async () => {
+    if (!agentToDelete?.id) return;
 
     try {
-      await api.deleteAgent(id);
+      setIsDeleting(true);
+      await api.deleteAgent(agentToDelete.id);
       setToast({ message: "Agent deleted successfully", type: "success" });
       await loadAgents();
       await loadRuns(); // Reload runs as they might be affected
     } catch (err) {
       console.error("Failed to delete agent:", err);
       setToast({ message: "Failed to delete agent", type: "error" });
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteDialog(false);
+      setAgentToDelete(null);
     }
+  };
+
+  /**
+   * Cancels the delete operation and closes the dialog
+   */
+  const cancelDeleteAgent = () => {
+    setShowDeleteDialog(false);
+    setAgentToDelete(null);
   };
 
   const handleEditAgent = (agent: Agent) => {
@@ -294,15 +342,29 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button
-                onClick={handleImportAgent}
-                size="default"
-                variant="outline"
-                className="flex items-center gap-2"
-              >
-                <Download className="h-4 w-4" />
-                Import
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    size="default"
+                    variant="outline"
+                    className="flex items-center gap-2"
+                  >
+                    <Download className="h-4 w-4" />
+                    Import
+                    <ChevronDown className="h-3 w-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={handleImportAgent}>
+                    <FileJson className="h-4 w-4 mr-2" />
+                    From File
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowGitHubBrowser(true)}>
+                    <Globe className="h-4 w-4 mr-2" />
+                    From GitHub
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Button
                 onClick={() => setView("create")}
                 size="default"
@@ -448,7 +510,7 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
                                   <Button
                                     size="sm"
                                     variant="ghost"
-                                    onClick={() => handleDeleteAgent(agent.id!)}
+                                    onClick={() => handleDeleteAgent(agent)}
                                     className="flex items-center gap-1 text-destructive hover:text-destructive"
                                     title="Delete agent"
                                   >
@@ -535,6 +597,61 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
           />
         )}
       </ToastContainer>
+
+      {/* GitHub Agent Browser */}
+      <GitHubAgentBrowser
+        isOpen={showGitHubBrowser}
+        onClose={() => setShowGitHubBrowser(false)}
+        onImportSuccess={async () => {
+          setShowGitHubBrowser(false);
+          await loadAgents();
+          setToast({ message: "Agent imported successfully from GitHub", type: "success" });
+        }}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-destructive" />
+              Delete Agent
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete the agent "{agentToDelete?.name}"? 
+              This action cannot be undone and will permanently remove the agent and all its associated data.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={cancelDeleteAgent}
+              disabled={isDeleting}
+              className="w-full sm:w-auto"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDeleteAgent}
+              disabled={isDeleting}
+              className="w-full sm:w-auto"
+            >
+              {isDeleting ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Agent
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

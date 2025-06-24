@@ -5,6 +5,7 @@ mod commands;
 mod sandbox;
 mod checkpoint;
 mod process;
+mod claude_binary;
 
 use tauri::Manager;
 use commands::claude::{
@@ -27,7 +28,8 @@ use commands::agents::{
     get_session_status, cleanup_finished_processes, get_session_output, 
     get_live_session_output, stream_session_output, get_claude_binary_path,
     set_claude_binary_path, export_agent, export_agent_to_file, import_agent,
-    import_agent_from_file, AgentDb
+    import_agent_from_file, fetch_github_agents, fetch_github_agent_content,
+    import_agent_from_github, AgentDb
 };
 use commands::sandbox::{
     list_sandbox_profiles, create_sandbox_profile, update_sandbox_profile, delete_sandbox_profile,
@@ -65,7 +67,6 @@ fn main() {
     }
 
     tauri::Builder::default()
-        .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             // Initialize agents database
@@ -142,6 +143,9 @@ fn main() {
             export_agent_to_file,
             import_agent,
             import_agent_from_file,
+            fetch_github_agents,
+            fetch_github_agent_content,
+            import_agent_from_github,
             execute_agent,
             list_agent_runs,
             get_agent_run,

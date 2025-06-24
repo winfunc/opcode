@@ -55,7 +55,7 @@ import { detectLinks, makeLinksClickable } from "@/lib/linkDetector";
 /**
  * Widget for TodoWrite tool - displays a beautiful TODO list
  */
-export const TodoWidget: React.FC<{ todos: any[] }> = ({ todos }) => {
+export const TodoWidget: React.FC<{ todos: any[]; result?: any }> = ({ todos, result: _result }) => {
   const statusIcons = {
     completed: <CheckCircle2 className="h-4 w-4 text-green-500" />,
     in_progress: <Clock className="h-4 w-4 text-blue-500 animate-pulse" />,
@@ -112,7 +112,38 @@ export const TodoWidget: React.FC<{ todos: any[] }> = ({ todos }) => {
 /**
  * Widget for LS (List Directory) tool
  */
-export const LSWidget: React.FC<{ path: string }> = ({ path }) => {
+export const LSWidget: React.FC<{ path: string; result?: any }> = ({ path, result }) => {
+  // If we have a result, show it using the LSResultWidget
+  if (result) {
+    let resultContent = '';
+    if (typeof result.content === 'string') {
+      resultContent = result.content;
+    } else if (result.content && typeof result.content === 'object') {
+      if (result.content.text) {
+        resultContent = result.content.text;
+      } else if (Array.isArray(result.content)) {
+        resultContent = result.content
+          .map((c: any) => (typeof c === 'string' ? c : c.text || JSON.stringify(c)))
+          .join('\n');
+      } else {
+        resultContent = JSON.stringify(result.content, null, 2);
+      }
+    }
+    
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
+          <FolderOpen className="h-4 w-4 text-primary" />
+          <span className="text-sm">Directory contents for:</span>
+          <code className="text-sm font-mono bg-background px-2 py-0.5 rounded">
+            {path}
+          </code>
+        </div>
+        {resultContent && <LSResultWidget content={resultContent} />}
+      </div>
+    );
+  }
+  
   return (
     <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
       <FolderOpen className="h-4 w-4 text-primary" />
@@ -120,6 +151,12 @@ export const LSWidget: React.FC<{ path: string }> = ({ path }) => {
       <code className="text-sm font-mono bg-background px-2 py-0.5 rounded">
         {path}
       </code>
+      {!result && (
+        <div className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
+          <div className="h-2 w-2 bg-blue-500 rounded-full animate-pulse" />
+          <span>Loading...</span>
+        </div>
+      )}
     </div>
   );
 };
@@ -298,7 +335,38 @@ export const LSResultWidget: React.FC<{ content: string }> = ({ content }) => {
 /**
  * Widget for Read tool
  */
-export const ReadWidget: React.FC<{ filePath: string }> = ({ filePath }) => {
+export const ReadWidget: React.FC<{ filePath: string; result?: any }> = ({ filePath, result }) => {
+  // If we have a result, show it using the ReadResultWidget
+  if (result) {
+    let resultContent = '';
+    if (typeof result.content === 'string') {
+      resultContent = result.content;
+    } else if (result.content && typeof result.content === 'object') {
+      if (result.content.text) {
+        resultContent = result.content.text;
+      } else if (Array.isArray(result.content)) {
+        resultContent = result.content
+          .map((c: any) => (typeof c === 'string' ? c : c.text || JSON.stringify(c)))
+          .join('\n');
+      } else {
+        resultContent = JSON.stringify(result.content, null, 2);
+      }
+    }
+    
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
+          <FileText className="h-4 w-4 text-primary" />
+          <span className="text-sm">File content:</span>
+          <code className="text-sm font-mono bg-background px-2 py-0.5 rounded flex-1 truncate">
+            {filePath}
+          </code>
+        </div>
+        {resultContent && <ReadResultWidget content={resultContent} filePath={filePath} />}
+      </div>
+    );
+  }
+  
   return (
     <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
       <FileText className="h-4 w-4 text-primary" />
@@ -306,6 +374,12 @@ export const ReadWidget: React.FC<{ filePath: string }> = ({ filePath }) => {
       <code className="text-sm font-mono bg-background px-2 py-0.5 rounded flex-1 truncate">
         {filePath}
       </code>
+      {!result && (
+        <div className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
+          <div className="h-2 w-2 bg-blue-500 rounded-full animate-pulse" />
+          <span>Loading...</span>
+        </div>
+      )}
     </div>
   );
 };
@@ -478,14 +552,55 @@ export const ReadResultWidget: React.FC<{ content: string; filePath?: string }> 
 /**
  * Widget for Glob tool
  */
-export const GlobWidget: React.FC<{ pattern: string }> = ({ pattern }) => {
+export const GlobWidget: React.FC<{ pattern: string; result?: any }> = ({ pattern, result }) => {
+  // Extract result content if available
+  let resultContent = '';
+  let isError = false;
+  
+  if (result) {
+    isError = result.is_error || false;
+    if (typeof result.content === 'string') {
+      resultContent = result.content;
+    } else if (result.content && typeof result.content === 'object') {
+      if (result.content.text) {
+        resultContent = result.content.text;
+      } else if (Array.isArray(result.content)) {
+        resultContent = result.content
+          .map((c: any) => (typeof c === 'string' ? c : c.text || JSON.stringify(c)))
+          .join('\n');
+      } else {
+        resultContent = JSON.stringify(result.content, null, 2);
+      }
+    }
+  }
+  
   return (
-    <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
-      <Search className="h-4 w-4 text-primary" />
-      <span className="text-sm">Searching for pattern:</span>
-      <code className="text-sm font-mono bg-background px-2 py-0.5 rounded">
-        {pattern}
-      </code>
+    <div className="space-y-2">
+      <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
+        <Search className="h-4 w-4 text-primary" />
+        <span className="text-sm">Searching for pattern:</span>
+        <code className="text-sm font-mono bg-background px-2 py-0.5 rounded">
+          {pattern}
+        </code>
+        {!result && (
+          <div className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
+            <div className="h-2 w-2 bg-blue-500 rounded-full animate-pulse" />
+            <span>Searching...</span>
+          </div>
+        )}
+      </div>
+      
+      {/* Show result if available */}
+      {result && (
+        <div className={cn(
+          "p-3 rounded-md border text-xs font-mono whitespace-pre-wrap overflow-x-auto",
+          isError 
+            ? "border-red-500/20 bg-red-500/5 text-red-400" 
+            : "border-green-500/20 bg-green-500/5 text-green-300"
+        )}>
+          {resultContent || (isError ? "Search failed" : "No matches found")}
+        </div>
+      )}
     </div>
   );
 };
@@ -493,7 +608,32 @@ export const GlobWidget: React.FC<{ pattern: string }> = ({ pattern }) => {
 /**
  * Widget for Bash tool
  */
-export const BashWidget: React.FC<{ command: string; description?: string }> = ({ command, description }) => {
+export const BashWidget: React.FC<{ 
+  command: string; 
+  description?: string;
+  result?: any;
+}> = ({ command, description, result }) => {
+  // Extract result content if available
+  let resultContent = '';
+  let isError = false;
+  
+  if (result) {
+    isError = result.is_error || false;
+    if (typeof result.content === 'string') {
+      resultContent = result.content;
+    } else if (result.content && typeof result.content === 'object') {
+      if (result.content.text) {
+        resultContent = result.content.text;
+      } else if (Array.isArray(result.content)) {
+        resultContent = result.content
+          .map((c: any) => (typeof c === 'string' ? c : c.text || JSON.stringify(c)))
+          .join('\n');
+      } else {
+        resultContent = JSON.stringify(result.content, null, 2);
+      }
+    }
+  }
+  
   return (
     <div className="rounded-lg border bg-zinc-950 overflow-hidden">
       <div className="px-4 py-2 bg-zinc-900/50 flex items-center gap-2 border-b">
@@ -505,11 +645,30 @@ export const BashWidget: React.FC<{ command: string; description?: string }> = (
             <span className="text-xs text-muted-foreground">{description}</span>
           </>
         )}
+        {/* Show loading indicator when no result yet */}
+        {!result && (
+          <div className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
+            <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse" />
+            <span>Running...</span>
+          </div>
+        )}
       </div>
-      <div className="p-4">
-        <code className="text-xs font-mono text-green-400">
+      <div className="p-4 space-y-3">
+        <code className="text-xs font-mono text-green-400 block">
           $ {command}
         </code>
+        
+        {/* Show result if available */}
+        {result && (
+          <div className={cn(
+            "mt-3 p-3 rounded-md border text-xs font-mono whitespace-pre-wrap overflow-x-auto",
+            isError 
+              ? "border-red-500/20 bg-red-500/5 text-red-400" 
+              : "border-green-500/20 bg-green-500/5 text-green-300"
+          )}>
+            {resultContent || (isError ? "Command failed" : "Command completed")}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -518,7 +677,7 @@ export const BashWidget: React.FC<{ command: string; description?: string }> = (
 /**
  * Widget for Write tool
  */
-export const WriteWidget: React.FC<{ filePath: string; content: string }> = ({ filePath, content }) => {
+export const WriteWidget: React.FC<{ filePath: string; content: string; result?: any }> = ({ filePath, content, result: _result }) => {
   const [isMaximized, setIsMaximized] = useState(false);
   
   // Extract file extension for syntax highlighting
@@ -692,7 +851,8 @@ export const GrepWidget: React.FC<{
   include?: string; 
   path?: string;
   exclude?: string;
-}> = ({ pattern, include, path, exclude }) => {
+  result?: any;
+}> = ({ pattern, include, path, exclude, result: _result }) => {
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2 mb-2">
@@ -782,8 +942,9 @@ const getLanguage = (path: string) => {
 export const EditWidget: React.FC<{ 
   file_path: string; 
   old_string: string; 
-  new_string: string 
-}> = ({ file_path, old_string, new_string }) => {
+  new_string: string;
+  result?: any;
+}> = ({ file_path, old_string, new_string, result: _result }) => {
 
   const diffResult = Diff.diffLines(old_string || '', new_string || '', { 
     newlineIsToken: true,
@@ -942,7 +1103,8 @@ export const EditResultWidget: React.FC<{ content: string }> = ({ content }) => 
 export const MCPWidget: React.FC<{ 
   toolName: string; 
   input?: any;
-}> = ({ toolName, input }) => {
+  result?: any;
+}> = ({ toolName, input, result: _result }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   
   // Parse the tool name to extract components
@@ -1243,7 +1405,8 @@ export const SummaryWidget: React.FC<{
 export const MultiEditWidget: React.FC<{
   file_path: string;
   edits: Array<{ old_string: string; new_string: string }>;
-}> = ({ file_path, edits }) => {
+  result?: any;
+}> = ({ file_path, edits, result: _result }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const language = getLanguage(file_path);
   
@@ -1653,7 +1816,8 @@ export const SystemInitializedWidget: React.FC<{
 export const TaskWidget: React.FC<{ 
   description?: string; 
   prompt?: string;
-}> = ({ description, prompt }) => {
+  result?: any;
+}> = ({ description, prompt, result: _result }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   
   return (
@@ -1699,4 +1863,4 @@ export const TaskWidget: React.FC<{
       </div>
     </div>
   );
-}; 
+};

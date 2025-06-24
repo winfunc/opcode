@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { 
   Terminal, 
   User, 
@@ -13,8 +13,6 @@ import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { claudeSyntaxTheme } from "@/lib/claudeSyntaxTheme";
 import type { ClaudeStreamMessage } from "./AgentExecution";
-import { CollapsibleToolResult } from "./CollapsibleToolResult";
-import type { EnhancedMessage } from "@/types/enhanced-messages";
 import {
   TodoWidget,
   LSWidget,
@@ -39,9 +37,9 @@ import {
 } from "./ToolWidgets";
 
 interface StreamMessageProps {
-  message: ClaudeStreamMessage | EnhancedMessage;
+  message: ClaudeStreamMessage;
   className?: string;
-  streamMessages: (ClaudeStreamMessage | EnhancedMessage)[];
+  streamMessages: ClaudeStreamMessage[];
   onLinkDetected?: (url: string) => void;
 }
 
@@ -49,6 +47,32 @@ interface StreamMessageProps {
  * Component to render a single Claude Code stream message
  */
 const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, className, streamMessages, onLinkDetected }) => {
+  // State to track tool results mapped by tool call ID
+  const [toolResults, setToolResults] = useState<Map<string, any>>(new Map());
+  
+  // Extract all tool results from stream messages
+  useEffect(() => {
+    const results = new Map<string, any>();
+    
+    // Iterate through all messages to find tool results
+    streamMessages.forEach(msg => {
+      if (msg.type === "user" && msg.message?.content && Array.isArray(msg.message.content)) {
+        msg.message.content.forEach((content: any) => {
+          if (content.type === "tool_result" && content.tool_use_id) {
+            results.set(content.tool_use_id, content);
+          }
+        });
+      }
+    });
+    
+    setToolResults(results);
+  }, [streamMessages]);
+  
+  // Helper to get tool result for a specific tool call ID
+  const getToolResult = (toolId: string | undefined): any => {
+    if (!toolId) return null;
+    return toolResults.get(toolId) || null;
+  };
   try {
     // Skip rendering for meta messages that don't have meaningful content
     if (message.isMeta && !message.leafUuid && !message.summary) {
@@ -75,8 +99,6 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
     // Assistant message
     if (message.type === "assistant" && message.message) {
       const msg = message.message;
-      const enhancedMsg = message as EnhancedMessage;
-      const hasToolCalls = enhancedMsg.toolCalls && enhancedMsg.toolCalls.length > 0;
       
       return (
         <Card className={cn("border-primary/20 bg-primary/5", className)}>
@@ -126,86 +148,73 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                   if (content.type === "tool_use") {
                     const toolName = content.name?.toLowerCase();
                     const input = content.input;
+                    const toolId = content.id;
+                    
+                    // Get the tool result if available
+                    const toolResult = getToolResult(toolId);
                     
                     // Function to render the appropriate tool widget
                     const renderToolWidget = () => {
                       // Task tool - for sub-agent tasks
                       if (toolName === "task" && input) {
-                        return <TaskWidget description={input.description} prompt={input.prompt} />;
+                        return <TaskWidget description={input.description} prompt={input.prompt} result={toolResult} />;
                       }
                       
                       // Edit tool
                       if (toolName === "edit" && input?.file_path) {
-                        return <EditWidget {...input} />;
+                        return <EditWidget {...input} result={toolResult} />;
                       }
                       
                       // MultiEdit tool
                       if (toolName === "multiedit" && input?.file_path && input?.edits) {
-                        return <MultiEditWidget {...input} />;
+                        return <MultiEditWidget {...input} result={toolResult} />;
                       }
                       
                       // MCP tools (starting with mcp__)
                       if (content.name?.startsWith("mcp__")) {
-                        return <MCPWidget toolName={content.name} input={input} />;
+                        return <MCPWidget toolName={content.name} input={input} result={toolResult} />;
                       }
                       
                       // TodoWrite tool
                       if (toolName === "todowrite" && input?.todos) {
-                        return <TodoWidget todos={input.todos} />;
+                        return <TodoWidget todos={input.todos} result={toolResult} />;
                       }
                       
                       // LS tool
                       if (toolName === "ls" && input?.path) {
-                        return <LSWidget path={input.path} />;
+                        return <LSWidget path={input.path} result={toolResult} />;
                       }
                       
                       // Read tool
                       if (toolName === "read" && input?.file_path) {
-                        return <ReadWidget filePath={input.file_path} />;
+                        return <ReadWidget filePath={input.file_path} result={toolResult} />;
                       }
                       
                       // Glob tool
                       if (toolName === "glob" && input?.pattern) {
-                        return <GlobWidget pattern={input.pattern} />;
+                        return <GlobWidget pattern={input.pattern} result={toolResult} />;
                       }
                       
                       // Bash tool
                       if (toolName === "bash" && input?.command) {
-                        return <BashWidget command={input.command} description={input.description} />;
+                        return <BashWidget command={input.command} description={input.description} result={toolResult} />;
                       }
                       
                       // Write tool
                       if (toolName === "write" && input?.file_path && input?.content) {
-                        return <WriteWidget filePath={input.file_path} content={input.content} />;
+                        return <WriteWidget filePath={input.file_path} content={input.content} result={toolResult} />;
                       }
                       
                       // Grep tool
                       if (toolName === "grep" && input?.pattern) {
-                        return <GrepWidget pattern={input.pattern} include={input.include} path={input.path} exclude={input.exclude} />;
+                        return <GrepWidget pattern={input.pattern} include={input.include} path={input.path} exclude={input.exclude} result={toolResult} />;
                       }
                       
-                      // Default - return null, will be handled by CollapsibleToolResult
+                      // Default - return null
                       return null;
                     };
                     
-                    // Check if we have enhanced message with tool results
-                    if (hasToolCalls && enhancedMsg.toolResults && content.id) {
-                      const toolCall = enhancedMsg.toolCalls?.find(tc => tc.id === content.id);
-                      const toolResult = enhancedMsg.toolResults.get(content.id);
-                      
-                      if (toolCall && toolResult) {
-                        // Only use collapsible widget when we have both tool call AND result
-                        return (
-                          <CollapsibleToolResult
-                            key={idx}
-                            toolCall={toolCall}
-                            toolResult={toolResult}
-                          />
-                        );
-                      }
-                    }
-                    
-                    // Render the normal tool widget (for pending tool calls or non-enhanced messages)
+                    // Render the tool widget
                     const widget = renderToolWidget();
                     if (widget) {
                       return <div key={idx}>{widget}</div>;
@@ -301,6 +310,40 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                 {Array.isArray(msg.content) && msg.content.map((content: any, idx: number) => {
                   // Tool result
                   if (content.type === "tool_result") {
+                    // Skip rendering tool results that are already displayed by tool widgets
+                    // We need to check if this result corresponds to a tool that has its own widget
+                    
+                    // Find the corresponding tool use for this result
+                    let hasCorrespondingWidget = false;
+                    if (content.tool_use_id && streamMessages) {
+                      // Look for the matching tool_use in previous assistant messages
+                      for (let i = streamMessages.length - 1; i >= 0; i--) {
+                        const prevMsg = streamMessages[i];
+                        if (prevMsg.type === 'assistant' && prevMsg.message?.content && Array.isArray(prevMsg.message.content)) {
+                          const toolUse = prevMsg.message.content.find((c: any) => 
+                            c.type === 'tool_use' && c.id === content.tool_use_id
+                          );
+                          if (toolUse) {
+                            const toolName = toolUse.name?.toLowerCase();
+                            // List of tools that display their own results
+                            const toolsWithWidgets = [
+                              'task', 'edit', 'multiedit', 'todowrite', 'ls', 'read', 
+                              'glob', 'bash', 'write', 'grep'
+                            ];
+                            // Also check for MCP tools
+                            if (toolsWithWidgets.includes(toolName) || toolUse.name?.startsWith('mcp__')) {
+                              hasCorrespondingWidget = true;
+                            }
+                            break;
+                          }
+                        }
+                      }
+                    }
+                    
+                    // If the tool has its own widget that displays results, skip rendering the duplicate
+                    if (hasCorrespondingWidget && !content.is_error) {
+                      return null;
+                    }
                     // Extract the actual content string
                     let contentText = '';
                     if (typeof content.content === 'string') {
@@ -320,7 +363,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                       }
                     }
                     
-                    // Check for system-reminder tags
+                    // Always show system reminders regardless of widget status
                     const reminderMatch = contentText.match(/<system-reminder>(.*?)<\/system-reminder>/s);
                     if (reminderMatch) {
                       const reminderMessage = reminderMatch[1].trim();
@@ -634,4 +677,4 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
   }
 };
 
-export const StreamMessage = React.memo(StreamMessageComponent); 
+export const StreamMessage = React.memo(StreamMessageComponent);

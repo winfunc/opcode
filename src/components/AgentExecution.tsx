@@ -24,7 +24,6 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { StreamMessage } from "./StreamMessage";
 import { ExecutionControlBar } from "./ExecutionControlBar";
 import { ErrorBoundary } from "./ErrorBoundary";
-import { enhanceMessages, type EnhancedMessage } from "@/types/enhanced-messages";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
 interface AgentExecutionProps {
@@ -75,7 +74,6 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
   const [model, setModel] = useState(agent.model || "sonnet");
   const [isRunning, setIsRunning] = useState(false);
   const [messages, setMessages] = useState<ClaudeStreamMessage[]>([]);
-  const [enhancedMessages, setEnhancedMessages] = useState<EnhancedMessage[]>([]);
   const [rawJsonlOutput, setRawJsonlOutput] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [copyPopoverOpen, setCopyPopoverOpen] = useState(false);
@@ -95,16 +93,74 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
   const unlistenRefs = useRef<UnlistenFn[]>([]);
   const elapsedTimeIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Filter out messages that shouldn't be displayed
+  const displayableMessages = React.useMemo(() => {
+    return messages.filter((message, index) => {
+      // Skip meta messages that don't have meaningful content
+      if (message.isMeta && !message.leafUuid && !message.summary) {
+        return false;
+      }
+
+      // Skip empty user messages
+      if (message.type === "user" && message.message) {
+        const msg = message.message;
+        if (!msg.content || (Array.isArray(msg.content) && msg.content.length === 0)) {
+          return false;
+        }
+        
+        // Check if this is a user message with only tool results that are already displayed
+        if (Array.isArray(msg.content)) {
+          const hasOnlyHiddenToolResults = msg.content.every((content: any) => {
+            if (content.type !== "tool_result") return false;
+            
+            // Check if this tool result should be hidden
+            let hasCorrespondingWidget = false;
+            if (content.tool_use_id) {
+              // Look for the matching tool_use in previous assistant messages
+              for (let i = index - 1; i >= 0; i--) {
+                const prevMsg = messages[i];
+                if (prevMsg.type === 'assistant' && prevMsg.message?.content && Array.isArray(prevMsg.message.content)) {
+                  const toolUse = prevMsg.message.content.find((c: any) => 
+                    c.type === 'tool_use' && c.id === content.tool_use_id
+                  );
+                  if (toolUse) {
+                    const toolName = toolUse.name?.toLowerCase();
+                    const toolsWithWidgets = [
+                      'task', 'edit', 'multiedit', 'todowrite', 'ls', 'read', 
+                      'glob', 'bash', 'write', 'grep'
+                    ];
+                    if (toolsWithWidgets.includes(toolName) || toolUse.name?.startsWith('mcp__')) {
+                      hasCorrespondingWidget = true;
+                    }
+                    break;
+                  }
+                }
+              }
+            }
+            
+            return hasCorrespondingWidget && !content.is_error;
+          });
+          
+          if (hasOnlyHiddenToolResults) {
+            return false;
+          }
+        }
+      }
+
+      return true;
+    });
+  }, [messages]);
+
   // Virtualizers for efficient, smooth scrolling of potentially very long outputs
   const rowVirtualizer = useVirtualizer({
-    count: enhancedMessages.length,
+    count: displayableMessages.length,
     getScrollElement: () => scrollContainerRef.current,
     estimateSize: () => 150, // fallback estimate; dynamically measured afterwards
     overscan: 5,
   });
 
   const fullscreenRowVirtualizer = useVirtualizer({
-    count: enhancedMessages.length,
+    count: displayableMessages.length,
     getScrollElement: () => fullscreenScrollRef.current,
     estimateSize: () => 150,
     overscan: 5,
@@ -132,19 +188,19 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
   };
 
   useEffect(() => {
-    if (enhancedMessages.length === 0) return;
+    if (displayableMessages.length === 0) return;
 
     // Auto-scroll only if the user has not manually scrolled OR they are still at the bottom
     const shouldAutoScroll = !hasUserScrolled || isAtBottom();
 
     if (shouldAutoScroll) {
       if (isFullscreenModalOpen) {
-        fullscreenRowVirtualizer.scrollToIndex(enhancedMessages.length - 1, { align: "end", behavior: "smooth" });
+        fullscreenRowVirtualizer.scrollToIndex(displayableMessages.length - 1, { align: "end", behavior: "smooth" });
       } else {
-        rowVirtualizer.scrollToIndex(enhancedMessages.length - 1, { align: "end", behavior: "smooth" });
+        rowVirtualizer.scrollToIndex(displayableMessages.length - 1, { align: "end", behavior: "smooth" });
       }
     }
-  }, [enhancedMessages.length, hasUserScrolled, isFullscreenModalOpen, rowVirtualizer, fullscreenRowVirtualizer]);
+  }, [displayableMessages.length, hasUserScrolled, isFullscreenModalOpen, rowVirtualizer, fullscreenRowVirtualizer]);
 
   // Update elapsed time while running
   useEffect(() => {
@@ -179,11 +235,6 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
     setTotalTokens(tokens);
   }, [messages]);
 
-  // Enhance messages whenever they change
-  useEffect(() => {
-    const enhanced = enhanceMessages(messages);
-    setEnhancedMessages(enhanced);
-  }, [messages]);
 
   const handleSelectPath = async () => {
     try {
@@ -620,7 +671,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
             }}
           >
             <div ref={messagesContainerRef}>
-            {enhancedMessages.length === 0 && !isRunning && (
+            {messages.length === 0 && !isRunning && (
               <div className="flex flex-col items-center justify-center h-full text-center">
                 <Terminal className="h-16 w-16 text-muted-foreground mb-4" />
                 <h3 className="text-lg font-medium mb-2">Ready to Execute</h3>
@@ -630,7 +681,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
               </div>
             )}
 
-            {isRunning && enhancedMessages.length === 0 && (
+            {isRunning && messages.length === 0 && (
               <div className="flex items-center justify-center h-full">
                 <div className="flex items-center gap-3">
                   <Loader2 className="h-6 w-6 animate-spin" />
@@ -645,7 +696,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
             >
               <AnimatePresence>
                 {rowVirtualizer.getVirtualItems().map((virtualItem) => {
-                  const message = enhancedMessages[virtualItem.index];
+                  const message = displayableMessages[virtualItem.index];
                   return (
                     <motion.div
                       key={virtualItem.key}
@@ -658,7 +709,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
                       style={{ top: virtualItem.start }}
                     >
                       <ErrorBoundary>
-                        <StreamMessage message={message} streamMessages={enhancedMessages} />
+                        <StreamMessage message={message} streamMessages={messages} />
                       </ErrorBoundary>
                     </motion.div>
                   );
@@ -761,7 +812,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
                 }
               }}
             >
-              {enhancedMessages.length === 0 && !isRunning && (
+              {messages.length === 0 && !isRunning && (
                 <div className="flex flex-col items-center justify-center h-full text-center">
                   <Terminal className="h-16 w-16 text-muted-foreground mb-4" />
                   <h3 className="text-lg font-medium mb-2">Ready to Execute</h3>
@@ -771,7 +822,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
                 </div>
               )}
 
-              {isRunning && enhancedMessages.length === 0 && (
+              {isRunning && messages.length === 0 && (
                 <div className="flex items-center justify-center h-full">
                   <div className="flex items-center gap-3">
                     <Loader2 className="h-6 w-6 animate-spin" />
@@ -786,7 +837,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
               >
                 <AnimatePresence>
                   {fullscreenRowVirtualizer.getVirtualItems().map((virtualItem) => {
-                    const message = enhancedMessages[virtualItem.index];
+                    const message = displayableMessages[virtualItem.index];
                     return (
                       <motion.div
                         key={virtualItem.key}
@@ -799,7 +850,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
                         style={{ top: virtualItem.start }}
                       >
                         <ErrorBoundary>
-                          <StreamMessage message={message} streamMessages={enhancedMessages} />
+                          <StreamMessage message={message} streamMessages={messages} />
                         </ErrorBoundary>
                       </motion.div>
                     );
@@ -817,4 +868,4 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
 };
 
 // Import AGENT_ICONS for icon rendering
-import { AGENT_ICONS } from "./CCAgents"; 
+import { AGENT_ICONS } from "./CCAgents";

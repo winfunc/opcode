@@ -5,11 +5,30 @@
   "windows": ["main"],
   "permissions": [
     "core:default",
-    "opener:default",
     "dialog:default",
     "dialog:allow-open",
+    "dialog:allow-save",
     "shell:allow-execute",
     "shell:allow-spawn",
-    "shell:allow-open"
+    "shell:allow-open",
+    "fs:default",
+    "fs:allow-mkdir",
+    "fs:allow-read",
+    "fs:allow-write",
+    "fs:allow-remove",
+    "fs:allow-rename",
+    "fs:allow-exists",
+    "fs:allow-copy-file",
+    "fs:read-all",
+    "fs:write-all",
+    "fs:scope-app-recursive",
+    "fs:scope-home-recursive",
+    "http:default",
+    "http:allow-fetch",
+    "process:default",
+    "notification:default",
+    "clipboard-manager:default",
+    "global-shortcut:default",
+    "updater:default"
   ]
 }

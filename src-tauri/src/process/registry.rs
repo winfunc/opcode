@@ -18,6 +18,7 @@ pub struct ProcessInfo {
 }
 
 /// Information about a running process with handle
+#[allow(dead_code)]
 pub struct ProcessHandle {
     pub info: ProcessInfo,
     pub child: Arc<Mutex<Option<Child>>>,
@@ -72,6 +73,7 @@ impl ProcessRegistry {
     }
 
     /// Unregister a process (called when it completes)
+    #[allow(dead_code)]
     pub fn unregister_process(&self, run_id: i64) -> Result<(), String> {
         let mut processes = self.processes.lock().map_err(|e| e.to_string())?;
         processes.remove(&run_id);
@@ -79,18 +81,21 @@ impl ProcessRegistry {
     }
 
     /// Get all running processes
+    #[allow(dead_code)]
     pub fn get_running_processes(&self) -> Result<Vec<ProcessInfo>, String> {
         let processes = self.processes.lock().map_err(|e| e.to_string())?;
         Ok(processes.values().map(|handle| handle.info.clone()).collect())
     }
 
     /// Get a specific running process
+    #[allow(dead_code)]
     pub fn get_process(&self, run_id: i64) -> Result<Option<ProcessInfo>, String> {
         let processes = self.processes.lock().map_err(|e| e.to_string())?;
         Ok(processes.get(&run_id).map(|handle| handle.info.clone()))
     }
 
     /// Kill a running process
+    #[allow(dead_code)]
     pub async fn kill_process(&self, run_id: i64) -> Result<bool, String> {
         let processes = self.processes.lock().map_err(|e| e.to_string())?;
         
@@ -116,6 +121,7 @@ impl ProcessRegistry {
     }
 
     /// Check if a process is still running by trying to get its status
+    #[allow(dead_code)]
     pub async fn is_process_running(&self, run_id: i64) -> Result<bool, String> {
         let processes = self.processes.lock().map_err(|e| e.to_string())?;
         
@@ -172,6 +178,7 @@ impl ProcessRegistry {
     }
 
     /// Cleanup finished processes
+    #[allow(dead_code)]
     pub async fn cleanup_finished_processes(&self) -> Result<Vec<i64>, String> {
         let mut finished_runs = Vec::new();
         let processes_lock = self.processes.clone();
