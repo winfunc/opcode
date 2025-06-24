@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* Dark theme configuration */
-@theme {
+:root {
   /* Colors */
   --color-background: oklch(0.12 0.01 240);
   --color-foreground: oklch(0.98 0.01 240);
@@ -27,6 +27,10 @@
   --color-green-500: oklch(0.72 0.20 142);
   --color-green-600: oklch(0.64 0.22 142);
 
+  /* Custom colors */
+  --shimmer-color: #d97757;
+  --usage-bar-color: #d97757;
+
   /* Border radius */
   --radius-sm: 0.25rem;
   --radius-base: 0.375rem;
@@ -41,6 +45,32 @@
   /* Transitions */
   --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.theme-catppuccin {
+  --color-background: #1e1e2e;
+  --color-foreground: #cdd6f4;
+  --color-card: #313244;
+  --color-card-foreground: #cdd6f4;
+  --color-popover: #45475a;
+  --color-popover-foreground: #cdd6f4;
+  --color-primary: #89b4fa;
+  --color-primary-foreground: #1e1e2e;
+  --color-secondary: #45475a;
+  --color-secondary-foreground: #cdd6f4;
+  --color-muted: #585b70;
+  --color-muted-foreground: #a6adc8;
+  --color-accent: #cba6f7;
+  --color-accent-foreground: #1e1e2e;
+  --color-destructive: #f38ba8;
+  --color-destructive-foreground: #cdd6f4;
+  --color-border: #313244;
+  --color-input: #313244;
+  --color-ring: #89b4fa;
+  --color-green-500: #a6e3a1;
+  --color-green-600: #94e2d5;
+  --shimmer-color: #fab387;
+  --usage-bar-color: #fab387;
 }
 
 /* Reset and base styles */

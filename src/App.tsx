@@ -18,6 +18,7 @@ import { MCPManager } from "@/components/MCPManager";
 import { NFOCredits } from "@/components/NFOCredits";
 import { ClaudeBinaryDialog } from "@/components/ClaudeBinaryDialog";
 import { Toast, ToastContainer } from "@/components/ui/toast";
+import { applyTheme } from "@/lib/theme";
 
 type View = "welcome" | "projects" | "agents" | "editor" | "settings" | "claude-file-editor" | "claude-code-session" | "usage-dashboard" | "mcp";
 
@@ -36,6 +37,15 @@ function App() {
   const [showNFO, setShowNFO] = useState(false);
   const [showClaudeBinaryDialog, setShowClaudeBinaryDialog] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
+
+  // Apply theme on initial load
+  useEffect(() => {
+    api.getClaudeSettings().then((s) => {
+      if (s && typeof s === 'object' && s.theme) {
+        applyTheme(s.theme as any);
+      }
+    }).catch(() => {});
+  }, []);
 
   // Load projects on mount when in projects view
   useEffect(() => {

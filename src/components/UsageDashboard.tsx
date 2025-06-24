@@ -499,9 +499,9 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                                 </div>
                                 
                                 {/* Bar */}
-                                <div 
-                                  className="w-full bg-[#d97757] hover:opacity-80 transition-opacity rounded-t cursor-pointer"
-                                  style={{ height: `${heightPercent}%` }}
+                                <div
+                                  className="w-full hover:opacity-80 transition-opacity rounded-t cursor-pointer"
+                                  style={{ height: `${heightPercent}%`, backgroundColor: 'var(--usage-bar-color)' }}
                                 />
                                 
                                 {/* X-axis label – absolutely positioned below the bar so it doesn't affect bar height */}

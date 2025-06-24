@@ -23,6 +23,7 @@ import {
   type ClaudeSettings
 } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { applyTheme } from "@/lib/theme";
 import { Toast, ToastContainer } from "@/components/ui/toast";
 
 interface SettingsProps {
@@ -92,6 +93,9 @@ export const Settings: React.FC<SettingsProps> = ({
       }
       
       setSettings(loadedSettings);
+      if (loadedSettings.theme) {
+        applyTheme(loadedSettings.theme as any);
+      }
 
       // Parse permissions
       if (loadedSettings.permissions && typeof loadedSettings.permissions === 'object') {
@@ -159,6 +163,9 @@ export const Settings: React.FC<SettingsProps> = ({
 
       await api.saveClaudeSettings(updatedSettings);
       setSettings(updatedSettings);
+      if (updatedSettings.theme) {
+        applyTheme(updatedSettings.theme as any);
+      }
       setToast({ message: "Settings saved successfully!", type: "success" });
     } catch (err) {
       console.error("Failed to save settings:", err);
@@ -370,6 +377,25 @@ export const Settings: React.FC<SettingsProps> = ({
                         id="verbose"
                         checked={settings?.verbose === true}
                         onCheckedChange={(checked) => updateSetting("verbose", checked)}
+                      />
+                    </div>
+
+                    {/* Catppuccin Mocha Theme */}
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5 flex-1">
+                        <Label htmlFor="theme">Catppuccin Mocha Theme</Label>
+                        <p className="text-xs text-muted-foreground">
+                          Enable the Catppuccin color palette
+                        </p>
+                      </div>
+                      <Switch
+                        id="theme"
+                        checked={settings?.theme === 'catppuccin'}
+                        onCheckedChange={(checked) => {
+                          const theme = checked ? 'catppuccin' : 'dark';
+                          updateSetting('theme', theme);
+                          applyTheme(theme as any);
+                        }}
                       />
                     </div>
                     
