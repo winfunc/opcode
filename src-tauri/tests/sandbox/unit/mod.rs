@@ -1,7 +1,7 @@
 //! Unit tests for sandbox components
 #[cfg(test)]
-mod profile_builder;
+mod executor;
 #[cfg(test)]
 mod platform;
 #[cfg(test)]
-mod executor; 
+mod profile_builder;

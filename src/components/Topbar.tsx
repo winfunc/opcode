@@ -95,21 +95,28 @@ export const Topbar: React.FC<TopbarProps> = ({
     if (!versionStatus) return null;
     
     const statusContent = (
-      <div className="flex items-center space-x-2 text-xs">
-        <Circle
-          className={cn(
-            "h-3 w-3",
-            versionStatus.is_installed 
-              ? "fill-green-500 text-green-500" 
-              : "fill-red-500 text-red-500"
-          )}
-        />
-        <span>
-          {versionStatus.is_installed && versionStatus.version
-            ? `Claude Code ${versionStatus.version}`
-            : "Claude Code"}
-        </span>
-      </div>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-auto py-1 px-2 hover:bg-accent"
+        onClick={onSettingsClick}
+      >
+        <div className="flex items-center space-x-2 text-xs">
+          <Circle
+            className={cn(
+              "h-3 w-3",
+              versionStatus.is_installed 
+                ? "fill-green-500 text-green-500" 
+                : "fill-red-500 text-red-500"
+            )}
+          />
+          <span>
+            {versionStatus.is_installed && versionStatus.version
+              ? `Claude Code ${versionStatus.version}`
+              : "Claude Code"}
+          </span>
+        </div>
+      </Button>
     );
     
     if (!versionStatus.is_installed) {
@@ -124,6 +131,14 @@ export const Topbar: React.FC<TopbarProps> = ({
                   {versionStatus.output}
                 </pre>
               </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={onSettingsClick}
+              >
+                Select Claude Installation
+              </Button>
               <a
                 href="https://www.anthropic.com/claude-code"
                 target="_blank"

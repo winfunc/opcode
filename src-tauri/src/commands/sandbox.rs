@@ -52,11 +52,11 @@ pub struct ImportResult {
 #[tauri::command]
 pub async fn list_sandbox_profiles(db: State<'_, AgentDb>) -> Result<Vec<SandboxProfile>, String> {
     let conn = db.0.lock().map_err(|e| e.to_string())?;
-    
+
     let mut stmt = conn
         .prepare("SELECT id, name, description, is_active, is_default, created_at, updated_at FROM sandbox_profiles ORDER BY name")
         .map_err(|e| e.to_string())?;
-    
+
     let profiles = stmt
         .query_map([], |row| {
             Ok(SandboxProfile {
@@ -72,7 +72,7 @@ pub async fn list_sandbox_profiles(db: State<'_, AgentDb>) -> Result<Vec<Sandbox
         .map_err(|e| e.to_string())?
         .collect::<Result<Vec<_>, _>>()
         .map_err(|e| e.to_string())?;
-    
+
     Ok(profiles)
 }
 
@@ -84,15 +84,15 @@ pub async fn create_sandbox_profile(
     description: Option<String>,
 ) -> Result<SandboxProfile, String> {
     let conn = db.0.lock().map_err(|e| e.to_string())?;
-    
+
     conn.execute(
         "INSERT INTO sandbox_profiles (name, description) VALUES (?1, ?2)",
         params![name, description],
     )
     .map_err(|e| e.to_string())?;
-    
+
     let id = conn.last_insert_rowid();
-    
+
     // Fetch the created profile
     let profile = conn
         .query_row(
@@ -111,7 +111,7 @@ pub async fn create_sandbox_profile(
             },
         )
         .map_err(|e| e.to_string())?;
-    
+
     Ok(profile)
 }
 
@@ -126,7 +126,7 @@ pub async fn update_sandbox_profile(
     is_default: bool,
 ) -> Result<SandboxProfile, String> {
     let conn = db.0.lock().map_err(|e| e.to_string())?;
-    
+
     // If setting as default, unset other defaults
     if is_default {
         conn.execute(
@@ -135,13 +135,13 @@ pub async fn update_sandbox_profile(
         )
         .map_err(|e| e.to_string())?;
     }
-    
+
     conn.execute(
         "UPDATE sandbox_profiles SET name = ?1, description = ?2, is_active = ?3, is_default = ?4 WHERE id = ?5",
         params![name, description, is_active, is_default, id],
     )
     .map_err(|e| e.to_string())?;
-    
+
     // Fetch the updated profile
     let profile = conn
         .query_row(
@@ -160,7 +160,7 @@ pub async fn update_sandbox_profile(
             },
         )
         .map_err(|e| e.to_string())?;
-    
+
     Ok(profile)
 }
 
@@ -168,7 +168,7 @@ pub async fn update_sandbox_profile(
 #[tauri::command]
 pub async fn delete_sandbox_profile(db: State<'_, AgentDb>, id: i64) -> Result<(), String> {
     let conn = db.0.lock().map_err(|e| e.to_string())?;
-    
+
     // Check if it's the default profile
     let is_default: bool = conn
         .query_row(
@@ -177,22 +177,25 @@ pub async fn delete_sandbox_profile(db: State<'_, AgentDb>, id: i64) -> Result<(
             |row| row.get(0),
         )
         .map_err(|e| e.to_string())?;
-    
+
     if is_default {
         return Err("Cannot delete the default profile".to_string());
     }
-    
+
     conn.execute("DELETE FROM sandbox_profiles WHERE id = ?1", params![id])
         .map_err(|e| e.to_string())?;
-    
+
     Ok(())
 }
 
 /// Get a single sandbox profile by ID
 #[tauri::command]
-pub async fn get_sandbox_profile(db: State<'_, AgentDb>, id: i64) -> Result<SandboxProfile, String> {
+pub async fn get_sandbox_profile(
+    db: State<'_, AgentDb>,
+    id: i64,
+) -> Result<SandboxProfile, String> {
     let conn = db.0.lock().map_err(|e| e.to_string())?;
-    
+
     let profile = conn
         .query_row(
             "SELECT id, name, description, is_active, is_default, created_at, updated_at FROM sandbox_profiles WHERE id = ?1",
@@ -210,7 +213,7 @@ pub async fn get_sandbox_profile(db: State<'_, AgentDb>, id: i64) -> Result<Sand
             },
         )
         .map_err(|e| e.to_string())?;
-    
+
     Ok(profile)
 }
 
@@ -221,11 +224,11 @@ pub async fn list_sandbox_rules(
     profile_id: i64,
 ) -> Result<Vec<SandboxRule>, String> {
     let conn = db.0.lock().map_err(|e| e.to_string())?;
-    
+
     let mut stmt = conn
         .prepare("SELECT id, profile_id, operation_type, pattern_type, pattern_value, enabled, platform_support, created_at FROM sandbox_rules WHERE profile_id = ?1 ORDER BY operation_type, pattern_value")
         .map_err(|e| e.to_string())?;
-    
+
     let rules = stmt
         .query_map(params![profile_id], |row| {
             Ok(SandboxRule {
@@ -242,7 +245,7 @@ pub async fn list_sandbox_rules(
         .map_err(|e| e.to_string())?
         .collect::<Result<Vec<_>, _>>()
         .map_err(|e| e.to_string())?;
-    
+
     Ok(rules)
 }
 
@@ -258,18 +261,18 @@ pub async fn create_sandbox_rule(
     platform_support: Option<String>,
 ) -> Result<SandboxRule, String> {
     let conn = db.0.lock().map_err(|e| e.to_string())?;
-    
+
     // Validate rule doesn't conflict
     // TODO: Add more validation logic here
-    
+
     conn.execute(
         "INSERT INTO sandbox_rules (profile_id, operation_type, pattern_type, pattern_value, enabled, platform_support) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
         params![profile_id, operation_type, pattern_type, pattern_value, enabled, platform_support],
     )
     .map_err(|e| e.to_string())?;
-    
+
     let id = conn.last_insert_rowid();
-    
+
     // Fetch the created rule
     let rule = conn
         .query_row(
@@ -289,7 +292,7 @@ pub async fn create_sandbox_rule(
             },
         )
         .map_err(|e| e.to_string())?;
-    
+
     Ok(rule)
 }
 
@@ -305,13 +308,13 @@ pub async fn update_sandbox_rule(
     platform_support: Option<String>,
 ) -> Result<SandboxRule, String> {
     let conn = db.0.lock().map_err(|e| e.to_string())?;
-    
+
     conn.execute(
         "UPDATE sandbox_rules SET operation_type = ?1, pattern_type = ?2, pattern_value = ?3, enabled = ?4, platform_support = ?5 WHERE id = ?6",
         params![operation_type, pattern_type, pattern_value, enabled, platform_support, id],
     )
     .map_err(|e| e.to_string())?;
-    
+
     // Fetch the updated rule
     let rule = conn
         .query_row(
@@ -331,7 +334,7 @@ pub async fn update_sandbox_rule(
             },
         )
         .map_err(|e| e.to_string())?;
-    
+
     Ok(rule)
 }
 
@@ -339,10 +342,10 @@ pub async fn update_sandbox_rule(
 #[tauri::command]
 pub async fn delete_sandbox_rule(db: State<'_, AgentDb>, id: i64) -> Result<(), String> {
     let conn = db.0.lock().map_err(|e| e.to_string())?;
-    
+
     conn.execute("DELETE FROM sandbox_rules WHERE id = ?1", params![id])
         .map_err(|e| e.to_string())?;
-    
+
     Ok(())
 }
 
@@ -359,38 +362,38 @@ pub async fn test_sandbox_profile(
     profile_id: i64,
 ) -> Result<String, String> {
     let conn = db.0.lock().map_err(|e| e.to_string())?;
-    
+
     // Load the profile and rules
     let profile = crate::sandbox::profile::load_profile(&conn, profile_id)
         .map_err(|e| format!("Failed to load profile: {}", e))?;
-    
+
     if !profile.is_active {
         return Ok(format!(
             "Profile '{}' is currently inactive. Activate it to use with agents.",
             profile.name
         ));
     }
-    
+
     let rules = crate::sandbox::profile::load_profile_rules(&conn, profile_id)
         .map_err(|e| format!("Failed to load profile rules: {}", e))?;
-    
+
     if rules.is_empty() {
         return Ok(format!(
             "Profile '{}' has no rules configured. Add rules to define sandbox permissions.",
             profile.name
         ));
     }
-    
+
     // Try to build the gaol profile
-    let test_path = std::env::current_dir()
-        .unwrap_or_else(|_| std::path::PathBuf::from("/tmp"));
-    
+    let test_path = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/tmp"));
+
     let builder = crate::sandbox::profile::ProfileBuilder::new(test_path.clone())
         .map_err(|e| format!("Failed to create profile builder: {}", e))?;
-    
-    let build_result = builder.build_profile_with_serialization(rules.clone())
+
+    let build_result = builder
+        .build_profile_with_serialization(rules.clone())
         .map_err(|e| format!("Failed to build sandbox profile: {}", e))?;
-    
+
     // Check platform support
     let platform_caps = crate::sandbox::platform::get_platform_capabilities();
     if !platform_caps.sandboxing_supported {
@@ -401,27 +404,23 @@ pub async fn test_sandbox_profile(
             platform_caps.os
         ));
     }
-    
+
     // Try to execute a simple command in the sandbox
     let executor = crate::sandbox::executor::SandboxExecutor::new_with_serialization(
-        build_result.profile, 
+        build_result.profile,
         test_path.clone(),
-        build_result.serialized
+        build_result.serialized,
     );
-    
+
     // Use a simple echo command for testing
-    let test_command = if cfg!(windows) {
-        "cmd"
-    } else {
-        "echo"
-    };
-    
+    let test_command = if cfg!(windows) { "cmd" } else { "echo" };
+
     let test_args = if cfg!(windows) {
         vec!["/C", "echo", "sandbox test successful"]
     } else {
         vec!["sandbox test successful"]
     };
-    
+
     match executor.execute_sandboxed_spawn(test_command, &test_args, &test_path) {
         Ok(mut child) => {
             // Wait for the process to complete with a timeout
@@ -452,19 +451,17 @@ pub async fn test_sandbox_profile(
                         ))
                     }
                 }
-                Err(e) => {
-                    Ok(format!(
-                        "⚠️ Profile '{}' validated with warnings.\n\n\
+                Err(e) => Ok(format!(
+                    "⚠️ Profile '{}' validated with warnings.\n\n\
                         • {} rules loaded and validated\n\
                         • Sandbox activation: Partial\n\
                         • Test process: Could not get exit status ({})\n\
                         • Platform: {}",
-                        profile.name,
-                        rules.len(),
-                        e,
-                        platform_caps.os
-                    ))
-                }
+                    profile.name,
+                    rules.len(),
+                    e,
+                    platform_caps.os
+                )),
             }
         }
         Err(e) => {
@@ -509,176 +506,200 @@ pub async fn list_sandbox_violations(
     limit: Option<i64>,
 ) -> Result<Vec<SandboxViolation>, String> {
     let conn = db.0.lock().map_err(|e| e.to_string())?;
-    
+
     // Build dynamic query
     let mut query = String::from(
         "SELECT id, profile_id, agent_id, agent_run_id, operation_type, pattern_value, process_name, pid, denied_at 
          FROM sandbox_violations WHERE 1=1"
     );
-    
+
     let mut param_idx = 1;
-    
+
     if profile_id.is_some() {
         query.push_str(&format!(" AND profile_id = ?{}", param_idx));
         param_idx += 1;
     }
-    
+
     if agent_id.is_some() {
         query.push_str(&format!(" AND agent_id = ?{}", param_idx));
         param_idx += 1;
     }
-    
+
     query.push_str(" ORDER BY denied_at DESC");
-    
+
     if limit.is_some() {
         query.push_str(&format!(" LIMIT ?{}", param_idx));
     }
-    
+
     // Execute query based on parameters
     let violations: Vec<SandboxViolation> = if let Some(pid) = profile_id {
         if let Some(aid) = agent_id {
             if let Some(lim) = limit {
                 // All three parameters
                 let mut stmt = conn.prepare(&query).map_err(|e| e.to_string())?;
-                let rows = stmt.query_map(params![pid, aid, lim], |row| {
-                    Ok(SandboxViolation {
-                        id: Some(row.get(0)?),
-                        profile_id: row.get(1)?,
-                        agent_id: row.get(2)?,
-                        agent_run_id: row.get(3)?,
-                        operation_type: row.get(4)?,
-                        pattern_value: row.get(5)?,
-                        process_name: row.get(6)?,
-                        pid: row.get(7)?,
-                        denied_at: row.get(8)?,
+                let rows = stmt
+                    .query_map(params![pid, aid, lim], |row| {
+                        Ok(SandboxViolation {
+                            id: Some(row.get(0)?),
+                            profile_id: row.get(1)?,
+                            agent_id: row.get(2)?,
+                            agent_run_id: row.get(3)?,
+                            operation_type: row.get(4)?,
+                            pattern_value: row.get(5)?,
+                            process_name: row.get(6)?,
+                            pid: row.get(7)?,
+                            denied_at: row.get(8)?,
+                        })
                     })
-                }).map_err(|e| e.to_string())?;
-                rows.collect::<Result<Vec<_>, _>>().map_err(|e| e.to_string())?
+                    .map_err(|e| e.to_string())?;
+                rows.collect::<Result<Vec<_>, _>>()
+                    .map_err(|e| e.to_string())?
             } else {
                 // profile_id and agent_id only
                 let mut stmt = conn.prepare(&query).map_err(|e| e.to_string())?;
-                let rows = stmt.query_map(params![pid, aid], |row| {
-                    Ok(SandboxViolation {
-                        id: Some(row.get(0)?),
-                        profile_id: row.get(1)?,
-                        agent_id: row.get(2)?,
-                        agent_run_id: row.get(3)?,
-                        operation_type: row.get(4)?,
-                        pattern_value: row.get(5)?,
-                        process_name: row.get(6)?,
-                        pid: row.get(7)?,
-                        denied_at: row.get(8)?,
+                let rows = stmt
+                    .query_map(params![pid, aid], |row| {
+                        Ok(SandboxViolation {
+                            id: Some(row.get(0)?),
+                            profile_id: row.get(1)?,
+                            agent_id: row.get(2)?,
+                            agent_run_id: row.get(3)?,
+                            operation_type: row.get(4)?,
+                            pattern_value: row.get(5)?,
+                            process_name: row.get(6)?,
+                            pid: row.get(7)?,
+                            denied_at: row.get(8)?,
+                        })
                     })
-                }).map_err(|e| e.to_string())?;
-                rows.collect::<Result<Vec<_>, _>>().map_err(|e| e.to_string())?
+                    .map_err(|e| e.to_string())?;
+                rows.collect::<Result<Vec<_>, _>>()
+                    .map_err(|e| e.to_string())?
             }
         } else if let Some(lim) = limit {
             // profile_id and limit only
             let mut stmt = conn.prepare(&query).map_err(|e| e.to_string())?;
-            let rows = stmt.query_map(params![pid, lim], |row| {
-                Ok(SandboxViolation {
-                    id: Some(row.get(0)?),
-                    profile_id: row.get(1)?,
-                    agent_id: row.get(2)?,
-                    agent_run_id: row.get(3)?,
-                    operation_type: row.get(4)?,
-                    pattern_value: row.get(5)?,
-                    process_name: row.get(6)?,
-                    pid: row.get(7)?,
-                    denied_at: row.get(8)?,
+            let rows = stmt
+                .query_map(params![pid, lim], |row| {
+                    Ok(SandboxViolation {
+                        id: Some(row.get(0)?),
+                        profile_id: row.get(1)?,
+                        agent_id: row.get(2)?,
+                        agent_run_id: row.get(3)?,
+                        operation_type: row.get(4)?,
+                        pattern_value: row.get(5)?,
+                        process_name: row.get(6)?,
+                        pid: row.get(7)?,
+                        denied_at: row.get(8)?,
+                    })
                 })
-            }).map_err(|e| e.to_string())?;
-            rows.collect::<Result<Vec<_>, _>>().map_err(|e| e.to_string())?
+                .map_err(|e| e.to_string())?;
+            rows.collect::<Result<Vec<_>, _>>()
+                .map_err(|e| e.to_string())?
         } else {
             // profile_id only
             let mut stmt = conn.prepare(&query).map_err(|e| e.to_string())?;
-            let rows = stmt.query_map(params![pid], |row| {
-                Ok(SandboxViolation {
-                    id: Some(row.get(0)?),
-                    profile_id: row.get(1)?,
-                    agent_id: row.get(2)?,
-                    agent_run_id: row.get(3)?,
-                    operation_type: row.get(4)?,
-                    pattern_value: row.get(5)?,
-                    process_name: row.get(6)?,
-                    pid: row.get(7)?,
-                    denied_at: row.get(8)?,
+            let rows = stmt
+                .query_map(params![pid], |row| {
+                    Ok(SandboxViolation {
+                        id: Some(row.get(0)?),
+                        profile_id: row.get(1)?,
+                        agent_id: row.get(2)?,
+                        agent_run_id: row.get(3)?,
+                        operation_type: row.get(4)?,
+                        pattern_value: row.get(5)?,
+                        process_name: row.get(6)?,
+                        pid: row.get(7)?,
+                        denied_at: row.get(8)?,
+                    })
                 })
-            }).map_err(|e| e.to_string())?;
-            rows.collect::<Result<Vec<_>, _>>().map_err(|e| e.to_string())?
+                .map_err(|e| e.to_string())?;
+            rows.collect::<Result<Vec<_>, _>>()
+                .map_err(|e| e.to_string())?
         }
     } else if let Some(aid) = agent_id {
         if let Some(lim) = limit {
             // agent_id and limit only
             let mut stmt = conn.prepare(&query).map_err(|e| e.to_string())?;
-            let rows = stmt.query_map(params![aid, lim], |row| {
-                Ok(SandboxViolation {
-                    id: Some(row.get(0)?),
-                    profile_id: row.get(1)?,
-                    agent_id: row.get(2)?,
-                    agent_run_id: row.get(3)?,
-                    operation_type: row.get(4)?,
-                    pattern_value: row.get(5)?,
-                    process_name: row.get(6)?,
-                    pid: row.get(7)?,
-                    denied_at: row.get(8)?,
+            let rows = stmt
+                .query_map(params![aid, lim], |row| {
+                    Ok(SandboxViolation {
+                        id: Some(row.get(0)?),
+                        profile_id: row.get(1)?,
+                        agent_id: row.get(2)?,
+                        agent_run_id: row.get(3)?,
+                        operation_type: row.get(4)?,
+                        pattern_value: row.get(5)?,
+                        process_name: row.get(6)?,
+                        pid: row.get(7)?,
+                        denied_at: row.get(8)?,
+                    })
                 })
-            }).map_err(|e| e.to_string())?;
-            rows.collect::<Result<Vec<_>, _>>().map_err(|e| e.to_string())?
+                .map_err(|e| e.to_string())?;
+            rows.collect::<Result<Vec<_>, _>>()
+                .map_err(|e| e.to_string())?
         } else {
             // agent_id only
             let mut stmt = conn.prepare(&query).map_err(|e| e.to_string())?;
-            let rows = stmt.query_map(params![aid], |row| {
-                Ok(SandboxViolation {
-                    id: Some(row.get(0)?),
-                    profile_id: row.get(1)?,
-                    agent_id: row.get(2)?,
-                    agent_run_id: row.get(3)?,
-                    operation_type: row.get(4)?,
-                    pattern_value: row.get(5)?,
-                    process_name: row.get(6)?,
-                    pid: row.get(7)?,
-                    denied_at: row.get(8)?,
+            let rows = stmt
+                .query_map(params![aid], |row| {
+                    Ok(SandboxViolation {
+                        id: Some(row.get(0)?),
+                        profile_id: row.get(1)?,
+                        agent_id: row.get(2)?,
+                        agent_run_id: row.get(3)?,
+                        operation_type: row.get(4)?,
+                        pattern_value: row.get(5)?,
+                        process_name: row.get(6)?,
+                        pid: row.get(7)?,
+                        denied_at: row.get(8)?,
+                    })
                 })
-            }).map_err(|e| e.to_string())?;
-            rows.collect::<Result<Vec<_>, _>>().map_err(|e| e.to_string())?
+                .map_err(|e| e.to_string())?;
+            rows.collect::<Result<Vec<_>, _>>()
+                .map_err(|e| e.to_string())?
         }
     } else if let Some(lim) = limit {
         // limit only
         let mut stmt = conn.prepare(&query).map_err(|e| e.to_string())?;
-        let rows = stmt.query_map(params![lim], |row| {
-            Ok(SandboxViolation {
-                id: Some(row.get(0)?),
-                profile_id: row.get(1)?,
-                agent_id: row.get(2)?,
-                agent_run_id: row.get(3)?,
-                operation_type: row.get(4)?,
-                pattern_value: row.get(5)?,
-                process_name: row.get(6)?,
-                pid: row.get(7)?,
-                denied_at: row.get(8)?,
+        let rows = stmt
+            .query_map(params![lim], |row| {
+                Ok(SandboxViolation {
+                    id: Some(row.get(0)?),
+                    profile_id: row.get(1)?,
+                    agent_id: row.get(2)?,
+                    agent_run_id: row.get(3)?,
+                    operation_type: row.get(4)?,
+                    pattern_value: row.get(5)?,
+                    process_name: row.get(6)?,
+                    pid: row.get(7)?,
+                    denied_at: row.get(8)?,
+                })
             })
-        }).map_err(|e| e.to_string())?;
-        rows.collect::<Result<Vec<_>, _>>().map_err(|e| e.to_string())?
+            .map_err(|e| e.to_string())?;
+        rows.collect::<Result<Vec<_>, _>>()
+            .map_err(|e| e.to_string())?
     } else {
         // No parameters
         let mut stmt = conn.prepare(&query).map_err(|e| e.to_string())?;
-        let rows = stmt.query_map([], |row| {
-            Ok(SandboxViolation {
-                id: Some(row.get(0)?),
-                profile_id: row.get(1)?,
-                agent_id: row.get(2)?,
-                agent_run_id: row.get(3)?,
-                operation_type: row.get(4)?,
-                pattern_value: row.get(5)?,
-                process_name: row.get(6)?,
-                pid: row.get(7)?,
-                denied_at: row.get(8)?,
+        let rows = stmt
+            .query_map([], |row| {
+                Ok(SandboxViolation {
+                    id: Some(row.get(0)?),
+                    profile_id: row.get(1)?,
+                    agent_id: row.get(2)?,
+                    agent_run_id: row.get(3)?,
+                    operation_type: row.get(4)?,
+                    pattern_value: row.get(5)?,
+                    process_name: row.get(6)?,
+                    pid: row.get(7)?,
+                    denied_at: row.get(8)?,
+                })
             })
-        }).map_err(|e| e.to_string())?;
-        rows.collect::<Result<Vec<_>, _>>().map_err(|e| e.to_string())?
+            .map_err(|e| e.to_string())?;
+        rows.collect::<Result<Vec<_>, _>>()
+            .map_err(|e| e.to_string())?
     };
-    
+
     Ok(violations)
 }
 
@@ -695,14 +716,14 @@ pub async fn log_sandbox_violation(
     pid: Option<i32>,
 ) -> Result<(), String> {
     let conn = db.0.lock().map_err(|e| e.to_string())?;
-    
+
     conn.execute(
         "INSERT INTO sandbox_violations (profile_id, agent_id, agent_run_id, operation_type, pattern_value, process_name, pid) 
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
         params![profile_id, agent_id, agent_run_id, operation_type, pattern_value, process_name, pid],
     )
     .map_err(|e| e.to_string())?;
-    
+
     Ok(())
 }
 
@@ -713,7 +734,7 @@ pub async fn clear_sandbox_violations(
     older_than_days: Option<i64>,
 ) -> Result<i64, String> {
     let conn = db.0.lock().map_err(|e| e.to_string())?;
-    
+
     let query = if let Some(days) = older_than_days {
         format!(
             "DELETE FROM sandbox_violations WHERE denied_at < datetime('now', '-{} days')",
@@ -722,10 +743,9 @@ pub async fn clear_sandbox_violations(
     } else {
         "DELETE FROM sandbox_violations".to_string()
     };
-    
-    let deleted = conn.execute(&query, [])
-        .map_err(|e| e.to_string())?;
-    
+
+    let deleted = conn.execute(&query, []).map_err(|e| e.to_string())?;
+
     Ok(deleted as i64)
 }
 
@@ -735,28 +755,30 @@ pub async fn get_sandbox_violation_stats(
     db: State<'_, AgentDb>,
 ) -> Result<serde_json::Value, String> {
     let conn = db.0.lock().map_err(|e| e.to_string())?;
-    
+
     // Get total violations
     let total: i64 = conn
-        .query_row("SELECT COUNT(*) FROM sandbox_violations", [], |row| row.get(0))
+        .query_row("SELECT COUNT(*) FROM sandbox_violations", [], |row| {
+            row.get(0)
+        })
         .map_err(|e| e.to_string())?;
-    
+
     // Get violations by operation type
     let mut stmt = conn
         .prepare(
             "SELECT operation_type, COUNT(*) as count 
              FROM sandbox_violations 
              GROUP BY operation_type 
-             ORDER BY count DESC"
+             ORDER BY count DESC",
         )
         .map_err(|e| e.to_string())?;
-    
+
     let by_operation: Vec<(String, i64)> = stmt
         .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))
         .map_err(|e| e.to_string())?
         .collect::<Result<Vec<_>, _>>()
         .map_err(|e| e.to_string())?;
-    
+
     // Get recent violations count (last 24 hours)
     let recent: i64 = conn
         .query_row(
@@ -765,7 +787,7 @@ pub async fn get_sandbox_violation_stats(
             |row| row.get(0),
         )
         .map_err(|e| e.to_string())?;
-    
+
     Ok(serde_json::json!({
         "total": total,
         "recent_24h": recent,
@@ -789,10 +811,10 @@ pub async fn export_sandbox_profile(
         let conn = db.0.lock().map_err(|e| e.to_string())?;
         crate::sandbox::profile::load_profile(&conn, profile_id).map_err(|e| e.to_string())?
     };
-    
+
     // Get the rules
     let rules = list_sandbox_rules(db.clone(), profile_id).await?;
-    
+
     Ok(SandboxProfileExport {
         version: 1,
         exported_at: chrono::Utc::now().to_rfc3339(),
@@ -808,17 +830,14 @@ pub async fn export_all_sandbox_profiles(
 ) -> Result<SandboxProfileExport, String> {
     let profiles = list_sandbox_profiles(db.clone()).await?;
     let mut profile_exports = Vec::new();
-    
+
     for profile in profiles {
         if let Some(id) = profile.id {
             let rules = list_sandbox_rules(db.clone(), id).await?;
-            profile_exports.push(SandboxProfileWithRules {
-                profile,
-                rules,
-            });
+            profile_exports.push(SandboxProfileWithRules { profile, rules });
         }
     }
-    
+
     Ok(SandboxProfileExport {
         version: 1,
         exported_at: chrono::Utc::now().to_rfc3339(),
@@ -834,16 +853,19 @@ pub async fn import_sandbox_profiles(
     export_data: SandboxProfileExport,
 ) -> Result<Vec<ImportResult>, String> {
     let mut results = Vec::new();
-    
+
     // Validate version
     if export_data.version != 1 {
-        return Err(format!("Unsupported export version: {}", export_data.version));
+        return Err(format!(
+            "Unsupported export version: {}",
+            export_data.version
+        ));
     }
-    
+
     for profile_export in export_data.profiles {
         let mut profile = profile_export.profile;
         let original_name = profile.name.clone();
-        
+
         // Check for name conflicts
         let existing: Result<i64, _> = {
             let conn = db.0.lock().map_err(|e| e.to_string())?;
@@ -853,29 +875,31 @@ pub async fn import_sandbox_profiles(
                 |row| row.get(0),
             )
         };
-        
+
         let (imported, new_name) = match existing {
             Ok(_) => {
                 // Name conflict - append timestamp
-                let new_name = format!("{} (imported {})", profile.name, chrono::Utc::now().format("%Y-%m-%d %H:%M"));
+                let new_name = format!(
+                    "{} (imported {})",
+                    profile.name,
+                    chrono::Utc::now().format("%Y-%m-%d %H:%M")
+                );
                 profile.name = new_name.clone();
                 (true, Some(new_name))
             }
             Err(_) => (true, None),
         };
-        
+
         if imported {
             // Reset profile fields for new insert
             profile.id = None;
             profile.is_default = false; // Never import as default
-            
+
             // Create the profile
-            let created_profile = create_sandbox_profile(
-                db.clone(),
-                profile.name.clone(),
-                profile.description,
-            ).await?;
-            
+            let created_profile =
+                create_sandbox_profile(db.clone(), profile.name.clone(), profile.description)
+                    .await?;
+
             if let Some(new_id) = created_profile.id {
                 // Import rules
                 for rule in profile_export.rules {
@@ -889,10 +913,11 @@ pub async fn import_sandbox_profiles(
                             rule.pattern_value,
                             rule.enabled,
                             rule.platform_support,
-                        ).await;
+                        )
+                        .await;
                     }
                 }
-                
+
                 // Update profile status if needed
                 if profile.is_active {
                     let _ = update_sandbox_profile(
@@ -902,18 +927,21 @@ pub async fn import_sandbox_profiles(
                         created_profile.description,
                         profile.is_active,
                         false, // Never set as default on import
-                    ).await;
+                    )
+                    .await;
                 }
             }
-            
+
             results.push(ImportResult {
                 profile_name: original_name,
                 imported: true,
-                reason: new_name.as_ref().map(|_| "Name conflict resolved".to_string()),
+                reason: new_name
+                    .as_ref()
+                    .map(|_| "Name conflict resolved".to_string()),
                 new_name,
             });
         }
     }
-    
+
     Ok(results)
-} 
+}

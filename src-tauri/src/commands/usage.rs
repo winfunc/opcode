@@ -1,9 +1,9 @@
-use std::collections::{HashMap, HashSet};
-use std::fs;
-use std::path::PathBuf;
 use chrono::{DateTime, Local, NaiveDate};
 use serde::{Deserialize, Serialize};
 use serde_json;
+use std::collections::{HashMap, HashSet};
+use std::fs;
+use std::path::PathBuf;
 use tauri::command;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -108,11 +108,21 @@ fn calculate_cost(model: &str, usage: &UsageData) -> f64 {
     let cache_read_tokens = usage.cache_read_input_tokens.unwrap_or(0) as f64;
 
     // Calculate cost based on model
-    let (input_price, output_price, cache_write_price, cache_read_price) = 
+    let (input_price, output_price, cache_write_price, cache_read_price) =
         if model.contains("opus-4") || model.contains("claude-opus-4") {
-            (OPUS_4_INPUT_PRICE, OPUS_4_OUTPUT_PRICE, OPUS_4_CACHE_WRITE_PRICE, OPUS_4_CACHE_READ_PRICE)
+            (
+                OPUS_4_INPUT_PRICE,
+                OPUS_4_OUTPUT_PRICE,
+                OPUS_4_CACHE_WRITE_PRICE,
+                OPUS_4_CACHE_READ_PRICE,
+            )
         } else if model.contains("sonnet-4") || model.contains("claude-sonnet-4") {
-            (SONNET_4_INPUT_PRICE, SONNET_4_OUTPUT_PRICE, SONNET_4_CACHE_WRITE_PRICE, SONNET_4_CACHE_READ_PRICE)
+            (
+                SONNET_4_INPUT_PRICE,
+                SONNET_4_OUTPUT_PRICE,
+                SONNET_4_CACHE_WRITE_PRICE,
+                SONNET_4_CACHE_READ_PRICE,
+            )
         } else {
             // Return 0 for unknown models to avoid incorrect cost estimations.
             (0.0, 0.0, 0.0, 0.0)
@@ -134,10 +144,11 @@ fn parse_jsonl_file(
 ) -> Vec<UsageEntry> {
     let mut entries = Vec::new();
     let mut actual_project_path: Option<String> = None;
-    
+
     if let Ok(content) = fs::read_to_string(path) {
         // Extract session ID from the file path
-        let session_id = path.parent()
+        let session_id = path
+            .parent()
             .and_then(|p| p.file_name())
             .and_then(|n| n.to_str())
             .unwrap_or("unknown")
@@ -155,7 +166,7 @@ fn parse_jsonl_file(
                         actual_project_path = Some(cwd.to_string());
                     }
                 }
-                
+
                 // Try to parse as JsonlEntry for usage data
                 if let Ok(entry) = serde_json::from_value::<JsonlEntry>(json_value) {
                     if let Some(message) = &entry.message {
@@ -170,10 +181,11 @@ fn parse_jsonl_file(
 
                         if let Some(usage) = &message.usage {
                             // Skip entries without meaningful token usage
-                            if usage.input_tokens.unwrap_or(0) == 0 && 
-                               usage.output_tokens.unwrap_or(0) == 0 &&
-                               usage.cache_creation_input_tokens.unwrap_or(0) == 0 &&
-                               usage.cache_read_input_tokens.unwrap_or(0) == 0 {
+                            if usage.input_tokens.unwrap_or(0) == 0
+                                && usage.output_tokens.unwrap_or(0) == 0
+                                && usage.cache_creation_input_tokens.unwrap_or(0) == 0
+                                && usage.cache_read_input_tokens.unwrap_or(0) == 0
+                            {
                                 continue;
                             }
 
@@ -184,17 +196,23 @@ fn parse_jsonl_file(
                                     0.0
                                 }
                             });
-                            
+
                             // Use actual project path if found, otherwise use encoded name
-                            let project_path = actual_project_path.clone()
+                            let project_path = actual_project_path
+                                .clone()
                                 .unwrap_or_else(|| encoded_project_name.to_string());
-                            
+
                             entries.push(UsageEntry {
                                 timestamp: entry.timestamp,
-                                model: message.model.clone().unwrap_or_else(|| "unknown".to_string()),
+                                model: message
+                                    .model
+                                    .clone()
+                                    .unwrap_or_else(|| "unknown".to_string()),
                                 input_tokens: usage.input_tokens.unwrap_or(0),
                                 output_tokens: usage.output_tokens.unwrap_or(0),
-                                cache_creation_tokens: usage.cache_creation_input_tokens.unwrap_or(0),
+                                cache_creation_tokens: usage
+                                    .cache_creation_input_tokens
+                                    .unwrap_or(0),
                                 cache_read_tokens: usage.cache_read_input_tokens.unwrap_or(0),
                                 cost,
                                 session_id: entry.session_id.unwrap_or_else(|| session_id.clone()),
@@ -263,10 +281,10 @@ fn get_all_usage_entries(claude_path: &PathBuf) -> Vec<UsageEntry> {
         let entries = parse_jsonl_file(&path, &project_name, &mut processed_hashes);
         all_entries.extend(entries);
     }
-    
+
     // Sort by timestamp
     all_entries.sort_by(|a, b| a.timestamp.cmp(&b.timestamp));
-    
+
     all_entries
 }
 
@@ -275,9 +293,9 @@ pub fn get_usage_stats(days: Option<u32>) -> Result<UsageStats, String> {
     let claude_path = dirs::home_dir()
         .ok_or("Failed to get home directory")?
         .join(".claude");
-    
+
     let all_entries = get_all_usage_entries(&claude_path);
-    
+
     if all_entries.is_empty() {
         return Ok(UsageStats {
             total_cost: 0.0,
@@ -292,11 +310,12 @@ pub fn get_usage_stats(days: Option<u32>) -> Result<UsageStats, String> {
             by_project: vec![],
         });
     }
-    
+
     // Filter by days if specified
     let filtered_entries = if let Some(days) = days {
         let cutoff = Local::now().naive_local().date() - chrono::Duration::days(days as i64);
-        all_entries.into_iter()
+        all_entries
+            .into_iter()
             .filter(|e| {
                 if let Ok(dt) = DateTime::parse_from_rfc3339(&e.timestamp) {
                     dt.naive_local().date() >= cutoff
@@ -308,18 +327,18 @@ pub fn get_usage_stats(days: Option<u32>) -> Result<UsageStats, String> {
     } else {
         all_entries
     };
-    
+
     // Calculate aggregated stats
     let mut total_cost = 0.0;
     let mut total_input_tokens = 0u64;
     let mut total_output_tokens = 0u64;
     let mut total_cache_creation_tokens = 0u64;
     let mut total_cache_read_tokens = 0u64;
-    
+
     let mut model_stats: HashMap<String, ModelUsage> = HashMap::new();
     let mut daily_stats: HashMap<String, DailyUsage> = HashMap::new();
     let mut project_stats: HashMap<String, ProjectUsage> = HashMap::new();
-    
+
     for entry in &filtered_entries {
         // Update totals
         total_cost += entry.cost;
@@ -327,18 +346,20 @@ pub fn get_usage_stats(days: Option<u32>) -> Result<UsageStats, String> {
         total_output_tokens += entry.output_tokens;
         total_cache_creation_tokens += entry.cache_creation_tokens;
         total_cache_read_tokens += entry.cache_read_tokens;
-        
+
         // Update model stats
-        let model_stat = model_stats.entry(entry.model.clone()).or_insert(ModelUsage {
-            model: entry.model.clone(),
-            total_cost: 0.0,
-            total_tokens: 0,
-            input_tokens: 0,
-            output_tokens: 0,
-            cache_creation_tokens: 0,
-            cache_read_tokens: 0,
-            session_count: 0,
-        });
+        let model_stat = model_stats
+            .entry(entry.model.clone())
+            .or_insert(ModelUsage {
+                model: entry.model.clone(),
+                total_cost: 0.0,
+                total_tokens: 0,
+                input_tokens: 0,
+                output_tokens: 0,
+                cache_creation_tokens: 0,
+                cache_read_tokens: 0,
+                session_count: 0,
+            });
         model_stat.total_cost += entry.cost;
         model_stat.input_tokens += entry.input_tokens;
         model_stat.output_tokens += entry.output_tokens;
@@ -346,9 +367,14 @@ pub fn get_usage_stats(days: Option<u32>) -> Result<UsageStats, String> {
         model_stat.cache_read_tokens += entry.cache_read_tokens;
         model_stat.total_tokens = model_stat.input_tokens + model_stat.output_tokens;
         model_stat.session_count += 1;
-        
+
         // Update daily stats
-        let date = entry.timestamp.split('T').next().unwrap_or(&entry.timestamp).to_string();
+        let date = entry
+            .timestamp
+            .split('T')
+            .next()
+            .unwrap_or(&entry.timestamp)
+            .to_string();
         let daily_stat = daily_stats.entry(date.clone()).or_insert(DailyUsage {
             date,
             total_cost: 0.0,
@@ -356,43 +382,58 @@ pub fn get_usage_stats(days: Option<u32>) -> Result<UsageStats, String> {
             models_used: vec![],
         });
         daily_stat.total_cost += entry.cost;
-        daily_stat.total_tokens += entry.input_tokens + entry.output_tokens + entry.cache_creation_tokens + entry.cache_read_tokens;
+        daily_stat.total_tokens += entry.input_tokens
+            + entry.output_tokens
+            + entry.cache_creation_tokens
+            + entry.cache_read_tokens;
         if !daily_stat.models_used.contains(&entry.model) {
             daily_stat.models_used.push(entry.model.clone());
         }
-        
+
         // Update project stats
-        let project_stat = project_stats.entry(entry.project_path.clone()).or_insert(ProjectUsage {
-            project_path: entry.project_path.clone(),
-            project_name: entry.project_path.split('/').last()
-                .unwrap_or(&entry.project_path)
-                .to_string(),
-            total_cost: 0.0,
-            total_tokens: 0,
-            session_count: 0,
-            last_used: entry.timestamp.clone(),
-        });
+        let project_stat =
+            project_stats
+                .entry(entry.project_path.clone())
+                .or_insert(ProjectUsage {
+                    project_path: entry.project_path.clone(),
+                    project_name: entry
+                        .project_path
+                        .split('/')
+                        .last()
+                        .unwrap_or(&entry.project_path)
+                        .to_string(),
+                    total_cost: 0.0,
+                    total_tokens: 0,
+                    session_count: 0,
+                    last_used: entry.timestamp.clone(),
+                });
         project_stat.total_cost += entry.cost;
-        project_stat.total_tokens += entry.input_tokens + entry.output_tokens + entry.cache_creation_tokens + entry.cache_read_tokens;
+        project_stat.total_tokens += entry.input_tokens
+            + entry.output_tokens
+            + entry.cache_creation_tokens
+            + entry.cache_read_tokens;
         project_stat.session_count += 1;
         if entry.timestamp > project_stat.last_used {
             project_stat.last_used = entry.timestamp.clone();
         }
     }
-    
-    let total_tokens = total_input_tokens + total_output_tokens + total_cache_creation_tokens + total_cache_read_tokens;
+
+    let total_tokens = total_input_tokens
+        + total_output_tokens
+        + total_cache_creation_tokens
+        + total_cache_read_tokens;
     let total_sessions = filtered_entries.len() as u64;
-    
+
     // Convert hashmaps to sorted vectors
     let mut by_model: Vec<ModelUsage> = model_stats.into_values().collect();
     by_model.sort_by(|a, b| b.total_cost.partial_cmp(&a.total_cost).unwrap());
-    
+
     let mut by_date: Vec<DailyUsage> = daily_stats.into_values().collect();
     by_date.sort_by(|a, b| b.date.cmp(&a.date));
-    
+
     let mut by_project: Vec<ProjectUsage> = project_stats.into_values().collect();
     by_project.sort_by(|a, b| b.total_cost.partial_cmp(&a.total_cost).unwrap());
-    
+
     Ok(UsageStats {
         total_cost,
         total_tokens,
@@ -412,27 +453,26 @@ pub fn get_usage_by_date_range(start_date: String, end_date: String) -> Result<U
     let claude_path = dirs::home_dir()
         .ok_or("Failed to get home directory")?
         .join(".claude");
-    
+
     let all_entries = get_all_usage_entries(&claude_path);
-    
+
     // Parse dates
-    let start = NaiveDate::parse_from_str(&start_date, "%Y-%m-%d")
-        .or_else(|_| {
-            // Try parsing ISO datetime format
-            DateTime::parse_from_rfc3339(&start_date)
-                .map(|dt| dt.naive_local().date())
-                .map_err(|e| format!("Invalid start date: {}", e))
-        })?;
-    let end = NaiveDate::parse_from_str(&end_date, "%Y-%m-%d")
-        .or_else(|_| {
-            // Try parsing ISO datetime format
-            DateTime::parse_from_rfc3339(&end_date)
-                .map(|dt| dt.naive_local().date())
-                .map_err(|e| format!("Invalid end date: {}", e))
-        })?;
-    
+    let start = NaiveDate::parse_from_str(&start_date, "%Y-%m-%d").or_else(|_| {
+        // Try parsing ISO datetime format
+        DateTime::parse_from_rfc3339(&start_date)
+            .map(|dt| dt.naive_local().date())
+            .map_err(|e| format!("Invalid start date: {}", e))
+    })?;
+    let end = NaiveDate::parse_from_str(&end_date, "%Y-%m-%d").or_else(|_| {
+        // Try parsing ISO datetime format
+        DateTime::parse_from_rfc3339(&end_date)
+            .map(|dt| dt.naive_local().date())
+            .map_err(|e| format!("Invalid end date: {}", e))
+    })?;
+
     // Filter entries by date range
-    let filtered_entries: Vec<_> = all_entries.into_iter()
+    let filtered_entries: Vec<_> = all_entries
+        .into_iter()
         .filter(|e| {
             if let Ok(dt) = DateTime::parse_from_rfc3339(&e.timestamp) {
                 let date = dt.naive_local().date();
@@ -442,7 +482,7 @@ pub fn get_usage_by_date_range(start_date: String, end_date: String) -> Result<U
             }
         })
         .collect();
-    
+
     if filtered_entries.is_empty() {
         return Ok(UsageStats {
             total_cost: 0.0,
@@ -457,18 +497,18 @@ pub fn get_usage_by_date_range(start_date: String, end_date: String) -> Result<U
             by_project: vec![],
         });
     }
-    
+
     // Calculate aggregated stats (same logic as get_usage_stats)
     let mut total_cost = 0.0;
     let mut total_input_tokens = 0u64;
     let mut total_output_tokens = 0u64;
     let mut total_cache_creation_tokens = 0u64;
     let mut total_cache_read_tokens = 0u64;
-    
+
     let mut model_stats: HashMap<String, ModelUsage> = HashMap::new();
     let mut daily_stats: HashMap<String, DailyUsage> = HashMap::new();
     let mut project_stats: HashMap<String, ProjectUsage> = HashMap::new();
-    
+
     for entry in &filtered_entries {
         // Update totals
         total_cost += entry.cost;
@@ -476,18 +516,20 @@ pub fn get_usage_by_date_range(start_date: String, end_date: String) -> Result<U
         total_output_tokens += entry.output_tokens;
         total_cache_creation_tokens += entry.cache_creation_tokens;
         total_cache_read_tokens += entry.cache_read_tokens;
-        
+
         // Update model stats
-        let model_stat = model_stats.entry(entry.model.clone()).or_insert(ModelUsage {
-            model: entry.model.clone(),
-            total_cost: 0.0,
-            total_tokens: 0,
-            input_tokens: 0,
-            output_tokens: 0,
-            cache_creation_tokens: 0,
-            cache_read_tokens: 0,
-            session_count: 0,
-        });
+        let model_stat = model_stats
+            .entry(entry.model.clone())
+            .or_insert(ModelUsage {
+                model: entry.model.clone(),
+                total_cost: 0.0,
+                total_tokens: 0,
+                input_tokens: 0,
+                output_tokens: 0,
+                cache_creation_tokens: 0,
+                cache_read_tokens: 0,
+                session_count: 0,
+            });
         model_stat.total_cost += entry.cost;
         model_stat.input_tokens += entry.input_tokens;
         model_stat.output_tokens += entry.output_tokens;
@@ -495,9 +537,14 @@ pub fn get_usage_by_date_range(start_date: String, end_date: String) -> Result<U
         model_stat.cache_read_tokens += entry.cache_read_tokens;
         model_stat.total_tokens = model_stat.input_tokens + model_stat.output_tokens;
         model_stat.session_count += 1;
-        
+
         // Update daily stats
-        let date = entry.timestamp.split('T').next().unwrap_or(&entry.timestamp).to_string();
+        let date = entry
+            .timestamp
+            .split('T')
+            .next()
+            .unwrap_or(&entry.timestamp)
+            .to_string();
         let daily_stat = daily_stats.entry(date.clone()).or_insert(DailyUsage {
             date,
             total_cost: 0.0,
@@ -505,43 +552,58 @@ pub fn get_usage_by_date_range(start_date: String, end_date: String) -> Result<U
             models_used: vec![],
         });
         daily_stat.total_cost += entry.cost;
-        daily_stat.total_tokens += entry.input_tokens + entry.output_tokens + entry.cache_creation_tokens + entry.cache_read_tokens;
+        daily_stat.total_tokens += entry.input_tokens
+            + entry.output_tokens
+            + entry.cache_creation_tokens
+            + entry.cache_read_tokens;
         if !daily_stat.models_used.contains(&entry.model) {
             daily_stat.models_used.push(entry.model.clone());
         }
-        
+
         // Update project stats
-        let project_stat = project_stats.entry(entry.project_path.clone()).or_insert(ProjectUsage {
-            project_path: entry.project_path.clone(),
-            project_name: entry.project_path.split('/').last()
-                .unwrap_or(&entry.project_path)
-                .to_string(),
-            total_cost: 0.0,
-            total_tokens: 0,
-            session_count: 0,
-            last_used: entry.timestamp.clone(),
-        });
+        let project_stat =
+            project_stats
+                .entry(entry.project_path.clone())
+                .or_insert(ProjectUsage {
+                    project_path: entry.project_path.clone(),
+                    project_name: entry
+                        .project_path
+                        .split('/')
+                        .last()
+                        .unwrap_or(&entry.project_path)
+                        .to_string(),
+                    total_cost: 0.0,
+                    total_tokens: 0,
+                    session_count: 0,
+                    last_used: entry.timestamp.clone(),
+                });
         project_stat.total_cost += entry.cost;
-        project_stat.total_tokens += entry.input_tokens + entry.output_tokens + entry.cache_creation_tokens + entry.cache_read_tokens;
+        project_stat.total_tokens += entry.input_tokens
+            + entry.output_tokens
+            + entry.cache_creation_tokens
+            + entry.cache_read_tokens;
         project_stat.session_count += 1;
         if entry.timestamp > project_stat.last_used {
             project_stat.last_used = entry.timestamp.clone();
         }
     }
-    
-    let total_tokens = total_input_tokens + total_output_tokens + total_cache_creation_tokens + total_cache_read_tokens;
+
+    let total_tokens = total_input_tokens
+        + total_output_tokens
+        + total_cache_creation_tokens
+        + total_cache_read_tokens;
     let total_sessions = filtered_entries.len() as u64;
-    
+
     // Convert hashmaps to sorted vectors
     let mut by_model: Vec<ModelUsage> = model_stats.into_values().collect();
     by_model.sort_by(|a, b| b.total_cost.partial_cmp(&a.total_cost).unwrap());
-    
+
     let mut by_date: Vec<DailyUsage> = daily_stats.into_values().collect();
     by_date.sort_by(|a, b| b.date.cmp(&a.date));
-    
+
     let mut by_project: Vec<ProjectUsage> = project_stats.into_values().collect();
     by_project.sort_by(|a, b| b.total_cost.partial_cmp(&a.total_cost).unwrap());
-    
+
     Ok(UsageStats {
         total_cost,
         total_tokens,
@@ -557,23 +619,26 @@ pub fn get_usage_by_date_range(start_date: String, end_date: String) -> Result<U
 }
 
 #[command]
-pub fn get_usage_details(project_path: Option<String>, date: Option<String>) -> Result<Vec<UsageEntry>, String> {
+pub fn get_usage_details(
+    project_path: Option<String>,
+    date: Option<String>,
+) -> Result<Vec<UsageEntry>, String> {
     let claude_path = dirs::home_dir()
         .ok_or("Failed to get home directory")?
         .join(".claude");
-    
+
     let mut all_entries = get_all_usage_entries(&claude_path);
-    
+
     // Filter by project if specified
     if let Some(project) = project_path {
         all_entries.retain(|e| e.project_path == project);
     }
-    
+
     // Filter by date if specified
     if let Some(date) = date {
         all_entries.retain(|e| e.timestamp.starts_with(&date));
     }
-    
+
     Ok(all_entries)
 }
 
@@ -586,7 +651,7 @@ pub fn get_session_stats(
     let claude_path = dirs::home_dir()
         .ok_or("Failed to get home directory")?
         .join(".claude");
-    
+
     let all_entries = get_all_usage_entries(&claude_path);
 
     let since_date = since.and_then(|s| NaiveDate::parse_from_str(&s, "%Y%m%d").ok());
@@ -609,14 +674,16 @@ pub fn get_session_stats(
     let mut session_stats: HashMap<String, ProjectUsage> = HashMap::new();
     for entry in &filtered_entries {
         let session_key = format!("{}/{}", entry.project_path, entry.session_id);
-        let project_stat = session_stats.entry(session_key).or_insert_with(|| ProjectUsage {
-            project_path: entry.project_path.clone(),
-            project_name: entry.session_id.clone(), // Using session_id as project_name for session view
-            total_cost: 0.0,
-            total_tokens: 0,
-            session_count: 0, // In this context, this will count entries per session
-            last_used: " ".to_string(),
-        });
+        let project_stat = session_stats
+            .entry(session_key)
+            .or_insert_with(|| ProjectUsage {
+                project_path: entry.project_path.clone(),
+                project_name: entry.session_id.clone(), // Using session_id as project_name for session view
+                total_cost: 0.0,
+                total_tokens: 0,
+                session_count: 0, // In this context, this will count entries per session
+                last_used: " ".to_string(),
+            });
 
         project_stat.total_cost += entry.cost;
         project_stat.total_tokens += entry.input_tokens
@@ -643,6 +710,5 @@ pub fn get_session_stats(
         by_session.sort_by(|a, b| b.last_used.cmp(&a.last_used));
     }
 
-
     Ok(by_session)
-} 
+}

@@ -28,7 +28,7 @@ pub struct OperationSupport {
 /// Get the platform capabilities for sandboxing
 pub fn get_platform_capabilities() -> PlatformCapabilities {
     let os = env::consts::OS;
-    
+
     match os {
         "linux" => get_linux_capabilities(),
         "macos" => get_macos_capabilities(),
@@ -176,4 +176,4 @@ fn get_unsupported_capabilities(os: &str) -> PlatformCapabilities {
 /// Check if sandboxing is available on the current platform
 pub fn is_sandboxing_available() -> bool {
     matches!(env::consts::OS, "linux" | "macos" | "freebsd")
-} 
+}

@@ -15,7 +15,10 @@ pub fn is_sandboxing_supported() -> bool {
 macro_rules! skip_if_unsupported {
     () => {
         if !$crate::sandbox::common::is_sandboxing_supported() {
-            eprintln!("Skipping test: sandboxing not supported on {}", std::env::consts::OS);
+            eprintln!(
+                "Skipping test: sandboxing not supported on {}",
+                std::env::consts::OS
+            );
             return;
         }
     };
@@ -39,7 +42,7 @@ impl PlatformConfig {
                 supports_file_read: true,
                 supports_metadata_read: false, // Cannot be precisely controlled
                 supports_network_all: true,
-                supports_network_tcp: false, // Cannot filter by port
+                supports_network_tcp: false,   // Cannot filter by port
                 supports_network_local: false, // Cannot filter by path
                 supports_system_info: false,
             },
@@ -89,54 +92,53 @@ impl TestCommand {
             working_dir: None,
         }
     }
-    
+
     /// Add an argument
     pub fn arg(mut self, arg: &str) -> Self {
         self.args.push(arg.to_string());
         self
     }
-    
+
     /// Add multiple arguments
     pub fn args(mut self, args: &[&str]) -> Self {
         self.args.extend(args.iter().map(|s| s.to_string()));
         self
     }
-    
+
     /// Set an environment variable
     pub fn env(mut self, key: &str, value: &str) -> Self {
         self.env_vars.push((key.to_string(), value.to_string()));
         self
     }
-    
+
     /// Set working directory
     pub fn current_dir(mut self, dir: &Path) -> Self {
         self.working_dir = Some(dir.to_path_buf());
         self
     }
-    
+
     /// Execute the command with timeout
     pub fn execute_with_timeout(&self, timeout: Duration) -> Result<Output> {
         let mut cmd = Command::new(&self.command);
-        
+
         cmd.args(&self.args);
-        
+
         for (key, value) in &self.env_vars {
             cmd.env(key, value);
         }
-        
+
         if let Some(dir) = &self.working_dir {
             cmd.current_dir(dir);
         }
-        
+
         // On Unix, we can use a timeout mechanism
         #[cfg(unix)]
         {
             use std::time::Instant;
-            
+
             let start = Instant::now();
-            let mut child = cmd.spawn()
-                .context("Failed to spawn command")?;
-            
+            let mut child = cmd.spawn().context("Failed to spawn command")?;
+
             loop {
                 match child.try_wait() {
                     Ok(Some(status)) => {
@@ -158,19 +160,18 @@ impl TestCommand {
                 }
             }
         }
-        
+
         #[cfg(not(unix))]
         {
             // Fallback for non-Unix platforms
-            cmd.output()
-                .context("Failed to execute command")
+            cmd.output().context("Failed to execute command")
         }
     }
-    
+
     /// Execute and expect success
     pub fn execute_expect_success(&self) -> Result<String> {
         let output = self.execute_with_timeout(Duration::from_secs(10))?;
-        
+
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
             return Err(anyhow::anyhow!(
@@ -178,31 +179,27 @@ impl TestCommand {
                 output.status.code()
             ));
         }
-        
+
         Ok(String::from_utf8_lossy(&output.stdout).to_string())
     }
-    
+
     /// Execute and expect failure
     pub fn execute_expect_failure(&self) -> Result<String> {
         let output = self.execute_with_timeout(Duration::from_secs(10))?;
-        
+
         if output.status.success() {
             let stdout = String::from_utf8_lossy(&output.stdout);
             return Err(anyhow::anyhow!(
                 "Command unexpectedly succeeded. Stdout: {stdout}"
             ));
         }
-        
+
         Ok(String::from_utf8_lossy(&output.stderr).to_string())
     }
 }
 
 /// Create a simple test binary that attempts an operation
-pub fn create_test_binary(
-    name: &str,
-    code: &str,
-    test_dir: &Path,
-) -> Result<PathBuf> {
+pub fn create_test_binary(name: &str, code: &str, test_dir: &Path) -> Result<PathBuf> {
     create_test_binary_with_deps(name, code, test_dir, &[])
 }
 
@@ -215,7 +212,7 @@ pub fn create_test_binary_with_deps(
 ) -> Result<PathBuf> {
     let src_dir = test_dir.join("src");
     std::fs::create_dir_all(&src_dir)?;
-    
+
     // Build dependencies section
     let deps_section = if dependencies.is_empty() {
         String::new()
@@ -226,7 +223,7 @@ pub fn create_test_binary_with_deps(
         }
         deps
     };
-    
+
     // Create Cargo.toml
     let cargo_toml = format!(
         r#"[package]
@@ -240,10 +237,10 @@ path = "src/main.rs"
 {deps_section}"#
     );
     std::fs::write(test_dir.join("Cargo.toml"), cargo_toml)?;
-    
+
     // Create main.rs
     std::fs::write(src_dir.join("main.rs"), code)?;
-    
+
     // Build the binary
     let output = Command::new("cargo")
         .arg("build")
@@ -251,12 +248,12 @@ path = "src/main.rs"
         .current_dir(test_dir)
         .output()
         .context("Failed to build test binary")?;
-    
+
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         return Err(anyhow::anyhow!("Failed to build test binary: {stderr}"));
     }
-    
+
     let binary_path = test_dir.join("target/release").join(name);
     Ok(binary_path)
 }
@@ -281,7 +278,7 @@ fn main() {{
 "#
         )
     }
-    
+
     /// Code that reads file metadata
     pub fn file_metadata(path: &str) -> String {
         format!(
@@ -300,7 +297,7 @@ fn main() {{
 "#
         )
     }
-    
+
     /// Code that makes a network connection
     pub fn network_connect(addr: &str) -> String {
         format!(
@@ -321,7 +318,7 @@ fn main() {{
 "#
         )
     }
-    
+
     /// Code that reads system information
     pub fn system_info() -> &'static str {
         r#"
@@ -368,7 +365,7 @@ fn main() {
 }
 "#
     }
-    
+
     /// Code that tries to spawn a process
     pub fn spawn_process() -> &'static str {
         r#"
@@ -387,7 +384,7 @@ fn main() {
 }
 "#
     }
-    
+
     /// Code that uses fork (requires libc)
     pub fn fork_process() -> &'static str {
         r#"
@@ -418,7 +415,7 @@ fn main() {
 }
 "#
     }
-    
+
     /// Code that uses exec (requires libc)
     pub fn exec_process() -> &'static str {
         r#"
@@ -446,7 +443,7 @@ fn main() {
 }
 "#
     }
-    
+
     /// Code that tries to write a file
     pub fn file_write(path: &str) -> String {
         format!(
@@ -483,4 +480,4 @@ pub fn assert_sandbox_success(output: &str) {
 /// Assert that a command output indicates failure
 pub fn assert_sandbox_failure(output: &str) {
     assert_output_contains(output, "FAILURE:");
-} 
+}

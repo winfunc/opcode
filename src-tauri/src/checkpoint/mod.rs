@@ -1,11 +1,11 @@
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
-use chrono::{DateTime, Utc};
 
 pub mod manager;
-pub mod storage;
 pub mod state;
+pub mod storage;
 
 /// Represents a checkpoint in the session timeline
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -188,24 +188,25 @@ impl SessionTimeline {
             total_checkpoints: 0,
         }
     }
-    
+
     /// Find a checkpoint by ID in the timeline tree
     pub fn find_checkpoint(&self, checkpoint_id: &str) -> Option<&TimelineNode> {
-        self.root_node.as_ref()
+        self.root_node
+            .as_ref()
             .and_then(|root| Self::find_in_tree(root, checkpoint_id))
     }
-    
+
     fn find_in_tree<'a>(node: &'a TimelineNode, checkpoint_id: &str) -> Option<&'a TimelineNode> {
         if node.checkpoint.id == checkpoint_id {
             return Some(node);
         }
-        
+
         for child in &node.children {
             if let Some(found) = Self::find_in_tree(child, checkpoint_id) {
                 return Some(found);
             }
         }
-        
+
         None
     }
 }
@@ -224,35 +225,38 @@ impl CheckpointPaths {
             .join(project_id)
             .join(".timelines")
             .join(session_id);
-            
+
         Self {
             timeline_file: base_dir.join("timeline.json"),
             checkpoints_dir: base_dir.join("checkpoints"),
             files_dir: base_dir.join("files"),
         }
     }
-    
+
     pub fn checkpoint_dir(&self, checkpoint_id: &str) -> PathBuf {
         self.checkpoints_dir.join(checkpoint_id)
     }
-    
+
     pub fn checkpoint_metadata_file(&self, checkpoint_id: &str) -> PathBuf {
         self.checkpoint_dir(checkpoint_id).join("metadata.json")
     }
-    
+
     pub fn checkpoint_messages_file(&self, checkpoint_id: &str) -> PathBuf {
         self.checkpoint_dir(checkpoint_id).join("messages.jsonl")
     }
-    
+
     #[allow(dead_code)]
     pub fn file_snapshot_path(&self, _checkpoint_id: &str, file_hash: &str) -> PathBuf {
         // In content-addressable storage, files are stored by hash in the content pool
         self.files_dir.join("content_pool").join(file_hash)
     }
-    
+
     #[allow(dead_code)]
     pub fn file_reference_path(&self, checkpoint_id: &str, safe_filename: &str) -> PathBuf {
         // References are stored per checkpoint
-        self.files_dir.join("refs").join(checkpoint_id).join(format!("{}.json", safe_filename))
+        self.files_dir
+            .join("refs")
+            .join(checkpoint_id)
+            .join(format!("{}.json", safe_filename))
     }
-} 
+}

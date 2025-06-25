@@ -174,7 +174,6 @@ export const SplitPane: React.FC<SplitPaneProps> = ({
           "w-1 hover:w-2 transition-all duration-150",
           "bg-border hover:bg-primary/50",
           "cursor-col-resize",
-          "focus:outline-none focus:bg-primary focus:w-2",
           isDragging && "bg-primary w-2"
         )}
         onMouseDown={handleMouseDown}

@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
   Download,
-  X,
   Loader2,
   AlertCircle,
   Eye,
@@ -16,8 +15,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { api, type GitHubAgentFile, type AgentExport } from "@/lib/api";
-import { AGENT_ICONS, type AgentIconName } from "./CCAgents";
+import { api, type GitHubAgentFile, type AgentExport, type Agent } from "@/lib/api";
+import { type AgentIconName } from "./CCAgents";
+import { ICON_MAP } from "./IconPicker";
+
 interface GitHubAgentBrowserProps {
   isOpen: boolean;
   onClose: () => void;
@@ -42,13 +43,23 @@ export const GitHubAgentBrowser: React.FC<GitHubAgentBrowserProps> = ({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedAgent, setSelectedAgent] = useState<AgentPreview | null>(null);
   const [importing, setImporting] = useState(false);
-  const [importedAgents, setImportedAgents] = useState<Set<string>>(new Set());
+  const [existingAgents, setExistingAgents] = useState<Agent[]>([]);
 
   useEffect(() => {
     if (isOpen) {
       fetchAgents();
+      fetchExistingAgents();
     }
   }, [isOpen]);
+
+  const fetchExistingAgents = async () => {
+    try {
+      const agents = await api.listAgents();
+      setExistingAgents(agents);
+    } catch (err) {
+      console.error("Failed to fetch existing agents:", err);
+    }
+  };
 
   const fetchAgents = async () => {
     try {
@@ -91,6 +102,13 @@ export const GitHubAgentBrowser: React.FC<GitHubAgentBrowserProps> = ({
     }
   };
 
+  const isAgentImported = (fileName: string) => {
+    const agentName = getAgentDisplayName(fileName);
+    return existingAgents.some(agent => 
+      agent.name.toLowerCase() === agentName.toLowerCase()
+    );
+  };
+
   const handleImportAgent = async () => {
     if (!selectedAgent?.file) return;
 
@@ -98,8 +116,8 @@ export const GitHubAgentBrowser: React.FC<GitHubAgentBrowserProps> = ({
       setImporting(true);
       await api.importAgentFromGitHub(selectedAgent.file.download_url);
       
-      // Mark as imported
-      setImportedAgents(prev => new Set(prev).add(selectedAgent.file.name));
+      // Refresh existing agents list
+      await fetchExistingAgents();
       
       // Close preview
       setSelectedAgent(null);
@@ -126,7 +144,7 @@ export const GitHubAgentBrowser: React.FC<GitHubAgentBrowserProps> = ({
   };
 
   const renderIcon = (iconName: string) => {
-    const Icon = AGENT_ICONS[iconName as AgentIconName] || AGENT_ICONS.bot;
+    const Icon = ICON_MAP[iconName as AgentIconName] || ICON_MAP.bot;
     return <Icon className="h-8 w-8" />;
   };
 
@@ -141,6 +159,25 @@ export const GitHubAgentBrowser: React.FC<GitHubAgentBrowserProps> = ({
         </DialogHeader>
 
         <div className="flex-1 overflow-hidden flex flex-col">
+          {/* Repository Info */}
+          <div className="px-4 py-3 bg-muted/50 rounded-lg mb-4">
+            <p className="text-sm text-muted-foreground">
+              Agents are fetched from{" "}
+              <a
+                href="https://github.com/getAsterisk/claudia/tree/main/cc_agents"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline inline-flex items-center gap-1"
+              >
+                github.com/getAsterisk/claudia/cc_agents
+                <Globe className="h-3 w-3" />
+              </a>
+            </p>
+            <p className="text-sm text-muted-foreground mt-1">
+              You can contribute your custom agents to the repository!
+            </p>
+          </div>
+
           {/* Search Bar */}
           <div className="mb-4">
             <div className="relative">
@@ -190,11 +227,20 @@ export const GitHubAgentBrowser: React.FC<GitHubAgentBrowserProps> = ({
                             onClick={() => handlePreviewAgent(agent)}>
                         <CardContent className="p-4">
                           <div className="flex items-start justify-between mb-3">
-                            <h3 className="text-sm font-semibold line-clamp-2">
-                              {getAgentDisplayName(agent.name)}
-                            </h3>
-                            {importedAgents.has(agent.name) && (
-                              <Badge variant="secondary" className="ml-2">
+                            <div className="flex items-center gap-3 flex-1">
+                              <div className="p-2 rounded-lg bg-primary/10 text-primary flex-shrink-0">
+                                {/* Default to bot icon for now, will be loaded from preview */}
+                                {(() => {
+                                  const Icon = ICON_MAP.bot;
+                                  return <Icon className="h-6 w-6" />;
+                                })()}
+                              </div>
+                              <h3 className="text-sm font-semibold line-clamp-2">
+                                {getAgentDisplayName(agent.name)}
+                              </h3>
+                            </div>
+                            {isAgentImported(agent.name) && (
+                              <Badge variant="secondary" className="ml-2 flex-shrink-0">
                                 <Check className="h-3 w-3 mr-1" />
                                 Imported
                               </Badge>
@@ -234,17 +280,7 @@ export const GitHubAgentBrowser: React.FC<GitHubAgentBrowserProps> = ({
           <Dialog open={!!selectedAgent} onOpenChange={() => setSelectedAgent(null)}>
             <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
               <DialogHeader>
-                <DialogTitle className="flex items-center justify-between">
-                  <span>Agent Preview</span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setSelectedAgent(null)}
-                    className="h-8 w-8"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </DialogTitle>
+                <DialogTitle>Agent Preview</DialogTitle>
               </DialogHeader>
 
               <div className="flex-1 overflow-y-auto">
@@ -333,14 +369,14 @@ export const GitHubAgentBrowser: React.FC<GitHubAgentBrowserProps> = ({
                   </Button>
                   <Button
                     onClick={handleImportAgent}
-                    disabled={importing || importedAgents.has(selectedAgent.file.name)}
+                    disabled={importing || isAgentImported(selectedAgent.file.name)}
                   >
                     {importing ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         Importing...
                       </>
-                    ) : importedAgents.has(selectedAgent.file.name) ? (
+                    ) : isAgentImported(selectedAgent.file.name) ? (
                       <>
                         <Check className="h-4 w-4 mr-2" />
                         Already Imported

@@ -37,7 +37,6 @@ env_logger = "0.11"
 regex = "1"
 glob = "0.3"
 base64 = "0.22"
-gaol = "0.2"
 libc = "0.2"
 reqwest = { version = "0.12", features = ["json"] }
 futures = "0.3"
@@ -49,6 +48,9 @@ sha2 = "0.10"
 zstd = "0.13"
 uuid = { version = "1.6", features = ["v4", "serde"] }
 walkdir = "2"
+
+[target.'cfg(unix)'.dependencies]
+gaol = "0.2"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 cocoa = "0.26"

@@ -80,6 +80,49 @@ button:disabled,
   cursor: not-allowed !important;
 }
 
+/* Remove all focus styles globally */
+* {
+  outline: none !important;
+  outline-offset: 0 !important;
+}
+
+*:focus,
+*:focus-visible,
+*:focus-within {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Specifically remove focus styles from form elements */
+input:focus,
+input:focus-visible,
+textarea:focus,
+textarea:focus-visible,
+select:focus,
+select:focus-visible,
+button:focus,
+button:focus-visible,
+[role="button"]:focus,
+[role="button"]:focus-visible,
+[role="combobox"]:focus,
+[role="combobox"]:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: var(--color-input) !important;
+}
+
+/* Remove ring styles */
+.ring-0,
+.ring-1,
+.ring-2,
+.ring,
+.ring-offset-0,
+.ring-offset-1,
+.ring-offset-2,
+.ring-offset {
+  box-shadow: none !important;
+}
+
 /* Custom utilities */
 @utility animate-in {
   animation-name: enter;
@@ -134,6 +177,7 @@ button:disabled,
 .w-md-editor.w-md-editor-focus {
   box-shadow: none !important;
   border-color: var(--color-border) !important;
+  outline: none !important;
 }
 
 .w-md-editor-toolbar {

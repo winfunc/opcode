@@ -33,7 +33,8 @@ import {
   SystemReminderWidget,
   SystemInitializedWidget,
   TaskWidget,
-  LSResultWidget
+  LSResultWidget,
+  ThinkingWidget
 } from "./ToolWidgets";
 
 interface StreamMessageProps {
@@ -73,6 +74,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
     if (!toolId) return null;
     return toolResults.get(toolId) || null;
   };
+  
   try {
     // Skip rendering for meta messages that don't have meaningful content
     if (message.isMeta && !message.leafUuid && !message.summary) {
@@ -100,7 +102,9 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
     if (message.type === "assistant" && message.message) {
       const msg = message.message;
       
-      return (
+      let renderedSomething = false;
+      
+      const renderedCard = (
         <Card className={cn("border-primary/20 bg-primary/5", className)}>
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
@@ -114,6 +118,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                       ? content.text 
                       : (content.text?.text || JSON.stringify(content.text || content));
                     
+                    renderedSomething = true;
                     return (
                       <div key={idx} className="prose prose-sm dark:prose-invert max-w-none">
                         <ReactMarkdown
@@ -144,6 +149,19 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                     );
                   }
                   
+                  // Thinking content - render with ThinkingWidget
+                  if (content.type === "thinking") {
+                    renderedSomething = true;
+                    return (
+                      <div key={idx}>
+                        <ThinkingWidget 
+                          thinking={content.thinking || ''} 
+                          signature={content.signature}
+                        />
+                      </div>
+                    );
+                  }
+                  
                   // Tool use - render custom widgets based on tool name
                   if (content.type === "tool_use") {
                     const toolName = content.name?.toLowerCase();
@@ -157,56 +175,67 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                     const renderToolWidget = () => {
                       // Task tool - for sub-agent tasks
                       if (toolName === "task" && input) {
+                        renderedSomething = true;
                         return <TaskWidget description={input.description} prompt={input.prompt} result={toolResult} />;
                       }
                       
                       // Edit tool
                       if (toolName === "edit" && input?.file_path) {
+                        renderedSomething = true;
                         return <EditWidget {...input} result={toolResult} />;
                       }
                       
                       // MultiEdit tool
                       if (toolName === "multiedit" && input?.file_path && input?.edits) {
+                        renderedSomething = true;
                         return <MultiEditWidget {...input} result={toolResult} />;
                       }
                       
                       // MCP tools (starting with mcp__)
                       if (content.name?.startsWith("mcp__")) {
+                        renderedSomething = true;
                         return <MCPWidget toolName={content.name} input={input} result={toolResult} />;
                       }
                       
                       // TodoWrite tool
                       if (toolName === "todowrite" && input?.todos) {
+                        renderedSomething = true;
                         return <TodoWidget todos={input.todos} result={toolResult} />;
                       }
                       
                       // LS tool
                       if (toolName === "ls" && input?.path) {
+                        renderedSomething = true;
                         return <LSWidget path={input.path} result={toolResult} />;
                       }
                       
                       // Read tool
                       if (toolName === "read" && input?.file_path) {
+                        renderedSomething = true;
                         return <ReadWidget filePath={input.file_path} result={toolResult} />;
                       }
                       
                       // Glob tool
                       if (toolName === "glob" && input?.pattern) {
+                        renderedSomething = true;
                         return <GlobWidget pattern={input.pattern} result={toolResult} />;
                       }
                       
                       // Bash tool
                       if (toolName === "bash" && input?.command) {
+                        renderedSomething = true;
                         return <BashWidget command={input.command} description={input.description} result={toolResult} />;
                       }
                       
                       // Write tool
                       if (toolName === "write" && input?.file_path && input?.content) {
+                        renderedSomething = true;
                         return <WriteWidget filePath={input.file_path} content={input.content} result={toolResult} />;
                       }
                       
                       // Grep tool
                       if (toolName === "grep" && input?.pattern) {
+                        renderedSomething = true;
                         return <GrepWidget pattern={input.pattern} include={input.include} path={input.path} exclude={input.exclude} result={toolResult} />;
                       }
                       
@@ -217,10 +246,12 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                     // Render the tool widget
                     const widget = renderToolWidget();
                     if (widget) {
+                      renderedSomething = true;
                       return <div key={idx}>{widget}</div>;
                     }
                     
                     // Fallback to basic tool display
+                    renderedSomething = true;
                     return (
                       <div key={idx} className="space-y-2">
                         <div className="flex items-center gap-2">
@@ -242,6 +273,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                   
                   return null;
                 })}
+                
                 {msg.usage && (
                   <div className="text-xs text-muted-foreground mt-2">
                     Tokens: {msg.usage.input_tokens} in, {msg.usage.output_tokens} out
@@ -252,30 +284,33 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
           </CardContent>
         </Card>
       );
+      
+      if (!renderedSomething) return null;
+      return renderedCard;
     }
 
-    // User message
-    if (message.type === "user" && message.message) {
+    // User message - handle both nested and direct content structures
+    if (message.type === "user") {
       // Don't render meta messages, which are for system use
       if (message.isMeta) return null;
 
-      const msg = message.message;
+      // Handle different message structures
+      const msg = message.message || message;
       
-      // Skip empty user messages
-      if (!msg.content || (Array.isArray(msg.content) && msg.content.length === 0)) {
-        return null;
-      }
+      let renderedSomething = false;
       
-      return (
+      const renderedCard = (
         <Card className={cn("border-muted-foreground/20 bg-muted/20", className)}>
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
               <User className="h-5 w-5 text-muted-foreground mt-0.5" />
               <div className="flex-1 space-y-2 min-w-0">
                 {/* Handle content that is a simple string (e.g. from user commands) */}
-                {typeof msg.content === 'string' && (
+                {(typeof msg.content === 'string' || (msg.content && !Array.isArray(msg.content))) && (
                   (() => {
-                    const contentStr = msg.content as string;
+                    const contentStr = typeof msg.content === 'string' ? msg.content : String(msg.content);
+                    if (contentStr.trim() === '') return null;
+                    renderedSomething = true;
                     
                     // Check if it's a command message
                     const commandMatch = contentStr.match(/<command-name>(.+?)<\/command-name>[\s\S]*?<command-message>(.+?)<\/command-message>[\s\S]*?<command-args>(.*?)<\/command-args>/);
@@ -299,9 +334,9 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                     
                     // Otherwise render as plain text
                     return (
-                      <pre className="text-sm font-mono whitespace-pre-wrap text-muted-foreground">
+                      <div className="text-sm">
                         {contentStr}
-                      </pre>
+                      </div>
                     );
                   })()
                 )}
@@ -310,27 +345,16 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                 {Array.isArray(msg.content) && msg.content.map((content: any, idx: number) => {
                   // Tool result
                   if (content.type === "tool_result") {
-                    // Skip rendering tool results that are already displayed by tool widgets
-                    // We need to check if this result corresponds to a tool that has its own widget
-                    
-                    // Find the corresponding tool use for this result
+                    // Skip duplicate tool_result if a dedicated widget is present
                     let hasCorrespondingWidget = false;
                     if (content.tool_use_id && streamMessages) {
-                      // Look for the matching tool_use in previous assistant messages
                       for (let i = streamMessages.length - 1; i >= 0; i--) {
                         const prevMsg = streamMessages[i];
                         if (prevMsg.type === 'assistant' && prevMsg.message?.content && Array.isArray(prevMsg.message.content)) {
-                          const toolUse = prevMsg.message.content.find((c: any) => 
-                            c.type === 'tool_use' && c.id === content.tool_use_id
-                          );
+                          const toolUse = prevMsg.message.content.find((c: any) => c.type === 'tool_use' && c.id === content.tool_use_id);
                           if (toolUse) {
                             const toolName = toolUse.name?.toLowerCase();
-                            // List of tools that display their own results
-                            const toolsWithWidgets = [
-                              'task', 'edit', 'multiedit', 'todowrite', 'ls', 'read', 
-                              'glob', 'bash', 'write', 'grep'
-                            ];
-                            // Also check for MCP tools
+                            const toolsWithWidgets = ['task','edit','multiedit','todowrite','ls','read','glob','bash','write','grep'];
                             if (toolsWithWidgets.includes(toolName) || toolUse.name?.startsWith('mcp__')) {
                               hasCorrespondingWidget = true;
                             }
@@ -339,9 +363,8 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                         }
                       }
                     }
-                    
-                    // If the tool has its own widget that displays results, skip rendering the duplicate
-                    if (hasCorrespondingWidget && !content.is_error) {
+
+                    if (hasCorrespondingWidget) {
                       return null;
                     }
                     // Extract the actual content string
@@ -370,6 +393,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                       const beforeReminder = contentText.substring(0, reminderMatch.index || 0).trim();
                       const afterReminder = contentText.substring((reminderMatch.index || 0) + reminderMatch[0].length).trim();
                       
+                      renderedSomething = true;
                       return (
                         <div key={idx} className="space-y-2">
                           <div className="flex items-center gap-2">
@@ -404,6 +428,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                     const isEditResult = contentText.includes("has been updated. Here's the result of running `cat -n`");
                     
                     if (isEditResult) {
+                      renderedSomething = true;
                       return (
                         <div key={idx} className="space-y-2">
                           <div className="flex items-center gap-2">
@@ -421,6 +446,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                                              contentText.includes("Applied multiple edits to");
                     
                     if (isMultiEditResult) {
+                      renderedSomething = true;
                       return (
                         <div key={idx} className="space-y-2">
                           <div className="flex items-center gap-2">
@@ -470,6 +496,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                     })();
                     
                     if (isLSResult) {
+                      renderedSomething = true;
                       return (
                         <div key={idx} className="space-y-2">
                           <div className="flex items-center gap-2">
@@ -508,6 +535,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                         }
                       }
                       
+                      renderedSomething = true;
                       return (
                         <div key={idx} className="space-y-2">
                           <div className="flex items-center gap-2">
@@ -521,6 +549,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                     
                     // Handle empty tool results
                     if (!contentText || contentText.trim() === '') {
+                      renderedSomething = true;
                       return (
                         <div key={idx} className="space-y-2">
                           <div className="flex items-center gap-2">
@@ -534,6 +563,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                       );
                     }
                     
+                    renderedSomething = true;
                     return (
                       <div key={idx} className="space-y-2">
                         <div className="flex items-center gap-2">
@@ -560,6 +590,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                       ? content.text 
                       : (content.text?.text || JSON.stringify(content.text));
                     
+                    renderedSomething = true;
                     return (
                       <div key={idx} className="text-sm">
                         {textContent}
@@ -574,6 +605,8 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
           </CardContent>
         </Card>
       );
+      if (!renderedSomething) return null;
+      return renderedCard;
     }
 
     // Result message - render with markdown
@@ -631,8 +664,8 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                 )}
                 
                 <div className="text-xs text-muted-foreground space-y-1 mt-2">
-                  {message.cost_usd !== undefined && (
-                    <div>Cost: ${message.cost_usd.toFixed(4)} USD</div>
+                  {(message.cost_usd !== undefined || message.total_cost_usd !== undefined) && (
+                    <div>Cost: ${((message.cost_usd || message.total_cost_usd)!).toFixed(4)} USD</div>
                   )}
                   {message.duration_ms !== undefined && (
                     <div>Duration: {(message.duration_ms / 1000).toFixed(2)}s</div>

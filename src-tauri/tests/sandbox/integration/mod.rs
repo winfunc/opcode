@@ -4,8 +4,8 @@ mod file_operations;
 #[cfg(test)]
 mod network_operations;
 #[cfg(test)]
-mod system_info;
-#[cfg(test)]
 mod process_isolation;
 #[cfg(test)]
-mod violations; 
+mod system_info;
+#[cfg(test)]
+mod violations;

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Play, Clock, Hash, Bot } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { formatISOTimestamp } from "@/lib/date-utils";
 import type { AgentRunWithMetrics } from "@/lib/api";
 import { AGENT_ICONS } from "./CCAgents";
+import { AgentRunOutputViewer } from "./AgentRunOutputViewer";
 
 interface AgentRunsListProps {
   /**
@@ -41,6 +42,7 @@ export const AgentRunsList: React.FC<AgentRunsListProps> = ({
   className,
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedRun, setSelectedRun] = useState<AgentRunWithMetrics | null>(null);
   
   // Calculate pagination
   const totalPages = Math.ceil(runs.length / ITEMS_PER_PAGE);
@@ -75,6 +77,16 @@ export const AgentRunsList: React.FC<AgentRunsListProps> = ({
     return tokens.toString();
   };
   
+  const handleRunClick = (run: AgentRunWithMetrics) => {
+    // If there's a callback, use it (for full-page navigation)
+    if (onRunClick) {
+      onRunClick(run);
+    } else {
+      // Otherwise, open in modal preview
+      setSelectedRun(run);
+    }
+  };
+  
   if (runs.length === 0) {
     return (
       <div className={cn("text-center py-8 text-muted-foreground", className)}>
@@ -83,92 +95,114 @@ export const AgentRunsList: React.FC<AgentRunsListProps> = ({
       </div>
     );
   }
-  
+
   return (
-    <div className={cn("space-y-4", className)}>
-      <div className="space-y-2">
-        {currentRuns.map((run, index) => (
-          <motion.div
-            key={run.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{
-              duration: 0.3,
-              delay: index * 0.05,
-              ease: [0.4, 0, 0.2, 1],
-            }}
-          >
-            <Card
-              className={cn(
-                "transition-all hover:shadow-md cursor-pointer",
-                onRunClick && "hover:shadow-lg hover:border-primary/50 active:scale-[0.99]"
-              )}
-              onClick={() => onRunClick?.(run)}
+    <>
+      <div className={cn("space-y-2", className)}>
+        <AnimatePresence mode="popLayout">
+          {currentRuns.map((run, index) => (
+            <motion.div
+              key={run.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{
+                duration: 0.3,
+                delay: index * 0.05,
+                ease: [0.4, 0, 0.2, 1],
+              }}
             >
-              <CardContent className="p-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3 flex-1 min-w-0">
-                    <div className="mt-0.5">
+              <Card
+                className={cn(
+                  "cursor-pointer transition-all hover:shadow-md hover:scale-[1.01] active:scale-[0.99]",
+                  run.status === "running" && "border-green-500/50"
+                )}
+                onClick={() => handleRunClick(run)}
+              >
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex-shrink-0">
                       {renderIcon(run.agent_icon)}
                     </div>
-                    <div className="flex-1 min-w-0 space-y-1">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium truncate">{run.task}</p>
-                        <Badge variant="outline" className="text-xs">
-                          {run.model === 'opus' ? 'Claude 4 Opus' : 'Claude 4 Sonnet'}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                        <span className="truncate">by {run.agent_name}</span>
-                        {run.completed_at && (
-                          <>
-                            <span>•</span>
-                            <div className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              <span>{formatDuration(run.metrics?.duration_ms)}</span>
-                            </div>
-                          </>
-                        )}
-                        {run.metrics?.total_tokens && (
-                          <>
-                            <span>•</span>
-                            <div className="flex items-center gap-1">
-                              <Hash className="h-3 w-3" />
-                              <span>{formatTokens(run.metrics?.total_tokens)}</span>
-                            </div>
-                          </>
-                        )}
-                        {run.metrics?.cost_usd && (
-                          <>
-                            <span>•</span>
-                            <span>${run.metrics?.cost_usd?.toFixed(4)}</span>
-                          </>
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h4 className="text-sm font-medium truncate">
+                          {run.agent_name}
+                        </h4>
+                        {run.status === "running" && (
+                          <div className="flex items-center gap-1">
+                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                            <span className="text-xs text-green-600 font-medium">Running</span>
+                          </div>
                         )}
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        {formatISOTimestamp(run.created_at)}
+                      
+                      <p className="text-xs text-muted-foreground truncate mb-1">
+                        {run.task}
                       </p>
+                      
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          <span>{formatISOTimestamp(run.created_at)}</span>
+                        </div>
+                        
+                        {run.metrics?.duration_ms && (
+                          <span>{formatDuration(run.metrics.duration_ms)}</span>
+                        )}
+                        
+                        {run.metrics?.total_tokens && (
+                          <div className="flex items-center gap-1">
+                            <Hash className="h-3 w-3" />
+                            <span>{formatTokens(run.metrics.total_tokens)}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="flex-shrink-0">
+                      <Badge 
+                        variant={
+                          run.status === "completed" ? "default" :
+                          run.status === "running" ? "secondary" :
+                          run.status === "failed" ? "destructive" :
+                          "outline"
+                        }
+                        className="text-xs"
+                      >
+                        {run.status === "completed" ? "Completed" :
+                         run.status === "running" ? "Running" :
+                         run.status === "failed" ? "Failed" :
+                         "Pending"}
+                      </Badge>
                     </div>
                   </div>
-                  {!run.completed_at && (
-                    <Badge variant="secondary" className="text-xs">
-                      Running
-                    </Badge>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        ))}
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+        
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="pt-2">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
+          </div>
+        )}
       </div>
-      
-      {totalPages > 1 && (
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={setCurrentPage}
+
+      {/* Agent Run Output Viewer Modal */}
+      {selectedRun && (
+        <AgentRunOutputViewer
+          run={selectedRun}
+          onClose={() => setSelectedRun(null)}
         />
       )}
-    </div>
+    </>
   );
 }; 

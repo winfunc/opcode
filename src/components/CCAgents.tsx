@@ -6,14 +6,6 @@ import {
   Trash2, 
   Play,
   Bot,
-  Brain,
-  Code,
-  Sparkles,
-  Zap,
-  Cpu,
-  Rocket,
-  Shield,
-  Terminal,
   ArrowLeft,
   History,
   Download,
@@ -46,9 +38,9 @@ import { Toast, ToastContainer } from "@/components/ui/toast";
 import { CreateAgent } from "./CreateAgent";
 import { AgentExecution } from "./AgentExecution";
 import { AgentRunsList } from "./AgentRunsList";
-import { AgentRunView } from "./AgentRunView";
 import { RunningSessionsView } from "./RunningSessionsView";
 import { GitHubAgentBrowser } from "./GitHubAgentBrowser";
+import { ICON_MAP } from "./IconPicker";
 
 interface CCAgentsProps {
   /**
@@ -61,18 +53,8 @@ interface CCAgentsProps {
   className?: string;
 }
 
-// Available icons for agents
-export const AGENT_ICONS = {
-  bot: Bot,
-  brain: Brain,
-  code: Code,
-  sparkles: Sparkles,
-  zap: Zap,
-  cpu: Cpu,
-  rocket: Rocket,
-  shield: Shield,
-  terminal: Terminal,
-};
+// Available icons for agents - now using all icons from IconPicker
+export const AGENT_ICONS = ICON_MAP;
 
 export type AgentIconName = keyof typeof AGENT_ICONS;
 
@@ -90,10 +72,10 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [view, setView] = useState<"list" | "create" | "edit" | "execute" | "viewRun">("list");
+  const [view, setView] = useState<"list" | "create" | "edit" | "execute">("list");
   const [activeTab, setActiveTab] = useState<"agents" | "running">("agents");
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
-  const [selectedRunId, setSelectedRunId] = useState<number | null>(null);
+  // const [selectedRunId, setSelectedRunId] = useState<number | null>(null);
   const [showGitHubBrowser, setShowGitHubBrowser] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [agentToDelete, setAgentToDelete] = useState<Agent | null>(null);
@@ -195,12 +177,12 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
     setToast({ message: "Agent updated successfully", type: "success" });
   };
 
-  const handleRunClick = (run: AgentRunWithMetrics) => {
-    if (run.id) {
-      setSelectedRunId(run.id);
-      setView("viewRun");
-    }
-  };
+  // const handleRunClick = (run: AgentRunWithMetrics) => {
+  //   if (run.id) {
+  //     setSelectedRunId(run.id);
+  //     setView("viewRun");
+  //   }
+  // };
 
   const handleExecutionComplete = async () => {
     // Reload runs when returning from execution
@@ -270,7 +252,7 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
   const paginatedAgents = agents.slice(startIndex, startIndex + AGENTS_PER_PAGE);
 
   const renderIcon = (iconName: string) => {
-    const Icon = AGENT_ICONS[iconName as AgentIconName] || Bot;
+    const Icon = AGENT_ICONS[iconName as AgentIconName] || AGENT_ICONS.bot;
     return <Icon className="h-12 w-12" />;
   };
 
@@ -305,14 +287,7 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
     );
   }
 
-  if (view === "viewRun" && selectedRunId) {
-    return (
-      <AgentRunView
-        runId={selectedRunId}
-        onBack={() => setView("list")}
-      />
-    );
-  }
+  // Removed viewRun case - now using modal preview in AgentRunsList
 
   return (
     <div className={cn("flex flex-col h-full bg-background", className)}>
@@ -564,7 +539,9 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
                         <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
                       </div>
                     ) : (
-                      <AgentRunsList runs={runs} onRunClick={handleRunClick} />
+                      <AgentRunsList 
+                        runs={runs} 
+                      />
                     )}
                   </div>
                 )}

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Save, Loader2 } from "lucide-react";
+import { ArrowLeft, Save, Loader2, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,8 +8,9 @@ import { Toast, ToastContainer } from "@/components/ui/toast";
 import { api, type Agent } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import MDEditor from "@uiw/react-md-editor";
-import { AGENT_ICONS, type AgentIconName } from "./CCAgents";
+import { type AgentIconName } from "./CCAgents";
 import { AgentSandboxSettings } from "./AgentSandboxSettings";
+import { IconPicker, ICON_MAP } from "./IconPicker";
 
 interface CreateAgentProps {
   /**
@@ -54,6 +55,7 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [showIconPicker, setShowIconPicker] = useState(false);
 
   const isEditMode = !!agent;
 
@@ -183,164 +185,172 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
         )}
         
         {/* Form */}
-        <div className="flex-1 p-4 overflow-y-auto">
-          <div className="space-y-6">
-            {/* Agent Name */}
-            <div className="space-y-2">
-              <Label htmlFor="agent-name">Agent Name</Label>
-              <Input
-                id="agent-name"
-                type="text"
-                placeholder="e.g., Code Reviewer, Test Generator"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="max-w-md"
-              />
-            </div>
-
-            {/* Icon Picker */}
-            <div className="space-y-2">
-              <Label>Icon</Label>
-              <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-9 gap-2 max-w-2xl">
-                {(Object.keys(AGENT_ICONS) as AgentIconName[]).map((iconName) => {
-                  const Icon = AGENT_ICONS[iconName];
-                  return (
-                    <button
-                      key={iconName}
-                      type="button"
-                      onClick={() => setSelectedIcon(iconName)}
-                      className={cn(
-                        "p-3 rounded-lg border-2 transition-all hover:scale-105",
-                        "flex items-center justify-center",
-                        selectedIcon === iconName
-                          ? "border-primary bg-primary/10"
-                          : "border-border hover:border-primary/50"
-                      )}
-                    >
-                      <Icon className="h-6 w-6" />
-                    </button>
-                  );
-                })}
+        <div className="flex-1 overflow-y-auto px-4 py-6">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.1 }}
+            className="space-y-6"
+          >
+            {/* Basic Information */}
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-sm font-medium mb-4">Basic Information</h3>
               </div>
-            </div>
-
-            {/* Model Selection */}
-            <div className="space-y-2">
-              <Label>Model</Label>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <button
-                  type="button"
-                  onClick={() => setModel("sonnet")}
-                  className={cn(
-                    "flex-1 px-4 py-2.5 rounded-full border-2 font-medium transition-all",
-                    "hover:scale-[1.02] active:scale-[0.98]",
-                    model === "sonnet" 
-                      ? "border-primary bg-primary text-primary-foreground shadow-lg" 
-                      : "border-muted-foreground/30 hover:border-muted-foreground/50"
-                  )}
-                >
-                  <div className="flex items-center justify-center gap-2.5">
-                    <div className={cn(
-                      "w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0",
-                      model === "sonnet" ? "border-primary-foreground" : "border-current"
-                    )}>
-                      {model === "sonnet" && (
-                        <div className="w-2 h-2 rounded-full bg-primary-foreground" />
-                      )}
-                    </div>
-                    <div className="text-left">
-                      <div className="text-sm font-semibold">Claude 4 Sonnet</div>
-                      <div className="text-xs opacity-80">Faster, efficient for most tasks</div>
-                    </div>
-                  </div>
-                </button>
+              
+              {/* Name and Icon */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Agent Name</Label>
+                  <Input
+                    id="name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g., Code Assistant"
+                    required
+                  />
+                </div>
                 
-                <button
-                  type="button"
-                  onClick={() => setModel("opus")}
-                  className={cn(
-                    "flex-1 px-4 py-2.5 rounded-full border-2 font-medium transition-all",
-                    "hover:scale-[1.02] active:scale-[0.98]",
-                    model === "opus" 
-                      ? "border-primary bg-primary text-primary-foreground shadow-lg" 
-                      : "border-muted-foreground/30 hover:border-muted-foreground/50"
-                  )}
-                >
-                  <div className="flex items-center justify-center gap-2.5">
-                    <div className={cn(
-                      "w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0",
-                      model === "opus" ? "border-primary-foreground" : "border-current"
-                    )}>
-                      {model === "opus" && (
-                        <div className="w-2 h-2 rounded-full bg-primary-foreground" />
-                      )}
+                <div className="space-y-2">
+                  <Label>Agent Icon</Label>
+                  <div
+                    onClick={() => setShowIconPicker(true)}
+                    className="h-10 px-3 py-2 bg-background border border-input rounded-md cursor-pointer hover:bg-accent hover:text-accent-foreground transition-colors flex items-center justify-between"
+                  >
+                    <div className="flex items-center gap-2">
+                      {(() => {
+                        const Icon = ICON_MAP[selectedIcon] || ICON_MAP.bot;
+                        return (
+                          <>
+                            <Icon className="h-4 w-4" />
+                            <span className="text-sm">{selectedIcon}</span>
+                          </>
+                        );
+                      })()}
                     </div>
-                    <div className="text-left">
-                      <div className="text-sm font-semibold">Claude 4 Opus</div>
-                      <div className="text-xs opacity-80">More capable, better for complex tasks</div>
-                    </div>
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
                   </div>
-                </button>
+                </div>
               </div>
-            </div>
 
-            {/* Default Task */}
-            <div className="space-y-2">
-              <Label htmlFor="default-task">Default Task (Optional)</Label>
-              <Input
-                id="default-task"
-                type="text"
-                placeholder="e.g., Review this code for security issues"
-                value={defaultTask}
-                onChange={(e) => setDefaultTask(e.target.value)}
-                className="max-w-md"
-              />
-              <p className="text-xs text-muted-foreground">
-                This will be used as the default task placeholder when executing the agent
-              </p>
-            </div>
+              {/* Model Selection */}
+              <div className="space-y-2">
+                <Label>Model</Label>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setModel("sonnet")}
+                    className={cn(
+                      "flex-1 px-4 py-2.5 rounded-full border-2 font-medium transition-all",
+                      "hover:scale-[1.02] active:scale-[0.98]",
+                      model === "sonnet" 
+                        ? "border-primary bg-primary text-primary-foreground shadow-lg" 
+                        : "border-muted-foreground/30 hover:border-muted-foreground/50"
+                    )}
+                  >
+                    <div className="flex items-center justify-center gap-2.5">
+                      <div className={cn(
+                        "w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0",
+                        model === "sonnet" ? "border-primary-foreground" : "border-current"
+                      )}>
+                        {model === "sonnet" && (
+                          <div className="w-2 h-2 rounded-full bg-primary-foreground" />
+                        )}
+                      </div>
+                      <div className="text-left">
+                        <div className="text-sm font-semibold">Claude 4 Sonnet</div>
+                        <div className="text-xs opacity-80">Faster, efficient for most tasks</div>
+                      </div>
+                    </div>
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={() => setModel("opus")}
+                    className={cn(
+                      "flex-1 px-4 py-2.5 rounded-full border-2 font-medium transition-all",
+                      "hover:scale-[1.02] active:scale-[0.98]",
+                      model === "opus" 
+                        ? "border-primary bg-primary text-primary-foreground shadow-lg" 
+                        : "border-muted-foreground/30 hover:border-muted-foreground/50"
+                    )}
+                  >
+                    <div className="flex items-center justify-center gap-2.5">
+                      <div className={cn(
+                        "w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0",
+                        model === "opus" ? "border-primary-foreground" : "border-current"
+                      )}>
+                        {model === "opus" && (
+                          <div className="w-2 h-2 rounded-full bg-primary-foreground" />
+                        )}
+                      </div>
+                      <div className="text-left">
+                        <div className="text-sm font-semibold">Claude 4 Opus</div>
+                        <div className="text-xs opacity-80">More capable, better for complex tasks</div>
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              </div>
 
-            {/* Sandbox Settings */}
-            <AgentSandboxSettings
-              agent={{
-                id: agent?.id,
-                name,
-                icon: selectedIcon,
-                system_prompt: systemPrompt,
-                default_task: defaultTask || undefined,
-                model,
-                sandbox_enabled: sandboxEnabled,
-                enable_file_read: enableFileRead,
-                enable_file_write: enableFileWrite,
-                enable_network: enableNetwork,
-                created_at: agent?.created_at || "",
-                updated_at: agent?.updated_at || ""
-              }}
-              onUpdate={(updates) => {
-                if ('sandbox_enabled' in updates) setSandboxEnabled(updates.sandbox_enabled!);
-                if ('enable_file_read' in updates) setEnableFileRead(updates.enable_file_read!);
-                if ('enable_file_write' in updates) setEnableFileWrite(updates.enable_file_write!);
-                if ('enable_network' in updates) setEnableNetwork(updates.enable_network!);
-              }}
-            />
-
-            {/* System Prompt Editor */}
-            <div className="space-y-2">
-              <Label>System Prompt</Label>
-              <p className="text-xs text-muted-foreground mb-2">
-                Define the behavior and capabilities of your CC Agent
-              </p>
-              <div className="rounded-lg border border-border overflow-hidden shadow-sm" data-color-mode="dark">
-                <MDEditor
-                  value={systemPrompt}
-                  onChange={(val) => setSystemPrompt(val || "")}
-                  preview="edit"
-                  height={400}
-                  visibleDragbar={false}
+              {/* Default Task */}
+              <div className="space-y-2">
+                <Label htmlFor="default-task">Default Task (Optional)</Label>
+                <Input
+                  id="default-task"
+                  type="text"
+                  placeholder="e.g., Review this code for security issues"
+                  value={defaultTask}
+                  onChange={(e) => setDefaultTask(e.target.value)}
+                  className="max-w-md"
                 />
+                <p className="text-xs text-muted-foreground">
+                  This will be used as the default task placeholder when executing the agent
+                </p>
+              </div>
+
+              {/* Sandbox Settings */}
+              <AgentSandboxSettings
+                agent={{
+                  id: agent?.id,
+                  name,
+                  icon: selectedIcon,
+                  system_prompt: systemPrompt,
+                  default_task: defaultTask || undefined,
+                  model,
+                  sandbox_enabled: sandboxEnabled,
+                  enable_file_read: enableFileRead,
+                  enable_file_write: enableFileWrite,
+                  enable_network: enableNetwork,
+                  created_at: agent?.created_at || "",
+                  updated_at: agent?.updated_at || ""
+                }}
+                onUpdate={(updates) => {
+                  if ('sandbox_enabled' in updates) setSandboxEnabled(updates.sandbox_enabled!);
+                  if ('enable_file_read' in updates) setEnableFileRead(updates.enable_file_read!);
+                  if ('enable_file_write' in updates) setEnableFileWrite(updates.enable_file_write!);
+                  if ('enable_network' in updates) setEnableNetwork(updates.enable_network!);
+                }}
+              />
+
+              {/* System Prompt Editor */}
+              <div className="space-y-2">
+                <Label>System Prompt</Label>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Define the behavior and capabilities of your CC Agent
+                </p>
+                <div className="rounded-lg border border-border overflow-hidden shadow-sm" data-color-mode="dark">
+                  <MDEditor
+                    value={systemPrompt}
+                    onChange={(val) => setSystemPrompt(val || "")}
+                    preview="edit"
+                    height={400}
+                    visibleDragbar={false}
+                  />
+                </div>
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
       
@@ -354,6 +364,17 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
           />
         )}
       </ToastContainer>
+
+      {/* Icon Picker Dialog */}
+      <IconPicker
+        value={selectedIcon}
+        onSelect={(iconName) => {
+          setSelectedIcon(iconName as AgentIconName);
+          setShowIconPicker(false);
+        }}
+        isOpen={showIconPicker}
+        onClose={() => setShowIconPicker(false)}
+      />
     </div>
   );
 }; 

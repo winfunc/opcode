@@ -10,9 +10,8 @@ use tempfile::{tempdir, TempDir};
 /// Using parking_lot::Mutex which doesn't poison on panic
 use parking_lot::Mutex;
 
-pub static TEST_DB: Lazy<Mutex<TestDatabase>> = Lazy::new(|| {
-    Mutex::new(TestDatabase::new().expect("Failed to create test database"))
-});
+pub static TEST_DB: Lazy<Mutex<TestDatabase>> =
+    Lazy::new(|| Mutex::new(TestDatabase::new().expect("Failed to create test database")));
 
 /// Test database manager
 pub struct TestDatabase {
@@ -26,13 +25,13 @@ impl TestDatabase {
         let temp_dir = tempdir()?;
         let db_path = temp_dir.path().join("test_sandbox.db");
         let conn = Connection::open(&db_path)?;
-        
+
         // Initialize schema
         Self::init_schema(&conn)?;
-        
+
         Ok(Self { conn, temp_dir })
     }
-    
+
     /// Initialize database schema
     fn init_schema(conn: &Connection) -> Result<()> {
         // Create sandbox profiles table
@@ -48,7 +47,7 @@ impl TestDatabase {
             )",
             [],
         )?;
-        
+
         // Create sandbox rules table
         conn.execute(
             "CREATE TABLE IF NOT EXISTS sandbox_rules (
@@ -64,7 +63,7 @@ impl TestDatabase {
             )",
             [],
         )?;
-        
+
         // Create agents table
         conn.execute(
             "CREATE TABLE IF NOT EXISTS agents (
@@ -80,7 +79,7 @@ impl TestDatabase {
             )",
             [],
         )?;
-        
+
         // Create agent_runs table
         conn.execute(
             "CREATE TABLE IF NOT EXISTS agent_runs (
@@ -101,7 +100,7 @@ impl TestDatabase {
             )",
             [],
         )?;
-        
+
         // Create sandbox violations table
         conn.execute(
             "CREATE TABLE IF NOT EXISTS sandbox_violations (
@@ -120,7 +119,7 @@ impl TestDatabase {
             )",
             [],
         )?;
-        
+
         // Create trigger to update the updated_at timestamp for agents
         conn.execute(
             "CREATE TRIGGER IF NOT EXISTS update_agent_timestamp 
@@ -131,7 +130,7 @@ impl TestDatabase {
              END",
             [],
         )?;
-        
+
         // Create trigger to update sandbox profile timestamp
         conn.execute(
             "CREATE TRIGGER IF NOT EXISTS update_sandbox_profile_timestamp 
@@ -142,10 +141,10 @@ impl TestDatabase {
              END",
             [],
         )?;
-        
+
         Ok(())
     }
-    
+
     /// Create a test profile with rules
     pub fn create_test_profile(&self, name: &str, rules: Vec<TestRule>) -> Result<i64> {
         // Insert profile
@@ -153,9 +152,9 @@ impl TestDatabase {
             "INSERT INTO sandbox_profiles (name, description, is_active, is_default) VALUES (?1, ?2, ?3, ?4)",
             params![name, format!("Test profile: {name}"), true, false],
         )?;
-        
+
         let profile_id = self.conn.last_insert_rowid();
-        
+
         // Insert rules
         for rule in rules {
             self.conn.execute(
@@ -171,10 +170,10 @@ impl TestDatabase {
                 ],
             )?;
         }
-        
+
         Ok(profile_id)
     }
-    
+
     /// Reset database to clean state
     pub fn reset(&self) -> Result<()> {
         // Delete in the correct order to respect foreign key constraints
@@ -208,7 +207,7 @@ impl TestRule {
             platform_support: Some(r#"["linux", "macos"]"#.to_string()),
         }
     }
-    
+
     /// Create a network rule
     pub fn network_all() -> Self {
         Self {
@@ -219,7 +218,7 @@ impl TestRule {
             platform_support: Some(r#"["linux", "macos"]"#.to_string()),
         }
     }
-    
+
     /// Create a network TCP rule
     pub fn network_tcp(port: u16) -> Self {
         Self {
@@ -230,7 +229,7 @@ impl TestRule {
             platform_support: Some(r#"["macos"]"#.to_string()),
         }
     }
-    
+
     /// Create a system info read rule
     pub fn system_info_read() -> Self {
         Self {
@@ -256,25 +255,28 @@ impl TestFileSystem {
     pub fn new() -> Result<Self> {
         let root = tempdir()?;
         let root_path = root.path();
-        
+
         // Create project directory
         let project_path = root_path.join("test_project");
         std::fs::create_dir_all(&project_path)?;
-        
+
         // Create allowed directory
         let allowed_path = root_path.join("allowed");
         std::fs::create_dir_all(&allowed_path)?;
         std::fs::write(allowed_path.join("test.txt"), "allowed content")?;
-        
+
         // Create forbidden directory
         let forbidden_path = root_path.join("forbidden");
         std::fs::create_dir_all(&forbidden_path)?;
         std::fs::write(forbidden_path.join("secret.txt"), "forbidden content")?;
-        
+
         // Create project files
         std::fs::write(project_path.join("main.rs"), "fn main() {}")?;
-        std::fs::write(project_path.join("Cargo.toml"), "[package]\nname = \"test\"")?;
-        
+        std::fs::write(
+            project_path.join("Cargo.toml"),
+            "[package]\nname = \"test\"",
+        )?;
+
         Ok(Self {
             root,
             project_path,
@@ -287,14 +289,12 @@ impl TestFileSystem {
 /// Standard test profiles
 pub mod profiles {
     use super::*;
-    
+
     /// Minimal profile - only project access
     pub fn minimal(project_path: &str) -> Vec<TestRule> {
-        vec![
-            TestRule::file_read(project_path, true),
-        ]
+        vec![TestRule::file_read(project_path, true)]
     }
-    
+
     /// Standard profile - project + system libraries
     pub fn standard(project_path: &str) -> Vec<TestRule> {
         vec![
@@ -304,7 +304,7 @@ pub mod profiles {
             TestRule::network_all(),
         ]
     }
-    
+
     /// Development profile - more permissive
     pub fn development(project_path: &str, home_dir: &str) -> Vec<TestRule> {
         vec![
@@ -316,18 +316,17 @@ pub mod profiles {
             TestRule::system_info_read(),
         ]
     }
-    
+
     /// Network-only profile
     pub fn network_only() -> Vec<TestRule> {
-        vec![
-            TestRule::network_all(),
-        ]
+        vec![TestRule::network_all()]
     }
-    
+
     /// File-only profile
     pub fn file_only(paths: Vec<&str>) -> Vec<TestRule> {
-        paths.into_iter()
+        paths
+            .into_iter()
             .map(|path| TestRule::file_read(path, true))
             .collect()
     }
-} 
+}

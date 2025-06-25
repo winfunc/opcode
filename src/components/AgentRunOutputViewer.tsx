@@ -1,43 +1,67 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Maximize2, Minimize2, Copy, RefreshCw, RotateCcw, ChevronDown } from 'lucide-react';
+import { 
+  X, 
+  Maximize2, 
+  Minimize2, 
+  Copy, 
+  RefreshCw, 
+  RotateCcw, 
+  ChevronDown,
+  Bot,
+  Clock,
+  Hash,
+  DollarSign,
+  ExternalLink
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Toast, ToastContainer } from '@/components/ui/toast';
 import { Popover } from '@/components/ui/popover';
-import { api } from '@/lib/api';
+import { api, type AgentRunWithMetrics } from '@/lib/api';
 import { useOutputCache } from '@/lib/outputCache';
-import type { AgentRun } from '@/lib/api';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { StreamMessage } from './StreamMessage';
 import { ErrorBoundary } from './ErrorBoundary';
+import { formatISOTimestamp } from '@/lib/date-utils';
+import { AGENT_ICONS } from './CCAgents';
+import type { ClaudeStreamMessage } from './AgentExecution';
 
-interface SessionOutputViewerProps {
-  session: AgentRun;
+interface AgentRunOutputViewerProps {
+  /**
+   * The agent run to display
+   */
+  run: AgentRunWithMetrics;
+  /**
+   * Callback when the viewer is closed
+   */
   onClose: () => void;
+  /**
+   * Optional callback to open full view
+   */
+  onOpenFullView?: () => void;
+  /**
+   * Optional className for styling
+   */
   className?: string;
 }
 
-// Use the same message interface as AgentExecution for consistency
-export interface ClaudeStreamMessage {
-  type: "system" | "assistant" | "user" | "result";
-  subtype?: string;
-  message?: {
-    content?: any[];
-    usage?: {
-      input_tokens: number;
-      output_tokens: number;
-    };
-  };
-  usage?: {
-    input_tokens: number;
-    output_tokens: number;
-  };
-  [key: string]: any;
-}
-
-export function SessionOutputViewer({ session, onClose, className }: SessionOutputViewerProps) {
+/**
+ * AgentRunOutputViewer - Modal component for viewing agent execution output
+ * 
+ * @example
+ * <AgentRunOutputViewer
+ *   run={agentRun}
+ *   onClose={() => setSelectedRun(null)}
+ * />
+ */
+export function AgentRunOutputViewer({ 
+  run, 
+  onClose, 
+  onOpenFullView,
+  className 
+}: AgentRunOutputViewerProps) {
   const [messages, setMessages] = useState<ClaudeStreamMessage[]>([]);
   const [rawJsonlOutput, setRawJsonlOutput] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -54,7 +78,7 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
   const unlistenRefs = useRef<UnlistenFn[]>([]);
   const { getCachedOutput, setCachedOutput } = useOutputCache();
 
-  // Auto-scroll logic similar to AgentExecution
+  // Auto-scroll logic
   const isAtBottom = () => {
     const container = isFullscreen ? fullscreenScrollRef.current : scrollAreaRef.current;
     if (container) {
@@ -89,29 +113,28 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
     }
   }, [messages, hasUserScrolled, isFullscreen]);
 
-
   const loadOutput = async (skipCache = false) => {
-    if (!session.id) return;
+    if (!run.id) return;
 
     try {
       // Check cache first if not skipping cache
       if (!skipCache) {
-        const cached = getCachedOutput(session.id);
+        const cached = getCachedOutput(run.id);
         if (cached) {
           const cachedJsonlLines = cached.output.split('\n').filter(line => line.trim());
           setRawJsonlOutput(cachedJsonlLines);
           setMessages(cached.messages);
           // If cache is recent (less than 5 seconds old) and session isn't running, use cache only
-          if (Date.now() - cached.lastUpdated < 5000 && session.status !== 'running') {
+          if (Date.now() - cached.lastUpdated < 5000 && run.status !== 'running') {
             return;
           }
         }
       }
 
       setLoading(true);
-      const rawOutput = await api.getSessionOutput(session.id);
+      const rawOutput = await api.getSessionOutput(run.id);
       
-      // Parse JSONL output into messages using AgentExecution style
+      // Parse JSONL output into messages
       const jsonlLines = rawOutput.split('\n').filter(line => line.trim());
       setRawJsonlOutput(jsonlLines);
       
@@ -127,33 +150,33 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
       setMessages(parsedMessages);
       
       // Update cache
-      setCachedOutput(session.id, {
+      setCachedOutput(run.id, {
         output: rawOutput,
         messages: parsedMessages,
         lastUpdated: Date.now(),
-        status: session.status
+        status: run.status
       });
       
       // Set up live event listeners for running sessions
-      if (session.status === 'running') {
+      if (run.status === 'running') {
         setupLiveEventListeners();
         
         try {
-          await api.streamSessionOutput(session.id);
+          await api.streamSessionOutput(run.id);
         } catch (streamError) {
           console.warn('Failed to start streaming, will poll instead:', streamError);
         }
       }
     } catch (error) {
-      console.error('Failed to load session output:', error);
-      setToast({ message: 'Failed to load session output', type: 'error' });
+      console.error('Failed to load agent output:', error);
+      setToast({ message: 'Failed to load agent output', type: 'error' });
     } finally {
       setLoading(false);
     }
   };
 
   const setupLiveEventListeners = async () => {
-    if (!session.id) return;
+    if (!run.id) return;
     
     try {
       // Clean up existing listeners
@@ -161,7 +184,7 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
       unlistenRefs.current = [];
 
       // Set up live event listeners with run ID isolation
-      const outputUnlisten = await listen<string>(`agent-output:${session.id}`, (event) => {
+      const outputUnlisten = await listen<string>(`agent-output:${run.id}`, (event) => {
         try {
           // Store raw JSONL
           setRawJsonlOutput(prev => [...prev, event.payload]);
@@ -174,17 +197,16 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
         }
       });
 
-      const errorUnlisten = await listen<string>(`agent-error:${session.id}`, (event) => {
+      const errorUnlisten = await listen<string>(`agent-error:${run.id}`, (event) => {
         console.error("Agent error:", event.payload);
         setToast({ message: event.payload, type: 'error' });
       });
 
-      const completeUnlisten = await listen<boolean>(`agent-complete:${session.id}`, () => {
+      const completeUnlisten = await listen<boolean>(`agent-complete:${run.id}`, () => {
         setToast({ message: 'Agent execution completed', type: 'success' });
-        // Don't set status here as the parent component should handle it
       });
 
-      const cancelUnlisten = await listen<boolean>(`agent-cancelled:${session.id}`, () => {
+      const cancelUnlisten = await listen<boolean>(`agent-cancelled:${run.id}`, () => {
         setToast({ message: 'Agent execution was cancelled', type: 'error' });
       });
 
@@ -194,7 +216,7 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
     }
   };
 
-  // Copy functionality similar to AgentExecution
+  // Copy functionality
   const handleCopyAsJsonl = async () => {
     const jsonl = rawJsonlOutput.join('\n');
     await navigator.clipboard.writeText(jsonl);
@@ -203,12 +225,14 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
   };
 
   const handleCopyAsMarkdown = async () => {
-    let markdown = `# Agent Session: ${session.agent_name}\n\n`;
-    markdown += `**Status:** ${session.status}\n`;
-    if (session.task) markdown += `**Task:** ${session.task}\n`;
-    if (session.model) markdown += `**Model:** ${session.model}\n`;
-    markdown += `**Date:** ${new Date().toISOString()}\n\n`;
-    markdown += `---\n\n`;
+    let markdown = `# Agent Execution: ${run.agent_name}\n\n`;
+    markdown += `**Task:** ${run.task}\n`;
+    markdown += `**Model:** ${run.model === 'opus' ? 'Claude 4 Opus' : 'Claude 4 Sonnet'}\n`;
+    markdown += `**Date:** ${formatISOTimestamp(run.created_at)}\n`;
+    if (run.metrics?.duration_ms) markdown += `**Duration:** ${(run.metrics.duration_ms / 1000).toFixed(2)}s\n`;
+    if (run.metrics?.total_tokens) markdown += `**Total Tokens:** ${run.metrics.total_tokens}\n`;
+    if (run.metrics?.cost_usd) markdown += `**Cost:** $${run.metrics.cost_usd.toFixed(4)} USD\n`;
+    markdown += `\n---\n\n`;
 
     for (const msg of messages) {
       if (msg.type === "system" && msg.subtype === "init") {
@@ -257,27 +281,25 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
     setToast({ message: 'Output copied as Markdown', type: 'success' });
   };
 
-
   const refreshOutput = async () => {
     setRefreshing(true);
-    try {
-      await loadOutput(true); // Skip cache when manually refreshing
-      setToast({ message: 'Output refreshed', type: 'success' });
-    } catch (error) {
-      console.error('Failed to refresh output:', error);
-      setToast({ message: 'Failed to refresh output', type: 'error' });
-    } finally {
-      setRefreshing(false);
-    }
+    await loadOutput(true); // Skip cache
+    setRefreshing(false);
   };
 
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    const { scrollTop, scrollHeight, clientHeight } = target;
+    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+    setHasUserScrolled(distanceFromBottom > 50);
+  };
 
-  // Load output on mount and check cache first
+  // Load output on mount
   useEffect(() => {
-    if (!session.id) return;
+    if (!run.id) return;
     
     // Check cache immediately for instant display
-    const cached = getCachedOutput(session.id);
+    const cached = getCachedOutput(run.id);
     if (cached) {
       const cachedJsonlLines = cached.output.split('\n').filter(line => line.trim());
       setRawJsonlOutput(cachedJsonlLines);
@@ -286,10 +308,10 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
     
     // Then load fresh data
     loadOutput();
-  }, [session.id]);
+  }, [run.id]);
 
   const displayableMessages = useMemo(() => {
-    return messages.filter((message, index) => {
+    return messages.filter((message) => {
       if (message.isMeta && !message.leafUuid && !message.summary) return false;
 
       if (message.type === "user" && message.message) {
@@ -303,9 +325,11 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
           for (const content of msg.content) {
             if (content.type === "text") { hasVisibleContent = true; break; }
             if (content.type === "tool_result") {
+              // Check if this tool result will be displayed as a widget
               let willBeSkipped = false;
               if (content.tool_use_id) {
-                for (let i = index - 1; i >= 0; i--) {
+                // Find the corresponding tool use
+                for (let i = messages.indexOf(message) - 1; i >= 0; i--) {
                   const prevMsg = messages[i];
                   if (prevMsg.type === 'assistant' && prevMsg.message?.content && Array.isArray(prevMsg.message.content)) {
                     const toolUse = prevMsg.message.content.find((c: any) => c.type === 'tool_use' && c.id === content.tool_use_id);
@@ -330,204 +354,101 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
     });
   }, [messages]);
 
+  const renderIcon = (iconName: string) => {
+    const Icon = AGENT_ICONS[iconName as keyof typeof AGENT_ICONS] || Bot;
+    return <Icon className="h-5 w-5" />;
+  };
+
+  const formatDuration = (ms?: number) => {
+    if (!ms) return "N/A";
+    const seconds = Math.floor(ms / 1000);
+    if (seconds < 60) return `${seconds}s`;
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}m ${remainingSeconds}s`;
+  };
+
+  const formatTokens = (tokens?: number) => {
+    if (!tokens) return "0";
+    if (tokens >= 1000) {
+      return `${(tokens / 1000).toFixed(1)}k`;
+    }
+    return tokens.toString();
+  };
+
   return (
     <>
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        transition={{ duration: 0.2 }}
-        className={`${isFullscreen ? 'fixed inset-0 z-50 bg-background' : ''} ${className}`}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40"
+        onClick={onClose}
+      />
+      
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        className={`fixed inset-x-4 top-[10%] bottom-[10%] z-50 max-w-4xl mx-auto ${className}`}
       >
-        <Card className={`h-full ${isFullscreen ? 'rounded-none border-0' : ''}`}>
+        <Card className="h-full flex flex-col shadow-xl">
           <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="text-2xl">{session.agent_icon}</div>
-                <div>
-                  <CardTitle className="text-base">{session.agent_name} - Output</CardTitle>
-                  <div className="flex items-center space-x-2 mt-1">
-                    <Badge variant={session.status === 'running' ? 'default' : 'secondary'}>
-                      {session.status}
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-3 flex-1 min-w-0">
+                <div className="mt-0.5">
+                  {renderIcon(run.agent_icon)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    {run.agent_name}
+                    {run.status === 'running' && (
+                      <div className="flex items-center gap-1">
+                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                        <span className="text-xs text-green-600 font-medium">Running</span>
+                      </div>
+                    )}
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground mt-1 truncate">
+                    {run.task}
+                  </p>
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground mt-2">
+                    <Badge variant="outline" className="text-xs">
+                      {run.model === 'opus' ? 'Claude 4 Opus' : 'Claude 4 Sonnet'}
                     </Badge>
-                    {session.status === 'running' && (
-                      <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
-                        <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse mr-1"></div>
-                        Live
-                      </Badge>
+                    <div className="flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      <span>{formatISOTimestamp(run.created_at)}</span>
+                    </div>
+                    {run.metrics?.duration_ms && (
+                      <span>{formatDuration(run.metrics.duration_ms)}</span>
                     )}
-                    <span className="text-xs text-muted-foreground">
-                      {messages.length} messages
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center space-x-2">
-                {messages.length > 0 && (
-                  <>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setIsFullscreen(!isFullscreen)}
-                      title="Fullscreen"
-                    >
-                      {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-                    </Button>
-                    <Popover
-                      trigger={
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex items-center gap-2"
-                        >
-                          <Copy className="h-4 w-4" />
-                          Copy Output
-                          <ChevronDown className="h-3 w-3" />
-                        </Button>
-                      }
-                      content={
-                        <div className="w-44 p-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="w-full justify-start"
-                            onClick={handleCopyAsJsonl}
-                          >
-                            Copy as JSONL
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="w-full justify-start"
-                            onClick={handleCopyAsMarkdown}
-                          >
-                            Copy as Markdown
-                          </Button>
-                        </div>
-                      }
-                      open={copyPopoverOpen}
-                      onOpenChange={setCopyPopoverOpen}
-                      align="end"
-                    />
-                  </>
-                )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={refreshOutput}
-                  disabled={refreshing}
-                  title="Refresh output"
-                >
-                  <RotateCcw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-                </Button>
-                <Button variant="outline" size="sm" onClick={onClose}>
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className={`${isFullscreen ? 'h-[calc(100vh-120px)]' : 'h-96'} p-0`}>
-            {loading ? (
-              <div className="flex items-center justify-center h-full">
-                <div className="flex items-center space-x-2">
-                  <RefreshCw className="h-4 w-4 animate-spin" />
-                  <span>Loading output...</span>
-                </div>
-              </div>
-            ) : (
-              <div 
-                className="h-full overflow-y-auto p-6 space-y-3" 
-                ref={scrollAreaRef}
-                onScroll={() => {
-                  // Mark that user has scrolled manually
-                  if (!hasUserScrolled) {
-                    setHasUserScrolled(true);
-                  }
-                  
-                  // If user scrolls back to bottom, re-enable auto-scroll
-                  if (isAtBottom()) {
-                    setHasUserScrolled(false);
-                  }
-                }}
-              >
-                {messages.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-full text-center">
-                    {session.status === 'running' ? (
-                      <>
-                        <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground mb-2" />
-                        <p className="text-muted-foreground">Waiting for output...</p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Agent is running but no output received yet
-                        </p>
-                      </>
-                    ) : (
-                      <>
-                        <p className="text-muted-foreground">No output available</p>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={refreshOutput}
-                          className="mt-2"
-                          disabled={refreshing}
-                        >
-                          {refreshing ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : <RotateCcw className="h-4 w-4 mr-2" />}
-                          Refresh
-                        </Button>
-                      </>
+                    {run.metrics?.total_tokens && (
+                      <div className="flex items-center gap-1">
+                        <Hash className="h-3 w-3" />
+                        <span>{formatTokens(run.metrics.total_tokens)}</span>
+                      </div>
+                    )}
+                    {run.metrics?.cost_usd && (
+                      <div className="flex items-center gap-1">
+                        <DollarSign className="h-3 w-3" />
+                        <span>${run.metrics.cost_usd.toFixed(4)}</span>
+                      </div>
                     )}
                   </div>
-                ) : (
-                  <>
-                    <AnimatePresence>
-                      {displayableMessages.map((message: ClaudeStreamMessage, index: number) => (
-                        <motion.div
-                          key={index}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.2 }}
-                        >
-                          <ErrorBoundary>
-                            <StreamMessage message={message} streamMessages={messages} />
-                          </ErrorBoundary>
-                        </motion.div>
-                      ))}
-                    </AnimatePresence>
-                    <div ref={outputEndRef} />
-                  </>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </motion.div>
-
-      {/* Fullscreen Modal */}
-      {isFullscreen && (
-        <div className="fixed inset-0 z-50 bg-background flex flex-col">
-          {/* Modal Header */}
-          <div className="flex items-center justify-between p-4 border-b border-border">
-            <div className="flex items-center gap-2">
-              <div className="text-2xl">{session.agent_icon}</div>
-              <h2 className="text-lg font-semibold">{session.agent_name} - Output</h2>
-              {session.status === 'running' && (
-                <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="text-xs text-green-600 font-medium">Running</span>
                 </div>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              {messages.length > 0 && (
+              </div>
+              <div className="flex items-center gap-1">
                 <Popover
                   trigger={
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="flex items-center gap-2"
+                      className="h-8 px-2"
                     >
-                      <Copy className="h-4 w-4" />
-                      Copy Output
-                      <ChevronDown className="h-3 w-3" />
+                      <Copy className="h-4 w-4 mr-1" />
+                      Copy
+                      <ChevronDown className="h-3 w-3 ml-1" />
                     </Button>
                   }
                   content={
@@ -554,51 +475,162 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
                   onOpenChange={setCopyPopoverOpen}
                   align="end"
                 />
-              )}
+                {onOpenFullView && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={onOpenFullView}
+                    title="Open in full view"
+                    className="h-8 px-2"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsFullscreen(!isFullscreen)}
+                  title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+                  className="h-8 px-2"
+                >
+                  {isFullscreen ? (
+                    <Minimize2 className="h-4 w-4" />
+                  ) : (
+                    <Maximize2 className="h-4 w-4" />
+                  )}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={refreshOutput}
+                  disabled={refreshing}
+                  title="Refresh output"
+                  className="h-8 px-2"
+                >
+                  <RotateCcw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={onClose}
+                  className="h-8 px-2"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className={`${isFullscreen ? 'h-[calc(100vh-120px)]' : 'flex-1'} p-0 overflow-hidden`}>
+            {loading ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="flex items-center space-x-2">
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  <span>Loading output...</span>
+                </div>
+              </div>
+            ) : messages.length === 0 ? (
+              <div className="flex items-center justify-center h-full text-muted-foreground">
+                <p>No output available yet</p>
+              </div>
+            ) : (
+              <div 
+                ref={scrollAreaRef}
+                className="h-full overflow-y-auto p-4 space-y-2"
+                onScroll={handleScroll}
+              >
+                <AnimatePresence>
+                  {displayableMessages.map((message: ClaudeStreamMessage, index: number) => (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <ErrorBoundary>
+                        <StreamMessage message={message} streamMessages={messages} />
+                      </ErrorBoundary>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+                <div ref={outputEndRef} />
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Fullscreen Modal */}
+      {isFullscreen && (
+        <div className="fixed inset-0 bg-background z-[60] flex flex-col">
+          <div className="flex items-center justify-between p-4 border-b">
+            <div className="flex items-center gap-3">
+              {renderIcon(run.agent_icon)}
+              <div>
+                <h3 className="font-semibold text-lg">{run.agent_name}</h3>
+                <p className="text-sm text-muted-foreground">{run.task}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Popover
+                trigger={
+                  <Button
+                    variant="outline"
+                    size="sm"
+                  >
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copy Output
+                    <ChevronDown className="h-3 w-3 ml-2" />
+                  </Button>
+                }
+                content={
+                  <div className="w-44 p-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-start"
+                      onClick={handleCopyAsJsonl}
+                    >
+                      Copy as JSONL
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-start"
+                      onClick={handleCopyAsMarkdown}
+                    >
+                      Copy as Markdown
+                    </Button>
+                  </div>
+                }
+                align="end"
+              />
               <Button
-                variant="ghost"
+                variant="outline"
+                size="sm"
+                onClick={refreshOutput}
+                disabled={refreshing}
+              >
+                <RotateCcw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+              </Button>
+              <Button
+                variant="outline"
                 size="sm"
                 onClick={() => setIsFullscreen(false)}
-                className="flex items-center gap-2"
               >
-                <X className="h-4 w-4" />
-                Close
+                <Minimize2 className="h-4 w-4 mr-2" />
+                Exit Fullscreen
               </Button>
             </div>
           </div>
-
-          {/* Modal Content */}
-          <div className="flex-1 overflow-hidden p-6">
-            <div 
-              ref={fullscreenScrollRef}
-              className="h-full overflow-y-auto space-y-3"
-              onScroll={() => {
-                // Mark that user has scrolled manually
-                if (!hasUserScrolled) {
-                  setHasUserScrolled(true);
-                }
-                
-                // If user scrolls back to bottom, re-enable auto-scroll
-                if (isAtBottom()) {
-                  setHasUserScrolled(false);
-                }
-              }}
-            >
+          <div 
+            ref={fullscreenScrollRef}
+            className="flex-1 overflow-y-auto p-6"
+            onScroll={handleScroll}
+          >
+            <div className="max-w-4xl mx-auto space-y-2">
               {messages.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-center">
-                  {session.status === 'running' ? (
-                    <>
-                      <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground mb-2" />
-                      <p className="text-muted-foreground">Waiting for output...</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Agent is running but no output received yet
-                      </p>
-                    </>
-                  ) : (
-                    <>
-                      <p className="text-muted-foreground">No output available</p>
-                    </>
-                  )}
+                <div className="text-center text-muted-foreground py-8">
+                  No output available yet
                 </div>
               ) : (
                 <>
@@ -636,4 +668,4 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
       </ToastContainer>
     </>
   );
-}
+} 

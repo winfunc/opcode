@@ -1,9 +1,9 @@
-import { useState } from "react";
-import { api } from "@/lib/api";
+import { useState, useEffect } from "react";
+import { api, type ClaudeInstallation } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ExternalLink, FileQuestion, Terminal } from "lucide-react";
+import { ExternalLink, FileQuestion, Terminal, AlertCircle, Loader2 } from "lucide-react";
+import { ClaudeVersionSelector } from "./ClaudeVersionSelector";
 
 interface ClaudeBinaryDialogProps {
   open: boolean;
@@ -13,18 +13,39 @@ interface ClaudeBinaryDialogProps {
 }
 
 export function ClaudeBinaryDialog({ open, onOpenChange, onSuccess, onError }: ClaudeBinaryDialogProps) {
-  const [binaryPath, setBinaryPath] = useState("");
+  const [selectedInstallation, setSelectedInstallation] = useState<ClaudeInstallation | null>(null);
   const [isValidating, setIsValidating] = useState(false);
+  const [hasInstallations, setHasInstallations] = useState(true);
+  const [checkingInstallations, setCheckingInstallations] = useState(true);
+
+  useEffect(() => {
+    if (open) {
+      checkInstallations();
+    }
+  }, [open]);
+
+  const checkInstallations = async () => {
+    try {
+      setCheckingInstallations(true);
+      const installations = await api.listClaudeInstallations();
+      setHasInstallations(installations.length > 0);
+    } catch (error) {
+      // If the API call fails, it means no installations found
+      setHasInstallations(false);
+    } finally {
+      setCheckingInstallations(false);
+    }
+  };
 
   const handleSave = async () => {
-    if (!binaryPath.trim()) {
-      onError("Please enter a valid path");
+    if (!selectedInstallation) {
+      onError("Please select a Claude installation");
       return;
     }
 
     setIsValidating(true);
     try {
-      await api.setClaudeBinaryPath(binaryPath.trim());
+      await api.setClaudeBinaryPath(selectedInstallation.path);
       onSuccess();
       onOpenChange(false);
     } catch (error) {
@@ -37,46 +58,58 @@ export function ClaudeBinaryDialog({ open, onOpenChange, onSuccess, onError }: C
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileQuestion className="w-5 h-5" />
-            Couldn't locate Claude Code installation
+            Select Claude Code Installation
           </DialogTitle>
           <DialogDescription className="space-y-3 mt-4">
-            <p>
-              Claude Code was not found in any of the common installation locations. 
-              Please specify the path to the Claude binary manually.
-            </p>
-            <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
-              <Terminal className="w-4 h-4 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">
-                <span className="font-medium">Tip:</span> Run{" "}
-                <code className="px-1 py-0.5 bg-black/10 dark:bg-white/10 rounded">which claude</code>{" "}
-                in your terminal to find the installation path
+            {checkingInstallations ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                <span className="ml-2 text-sm text-muted-foreground">Searching for Claude installations...</span>
+              </div>
+            ) : hasInstallations ? (
+              <p>
+                Multiple Claude Code installations were found on your system. 
+                Please select which one you'd like to use.
               </p>
-            </div>
+            ) : (
+              <>
+                <p>
+                  Claude Code was not found in any of the common installation locations. 
+                  Please install Claude Code to continue.
+                </p>
+                <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
+                  <AlertCircle className="w-4 h-4 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">
+                    <span className="font-medium">Searched locations:</span> PATH, /usr/local/bin, 
+                    /opt/homebrew/bin, ~/.nvm/versions/node/*/bin, ~/.claude/local, ~/.local/bin
+                  </p>
+                </div>
+              </>
+            )}
+            {!checkingInstallations && (
+              <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
+                <Terminal className="w-4 h-4 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">
+                  <span className="font-medium">Tip:</span> You can install Claude Code using{" "}
+                  <code className="px-1 py-0.5 bg-black/10 dark:bg-white/10 rounded">npm install -g @claude</code>
+                </p>
+              </div>
+            )}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="py-4">
-          <Input
-            type="text"
-            placeholder="/usr/local/bin/claude"
-            value={binaryPath}
-            onChange={(e) => setBinaryPath(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !isValidating) {
-                handleSave();
-              }
-            }}
-            autoFocus
-            className="font-mono text-sm"
-          />
-          <p className="text-xs text-muted-foreground mt-2">
-            Common locations: /usr/local/bin/claude, /opt/homebrew/bin/claude, ~/.claude/local/claude
-          </p>
-        </div>
+        {!checkingInstallations && hasInstallations && (
+          <div className="py-4">
+            <ClaudeVersionSelector
+              onSelect={(installation) => setSelectedInstallation(installation)}
+              selectedPath={null}
+            />
+          </div>
+        )}
 
         <DialogFooter className="gap-3">
           <Button
@@ -94,8 +127,11 @@ export function ClaudeBinaryDialog({ open, onOpenChange, onSuccess, onError }: C
           >
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={isValidating || !binaryPath.trim()}>
-            {isValidating ? "Validating..." : "Save Path"}
+          <Button 
+            onClick={handleSave} 
+            disabled={isValidating || !selectedInstallation || !hasInstallations}
+          >
+            {isValidating ? "Validating..." : hasInstallations ? "Save Selection" : "No Installations Found"}
           </Button>
         </DialogFooter>
       </DialogContent>

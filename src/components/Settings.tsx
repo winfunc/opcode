@@ -20,10 +20,12 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { 
   api, 
-  type ClaudeSettings
+  type ClaudeSettings,
+  type ClaudeInstallation
 } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { Toast, ToastContainer } from "@/components/ui/toast";
+import { ClaudeVersionSelector } from "./ClaudeVersionSelector";
 
 interface SettingsProps {
   /**
@@ -69,11 +71,29 @@ export const Settings: React.FC<SettingsProps> = ({
   // Environment variables state
   const [envVars, setEnvVars] = useState<EnvironmentVariable[]>([]);
 
+  // Claude binary path state
+  const [currentBinaryPath, setCurrentBinaryPath] = useState<string | null>(null);
+  const [selectedInstallation, setSelectedInstallation] = useState<ClaudeInstallation | null>(null);
+  const [binaryPathChanged, setBinaryPathChanged] = useState(false);
+
 
   // Load settings on mount
   useEffect(() => {
     loadSettings();
+    loadClaudeBinaryPath();
   }, []);
+
+  /**
+   * Loads the current Claude binary path
+   */
+  const loadClaudeBinaryPath = async () => {
+    try {
+      const path = await api.getClaudeBinaryPath();
+      setCurrentBinaryPath(path);
+    } catch (err) {
+      console.error("Failed to load Claude binary path:", err);
+    }
+  };
 
   /**
    * Loads the current Claude settings
@@ -159,6 +179,14 @@ export const Settings: React.FC<SettingsProps> = ({
 
       await api.saveClaudeSettings(updatedSettings);
       setSettings(updatedSettings);
+
+      // Save Claude binary path if changed
+      if (binaryPathChanged && selectedInstallation) {
+        await api.setClaudeBinaryPath(selectedInstallation.path);
+        setCurrentBinaryPath(selectedInstallation.path);
+        setBinaryPathChanged(false);
+      }
+
       setToast({ message: "Settings saved successfully!", type: "success" });
     } catch (err) {
       console.error("Failed to save settings:", err);
@@ -246,6 +274,13 @@ export const Settings: React.FC<SettingsProps> = ({
     setEnvVars(prev => prev.filter(envVar => envVar.id !== id));
   };
 
+  /**
+   * Handle Claude installation selection
+   */
+  const handleClaudeInstallationSelect = (installation: ClaudeInstallation) => {
+    setSelectedInstallation(installation);
+    setBinaryPathChanged(installation.path !== currentBinaryPath);
+  };
 
   return (
     <div className={cn("flex flex-col h-full bg-background text-foreground", className)}>
@@ -405,6 +440,25 @@ export const Settings: React.FC<SettingsProps> = ({
                       <p className="text-xs text-muted-foreground">
                         How long to retain chat transcripts locally (default: 30 days)
                       </p>
+                    </div>
+                    
+                    {/* Claude Binary Path Selector */}
+                    <div className="space-y-4">
+                      <div>
+                        <Label className="text-sm font-medium mb-2 block">Claude Code Installation</Label>
+                        <p className="text-xs text-muted-foreground mb-4">
+                          Select which Claude Code installation to use
+                        </p>
+                      </div>
+                      <ClaudeVersionSelector
+                        selectedPath={currentBinaryPath}
+                        onSelect={handleClaudeInstallationSelect}
+                      />
+                      {binaryPathChanged && (
+                        <p className="text-xs text-amber-600 dark:text-amber-400">
+                          ⚠️ Claude binary path has been changed. Remember to save your settings.
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>

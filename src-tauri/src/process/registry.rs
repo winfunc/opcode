@@ -1,8 +1,8 @@
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use serde::{Deserialize, Serialize};
 use tokio::process::Child;
-use chrono::{DateTime, Utc};
 
 /// Information about a running agent process
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -50,7 +50,7 @@ impl ProcessRegistry {
         child: Child,
     ) -> Result<(), String> {
         let mut processes = self.processes.lock().map_err(|e| e.to_string())?;
-        
+
         let process_info = ProcessInfo {
             run_id,
             agent_id,
@@ -84,7 +84,10 @@ impl ProcessRegistry {
     #[allow(dead_code)]
     pub fn get_running_processes(&self) -> Result<Vec<ProcessInfo>, String> {
         let processes = self.processes.lock().map_err(|e| e.to_string())?;
-        Ok(processes.values().map(|handle| handle.info.clone()).collect())
+        Ok(processes
+            .values()
+            .map(|handle| handle.info.clone())
+            .collect())
     }
 
     /// Get a specific running process
@@ -94,29 +97,180 @@ impl ProcessRegistry {
         Ok(processes.get(&run_id).map(|handle| handle.info.clone()))
     }
 
-    /// Kill a running process
-    #[allow(dead_code)]
+    /// Kill a running process with proper cleanup
     pub async fn kill_process(&self, run_id: i64) -> Result<bool, String> {
-        let processes = self.processes.lock().map_err(|e| e.to_string())?;
-        
-        if let Some(handle) = processes.get(&run_id) {
-            let child_arc = handle.child.clone();
-            drop(processes); // Release the lock before async operation
-            
+        use log::{error, info, warn};
+
+        // First check if the process exists and get its PID
+        let (pid, child_arc) = {
+            let processes = self.processes.lock().map_err(|e| e.to_string())?;
+            if let Some(handle) = processes.get(&run_id) {
+                (handle.info.pid, handle.child.clone())
+            } else {
+                return Ok(false); // Process not found
+            }
+        };
+
+        info!(
+            "Attempting graceful shutdown of process {} (PID: {})",
+            run_id, pid
+        );
+
+        // Send kill signal to the process
+        let kill_sent = {
             let mut child_guard = child_arc.lock().map_err(|e| e.to_string())?;
-            if let Some(ref mut child) = child_guard.as_mut() {
-                match child.kill().await {
+            if let Some(child) = child_guard.as_mut() {
+                match child.start_kill() {
                     Ok(_) => {
-                        *child_guard = None; // Clear the child handle
-                        Ok(true)
+                        info!("Successfully sent kill signal to process {}", run_id);
+                        true
                     }
-                    Err(e) => Err(format!("Failed to kill process: {}", e)),
+                    Err(e) => {
+                        error!("Failed to send kill signal to process {}: {}", run_id, e);
+                        return Err(format!("Failed to kill process: {}", e));
+                    }
                 }
             } else {
-                Ok(false) // Process was already killed or completed
+                false // Process already killed
             }
+        };
+
+        if !kill_sent {
+            return Ok(false);
+        }
+
+        // Wait for the process to exit (with timeout)
+        let wait_result = tokio::time::timeout(tokio::time::Duration::from_secs(5), async {
+            loop {
+                // Check if process has exited
+                let status = {
+                    let mut child_guard = child_arc.lock().map_err(|e| e.to_string())?;
+                    if let Some(child) = child_guard.as_mut() {
+                        match child.try_wait() {
+                            Ok(Some(status)) => {
+                                info!("Process {} exited with status: {:?}", run_id, status);
+                                *child_guard = None; // Clear the child handle
+                                Some(Ok::<(), String>(()))
+                            }
+                            Ok(None) => {
+                                // Still running
+                                None
+                            }
+                            Err(e) => {
+                                error!("Error checking process status: {}", e);
+                                Some(Err(e.to_string()))
+                            }
+                        }
+                    } else {
+                        // Process already gone
+                        Some(Ok(()))
+                    }
+                };
+
+                match status {
+                    Some(result) => return result,
+                    None => {
+                        // Still running, wait a bit
+                        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+                    }
+                }
+            }
+        })
+        .await;
+
+        match wait_result {
+            Ok(Ok(_)) => {
+                info!("Process {} exited gracefully", run_id);
+            }
+            Ok(Err(e)) => {
+                error!("Error waiting for process {}: {}", run_id, e);
+            }
+            Err(_) => {
+                warn!("Process {} didn't exit within 5 seconds after kill", run_id);
+                // Force clear the handle
+                if let Ok(mut child_guard) = child_arc.lock() {
+                    *child_guard = None;
+                }
+            }
+        }
+
+        // Remove from registry after killing
+        self.unregister_process(run_id)?;
+
+        Ok(true)
+    }
+
+    /// Kill a process by PID using system commands (fallback method)
+    pub fn kill_process_by_pid(&self, run_id: i64, pid: u32) -> Result<bool, String> {
+        use log::{error, info, warn};
+
+        info!("Attempting to kill process {} by PID {}", run_id, pid);
+
+        let kill_result = if cfg!(target_os = "windows") {
+            std::process::Command::new("taskkill")
+                .args(["/F", "/PID", &pid.to_string()])
+                .output()
         } else {
-            Ok(false) // Process not found
+            // First try SIGTERM
+            let term_result = std::process::Command::new("kill")
+                .args(["-TERM", &pid.to_string()])
+                .output();
+
+            match &term_result {
+                Ok(output) if output.status.success() => {
+                    info!("Sent SIGTERM to PID {}", pid);
+                    // Give it 2 seconds to exit gracefully
+                    std::thread::sleep(std::time::Duration::from_secs(2));
+
+                    // Check if still running
+                    let check_result = std::process::Command::new("kill")
+                        .args(["-0", &pid.to_string()])
+                        .output();
+
+                    if let Ok(output) = check_result {
+                        if output.status.success() {
+                            // Still running, send SIGKILL
+                            warn!(
+                                "Process {} still running after SIGTERM, sending SIGKILL",
+                                pid
+                            );
+                            std::process::Command::new("kill")
+                                .args(["-KILL", &pid.to_string()])
+                                .output()
+                        } else {
+                            term_result
+                        }
+                    } else {
+                        term_result
+                    }
+                }
+                _ => {
+                    // SIGTERM failed, try SIGKILL directly
+                    warn!("SIGTERM failed for PID {}, trying SIGKILL", pid);
+                    std::process::Command::new("kill")
+                        .args(["-KILL", &pid.to_string()])
+                        .output()
+                }
+            }
+        };
+
+        match kill_result {
+            Ok(output) => {
+                if output.status.success() {
+                    info!("Successfully killed process with PID {}", pid);
+                    // Remove from registry
+                    self.unregister_process(run_id)?;
+                    Ok(true)
+                } else {
+                    let error_msg = String::from_utf8_lossy(&output.stderr);
+                    warn!("Failed to kill PID {}: {}", pid, error_msg);
+                    Ok(false)
+                }
+            }
+            Err(e) => {
+                error!("Failed to execute kill command for PID {}: {}", pid, e);
+                Err(format!("Failed to execute kill command: {}", e))
+            }
         }
     }
 
@@ -124,11 +278,11 @@ impl ProcessRegistry {
     #[allow(dead_code)]
     pub async fn is_process_running(&self, run_id: i64) -> Result<bool, String> {
         let processes = self.processes.lock().map_err(|e| e.to_string())?;
-        
+
         if let Some(handle) = processes.get(&run_id) {
             let child_arc = handle.child.clone();
             drop(processes); // Release the lock before async operation
-            
+
             let mut child_guard = child_arc.lock().map_err(|e| e.to_string())?;
             if let Some(ref mut child) = child_guard.as_mut() {
                 match child.try_wait() {
@@ -182,20 +336,20 @@ impl ProcessRegistry {
     pub async fn cleanup_finished_processes(&self) -> Result<Vec<i64>, String> {
         let mut finished_runs = Vec::new();
         let processes_lock = self.processes.clone();
-        
+
         // First, identify finished processes
         {
             let processes = processes_lock.lock().map_err(|e| e.to_string())?;
             let run_ids: Vec<i64> = processes.keys().cloned().collect();
             drop(processes);
-            
+
             for run_id in run_ids {
                 if !self.is_process_running(run_id).await? {
                     finished_runs.push(run_id);
                 }
             }
         }
-        
+
         // Then remove them from the registry
         {
             let mut processes = processes_lock.lock().map_err(|e| e.to_string())?;
@@ -203,7 +357,7 @@ impl ProcessRegistry {
                 processes.remove(run_id);
             }
         }
-        
+
         Ok(finished_runs)
     }
 }
