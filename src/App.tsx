@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Loader2, Bot, FolderCode } from "lucide-react";
 import { api, type Project, type Session, type ClaudeMdFile } from "@/lib/api";
 import { OutputCacheProvider } from "@/lib/outputCache";
+import { SessionProvider, useSessionContext } from "@/contexts/SessionContext";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ProjectList } from "@/components/ProjectList";
@@ -17,14 +18,17 @@ import { UsageDashboard } from "@/components/UsageDashboard";
 import { MCPManager } from "@/components/MCPManager";
 import { NFOCredits } from "@/components/NFOCredits";
 import { ClaudeBinaryDialog } from "@/components/ClaudeBinaryDialog";
+import { NavigationConfirmDialog } from "@/components/NavigationConfirmDialog";
+import { ActiveClaudeSessions } from "@/components/ActiveClaudeSessions";
 import { Toast, ToastContainer } from "@/components/ui/toast";
 
 type View = "welcome" | "projects" | "agents" | "editor" | "settings" | "claude-file-editor" | "claude-code-session" | "usage-dashboard" | "mcp";
 
 /**
- * Main App component - Manages the Claude directory browser UI
+ * Inner App component that uses the session context
  */
-function App() {
+function AppInner() {
+  const { checkNavigationAllowed, activeSession } = useSessionContext();
   const [view, setView] = useState<View>("welcome");
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
@@ -36,6 +40,39 @@ function App() {
   const [showNFO, setShowNFO] = useState(false);
   const [showClaudeBinaryDialog, setShowClaudeBinaryDialog] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
+  const [pendingView, setPendingView] = useState<View | null>(null);
+  const [showNavConfirmDialog, setShowNavConfirmDialog] = useState(false);
+
+  // Navigation guard handler
+  const handleNavigation = useCallback(async (newView: View) => {
+    // Skip check if we're already on the same view or navigating to claude-code-session
+    if (view === newView || newView === "claude-code-session") {
+      setView(newView);
+      return;
+    }
+
+    // Check if navigation is allowed when leaving claude-code-session
+    if (view === "claude-code-session" && activeSession?.isActive) {
+      setPendingView(newView);
+      setShowNavConfirmDialog(true);
+    } else {
+      setView(newView);
+    }
+  }, [view, activeSession, checkNavigationAllowed]);
+
+  // Handle navigation confirmation
+  const handleConfirmNavigation = useCallback(() => {
+    if (pendingView) {
+      setView(pendingView);
+      setPendingView(null);
+    }
+    setShowNavConfirmDialog(false);
+  }, [pendingView]);
+
+  const handleCancelNavigation = useCallback(() => {
+    setPendingView(null);
+    setShowNavConfirmDialog(false);
+  }, []);
 
   // Load projects on mount when in projects view
   useEffect(() => {
@@ -52,7 +89,7 @@ function App() {
     const handleSessionSelected = (event: CustomEvent) => {
       const { session } = event.detail;
       setSelectedSession(session);
-      setView("claude-code-session");
+      handleNavigation("claude-code-session");
     };
 
     const handleClaudeNotFound = () => {
@@ -65,7 +102,7 @@ function App() {
       window.removeEventListener('claude-session-selected', handleSessionSelected as EventListener);
       window.removeEventListener('claude-not-found', handleClaudeNotFound as EventListener);
     };
-  }, []);
+  }, [handleNavigation]);
 
   /**
    * Loads all projects from the ~/.claude/projects directory
@@ -106,7 +143,7 @@ function App() {
    * Opens a new Claude Code session in the interactive UI
    */
   const handleNewSession = async () => {
-    setView("claude-code-session");
+    handleNavigation("claude-code-session");
     setSelectedSession(null);
   };
 
@@ -131,7 +168,7 @@ function App() {
    */
   const handleBackFromClaudeFileEditor = () => {
     setEditingClaudeFile(null);
-    setView("projects");
+    handleNavigation("projects");
   };
 
   const renderContent = () => {
@@ -153,6 +190,11 @@ function App() {
                 </h1>
               </motion.div>
 
+              {/* Active Sessions */}
+              <div className="mb-8">
+                <ActiveClaudeSessions />
+              </div>
+              
               {/* Navigation Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
                 {/* CC Agents Card */}
@@ -163,7 +205,7 @@ function App() {
                 >
                   <Card 
                     className="h-64 cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-lg border border-border/50 shimmer-hover"
-                    onClick={() => setView("agents")}
+                    onClick={() => handleNavigation("agents")}
                   >
                     <div className="h-full flex flex-col items-center justify-center p-8">
                       <Bot className="h-16 w-16 mb-4 text-primary" />
@@ -180,7 +222,7 @@ function App() {
                 >
                   <Card 
                     className="h-64 cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-lg border border-border/50 shimmer-hover"
-                    onClick={() => setView("projects")}
+                    onClick={() => handleNavigation("projects")}
                   >
                     <div className="h-full flex flex-col items-center justify-center p-8">
                       <FolderCode className="h-16 w-16 mb-4 text-primary" />
@@ -197,21 +239,21 @@ function App() {
       case "agents":
         return (
           <div className="flex-1 overflow-hidden">
-            <CCAgents onBack={() => setView("welcome")} />
+            <CCAgents onBack={() => handleNavigation("welcome")} />
           </div>
         );
 
       case "editor":
         return (
           <div className="flex-1 overflow-hidden">
-            <MarkdownEditor onBack={() => setView("welcome")} />
+            <MarkdownEditor onBack={() => handleNavigation("welcome")} />
           </div>
         );
       
       case "settings":
         return (
           <div className="flex-1 flex flex-col" style={{ minHeight: 0 }}>
-            <Settings onBack={() => setView("welcome")} />
+            <Settings onBack={() => handleNavigation("welcome")} />
           </div>
         );
       
@@ -229,7 +271,7 @@ function App() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setView("welcome")}
+                  onClick={() => handleNavigation("welcome")}
                   className="mb-4"
                 >
                   ← Back to Home
@@ -338,19 +380,19 @@ function App() {
             session={selectedSession || undefined}
             onBack={() => {
               setSelectedSession(null);
-              setView("projects");
+              handleNavigation("projects");
             }}
           />
         );
       
       case "usage-dashboard":
         return (
-          <UsageDashboard onBack={() => setView("welcome")} />
+          <UsageDashboard onBack={() => handleNavigation("welcome")} />
         );
       
       case "mcp":
         return (
-          <MCPManager onBack={() => setView("welcome")} />
+          <MCPManager onBack={() => handleNavigation("welcome")} />
         );
       
       default:
@@ -363,10 +405,10 @@ function App() {
       <div className="h-screen bg-background flex flex-col">
         {/* Topbar */}
         <Topbar
-          onClaudeClick={() => setView("editor")}
-          onSettingsClick={() => setView("settings")}
-          onUsageClick={() => setView("usage-dashboard")}
-          onMCPClick={() => setView("mcp")}
+          onClaudeClick={() => handleNavigation("editor")}
+          onSettingsClick={() => handleNavigation("settings")}
+          onUsageClick={() => handleNavigation("usage-dashboard")}
+          onMCPClick={() => handleNavigation("mcp")}
           onInfoClick={() => setShowNFO(true)}
         />
         
@@ -400,8 +442,26 @@ function App() {
             />
           )}
         </ToastContainer>
+        
+        {/* Navigation Confirmation Dialog */}
+        <NavigationConfirmDialog
+          open={showNavConfirmDialog}
+          onConfirm={handleConfirmNavigation}
+          onCancel={handleCancelNavigation}
+        />
       </div>
     </OutputCacheProvider>
+  );
+}
+
+/**
+ * Main App component - Manages the Claude directory browser UI
+ */
+function App() {
+  return (
+    <SessionProvider>
+      <AppInner />
+    </SessionProvider>
   );
 }
 

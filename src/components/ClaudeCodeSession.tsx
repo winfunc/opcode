@@ -17,6 +17,8 @@ import { Label } from "@/components/ui/label";
 import { Popover } from "@/components/ui/popover";
 import { api, type Session } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { useSessionContext } from "@/contexts/SessionContext";
+import { sessionStorage } from "@/services/sessionStorage";
 import { open } from "@tauri-apps/plugin-dialog";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { StreamMessage } from "./StreamMessage";
@@ -92,6 +94,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   const unlistenRefs = useRef<UnlistenFn[]>([]);
   const hasActiveSessionRef = useRef(false);
   const floatingPromptRef = useRef<FloatingPromptInputRef>(null);
+  const { setActiveSession } = useSessionContext();
 
   // Get effective session info (from prop or extracted) - use useMemo to ensure it updates
   const effectiveSession = useMemo(() => {
@@ -245,6 +248,29 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       setIsLoading(false);
     }
   };
+  
+  // Update session context when loading state changes
+  useEffect(() => {
+    if (effectiveSession && hasActiveSessionRef.current) {
+      setActiveSession({
+        sessionId: effectiveSession.id,
+        projectPath: projectPath,
+        isActive: isLoading,
+        hasUnsavedChanges: false,
+      });
+    }
+  }, [isLoading, effectiveSession, projectPath, setActiveSession]);
+  
+  // Save messages to session storage periodically
+  useEffect(() => {
+    if (!effectiveSession || messages.length === 0) return;
+    
+    const saveTimer = setTimeout(() => {
+      sessionStorage.saveSession(effectiveSession.id, projectPath, messages);
+    }, 1000); // Debounce saves by 1 second
+    
+    return () => clearTimeout(saveTimer);
+  }, [effectiveSession, projectPath, messages]);
 
   const handleSelectPath = async () => {
     try {
@@ -277,6 +303,15 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       setIsLoading(true);
       setError(null);
       hasActiveSessionRef.current = true;
+      
+      // Update the global session context
+      const sessionId = effectiveSession?.id || `new-${Date.now()}`;
+      setActiveSession({
+        sessionId: sessionId,
+        projectPath: projectPath,
+        isActive: true,
+        hasUnsavedChanges: false,
+      });
       
       // Clean up previous listeners
       unlistenRefs.current.forEach(unlisten => unlisten());
@@ -337,6 +372,9 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         setIsLoading(false);
         hasActiveSessionRef.current = false;
         
+        // Update the global session context
+        setActiveSession(null);
+        
         // Check if we should create an auto checkpoint after completion
         if (effectiveSession && event.payload) {
           try {
@@ -392,6 +430,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       setError("Failed to send prompt");
       setIsLoading(false);
       hasActiveSessionRef.current = false;
+      setActiveSession(null);
     }
   };
 
@@ -506,6 +545,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       setIsLoading(false);
       hasActiveSessionRef.current = false;
       setError(null);
+      setActiveSession(null);
     } catch (err) {
       console.error("Failed to cancel execution:", err);
       setError("Failed to cancel execution");
@@ -595,6 +635,12 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   useEffect(() => {
     return () => {
       unlistenRefs.current.forEach(unlisten => unlisten());
+      // Clear active session on unmount
+      setActiveSession(null);
+      // Clear session from storage if it was completed
+      if (effectiveSession && !hasActiveSessionRef.current) {
+        sessionStorage.removeSession(effectiveSession.id);
+      }
       // Clear checkpoint manager when session ends
       if (effectiveSession) {
         api.clearCheckpointManager(effectiveSession.id).catch(err => {
@@ -602,7 +648,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         });
       }
     };
-  }, []);
+  }, [effectiveSession, setActiveSession]);
 
   const messagesList = (
     <div
