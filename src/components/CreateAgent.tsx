@@ -11,6 +11,7 @@ import MDEditor from "@uiw/react-md-editor";
 import { type AgentIconName } from "./CCAgents";
 import { AgentSandboxSettings } from "./AgentSandboxSettings";
 import { IconPicker, ICON_MAP } from "./IconPicker";
+import { t } from "@/lib/i18n";
 
 interface CreateAgentProps {
   /**
@@ -61,12 +62,12 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
 
   const handleSave = async () => {
     if (!name.trim()) {
-      setError("Agent name is required");
+      setError(t('agentNameRequired'));
       return;
     }
 
     if (!systemPrompt.trim()) {
-      setError("System prompt is required");
+      setError(t('systemPromptRequired'));
       return;
     }
 
@@ -102,14 +103,14 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
       }
       
       onAgentCreated();
-    } catch (err) {
-      console.error("Failed to save agent:", err);
-      setError(isEditMode ? "Failed to update agent" : "Failed to create agent");
-      setToast({ 
-        message: isEditMode ? "Failed to update agent" : "Failed to create agent", 
-        type: "error" 
-      });
-    } finally {
+          } catch (err) {
+        console.error("Failed to save agent:", err);
+        setError(isEditMode ? t('failedToUpdateAgent') : t('failedToCreateAgent'));
+        setToast({ 
+          message: isEditMode ? t('failedToUpdateAgent') : t('failedToCreateAgent'), 
+          type: "error" 
+        });
+      } finally {
       setSaving(false);
     }
   };
@@ -124,7 +125,7 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
          enableFileRead !== (agent?.enable_file_read ?? true) ||
          enableFileWrite !== (agent?.enable_file_write ?? true) ||
          enableNetwork !== (agent?.enable_network ?? false)) && 
-        !confirm("You have unsaved changes. Are you sure you want to leave?")) {
+        !confirm(t('unsavedChanges'))) {
       return;
     }
     onBack();
@@ -151,10 +152,10 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
             </Button>
             <div>
               <h2 className="text-lg font-semibold">
-                {isEditMode ? "Edit CC Agent" : "Create CC Agent"}
+                {isEditMode ? t('editAgent') : t('createAgent')}
               </h2>
               <p className="text-xs text-muted-foreground">
-                {isEditMode ? "Update your Claude Code agent" : "Create a new Claude Code agent"}
+                {isEditMode ? t('updateCCAgent') : t('createNewCCAgent')}
               </p>
             </div>
           </div>
@@ -169,7 +170,7 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
             ) : (
               <Save className="mr-2 h-4 w-4" />
             )}
-            {saving ? "Saving..." : "Save"}
+            {saving ? t('saving') : t('save')}
           </Button>
         </motion.div>
         
@@ -195,13 +196,13 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
             {/* Basic Information */}
             <div className="space-y-4">
               <div>
-                <h3 className="text-sm font-medium mb-4">Basic Information</h3>
+                <h3 className="text-sm font-medium mb-4">{t('basicInformation')}</h3>
               </div>
               
               {/* Name and Icon */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Agent Name</Label>
+                  <Label htmlFor="name">{t('agentName')}</Label>
                   <Input
                     id="name"
                     value={name}
@@ -212,7 +213,7 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
                 </div>
                 
                 <div className="space-y-2">
-                  <Label>Agent Icon</Label>
+                  <Label>{t('selectIcon')}</Label>
                   <div
                     onClick={() => setShowIconPicker(true)}
                     className="h-10 px-3 py-2 bg-background border border-input rounded-md cursor-pointer hover:bg-accent hover:text-accent-foreground transition-colors flex items-center justify-between"
@@ -235,7 +236,7 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
 
               {/* Model Selection */}
               <div className="space-y-2">
-                <Label>Model</Label>
+                <Label>{t('selectModel')}</Label>
                 <div className="flex flex-col sm:flex-row gap-3">
                   <button
                     type="button"
@@ -258,8 +259,8 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
                         )}
                       </div>
                       <div className="text-left">
-                        <div className="text-sm font-semibold">Claude 4 Sonnet</div>
-                        <div className="text-xs opacity-80">Faster, efficient for most tasks</div>
+                        <div className="text-sm font-semibold">{t('claudeSonnet')}</div>
+                        <div className="text-xs opacity-80">{t('recommended')}</div>
                       </div>
                     </div>
                   </button>
@@ -285,7 +286,7 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
                         )}
                       </div>
                       <div className="text-left">
-                        <div className="text-sm font-semibold">Claude 4 Opus</div>
+                        <div className="text-sm font-semibold">{t('claudeOpus')}</div>
                         <div className="text-xs opacity-80">More capable, better for complex tasks</div>
                       </div>
                     </div>
@@ -295,7 +296,7 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
 
               {/* Default Task */}
               <div className="space-y-2">
-                <Label htmlFor="default-task">Default Task (Optional)</Label>
+                <Label htmlFor="default-task">{t('defaultTask')} ({t('optional')})</Label>
                 <Input
                   id="default-task"
                   type="text"
@@ -305,7 +306,7 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
                   className="max-w-md"
                 />
                 <p className="text-xs text-muted-foreground">
-                  This will be used as the default task placeholder when executing the agent
+                  {t('thisWillBeUsedAsDefaultTaskPlaceholder')}
                 </p>
               </div>
 
@@ -335,9 +336,9 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
 
               {/* System Prompt Editor */}
               <div className="space-y-2">
-                <Label>System Prompt</Label>
+                <Label>{t('systemPrompt')}</Label>
                 <p className="text-xs text-muted-foreground mb-2">
-                  Define the behavior and capabilities of your CC Agent
+                  {t('defineTheBehaviorAndCapabilities')}
                 </p>
                 <div className="rounded-lg border border-border overflow-hidden shadow-sm" data-color-mode="dark">
                   <MDEditor

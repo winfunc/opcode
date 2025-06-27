@@ -6,6 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { type Agent } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { t } from "@/lib/i18n";
 
 interface AgentSandboxSettingsProps {
   agent: Agent;
@@ -30,10 +31,10 @@ export const AgentSandboxSettings: React.FC<AgentSandboxSettingsProps> = ({
     <Card className={cn("p-4 space-y-4", className)}>
       <div className="flex items-center gap-2">
         <Shield className="h-5 w-5 text-amber-500" />
-        <h4 className="font-semibold">Sandbox Permissions</h4>
+        <h4 className="font-semibold">{t('sandboxPermissions')}</h4>
         {!agent.sandbox_enabled && (
           <Badge variant="secondary" className="text-xs">
-            Disabled
+            {t('disabled')}
           </Badge>
         )}
       </div>
@@ -42,9 +43,9 @@ export const AgentSandboxSettings: React.FC<AgentSandboxSettingsProps> = ({
         {/* Master sandbox toggle */}
         <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
           <div className="space-y-1">
-            <Label className="text-sm font-medium">Enable Sandbox</Label>
+            <Label className="text-sm font-medium">{t('enableSandbox')}</Label>
             <p className="text-xs text-muted-foreground">
-              Run this agent in a secure sandbox environment
+              {t('runThisAgentInSecureSandboxEnvironment')}
             </p>
           </div>
           <Switch 
@@ -60,9 +61,9 @@ export const AgentSandboxSettings: React.FC<AgentSandboxSettingsProps> = ({
               <div className="flex items-center gap-2">
                 <FileText className="h-4 w-4 text-blue-500" />
                 <div>
-                  <Label className="text-sm font-medium">File Read Access</Label>
+                  <Label className="text-sm font-medium">{t('fileReadAccess')}</Label>
                   <p className="text-xs text-muted-foreground">
-                    Allow reading files and directories
+                    {t('allowReadingFilesAndDirectories')}
                   </p>
                 </div>
               </div>
@@ -76,9 +77,9 @@ export const AgentSandboxSettings: React.FC<AgentSandboxSettingsProps> = ({
               <div className="flex items-center gap-2">
                 <Upload className="h-4 w-4 text-green-500" />
                 <div>
-                  <Label className="text-sm font-medium">File Write Access</Label>
+                  <Label className="text-sm font-medium">{t('fileWriteAccess')}</Label>
                   <p className="text-xs text-muted-foreground">
-                    Allow creating and modifying files
+                    {t('allowCreatingAndModifyingFiles')}
                   </p>
                 </div>
               </div>
@@ -92,9 +93,9 @@ export const AgentSandboxSettings: React.FC<AgentSandboxSettingsProps> = ({
               <div className="flex items-center gap-2">
                 <Network className="h-4 w-4 text-purple-500" />
                 <div>
-                  <Label className="text-sm font-medium">Network Access</Label>
+                  <Label className="text-sm font-medium">{t('networkAccess')}</Label>
                   <p className="text-xs text-muted-foreground">
-                    Allow outbound network connections
+                    {t('allowOutboundNetworkConnections')}
                   </p>
                 </div>
               </div>

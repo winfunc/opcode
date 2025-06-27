@@ -3,7 +3,9 @@ import { motion } from "framer-motion";
 import { Circle, FileText, Settings, ExternalLink, BarChart3, Network, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover } from "@/components/ui/popover";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { api, type ClaudeVersionStatus } from "@/lib/api";
+import { t } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 interface TopbarProps {
@@ -87,7 +89,7 @@ export const Topbar: React.FC<TopbarProps> = ({
       return (
         <div className="flex items-center space-x-2 text-xs">
           <Circle className="h-3 w-3 animate-pulse text-muted-foreground" />
-          <span className="text-muted-foreground">Checking...</span>
+          <span className="text-muted-foreground">{t('loading')}</span>
         </div>
       );
     }
@@ -180,7 +182,7 @@ export const Topbar: React.FC<TopbarProps> = ({
           className="text-xs"
         >
           <BarChart3 className="mr-2 h-3 w-3" />
-          Usage Dashboard
+          {t('usageDashboard')}
         </Button>
         
         <Button
@@ -190,7 +192,7 @@ export const Topbar: React.FC<TopbarProps> = ({
           className="text-xs"
         >
           <FileText className="mr-2 h-3 w-3" />
-          CLAUDE.md
+          {t('claudeMd')}
         </Button>
         
         <Button
@@ -200,7 +202,7 @@ export const Topbar: React.FC<TopbarProps> = ({
           className="text-xs"
         >
           <Network className="mr-2 h-3 w-3" />
-          MCP
+          {t('mcp')}
         </Button>
         
         <Button
@@ -210,7 +212,7 @@ export const Topbar: React.FC<TopbarProps> = ({
           className="text-xs"
         >
           <Settings className="mr-2 h-3 w-3" />
-          Settings
+          {t('settings')}
         </Button>
         
         <Button
@@ -222,6 +224,9 @@ export const Topbar: React.FC<TopbarProps> = ({
         >
           <Info className="h-4 w-4" />
         </Button>
+        
+        {/* Language Switcher */}
+        <LanguageSwitcher />
       </div>
     </motion.div>
   );
