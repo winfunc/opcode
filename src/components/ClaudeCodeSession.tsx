@@ -1,8 +1,5 @@
-// Fixed event management issues:
-// 1. Simplified event listener setup to always use generic events (claude-output, claude-error, claude-complete)
-// 2. Improved listener cleanup with better error handling
-// 3. Removed session-specific event suffix logic that was causing timing issues
-// 4. Backend still emits both generic and session-specific events for compatibility
+// Restored to upstream state - kept original event management system that works properly
+// Only change: Added TooltipProvider wrapper for proper tooltip functionality
 
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -343,34 +340,18 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       setError(null);
       hasActiveSessionRef.current = true;
 
-      // Clean up previous listeners more aggressively
-      console.log(
-        "[ClaudeCodeSession] Cleaning up previous listeners, count:",
-        unlistenRefs.current.length
-      );
-      try {
-        unlistenRefs.current.forEach((unlisten) => {
-          try {
-            unlisten();
-          } catch (err) {
-            console.warn(
-              "[ClaudeCodeSession] Error cleaning up listener:",
-              err
-            );
-          }
-        });
-      } catch (err) {
-        console.warn("[ClaudeCodeSession] Error during listener cleanup:", err);
-      } finally {
-        unlistenRefs.current = [];
-      }
+      // Clean up previous listeners
+      unlistenRefs.current.forEach((unlisten) => unlisten());
+      unlistenRefs.current = [];
 
       // Set up event listeners before executing
       console.log("[ClaudeCodeSession] Setting up event listeners...");
 
-      // Always listen to generic events first, then upgrade to session-specific when we get session ID
+      // If we already have a Claude session ID, use isolated listeners
+      const eventSuffix = claudeSessionId ? `:${claudeSessionId}` : "";
+
       const outputUnlisten = await listen<string>(
-        "claude-output",
+        `claude-output${eventSuffix}`,
         async (event) => {
           try {
             console.log(
@@ -423,13 +404,16 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         }
       );
 
-      const errorUnlisten = await listen<string>("claude-error", (event) => {
-        console.error("Claude error:", event.payload);
-        setError(event.payload);
-      });
+      const errorUnlisten = await listen<string>(
+        `claude-error${eventSuffix}`,
+        (event) => {
+          console.error("Claude error:", event.payload);
+          setError(event.payload);
+        }
+      );
 
       const completeUnlisten = await listen<boolean>(
-        "claude-complete",
+        `claude-complete${eventSuffix}`,
         async (event) => {
           console.log(
             "[ClaudeCodeSession] Received claude-complete:",
@@ -604,33 +588,12 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     try {
       setIsCancelling(true);
 
-      // Cancel the Claude execution - no need to pass session ID as backend handles both generic and specific
-      await api.cancelClaudeExecution();
+      // Cancel the Claude execution with session ID if available
+      await api.cancelClaudeExecution(claudeSessionId || undefined);
 
-      // Clean up listeners more aggressively
-      console.log(
-        "[ClaudeCodeSession] Cancel: Cleaning up listeners, count:",
-        unlistenRefs.current.length
-      );
-      try {
-        unlistenRefs.current.forEach((unlisten) => {
-          try {
-            unlisten();
-          } catch (err) {
-            console.warn(
-              "[ClaudeCodeSession] Cancel: Error cleaning up listener:",
-              err
-            );
-          }
-        });
-      } catch (err) {
-        console.warn(
-          "[ClaudeCodeSession] Cancel: Error during listener cleanup:",
-          err
-        );
-      } finally {
-        unlistenRefs.current = [];
-      }
+      // Clean up listeners
+      unlistenRefs.current.forEach((unlisten) => unlisten());
+      unlistenRefs.current = [];
 
       // Add a system message indicating cancellation
       const cancelMessage: ClaudeStreamMessage = {
@@ -736,30 +699,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   // Clean up listeners on component unmount
   useEffect(() => {
     return () => {
-      console.log(
-        "[ClaudeCodeSession] Component unmounting, cleaning up listeners"
-      );
-      try {
-        unlistenRefs.current.forEach((unlisten) => {
-          try {
-            unlisten();
-          } catch (err) {
-            console.warn(
-              "[ClaudeCodeSession] Cleanup: Error cleaning up listener:",
-              err
-            );
-          }
-        });
-      } catch (err) {
-        console.warn(
-          "[ClaudeCodeSession] Cleanup: Error during listener cleanup:",
-          err
-        );
-      } finally {
-        unlistenRefs.current = [];
-      }
-      hasActiveSessionRef.current = false;
-
+      unlistenRefs.current.forEach((unlisten) => unlisten());
       // Clear checkpoint manager when session ends
       if (effectiveSession) {
         api.clearCheckpointManager(effectiveSession.id).catch((err) => {
@@ -767,7 +707,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         });
       }
     };
-  }, []); // Only run on mount/unmount
+  }, []);
 
   const messagesList = (
     <div
