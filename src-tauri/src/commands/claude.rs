@@ -857,9 +857,6 @@ pub async fn continue_claude_code(
         model
     );
 
-    // Check if AWS Bedrock mode is enabled
-    let use_aws_bedrock = std::env::var("CLAUDE_CODE_USE_BEDROCK").unwrap_or_default() == "1";
-
     // Check if sandboxing should be used
     let use_sandbox = should_use_sandbox(&app)?;
 
@@ -872,15 +869,10 @@ pub async fn continue_claude_code(
 
     cmd.arg("-c") // Continue flag
         .arg("-p")
-        .arg(&prompt);
-    
-    // Only add model argument if not using AWS Bedrock
-    if !use_aws_bedrock {
-        cmd.arg("--model")
-           .arg(&model);
-    }
-    
-    cmd.arg("--output-format")
+        .arg(&prompt)
+        .arg("--model")
+        .arg(&model)
+        .arg("--output-format")
         .arg("stream-json")
         .arg("--verbose")
         .arg("--dangerously-skip-permissions")
@@ -907,9 +899,6 @@ pub async fn resume_claude_code(
         model
     );
 
-    // Check if AWS Bedrock mode is enabled
-    let use_aws_bedrock = std::env::var("CLAUDE_CODE_USE_BEDROCK").unwrap_or_default() == "1";
-
     // Check if sandboxing should be used
     let use_sandbox = should_use_sandbox(&app)?;
 
@@ -923,15 +912,10 @@ pub async fn resume_claude_code(
     cmd.arg("--resume")
         .arg(&session_id)
         .arg("-p")
-        .arg(&prompt);
-    
-    // Only add model argument if not using AWS Bedrock
-    if !use_aws_bedrock {
-        cmd.arg("--model")
-           .arg(&model);
-    }
-    
-    cmd.arg("--output-format")
+        .arg(&prompt)
+        .arg("--model")
+        .arg(&model)
+        .arg("--output-format")
         .arg("stream-json")
         .arg("--verbose")
         .arg("--dangerously-skip-permissions")
