@@ -34,7 +34,8 @@ import {
   SystemInitializedWidget,
   TaskWidget,
   LSResultWidget,
-  ThinkingWidget
+  ThinkingWidget,
+  WebSearchWidget
 } from "./ToolWidgets";
 
 interface StreamMessageProps {
@@ -239,6 +240,12 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                         return <GrepWidget pattern={input.pattern} include={input.include} path={input.path} exclude={input.exclude} result={toolResult} />;
                       }
                       
+                      // WebSearch tool
+                      if (toolName === "websearch" && input?.query) {
+                        renderedSomething = true;
+                        return <WebSearchWidget query={input.query} result={toolResult} />;
+                      }
+                      
                       // Default - return null
                       return null;
                     };
@@ -354,7 +361,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                           const toolUse = prevMsg.message.content.find((c: any) => c.type === 'tool_use' && c.id === content.tool_use_id);
                           if (toolUse) {
                             const toolName = toolUse.name?.toLowerCase();
-                            const toolsWithWidgets = ['task','edit','multiedit','todowrite','ls','read','glob','bash','write','grep'];
+                            const toolsWithWidgets = ['task','edit','multiedit','todowrite','ls','read','glob','bash','write','grep','websearch'];
                             if (toolsWithWidgets.includes(toolName) || toolUse.name?.startsWith('mcp__')) {
                               hasCorrespondingWidget = true;
                             }

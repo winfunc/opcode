@@ -51,6 +51,8 @@ import { createPortal } from "react-dom";
 import * as Diff from 'diff';
 import { Card, CardContent } from "@/components/ui/card";
 import { detectLinks, makeLinksClickable } from "@/lib/linkDetector";
+import ReactMarkdown from "react-markdown";
+import { open } from "@tauri-apps/plugin-shell";
 
 /**
  * Widget for TodoWrite tool - displays a beautiful TODO list
@@ -857,45 +859,205 @@ export const GrepWidget: React.FC<{
   path?: string;
   exclude?: string;
   result?: any;
-}> = ({ pattern, include, path, exclude, result: _result }) => {
+}> = ({ pattern, include, path, exclude, result }) => {
+  const [isExpanded, setIsExpanded] = useState(true);
+  
+  // Extract result content if available
+  let resultContent = '';
+  let isError = false;
+  
+  if (result) {
+    isError = result.is_error || false;
+    if (typeof result.content === 'string') {
+      resultContent = result.content;
+    } else if (result.content && typeof result.content === 'object') {
+      if (result.content.text) {
+        resultContent = result.content.text;
+      } else if (Array.isArray(result.content)) {
+        resultContent = result.content
+          .map((c: any) => (typeof c === 'string' ? c : c.text || JSON.stringify(c)))
+          .join('\n');
+      } else {
+        resultContent = JSON.stringify(result.content, null, 2);
+      }
+    }
+  }
+  
+  // Parse grep results to extract file paths and matches
+  const parseGrepResults = (content: string) => {
+    const lines = content.split('\n').filter(line => line.trim());
+    const results: Array<{
+      file: string;
+      lineNumber: number;
+      content: string;
+    }> = [];
+    
+    lines.forEach(line => {
+      // Common grep output format: filename:lineNumber:content
+      const match = line.match(/^(.+?):(\d+):(.*)$/);
+      if (match) {
+        results.push({
+          file: match[1],
+          lineNumber: parseInt(match[2], 10),
+          content: match[3]
+        });
+      }
+    });
+    
+    return results;
+  };
+  
+  const grepResults = result && !isError ? parseGrepResults(resultContent) : [];
+  
   return (
     <div className="space-y-2">
-      <div className="flex items-center gap-2 mb-2">
-        <Code className="h-4 w-4 text-primary" />
+      <div className="flex items-center gap-2 p-3 rounded-lg bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/20">
+        <Search className="h-4 w-4 text-emerald-500" />
         <span className="text-sm font-medium">Searching with grep</span>
+        {!result && (
+          <div className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
+            <div className="h-2 w-2 bg-emerald-500 rounded-full animate-pulse" />
+            <span>Searching...</span>
+          </div>
+        )}
       </div>
-      <div className="space-y-1.5 text-xs">
-        <div className="flex gap-2 items-center">
-          <span className="text-muted-foreground w-16">Pattern:</span>
-          <code className="font-mono bg-muted px-2 py-0.5 rounded flex-1">
-            {pattern}
-          </code>
+      
+      {/* Search Parameters */}
+      <div className="rounded-lg border bg-muted/20 p-3 space-y-2">
+        <div className="grid gap-2">
+          {/* Pattern with regex highlighting */}
+          <div className="flex items-start gap-3">
+            <div className="flex items-center gap-1.5 min-w-[80px]">
+              <Code className="h-3 w-3 text-emerald-500" />
+              <span className="text-xs font-medium text-muted-foreground">Pattern</span>
+            </div>
+            <code className="flex-1 font-mono text-sm bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-md text-emerald-600 dark:text-emerald-400">
+              {pattern}
+            </code>
+          </div>
+          
+          {/* Path */}
+          {path && (
+            <div className="flex items-start gap-3">
+              <div className="flex items-center gap-1.5 min-w-[80px]">
+                <FolderOpen className="h-3 w-3 text-muted-foreground" />
+                <span className="text-xs font-medium text-muted-foreground">Path</span>
+              </div>
+              <code className="flex-1 font-mono text-xs bg-muted px-2 py-1 rounded truncate">
+                {path}
+              </code>
+            </div>
+          )}
+          
+          {/* Include/Exclude patterns in a row */}
+          {(include || exclude) && (
+            <div className="flex gap-4">
+              {include && (
+                <div className="flex items-center gap-2 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <FilePlus className="h-3 w-3 text-green-500" />
+                    <span className="text-xs font-medium text-muted-foreground">Include</span>
+                  </div>
+                  <code className="font-mono text-xs bg-green-500/10 border border-green-500/20 px-2 py-0.5 rounded text-green-600 dark:text-green-400">
+                    {include}
+                  </code>
+                </div>
+              )}
+              
+              {exclude && (
+                <div className="flex items-center gap-2 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <X className="h-3 w-3 text-red-500" />
+                    <span className="text-xs font-medium text-muted-foreground">Exclude</span>
+                  </div>
+                  <code className="font-mono text-xs bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded text-red-600 dark:text-red-400">
+                    {exclude}
+                  </code>
+                </div>
+              )}
+            </div>
+          )}
         </div>
-        {path && (
-          <div className="flex gap-2 items-center">
-            <span className="text-muted-foreground w-16">Path:</span>
-            <code className="font-mono bg-muted px-2 py-0.5 rounded flex-1">
-              {path}
-            </code>
-          </div>
-        )}
-        {include && (
-          <div className="flex gap-2 items-center">
-            <span className="text-muted-foreground w-16">Include:</span>
-            <code className="font-mono bg-muted px-2 py-0.5 rounded">
-              {include}
-            </code>
-          </div>
-        )}
-        {exclude && (
-          <div className="flex gap-2 items-center">
-            <span className="text-muted-foreground w-16">Exclude:</span>
-            <code className="font-mono bg-muted px-2 py-0.5 rounded">
-              {exclude}
-            </code>
-          </div>
-        )}
       </div>
+      
+      {/* Results */}
+      {result && (
+        <div className="space-y-2">
+          {isError ? (
+            <div className="flex items-center gap-3 p-4 rounded-lg bg-red-500/10 border border-red-500/20">
+              <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
+              <div className="text-sm text-red-600 dark:text-red-400">
+                {resultContent || "Search failed"}
+              </div>
+            </div>
+          ) : grepResults.length > 0 ? (
+            <>
+              <button
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {isExpanded ? (
+                  <ChevronDown className="h-3.5 w-3.5" />
+                ) : (
+                  <ChevronRight className="h-3.5 w-3.5" />
+                )}
+                <span>{grepResults.length} matches found</span>
+              </button>
+              
+              {isExpanded && (
+                <div className="rounded-lg border bg-zinc-950 overflow-hidden">
+                  <div className="max-h-[400px] overflow-y-auto">
+                    {grepResults.map((match, idx) => {
+                      const fileName = match.file.split('/').pop() || match.file;
+                      const dirPath = match.file.substring(0, match.file.lastIndexOf('/'));
+                      
+                      return (
+                        <div 
+                          key={idx} 
+                          className={cn(
+                            "flex items-start gap-3 p-3 border-b border-zinc-800 hover:bg-zinc-900/50 transition-colors",
+                            idx === grepResults.length - 1 && "border-b-0"
+                          )}
+                        >
+                          <div className="flex items-center gap-2 min-w-[60px]">
+                            <FileText className="h-3.5 w-3.5 text-emerald-500" />
+                            <span className="text-xs font-mono text-emerald-400">
+                              {match.lineNumber}
+                            </span>
+                          </div>
+                          
+                          <div className="flex-1 space-y-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-medium text-blue-400 truncate">
+                                {fileName}
+                              </span>
+                              {dirPath && (
+                                <span className="text-xs text-muted-foreground truncate">
+                                  {dirPath}
+                                </span>
+                              )}
+                            </div>
+                            <code className="text-xs font-mono text-zinc-300 block whitespace-pre-wrap break-all">
+                              {match.content.trim()}
+                            </code>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="flex items-center gap-3 p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
+              <Info className="h-5 w-5 text-amber-500 flex-shrink-0" />
+              <div className="text-sm text-amber-600 dark:text-amber-400">
+                No matches found for the given pattern.
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
@@ -1866,6 +2028,218 @@ export const TaskWidget: React.FC<{
           </div>
         )}
       </div>
+    </div>
+  );
+};
+
+/**
+ * Widget for WebSearch tool - displays web search query and results
+ */
+export const WebSearchWidget: React.FC<{ 
+  query: string; 
+  result?: any;
+}> = ({ query, result }) => {
+  const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set());
+  
+  // Parse the result to extract all links sections and build a structured representation
+  const parseSearchResult = (resultContent: string) => {
+    const sections: Array<{
+      type: 'text' | 'links';
+      content: string | Array<{ title: string; url: string }>;
+    }> = [];
+    
+    // Split by "Links: [" to find all link sections
+    const parts = resultContent.split(/Links:\s*\[/);
+    
+    // First part is always text (or empty)
+    if (parts[0]) {
+      sections.push({ type: 'text', content: parts[0].trim() });
+    }
+    
+    // Process each links section
+    parts.slice(1).forEach(part => {
+      try {
+        // Find the closing bracket
+        const closingIndex = part.indexOf(']');
+        if (closingIndex === -1) return;
+        
+        const linksJson = '[' + part.substring(0, closingIndex + 1);
+        const remainingText = part.substring(closingIndex + 1).trim();
+        
+        // Parse the JSON array
+        const links = JSON.parse(linksJson);
+        sections.push({ type: 'links', content: links });
+        
+        // Add any remaining text
+        if (remainingText) {
+          sections.push({ type: 'text', content: remainingText });
+        }
+      } catch (e) {
+        // If parsing fails, treat it as text
+        sections.push({ type: 'text', content: 'Links: [' + part });
+      }
+    });
+    
+    return sections;
+  };
+  
+  const toggleSection = (index: number) => {
+    const newExpanded = new Set(expandedSections);
+    if (newExpanded.has(index)) {
+      newExpanded.delete(index);
+    } else {
+      newExpanded.add(index);
+    }
+    setExpandedSections(newExpanded);
+  };
+  
+  // Extract result content if available
+  let searchResults: {
+    sections: Array<{
+      type: 'text' | 'links';
+      content: string | Array<{ title: string; url: string }>;
+    }>;
+    noResults: boolean;
+  } = { sections: [], noResults: false };
+  
+  if (result) {
+    let resultContent = '';
+    if (typeof result.content === 'string') {
+      resultContent = result.content;
+    } else if (result.content && typeof result.content === 'object') {
+      if (result.content.text) {
+        resultContent = result.content.text;
+      } else if (Array.isArray(result.content)) {
+        resultContent = result.content
+          .map((c: any) => (typeof c === 'string' ? c : c.text || JSON.stringify(c)))
+          .join('\n');
+      } else {
+        resultContent = JSON.stringify(result.content, null, 2);
+      }
+    }
+    
+    searchResults.noResults = resultContent.toLowerCase().includes('no links found') || 
+                               resultContent.toLowerCase().includes('no results');
+    searchResults.sections = parseSearchResult(resultContent);
+  }
+  
+  const handleLinkClick = async (url: string) => {
+    try {
+      await open(url);
+    } catch (error) {
+      console.error('Failed to open URL:', error);
+    }
+  };
+  
+  return (
+    <div className="flex flex-col gap-2">
+      {/* Subtle Search Query Header */}
+      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-500/5 border border-blue-500/10">
+        <Globe className="h-4 w-4 text-blue-500/70" />
+        <span className="text-xs font-medium uppercase tracking-wider text-blue-600/70 dark:text-blue-400/70">Web Search</span>
+        <span className="text-sm text-muted-foreground/80 flex-1 truncate">{query}</span>
+      </div>
+      
+      {/* Results */}
+      {result && (
+        <div className="rounded-lg border bg-background/50 backdrop-blur-sm overflow-hidden">
+          {!searchResults.sections.length ? (
+            <div className="px-3 py-2 flex items-center gap-2 text-muted-foreground">
+              <div className="animate-pulse flex items-center gap-1">
+                <div className="h-1 w-1 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                <div className="h-1 w-1 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                <div className="h-1 w-1 bg-blue-500 rounded-full animate-bounce"></div>
+              </div>
+              <span className="text-sm">Searching...</span>
+            </div>
+          ) : searchResults.noResults ? (
+            <div className="px-3 py-2">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <AlertCircle className="h-4 w-4" />
+                <span className="text-sm">No results found</span>
+              </div>
+            </div>
+          ) : (
+            <div className="p-3 space-y-3">
+              {searchResults.sections.map((section, idx) => {
+                if (section.type === 'text') {
+                  return (
+                    <div key={idx} className="prose prose-sm dark:prose-invert max-w-none">
+                      <ReactMarkdown>{section.content as string}</ReactMarkdown>
+                    </div>
+                  );
+                } else if (section.type === 'links' && Array.isArray(section.content)) {
+                  const links = section.content;
+                  const isExpanded = expandedSections.has(idx);
+                  
+                  return (
+                    <div key={idx} className="space-y-1.5">
+                      {/* Toggle Button */}
+                      <button
+                        onClick={() => toggleSection(idx)}
+                        className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {isExpanded ? (
+                          <ChevronDown className="h-3 w-3" />
+                        ) : (
+                          <ChevronRight className="h-3 w-3" />
+                        )}
+                        <span>{links.length} result{links.length !== 1 ? 's' : ''}</span>
+                      </button>
+                      
+                      {/* Links Display */}
+                      {isExpanded ? (
+                        /* Expanded Card View */
+                        <div className="grid gap-1.5 ml-4">
+                          {links.map((link, linkIdx) => (
+                            <button
+                              key={linkIdx}
+                              onClick={() => handleLinkClick(link.url)}
+                              className="group flex flex-col gap-0.5 p-2.5 rounded-md border bg-card/30 hover:bg-card/50 hover:border-blue-500/30 transition-all text-left"
+                            >
+                              <div className="flex items-start gap-2">
+                                <Globe2 className="h-3.5 w-3.5 text-blue-500/70 mt-0.5 flex-shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-sm font-medium group-hover:text-blue-500 transition-colors line-clamp-2">
+                                    {link.title}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground mt-0.5 truncate">
+                                    {link.url}
+                                  </div>
+                                </div>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        /* Collapsed Pills View */
+                        <div className="flex flex-wrap gap-1.5 ml-4">
+                          {links.map((link, linkIdx) => (
+                            <button
+                              key={linkIdx}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleLinkClick(link.url);
+                              }}
+                              className="group inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-500/5 hover:bg-blue-500/10 border border-blue-500/10 hover:border-blue-500/20 transition-all"
+                            >
+                              <Globe2 className="h-3 w-3 text-blue-500/70" />
+                              <span className="truncate max-w-[180px] text-foreground/70 group-hover:text-foreground/90">
+                                {link.title}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+                return null;
+              })}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

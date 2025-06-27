@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { api, type GitHubAgentFile, type AgentExport, type Agent } from "@/lib/api";
 import { type AgentIconName } from "./CCAgents";
 import { ICON_MAP } from "./IconPicker";
+import { open } from "@tauri-apps/plugin-shell";
 
 interface GitHubAgentBrowserProps {
   isOpen: boolean;
@@ -148,6 +149,15 @@ export const GitHubAgentBrowser: React.FC<GitHubAgentBrowserProps> = ({
     return <Icon className="h-8 w-8" />;
   };
 
+  const handleGitHubLinkClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    try {
+      await open("https://github.com/getAsterisk/claudia/tree/main/cc_agents");
+    } catch (error) {
+      console.error('Failed to open GitHub link:', error);
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
@@ -163,15 +173,13 @@ export const GitHubAgentBrowser: React.FC<GitHubAgentBrowserProps> = ({
           <div className="px-4 py-3 bg-muted/50 rounded-lg mb-4">
             <p className="text-sm text-muted-foreground">
               Agents are fetched from{" "}
-              <a
-                href="https://github.com/getAsterisk/claudia/tree/main/cc_agents"
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                onClick={handleGitHubLinkClick}
                 className="text-primary hover:underline inline-flex items-center gap-1"
               >
                 github.com/getAsterisk/claudia/cc_agents
                 <Globe className="h-3 w-3" />
-              </a>
+              </button>
             </p>
             <p className="text-sm text-muted-foreground mt-1">
               You can contribute your custom agents to the repository!
