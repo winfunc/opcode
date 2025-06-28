@@ -26,6 +26,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Toast, ToastContainer } from "@/components/ui/toast";
 import { ClaudeVersionSelector } from "./ClaudeVersionSelector";
+import { ThemeSelector } from "./ThemeSelector";
 
 interface SettingsProps {
   /**
@@ -378,6 +379,9 @@ export const Settings: React.FC<SettingsProps> = ({
                   <h3 className="text-base font-semibold mb-4">General Settings</h3>
                   
                   <div className="space-y-4">
+                    {/* Theme Selector */}
+                    <ThemeSelector />
+                    
                     {/* Include Co-authored By */}
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5 flex-1">

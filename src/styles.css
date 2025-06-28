@@ -1,31 +1,10 @@
 @import "tailwindcss";
+@import "./styles/themes.css";
 
-/* Dark theme configuration */
+/* Default theme configuration */
 @theme {
-  /* Colors */
-  --color-background: oklch(0.12 0.01 240);
-  --color-foreground: oklch(0.98 0.01 240);
-  --color-card: oklch(0.14 0.01 240);
-  --color-card-foreground: oklch(0.98 0.01 240);
-  --color-popover: oklch(0.12 0.01 240);
-  --color-popover-foreground: oklch(0.98 0.01 240);
-  --color-primary: oklch(0.98 0.01 240);
-  --color-primary-foreground: oklch(0.17 0.01 240);
-  --color-secondary: oklch(0.16 0.01 240);
-  --color-secondary-foreground: oklch(0.98 0.01 240);
-  --color-muted: oklch(0.16 0.01 240);
-  --color-muted-foreground: oklch(0.68 0.01 240);
-  --color-accent: oklch(0.16 0.01 240);
-  --color-accent-foreground: oklch(0.98 0.01 240);
-  --color-destructive: oklch(0.6 0.2 25);
-  --color-destructive-foreground: oklch(0.98 0.01 240);
-  --color-border: oklch(0.16 0.01 240);
-  --color-input: oklch(0.16 0.01 240);
-  --color-ring: oklch(0.52 0.015 240);
-  
-  /* Additional colors for status messages */
-  --color-green-500: oklch(0.72 0.20 142);
-  --color-green-600: oklch(0.64 0.22 142);
+  /* Dialog overlay colors */
+  --color-overlay: rgba(0, 0, 0, 0.8);
 
   /* Border radius */
   --radius-sm: 0.25rem;

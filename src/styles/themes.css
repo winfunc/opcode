@@ -1,0 +1,79 @@
+/* Theme Variables - Multiple Color Schemes */
+
+/* Base Dark Theme (Current) */
+.theme-dark {
+  --color-background: oklch(0.12 0.01 240);
+  --color-foreground: oklch(0.98 0.01 240);
+  --color-card: oklch(0.14 0.01 240);
+  --color-card-foreground: oklch(0.98 0.01 240);
+  --color-popover: oklch(0.12 0.01 240);
+  --color-popover-foreground: oklch(0.98 0.01 240);
+  --color-primary: oklch(0.98 0.01 240);
+  --color-primary-foreground: oklch(0.17 0.01 240);
+  --color-secondary: oklch(0.16 0.01 240);
+  --color-secondary-foreground: oklch(0.98 0.01 240);
+  --color-muted: oklch(0.16 0.01 240);
+  --color-muted-foreground: oklch(0.68 0.01 240);
+  --color-accent: oklch(0.16 0.01 240);
+  --color-accent-foreground: oklch(0.98 0.01 240);
+  --color-destructive: oklch(0.6 0.2 25);
+  --color-destructive-foreground: oklch(0.98 0.01 240);
+  --color-border: oklch(0.16 0.01 240);
+  --color-input: oklch(0.16 0.01 240);
+  --color-ring: oklch(0.52 0.015 240);
+  --color-green-500: oklch(0.72 0.20 142);
+  --color-green-600: oklch(0.64 0.22 142);
+  --color-overlay: rgba(0, 0, 0, 0.8);
+}
+
+/* Light Theme (Solarized Light) */
+.theme-light {
+  --color-background: #fdf6e3;
+  --color-foreground: #657b83;
+  --color-card: #eee8d5;
+  --color-card-foreground: #657b83;
+  --color-popover: #fdf6e3;
+  --color-popover-foreground: #657b83;
+  --color-primary: #268bd2;
+  --color-primary-foreground: #fdf6e3;
+  --color-secondary: #eee8d5;
+  --color-secondary-foreground: #586e75;
+  --color-muted: #eee8d5;
+  --color-muted-foreground: #93a1a1;
+  --color-accent: #eee8d5;
+  --color-accent-foreground: #586e75;
+  --color-destructive: #dc322f;
+  --color-destructive-foreground: #fdf6e3;
+  --color-border: #eee8d5;
+  --color-input: #fdf6e3;
+  --color-ring: #268bd2;
+  --color-green-500: #859900;
+  --color-green-600: #719e07;
+  --color-overlay: rgba(255, 255, 255, 0.6);
+}
+
+/* Claude Desktop Theme (Brownish variant) */
+.theme-claude-desktop {
+  --color-background: #1f1e1d;
+  --color-foreground: oklch(0.88 0.005 45);
+  --color-card: #262624;
+  --color-card-foreground: oklch(0.88 0.005 45);
+  --color-popover: #1f1e1d;
+  --color-popover-foreground: oklch(0.88 0.005 45);
+  --color-primary: oklch(0.75 0.12 45);
+  --color-primary-foreground: #1f1e1d;
+  --color-secondary: #30302e;
+  --color-secondary-foreground: oklch(0.88 0.005 45);
+  --color-muted: #262624;
+  --color-muted-foreground: oklch(0.68 0.005 45);
+  --color-accent: #30302e;
+  --color-accent-foreground: oklch(0.88 0.005 45);
+  --color-destructive: oklch(0.65 0.18 25);
+  --color-destructive-foreground: oklch(0.88 0.005 45);
+  --color-border: #262624;
+  --color-input: #262624;
+  --color-ring: oklch(0.75 0.12 45);
+  --color-green-500: oklch(0.68 0.15 142);
+  --color-green-600: oklch(0.6 0.17 142);
+  --color-overlay: rgba(31, 30, 29, 0.75);
+}
