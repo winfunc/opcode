@@ -432,18 +432,59 @@ pub fn create_command_with_env(program: &str) -> Command {
         }
     }
 
+    // Enhance PATH to include common Node.js installation locations
+    // This is crucial for GUI apps on macOS which have a restricted PATH
+    let current_path = std::env::var("PATH").unwrap_or_default();
+    let mut additional_paths: Vec<String> = Vec::new();
+    
+    // Common Node.js installation paths
+    let potential_paths = [
+        "/opt/homebrew/bin",        // Homebrew on Apple Silicon
+        "/usr/local/bin",           // Homebrew on Intel, manual installs
+        "/opt/homebrew/sbin",       // Homebrew additional binaries
+        "/usr/local/sbin",          // Additional system binaries
+    ];
+    
+    for path in &potential_paths {
+        if !current_path.contains(path) && std::path::Path::new(path).exists() {
+            additional_paths.push(path.to_string());
+            debug!("Adding path for Node.js support: {}", path);
+        }
+    }
+    
+    // Add user-specific paths if HOME is available
+    if let Ok(home) = std::env::var("HOME") {
+        let user_paths = [
+            format!("{}/.local/bin", home),
+            format!("{}/.npm-global/bin", home),
+            format!("{}/.bun/bin", home),
+            format!("{}/.cargo/bin", home),
+        ];
+        
+        for path in &user_paths {
+            if !current_path.contains(path) && std::path::Path::new(path).exists() {
+                additional_paths.push(path.clone());
+                debug!("Adding user path: {}", path);
+            }
+        }
+    }
+    
     // Add NVM support if the program is in an NVM directory
     if program.contains("/.nvm/versions/node/") {
         if let Some(node_bin_dir) = std::path::Path::new(program).parent() {
-            // Ensure the Node.js bin directory is in PATH
-            let current_path = std::env::var("PATH").unwrap_or_default();
             let node_bin_str = node_bin_dir.to_string_lossy();
             if !current_path.contains(&node_bin_str.as_ref()) {
-                let new_path = format!("{}:{}", node_bin_str, current_path);
+                additional_paths.push(node_bin_str.to_string());
                 debug!("Adding NVM bin directory to PATH: {}", node_bin_str);
-                cmd.env("PATH", new_path);
             }
         }
+    }
+    
+    // Apply the enhanced PATH if we have additional paths
+    if !additional_paths.is_empty() {
+        let enhanced_path = format!("{}:{}", additional_paths.join(":"), current_path);
+        debug!("Enhanced PATH: {}", enhanced_path);
+        cmd.env("PATH", enhanced_path);
     }
 
     cmd
