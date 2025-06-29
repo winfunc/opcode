@@ -619,10 +619,10 @@ const FloatingPromptInputInner = (
         )}
       </AnimatePresence>
 
-      {/* Fixed Position Input Bar */}
+      {/* Bottom Input Bar (non-floating) */}
       <div
         className={cn(
-          "fixed bottom-0 left-0 right-0 z-40 bg-background border-t border-border",
+          "bg-background border-t border-border",
           dragActive && "ring-2 ring-primary ring-offset-2",
           className
         )}

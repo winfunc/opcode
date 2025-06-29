@@ -647,7 +647,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       </div>
 
       {/* Loading and Error indicators positioned relative to the scroll container */}
-      <div className="sticky bottom-0 w-full flex flex-col items-center pb-40">
+      <div className="sticky bottom-0 w-full flex flex-col items-center pb-4">
         {isLoading && (
           <motion.div
             initial={{ opacity: 0 }}
