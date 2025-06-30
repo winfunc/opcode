@@ -35,10 +35,10 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [showNFO, setShowNFO] = useState(false);
   const [showClaudeBinaryDialog, setShowClaudeBinaryDialog] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
+  const [toast, setToast] = useState<{ id: number; message: string; type: "success" | "error" | "info" } | null>(null);
 
   const showToast = (message: string, type: "success" | "error" | "info") => {
-    setToast({ message, type });
+    setToast({ id: Date.now(), message, type });
   };
 
   // Load projects on mount when in projects view
@@ -406,6 +406,7 @@ function App() {
         <ToastContainer>
           {toast && (
             <Toast
+              key={toast.id}
               message={toast.message}
               type={toast.type}
               onDismiss={() => setToast(null)}
