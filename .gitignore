@@ -25,3 +25,4 @@ dist-ssr
 temp_lib/
 
 .cursor/
+.direnv/
