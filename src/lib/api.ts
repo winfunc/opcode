@@ -1019,22 +1019,22 @@ export const api = {
   /**
    * Executes a new interactive Claude Code session with streaming output
    */
-  async executeClaudeCode(projectPath: string, prompt: string, model: string): Promise<void> {
-    return invoke("execute_claude_code", { projectPath, prompt, model });
+  async executeClaudeCode(projectPath: string, prompt: string, model: string, sessionId?: string): Promise<void> {
+    return invoke("execute_claude_code", { projectPath, prompt, model, sessionId });
   },
 
   /**
    * Continues an existing Claude Code conversation with streaming output
    */
-  async continueClaudeCode(projectPath: string, prompt: string, model: string): Promise<void> {
-    return invoke("continue_claude_code", { projectPath, prompt, model });
+  async continueClaudeCode(projectPath: string, prompt: string, model: string, sessionId?: string): Promise<void> {
+    return invoke("continue_claude_code", { projectPath, prompt, model, sessionId });
   },
 
   /**
    * Resumes an existing Claude Code session by ID with streaming output
    */
-  async resumeClaudeCode(projectPath: string, sessionId: string, prompt: string, model: string): Promise<void> {
-    return invoke("resume_claude_code", { projectPath, sessionId, prompt, model });
+  async resumeClaudeCode(projectPath: string, sessionId: string, prompt: string, model: string, frontendSessionId?: string): Promise<void> {
+    return invoke("resume_claude_code", { projectPath, sessionId, prompt, model, frontendSessionId });
   },
 
   /**

@@ -792,6 +792,7 @@ pub async fn execute_claude_code(
     project_path: String,
     prompt: String,
     model: String,
+    session_id: Option<String>,
 ) -> Result<(), String> {
     log::info!(
         "Starting new Claude Code session in: {} with model: {}",
@@ -821,7 +822,7 @@ pub async fn execute_claude_code(
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
 
-    spawn_claude_process(app, cmd).await
+    spawn_claude_process(app, cmd, session_id).await
 }
 
 /// Continue an existing Claude Code conversation with streaming output
@@ -831,6 +832,7 @@ pub async fn continue_claude_code(
     project_path: String,
     prompt: String,
     model: String,
+    session_id: Option<String>,
 ) -> Result<(), String> {
     log::info!(
         "Continuing Claude Code conversation in: {} with model: {}",
@@ -861,7 +863,7 @@ pub async fn continue_claude_code(
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
 
-    spawn_claude_process(app, cmd).await
+    spawn_claude_process(app, cmd, session_id).await
 }
 
 /// Resume an existing Claude Code session by ID with streaming output
@@ -872,6 +874,7 @@ pub async fn resume_claude_code(
     session_id: String,
     prompt: String,
     model: String,
+    frontend_session_id: Option<String>,
 ) -> Result<(), String> {
     log::info!(
         "Resuming Claude Code session: {} in: {} with model: {}",
@@ -904,7 +907,7 @@ pub async fn resume_claude_code(
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
 
-    spawn_claude_process(app, cmd).await
+    spawn_claude_process(app, cmd, frontend_session_id).await
 }
 
 /// Cancel the currently running Claude Code execution
@@ -1151,18 +1154,20 @@ fn get_claude_settings_sync(_app: &AppHandle) -> Result<ClaudeSettings, String> 
 }
 
 /// Helper function to spawn Claude process and handle streaming
-async fn spawn_claude_process(app: AppHandle, mut cmd: Command) -> Result<(), String> {
+async fn spawn_claude_process(app: AppHandle, mut cmd: Command, existing_session_id: Option<String>) -> Result<(), String> {
     use tokio::io::{AsyncBufReadExt, BufReader};
 
-    // Generate a unique session ID for this Claude Code session
-    let session_id = format!(
-        "claude-{}-{}",
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_millis(),
-        uuid::Uuid::new_v4().to_string()
-    );
+    // Use existing session ID if provided, otherwise generate a new one
+    let session_id = existing_session_id.unwrap_or_else(|| {
+        format!(
+            "claude-{}-{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis(),
+            uuid::Uuid::new_v4().to_string()
+        )
+    });
 
     // Spawn the process
     let mut child = cmd

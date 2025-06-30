@@ -381,11 +381,11 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       // Execute the appropriate command
       if (effectiveSession && !isFirstPrompt) {
         console.log('[ClaudeCodeSession] Resuming session:', effectiveSession.id);
-        await api.resumeClaudeCode(projectPath, effectiveSession.id, prompt, model);
+        await api.resumeClaudeCode(projectPath, effectiveSession.id, prompt, model, claudeSessionId || undefined);
       } else {
         console.log('[ClaudeCodeSession] Starting new session');
         setIsFirstPrompt(false);
-        await api.executeClaudeCode(projectPath, prompt, model);
+        await api.executeClaudeCode(projectPath, prompt, model, claudeSessionId || undefined);
       }
     } catch (err) {
       console.error("Failed to send prompt:", err);
