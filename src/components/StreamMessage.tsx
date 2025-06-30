@@ -12,6 +12,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { claudeSyntaxTheme } from "@/lib/claudeSyntaxTheme";
+import { parseErrorMessage } from "@/lib/errorParser";
 import type { ClaudeStreamMessage } from "./AgentExecution";
 import {
   TodoWidget,
@@ -620,6 +621,12 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
     if (message.type === "result") {
       const isError = message.is_error || message.subtype?.includes("error");
       
+      // Parse error message if it's an error (minimal change to existing logic)
+      let parsedError = null;
+      if (isError && message.result) {
+        parsedError = parseErrorMessage(message.result);
+      }
+      
       return (
         <Card className={cn(
           isError ? "border-destructive/20 bg-destructive/5" : "border-green-500/20 bg-green-500/5",
@@ -628,16 +635,30 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
               {isError ? (
-                <AlertCircle className="h-5 w-5 text-destructive mt-0.5" />
+                // Use custom icon if available, otherwise keep original AlertCircle
+                parsedError?.icon ? (
+                  <parsedError.icon className="h-5 w-5 text-destructive mt-0.5" />
+                ) : (
+                  <AlertCircle className="h-5 w-5 text-destructive mt-0.5" />
+                )
               ) : (
                 <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5" />
               )}
               <div className="flex-1 space-y-2">
                 <h4 className="font-semibold text-sm">
-                  {isError ? "Execution Failed" : "Execution Complete"}
+                  {/* Use parsed title if available, otherwise keep original logic */}
+                  {parsedError?.isSpecialError ? parsedError.title : (isError ? "Execution Failed" : "Execution Complete")}
                 </h4>
                 
-                {message.result && (
+                {/* Show enhanced error message for special errors */}
+                {parsedError?.isSpecialError && (
+                  <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md border border-destructive/20">
+                    {parsedError.description}
+                  </div>
+                )}
+                
+                {/* Keep original result rendering logic - only show if not a special error */}
+                {message.result && (!parsedError?.isSpecialError) && (
                   <div className="prose prose-sm dark:prose-invert max-w-none">
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm]}
@@ -666,10 +687,12 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                   </div>
                 )}
                 
+                {/* Keep original error handling */}
                 {message.error && (
                   <div className="text-sm text-destructive">{message.error}</div>
                 )}
                 
+                {/* Keep original stats section unchanged */}
                 <div className="text-xs text-muted-foreground space-y-1 mt-2">
                   {(message.cost_usd !== undefined || message.total_cost_usd !== undefined) && (
                     <div>Cost: ${((message.cost_usd || message.total_cost_usd)!).toFixed(4)} USD</div>
