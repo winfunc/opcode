@@ -1,0 +1,1 @@
+Refactor: Improve error handling, remove direct DOM manipulation, and fix hardcoded path

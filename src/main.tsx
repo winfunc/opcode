@@ -5,7 +5,9 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import "./styles.css";
 import "./assets/shimmer.css";
 
-ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
+const ROOT_ELEMENT_ID = "root";
+
+ReactDOM.createRoot(document.getElementById(ROOT_ELEMENT_ID) as HTMLElement).render(
   <React.StrictMode>
     <ErrorBoundary>
       <App />
