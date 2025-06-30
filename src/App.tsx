@@ -37,6 +37,10 @@ function App() {
   const [showClaudeBinaryDialog, setShowClaudeBinaryDialog] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
 
+  const showToast = (message: string, type: "success" | "error" | "info") => {
+    setToast({ message, type });
+  };
+
   // Load projects on mount when in projects view
   useEffect(() => {
     if (view === "projects") {
@@ -59,11 +63,17 @@ function App() {
       setShowClaudeBinaryDialog(true);
     };
 
+    const handleClaudeBinaryPathSaved = () => {
+      loadProjects();
+    };
+
     window.addEventListener('claude-session-selected', handleSessionSelected as EventListener);
     window.addEventListener('claude-not-found', handleClaudeNotFound as EventListener);
+    window.addEventListener('claude-binary-path-saved', handleClaudeBinaryPathSaved as EventListener);
     return () => {
       window.removeEventListener('claude-session-selected', handleSessionSelected as EventListener);
       window.removeEventListener('claude-not-found', handleClaudeNotFound as EventListener);
+      window.removeEventListener('claude-binary-path-saved', handleClaudeBinaryPathSaved as EventListener);
     };
   }, []);
 
@@ -78,6 +88,7 @@ function App() {
       setProjects(projectList);
     } catch (err) {
       console.error("Failed to load projects:", err);
+      showToast("Failed to load projects. Please ensure ~/.claude directory exists.", "error");
       setError("Failed to load projects. Please ensure ~/.claude directory exists.");
     } finally {
       setLoading(false);
@@ -96,6 +107,7 @@ function App() {
       setSelectedProject(project);
     } catch (err) {
       console.error("Failed to load sessions:", err);
+      showToast("Failed to load sessions for this project.", "error");
       setError("Failed to load sessions for this project.");
     } finally {
       setLoading(false);
@@ -312,7 +324,7 @@ function App() {
                       ) : (
                         <div className="py-8 text-center">
                           <p className="text-sm text-muted-foreground">
-                            No projects found in ~/.claude/projects
+                            No projects found in {api.getClaudeDirectory()}/projects
                           </p>
                         </div>
                       )}
@@ -385,7 +397,7 @@ function App() {
           onSuccess={() => {
             setToast({ message: "Claude binary path saved successfully", type: "success" });
             // Trigger a refresh of the Claude version check
-            window.location.reload();
+            window.dispatchEvent(new CustomEvent('claude-binary-path-saved'));
           }}
           onError={(message) => setToast({ message, type: "error" })}
         />
