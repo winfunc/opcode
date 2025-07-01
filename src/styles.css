@@ -1,26 +1,54 @@
 @import "tailwindcss";
 
-/* Dark theme configuration */
+/* Light theme configuration */
 @theme {
   /* Colors */
-  --color-background: oklch(0.12 0.01 240);
-  --color-foreground: oklch(0.98 0.01 240);
-  --color-card: oklch(0.14 0.01 240);
-  --color-card-foreground: oklch(0.98 0.01 240);
-  --color-popover: oklch(0.12 0.01 240);
-  --color-popover-foreground: oklch(0.98 0.01 240);
-  --color-primary: oklch(0.98 0.01 240);
-  --color-primary-foreground: oklch(0.17 0.01 240);
-  --color-secondary: oklch(0.16 0.01 240);
-  --color-secondary-foreground: oklch(0.98 0.01 240);
-  --color-muted: oklch(0.16 0.01 240);
-  --color-muted-foreground: oklch(0.68 0.01 240);
-  --color-accent: oklch(0.16 0.01 240);
-  --color-accent-foreground: oklch(0.98 0.01 240);
+  --color-background: oklch(0.98 0.01 240);
+  --color-foreground: oklch(0.12 0.01 240);
+  --color-card: oklch(0.96 0.01 240);
+  --color-card-foreground: oklch(0.12 0.01 240);
+  --color-popover: oklch(0.98 0.01 240);
+  --color-popover-foreground: oklch(0.12 0.01 240);
+  --color-primary: oklch(0.12 0.01 240);
+  --color-primary-foreground: oklch(0.98 0.01 240);
+  --color-secondary: oklch(0.94 0.01 240);
+  --color-secondary-foreground: oklch(0.12 0.01 240);
+  --color-muted: oklch(0.94 0.01 240);
+  --color-muted-foreground: oklch(0.45 0.01 240);
+  --color-accent: oklch(0.94 0.01 240);
+  --color-accent-foreground: oklch(0.12 0.01 240);
   --color-destructive: oklch(0.6 0.2 25);
   --color-destructive-foreground: oklch(0.98 0.01 240);
-  --color-border: oklch(0.16 0.01 240);
-  --color-input: oklch(0.16 0.01 240);
+  --color-border: oklch(0.88 0.01 240);
+  --color-input: oklch(0.88 0.01 240);
+  --color-ring: oklch(0.52 0.015 240);
+  
+  /* Additional colors for status messages */
+  --color-green-500: oklch(0.72 0.20 142);
+  --color-green-600: oklch(0.64 0.22 142);
+}
+
+/* Dark theme overrides */
+.dark {
+  /* Colors */
+  --color-background: oklch(0.18 0.01 240);
+  --color-foreground: oklch(0.92 0.01 240);
+  --color-card: oklch(0.22 0.01 240);
+  --color-card-foreground: oklch(0.92 0.01 240);
+  --color-popover: oklch(0.18 0.01 240);
+  --color-popover-foreground: oklch(0.92 0.01 240);
+  --color-primary: oklch(0.92 0.01 240);
+  --color-primary-foreground: oklch(0.22 0.01 240);
+  --color-secondary: oklch(0.24 0.01 240);
+  --color-secondary-foreground: oklch(0.92 0.01 240);
+  --color-muted: oklch(0.24 0.01 240);
+  --color-muted-foreground: oklch(0.65 0.01 240);
+  --color-accent: oklch(0.24 0.01 240);
+  --color-accent-foreground: oklch(0.92 0.01 240);
+  --color-destructive: oklch(0.6 0.2 25);
+  --color-destructive-foreground: oklch(0.98 0.01 240);
+  --color-border: oklch(0.26 0.01 240);
+  --color-input: oklch(0.26 0.01 240);
   --color-ring: oklch(0.52 0.015 240);
   
   /* Additional colors for status messages */
@@ -157,11 +185,23 @@ button:focus-visible,
   }
 }
 
+/* Markdown Editor Light Mode Styles */
+[data-color-mode="light"] {
+  --color-border-default: rgb(208, 215, 222);
+  --color-canvas-default: rgb(255, 255, 255);
+  --color-canvas-subtle: rgb(246, 248, 250);
+  --color-fg-default: rgb(31, 35, 40);
+  --color-fg-muted: rgb(101, 109, 118);
+  --color-fg-subtle: rgb(144, 157, 171);
+  --color-accent-fg: rgb(9, 105, 218);
+  --color-danger-fg: rgb(207, 34, 46);
+}
+
 /* Markdown Editor Dark Mode Styles */
 [data-color-mode="dark"] {
-  --color-border-default: rgb(48, 54, 61);
-  --color-canvas-default: rgb(13, 17, 23);
-  --color-canvas-subtle: rgb(22, 27, 34);
+  --color-border-default: rgb(68, 76, 86);
+  --color-canvas-default: rgb(22, 27, 34);
+  --color-canvas-subtle: rgb(32, 39, 48);
   --color-fg-default: rgb(201, 209, 217);
   --color-fg-muted: rgb(139, 148, 158);
   --color-fg-subtle: rgb(110, 118, 129);
@@ -402,8 +442,8 @@ button:focus-visible,
   background-color: var(--color-muted);
 }
 
-.prose.dark\:prose-invert pre {
-  background-color: rgb(13, 17, 23);
+.prose pre {
+  background-color: var(--color-card);
   border: 1px solid var(--color-border);
 }
 
