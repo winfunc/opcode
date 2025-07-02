@@ -35,7 +35,8 @@ import {
   TaskWidget,
   LSResultWidget,
   ThinkingWidget,
-  WebSearchWidget
+  WebSearchWidget,
+  WebFetchWidget
 } from "./ToolWidgets";
 
 interface StreamMessageProps {
@@ -246,6 +247,12 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                         return <WebSearchWidget query={input.query} result={toolResult} />;
                       }
                       
+                      // WebFetch tool
+                      if (toolName === "webfetch" && input?.url) {
+                        renderedSomething = true;
+                        return <WebFetchWidget url={input.url} prompt={input.prompt} result={toolResult} />;
+                      }
+                      
                       // Default - return null
                       return null;
                     };
@@ -361,7 +368,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                           const toolUse = prevMsg.message.content.find((c: any) => c.type === 'tool_use' && c.id === content.tool_use_id);
                           if (toolUse) {
                             const toolName = toolUse.name?.toLowerCase();
-                            const toolsWithWidgets = ['task','edit','multiedit','todowrite','ls','read','glob','bash','write','grep','websearch'];
+                            const toolsWithWidgets = ['task','edit','multiedit','todowrite','ls','read','glob','bash','write','grep','websearch','webfetch'];
                             if (toolsWithWidgets.includes(toolName) || toolUse.name?.startsWith('mcp__')) {
                               hasCorrespondingWidget = true;
                             }

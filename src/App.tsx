@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ProjectList } from "@/components/ProjectList";
 import { SessionList } from "@/components/SessionList";
+import { RunningClaudeSessions } from "@/components/RunningClaudeSessions";
 import { Topbar } from "@/components/Topbar";
 import { MarkdownEditor } from "@/components/MarkdownEditor";
 import { ClaudeFileEditor } from "@/components/ClaudeFileEditor";
@@ -37,6 +38,8 @@ function App() {
   const [showNFO, setShowNFO] = useState(false);
   const [showClaudeBinaryDialog, setShowClaudeBinaryDialog] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
+  const [activeClaudeSessionId, setActiveClaudeSessionId] = useState<string | null>(null);
+  const [isClaudeStreaming, setIsClaudeStreaming] = useState(false);
 
   // Load projects on mount when in projects view
   useEffect(() => {
@@ -53,7 +56,7 @@ function App() {
     const handleSessionSelected = (event: CustomEvent) => {
       const { session } = event.detail;
       setSelectedSession(session);
-      setView("claude-code-session");
+      handleViewChange("claude-code-session");
     };
 
     const handleClaudeNotFound = () => {
@@ -107,7 +110,7 @@ function App() {
    * Opens a new Claude Code session in the interactive UI
    */
   const handleNewSession = async () => {
-    setView("claude-code-session");
+    handleViewChange("claude-code-session");
     setSelectedSession(null);
   };
 
@@ -124,7 +127,7 @@ function App() {
    */
   const handleEditClaudeFile = (file: ClaudeMdFile) => {
     setEditingClaudeFile(file);
-    setView("claude-file-editor");
+    handleViewChange("claude-file-editor");
   };
 
   /**
@@ -132,7 +135,27 @@ function App() {
    */
   const handleBackFromClaudeFileEditor = () => {
     setEditingClaudeFile(null);
-    setView("projects");
+    handleViewChange("projects");
+  };
+
+  /**
+   * Handles view changes with navigation protection
+   */
+  const handleViewChange = (newView: View) => {
+    // Check if we're navigating away from an active Claude session
+    if (view === "claude-code-session" && isClaudeStreaming && activeClaudeSessionId) {
+      const shouldLeave = window.confirm(
+        "Claude is still responding. If you navigate away, Claude will continue running in the background.\n\n" +
+        "You can return to this session from the Projects view.\n\n" +
+        "Do you want to continue?"
+      );
+      
+      if (!shouldLeave) {
+        return;
+      }
+    }
+    
+    setView(newView);
   };
 
   const renderContent = () => {
@@ -164,7 +187,7 @@ function App() {
                 >
                   <Card 
                     className="h-64 cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-lg border border-border/50 shimmer-hover"
-                    onClick={() => setView("agents")}
+                    onClick={() => handleViewChange("agents")}
                   >
                     <div className="h-full flex flex-col items-center justify-center p-8">
                       <Bot className="h-16 w-16 mb-4 text-primary" />
@@ -181,7 +204,7 @@ function App() {
                 >
                   <Card 
                     className="h-64 cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-lg border border-border/50 shimmer-hover"
-                    onClick={() => setView("projects")}
+                    onClick={() => handleViewChange("projects")}
                   >
                     <div className="h-full flex flex-col items-center justify-center p-8">
                       <FolderCode className="h-16 w-16 mb-4 text-primary" />
@@ -198,21 +221,21 @@ function App() {
       case "agents":
         return (
           <div className="flex-1 overflow-hidden">
-            <CCAgents onBack={() => setView("welcome")} />
+            <CCAgents onBack={() => handleViewChange("welcome")} />
           </div>
         );
 
       case "editor":
         return (
           <div className="flex-1 overflow-hidden">
-            <MarkdownEditor onBack={() => setView("welcome")} />
+            <MarkdownEditor onBack={() => handleViewChange("welcome")} />
           </div>
         );
       
       case "settings":
         return (
           <div className="flex-1 flex flex-col" style={{ minHeight: 0 }}>
-            <Settings onBack={() => setView("welcome")} />
+            <Settings onBack={() => handleViewChange("welcome")} />
           </div>
         );
       
@@ -230,7 +253,7 @@ function App() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setView("welcome")}
+                  onClick={() => handleViewChange("welcome")}
                   className="mb-4"
                 >
                   ← Back to Home
@@ -304,6 +327,9 @@ function App() {
                         </Button>
                       </motion.div>
 
+                      {/* Running Claude Sessions */}
+                      <RunningClaudeSessions />
+
                       {/* Project list */}
                       {projects.length > 0 ? (
                         <ProjectList
@@ -339,19 +365,23 @@ function App() {
             session={selectedSession || undefined}
             onBack={() => {
               setSelectedSession(null);
-              setView("projects");
+              handleViewChange("projects");
+            }}
+            onStreamingChange={(isStreaming, sessionId) => {
+              setIsClaudeStreaming(isStreaming);
+              setActiveClaudeSessionId(sessionId);
             }}
           />
         );
       
       case "usage-dashboard":
         return (
-          <UsageDashboard onBack={() => setView("welcome")} />
+          <UsageDashboard onBack={() => handleViewChange("welcome")} />
         );
       
       case "mcp":
         return (
-          <MCPManager onBack={() => setView("welcome")} />
+          <MCPManager onBack={() => handleViewChange("welcome")} />
         );
       
       default:
@@ -365,10 +395,10 @@ function App() {
         <div className="h-screen bg-background flex flex-col">
           {/* Topbar */}
           <Topbar
-            onClaudeClick={() => setView("editor")}
-            onSettingsClick={() => setView("settings")}
-            onUsageClick={() => setView("usage-dashboard")}
-            onMCPClick={() => setView("mcp")}
+            onClaudeClick={() => handleViewChange("editor")}
+            onSettingsClick={() => handleViewChange("settings")}
+            onUsageClick={() => handleViewChange("usage-dashboard")}
+            onMCPClick={() => handleViewChange("mcp")}
             onInfoClick={() => setShowNFO(true)}
           />
           

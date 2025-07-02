@@ -7,7 +7,6 @@ import {
   X,
   Minimize2,
   Maximize2,
-  Camera,
   Loader2,
   AlertCircle,
   Globe,
@@ -17,7 +16,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { api } from "@/lib/api";
 // TODO: These imports will be used when implementing actual Tauri webview
 // import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 // import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
@@ -31,10 +29,6 @@ interface WebviewPreviewProps {
    * Callback when close is clicked
    */
   onClose: () => void;
-  /**
-   * Callback when screenshot is requested
-   */
-  onScreenshot?: (imagePath: string) => void;
   /**
    * Whether the webview is maximized
    */
@@ -60,13 +54,11 @@ interface WebviewPreviewProps {
  * <WebviewPreview
  *   initialUrl="http://localhost:3000"
  *   onClose={() => setShowPreview(false)}
- *   onScreenshot={(path) => attachImage(path)}
  * />
  */
 const WebviewPreviewComponent: React.FC<WebviewPreviewProps> = ({
   initialUrl,
   onClose,
-  onScreenshot,
   isMaximized = false,
   onToggleMaximize,
   onUrlChange,
@@ -80,8 +72,6 @@ const WebviewPreviewComponent: React.FC<WebviewPreviewProps> = ({
   // TODO: These will be implemented with actual webview navigation
   // const [canGoBack, setCanGoBack] = useState(false);
   // const [canGoForward, setCanGoForward] = useState(false);
-  const [isCapturing, setIsCapturing] = useState(false);
-  const [showShutterAnimation, setShowShutterAnimation] = useState(false);
   
   // TODO: These will be used for actual Tauri webview implementation
   // const webviewRef = useRef<WebviewWindow | null>(null);
@@ -179,39 +169,6 @@ const WebviewPreviewComponent: React.FC<WebviewPreviewProps> = ({
 
   const handleGoHome = () => {
     navigate(initialUrl);
-  };
-
-  const handleScreenshot = async () => {
-    if (isCapturing || !currentUrl) return;
-    
-    try {
-      setIsCapturing(true);
-      setShowShutterAnimation(true);
-      
-      // Wait for shutter animation to start
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Capture the current URL using headless Chrome
-      const filePath = await api.captureUrlScreenshot(
-        currentUrl,
-        null,  // No specific selector - capture the whole viewport
-        false  // Not full page, just viewport
-      );
-      
-      console.log("Screenshot captured and saved to:", filePath);
-      
-      // Continue shutter animation
-      await new Promise(resolve => setTimeout(resolve, 200));
-      setShowShutterAnimation(false);
-      
-      // Trigger callback with animation
-      onScreenshot?.(filePath);
-    } catch (err) {
-      console.error("Failed to capture screenshot:", err);
-      setShowShutterAnimation(false);
-    } finally {
-      setIsCapturing(false);
-    }
   };
 
   return (
@@ -330,49 +287,11 @@ const WebviewPreviewComponent: React.FC<WebviewPreviewProps> = ({
               </Button>
             )}
           </div>
-          
-          {/* Screenshot Button */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleScreenshot}
-            disabled={isCapturing || hasError}
-            className="gap-2"
-          >
-            {isCapturing ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Camera className="h-4 w-4" />
-            )}
-            Send to Claude
-          </Button>
         </div>
       </div>
       
       {/* Webview Content */}
       <div className="flex-1 relative bg-background" ref={contentRef}>
-        {/* Shutter Animation */}
-        <AnimatePresence>
-          {showShutterAnimation && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="absolute inset-0 z-20 pointer-events-none"
-            >
-              <motion.div
-                initial={{ borderWidth: 0 }}
-                animate={{ borderWidth: 8 }}
-                exit={{ borderWidth: 0 }}
-                transition={{ duration: 0.3 }}
-                className="absolute inset-0 border-white shadow-lg"
-                style={{ boxShadow: 'inset 0 0 20px rgba(255, 255, 255, 0.8)' }}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
-        
         {/* Loading Overlay */}
         <AnimatePresence>
           {isLoading && (

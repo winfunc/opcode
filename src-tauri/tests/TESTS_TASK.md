@@ -13,7 +13,7 @@
    - Created `create_test_binary_with_deps` function
 
 3. **Fixed Database Schema Issue** ✅
-   - Added missing tables (agents, agent_runs, sandbox_violations) to test database
+   - Added missing tables (agents, agent_runs) to test database
    - Fixed foreign key constraint issues
 
 4. **Fixed Mutex Poisoning** ✅
@@ -35,8 +35,8 @@
 7. **Removed All TODOs** ✅
    - No TODOs remain in test code
 
-8. **Handled Platform-Specific Sandbox Limitations** ✅
-   - Tests properly handle macOS sandbox limitations
+8. **Handled Platform-Specific Limitations** ✅
+   - Tests properly handle platform-specific differences
    - Platform-aware assertions prevent false failures
 
 ## Test Results:

@@ -92,6 +92,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
   const fullscreenMessagesEndRef = useRef<HTMLDivElement>(null);
   const unlistenRefs = useRef<UnlistenFn[]>([]);
   const elapsedTimeIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [runId, setRunId] = useState<number | null>(null);
 
   // Filter out messages that shouldn't be displayed
   const displayableMessages = React.useMemo(() => {
@@ -266,24 +267,24 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
   };
 
   const handleExecute = async () => {
-    if (!projectPath || !task.trim()) return;
-
-    let runId: number | null = null;
-    
     try {
       setIsRunning(true);
-      setError(null);
+      setExecutionStartTime(Date.now());
       setMessages([]);
       setRawJsonlOutput([]);
-      setExecutionStartTime(Date.now());
-      setElapsedTime(0);
-      setTotalTokens(0);
-
-      // Execute the agent with model override and get run ID
-      runId = await api.executeAgent(agent.id!, projectPath, task, model);
+      setRunId(null);
+      
+      // Clear any existing listeners
+      unlistenRefs.current.forEach(unlisten => unlisten());
+      unlistenRefs.current = [];
+      
+      // Execute the agent and get the run ID
+      const executionRunId = await api.executeAgent(agent.id!, projectPath, task, model);
+      console.log("Agent execution started with run ID:", executionRunId);
+      setRunId(executionRunId);
       
       // Set up event listeners with run ID isolation
-      const outputUnlisten = await listen<string>(`agent-output:${runId}`, (event) => {
+      const outputUnlisten = await listen<string>(`agent-output:${executionRunId}`, (event) => {
         try {
           // Store raw JSONL
           setRawJsonlOutput(prev => [...prev, event.payload]);
@@ -296,12 +297,12 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
         }
       });
 
-      const errorUnlisten = await listen<string>(`agent-error:${runId}`, (event) => {
+      const errorUnlisten = await listen<string>(`agent-error:${executionRunId}`, (event) => {
         console.error("Agent error:", event.payload);
         setError(event.payload);
       });
 
-      const completeUnlisten = await listen<boolean>(`agent-complete:${runId}`, (event) => {
+      const completeUnlisten = await listen<boolean>(`agent-complete:${executionRunId}`, (event) => {
         setIsRunning(false);
         setExecutionStartTime(null);
         if (!event.payload) {
@@ -309,7 +310,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
         }
       });
 
-      const cancelUnlisten = await listen<boolean>(`agent-cancelled:${runId}`, () => {
+      const cancelUnlisten = await listen<boolean>(`agent-cancelled:${executionRunId}`, () => {
         setIsRunning(false);
         setExecutionStartTime(null);
         setError("Agent execution was cancelled");
@@ -318,16 +319,41 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
       unlistenRefs.current = [outputUnlisten, errorUnlisten, completeUnlisten, cancelUnlisten];
     } catch (err) {
       console.error("Failed to execute agent:", err);
-      setError("Failed to execute agent");
       setIsRunning(false);
       setExecutionStartTime(null);
+      setRunId(null);
+      // Show error in messages
+      setMessages(prev => [...prev, {
+        type: "result",
+        subtype: "error",
+        is_error: true,
+        result: `Failed to execute agent: ${err instanceof Error ? err.message : 'Unknown error'}`,
+        duration_ms: 0,
+        usage: {
+          input_tokens: 0,
+          output_tokens: 0
+        }
+      }]);
     }
   };
 
   const handleStop = async () => {
     try {
-      // TODO: Implement actual stop functionality via API
-      // For now, just update the UI state
+      if (!runId) {
+        console.error("No run ID available to stop");
+        return;
+      }
+
+      // Call the API to kill the agent session
+      const success = await api.killAgentSession(runId);
+      
+      if (success) {
+        console.log(`Successfully stopped agent session ${runId}`);
+      } else {
+        console.warn(`Failed to stop agent session ${runId} - it may have already finished`);
+      }
+      
+      // Update UI state
       setIsRunning(false);
       setExecutionStartTime(null);
       
@@ -349,6 +375,22 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
       }]);
     } catch (err) {
       console.error("Failed to stop agent:", err);
+      // Still update UI state even if the backend call failed
+      setIsRunning(false);
+      setExecutionStartTime(null);
+      
+      // Show error message
+      setMessages(prev => [...prev, {
+        type: "result",
+        subtype: "error",
+        is_error: true,
+        result: `Failed to stop execution: ${err instanceof Error ? err.message : 'Unknown error'}`,
+        duration_ms: elapsedTime * 1000,
+        usage: {
+          input_tokens: totalTokens,
+          output_tokens: 0
+        }
+      }]);
     }
   };
 
@@ -453,7 +495,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
       {/* Fixed container that takes full height */}
       <div className="h-full flex flex-col">
         {/* Sticky Header */}
-        <div className="sticky top-0 z-10 bg-background border-b border-border">
+        <div className="sticky top-0 z-20 bg-background border-b border-border">
           <div className="w-full max-w-5xl mx-auto">
             <motion.div
               initial={{ opacity: 0, y: -20 }}

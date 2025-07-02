@@ -335,13 +335,13 @@ const FloatingPromptInputInner = (
   }, [isExpanded]);
 
   const handleSend = () => {
-    if (prompt.trim() && !isLoading && !disabled) {
+    if (prompt.trim() && !disabled) {
       let finalPrompt = prompt.trim();
       
       // Append thinking phrase if not auto mode
       const thinkingMode = THINKING_MODES.find(m => m.id === selectedThinkingMode);
       if (thinkingMode && thinkingMode.phrase) {
-        finalPrompt = `${finalPrompt}\n\n${thinkingMode.phrase}.`;
+        finalPrompt = `${finalPrompt}.\n\n${thinkingMode.phrase}.`;
       }
       
       onSend(finalPrompt, selectedModel);
@@ -516,7 +516,7 @@ const FloatingPromptInputInner = (
                 onChange={handleTextChange}
                 placeholder="Type your prompt here..."
                 className="min-h-[200px] resize-none"
-                disabled={isLoading || disabled}
+                disabled={disabled}
                 onDragEnter={handleDrag}
                 onDragLeave={handleDrag}
                 onDragOver={handleDrag}
@@ -603,7 +603,7 @@ const FloatingPromptInputInner = (
 
                 <Button
                   onClick={handleSend}
-                  disabled={!prompt.trim() || isLoading || disabled}
+                  disabled={!prompt.trim() || disabled}
                   size="default"
                   className="min-w-[60px]"
                 >
@@ -649,7 +649,7 @@ const FloatingPromptInputInner = (
                   <Button
                     variant="outline"
                     size="default"
-                    disabled={isLoading || disabled}
+                    disabled={disabled}
                     className="gap-2 min-w-[180px] justify-start"
                   >
                     {selectedModelData.icon}
@@ -698,7 +698,7 @@ const FloatingPromptInputInner = (
                         <Button
                           variant="outline"
                           size="default"
-                          disabled={isLoading || disabled}
+                          disabled={disabled}
                           className="gap-2"
                         >
                           <Brain className="h-4 w-4" />
@@ -757,7 +757,7 @@ const FloatingPromptInputInner = (
                   onChange={handleTextChange}
                   onKeyDown={handleKeyDown}
                   placeholder={dragActive ? "Drop images here..." : "Ask Claude anything..."}
-                  disabled={isLoading || disabled}
+                  disabled={disabled}
                   className={cn(
                     "min-h-[44px] max-h-[120px] resize-none pr-10",
                     dragActive && "border-primary"
@@ -769,7 +769,7 @@ const FloatingPromptInputInner = (
                   variant="ghost"
                   size="icon"
                   onClick={() => setIsExpanded(true)}
-                  disabled={isLoading || disabled}
+                  disabled={disabled}
                   className="absolute right-1 bottom-1 h-8 w-8"
                 >
                   <Maximize2 className="h-4 w-4" />
