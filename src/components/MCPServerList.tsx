@@ -19,6 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { api, type MCPServer } from "@/lib/api";
+import { t } from "@/lib/i18n";
 
 interface MCPServerListProps {
   /**
@@ -157,11 +158,11 @@ export const MCPServerList: React.FC<MCPServerListProps> = ({
   const getScopeDisplayName = (scope: string) => {
     switch (scope) {
       case "local":
-        return "Local (Project-specific)";
+        return t('localProjectSpecific');
       case "project":
-        return "Project (Shared via .mcp.json)";
+        return t('projectSharedViaJson');
       case "user":
-        return "User (All projects)";
+        return t('userAllProjectsScope');
       default:
         return scope;
     }
@@ -193,7 +194,7 @@ export const MCPServerList: React.FC<MCPServerListProps> = ({
                 {server.status?.running && (
                   <Badge variant="outline" className="gap-1 flex-shrink-0 border-green-500/50 text-green-600 bg-green-500/10">
                     <CheckCircle className="h-3 w-3" />
-                    Running
+                    {t('running')}
                   </Badge>
                 )}
               </div>
@@ -210,7 +211,7 @@ export const MCPServerList: React.FC<MCPServerListProps> = ({
                     className="h-6 px-2 text-xs hover:bg-primary/10"
                   >
                     <ChevronDown className="h-3 w-3 mr-1" />
-                    Show full
+                    {t('showFull')}
                   </Button>
                 </div>
               )}
@@ -225,7 +226,7 @@ export const MCPServerList: React.FC<MCPServerListProps> = ({
               
               {Object.keys(server.env).length > 0 && !isExpanded && (
                 <div className="flex items-center gap-1 text-xs text-muted-foreground pl-9">
-                  <span>Environment variables: {Object.keys(server.env).length}</span>
+                  <span>{t('environmentVariables')}: {Object.keys(server.env).length}</span>
                 </div>
               )}
             </div>
@@ -272,7 +273,7 @@ export const MCPServerList: React.FC<MCPServerListProps> = ({
               {server.command && (
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
-                    <p className="text-xs font-medium text-muted-foreground">Command</p>
+                    <p className="text-xs font-medium text-muted-foreground">{t('command')}</p>
                     <div className="flex items-center gap-1">
                       <Button
                         variant="ghost"
@@ -281,7 +282,7 @@ export const MCPServerList: React.FC<MCPServerListProps> = ({
                         className="h-6 px-2 text-xs hover:bg-primary/10"
                       >
                         <Copy className="h-3 w-3 mr-1" />
-                        {isCopied ? "Copied!" : "Copy"}
+                        {isCopied ? t('copied') : t('copy')}
                       </Button>
                       <Button
                         variant="ghost"
@@ -290,7 +291,7 @@ export const MCPServerList: React.FC<MCPServerListProps> = ({
                         className="h-6 px-2 text-xs hover:bg-primary/10"
                       >
                         <ChevronUp className="h-3 w-3 mr-1" />
-                        Hide
+                        {t('hide')}
                       </Button>
                     </div>
                   </div>
@@ -302,7 +303,7 @@ export const MCPServerList: React.FC<MCPServerListProps> = ({
               
               {server.args && server.args.length > 0 && (
                 <div className="space-y-1">
-                  <p className="text-xs font-medium text-muted-foreground">Arguments</p>
+                  <p className="text-xs font-medium text-muted-foreground">{t('arguments')}</p>
                   <div className="text-xs font-mono bg-muted/50 p-2 rounded space-y-1">
                     {server.args.map((arg, idx) => (
                       <div key={idx} className="break-all">
@@ -316,7 +317,7 @@ export const MCPServerList: React.FC<MCPServerListProps> = ({
               
               {server.transport === "sse" && server.url && (
                 <div className="space-y-1">
-                  <p className="text-xs font-medium text-muted-foreground">URL</p>
+                  <p className="text-xs font-medium text-muted-foreground">{t('url')}</p>
                   <p className="text-xs font-mono bg-muted/50 p-2 rounded break-all">
                     {server.url}
                   </p>
@@ -325,7 +326,7 @@ export const MCPServerList: React.FC<MCPServerListProps> = ({
               
               {Object.keys(server.env).length > 0 && (
                 <div className="space-y-1">
-                  <p className="text-xs font-medium text-muted-foreground">Environment Variables</p>
+                  <p className="text-xs font-medium text-muted-foreground">{t('environmentVariables')}</p>
                   <div className="text-xs font-mono bg-muted/50 p-2 rounded space-y-1">
                     {Object.entries(server.env).map(([key, value]) => (
                       <div key={key} className="break-all">

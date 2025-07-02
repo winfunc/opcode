@@ -294,6 +294,129 @@ export interface Translations {
     pressEnterToSend: string;
     closePreview: string;
     closeThePreviewPane: string;
+    
+    // MCP 组件补充翻译
+    addMCPServer: string;
+    configureNewMCPServer: string;
+    serverNameRequired: string;
+    command: string;
+    commandRequired: string;
+    arguments: string;
+    argumentsOptional: string;
+    spaceSeperatedArguments: string;
+    scope: string;
+    localProjectOnly: string;
+    projectSharedViaMcp: string;
+    userAllProjects: string;
+    addingServer: string;
+    addStdioServer: string;
+    addSSEServer: string;
+    url: string;
+    urlRequired: string;
+    sseEndpointUrl: string;
+    exampleCommands: string;
+    failedToAddServer: string;
+    uniqueNameToIdentify: string;
+    commandToExecuteServer: string;
+    showFull: string;
+    hide: string;
+    copy: string;
+    copied: string;
+    localProjectSpecific: string;
+    projectSharedViaJson: string;
+    userAllProjectsScope: string;
+    
+    // CheckpointSettings 组件翻译
+    checkpointSettings: string;
+    experimentalFeature: string;
+    checkpointingMayAffectStructure: string;
+    automaticCheckpoints: string;
+    automaticallyCreateCheckpoints: string;
+    checkpointStrategy: string;
+    manualOnly: string;
+    afterEachPrompt: string;
+    afterToolUse: string;
+    smartRecommended: string;
+    checkpointsWillOnlyBeCreatedManually: string;
+    checkpointWillBeCreatedAfterEachPrompt: string;
+    checkpointWillBeCreatedAfterToolUse: string;
+    checkpointsWillBeCreatedAfterDestructive: string;
+    storageManagement: string;
+    totalCheckpoints: string;
+    failedToLoadCheckpointSettings: string;
+    settingsSavedSuccessfully: string;
+    failedToSaveCheckpointSettings: string;
+    removedOldCheckpoints: string;
+    failedToCleanupCheckpoints: string;
+    
+    // AgentRunView 组件翻译
+    executionHistory: string;
+    copyOutput: string;
+    task: string;
+    runNotFound: string;
+    
+    // WebviewPreview 组件翻译
+    webPreview: string;
+    enterUrl: string;
+    invalidUrl: string;
+    exitFullScreenEsc: string;
+    enterFullScreen: string;
+    
+    // 通用状态和操作
+    somethingWentWrong: string;
+    
+    // MCPImportExport 组件补充翻译
+    importExport: string;
+    importMCPServersFromOtherSources: string;
+    importScope: string;
+    chooseWhereToSaveImportedServers: string;
+    importFromClaudeDesktop: string;
+    automaticallyImportsAllMCPServers: string;
+    importFromJSON: string;
+    importServerConfigurationFromJSON: string;
+    importing: string;
+    chooseJSONFile: string;
+    exportConfiguration: string;
+    exportYourMCPServerConfiguration: string;
+    exportComingSoon: string;
+    useClaudeCodeAsMCPServer: string;
+    startClaudeCodeAsMCPServer: string;
+    startMCPServer: string;
+    jsonFormatExamples: string;
+    singleServer: string;
+    multipleServers: string;
+    
+    // CheckpointSettings 组件补充翻译
+    closeButton: string;
+    cleanupOldCheckpoints: string;
+    keepMostRecent: string;
+    cleanupNow: string;
+    
+    // AgentRunView 组件补充翻译
+    failedToLoadExecutionDetails: string;
+    agentExecution: string;
+    model: string;
+    date: string;
+    cost: string;
+    tokens: string;
+    systemInitialization: string;
+    sessionId: string;
+    workingDirectory: string;
+    tools: string;
+    assistant: string;
+    user: string;
+    toolResult: string;
+    
+    // WebviewPreview 组件补充翻译
+    goBack: string;
+    goForward: string;
+    goHome: string;
+    screenshot: string;
+    minimize: string;
+    maximize: string;
+    captureScreenshot: string;
+    screenshotCaptured: string;
+    failedToCaptureScreenshot: string;
   }
 
 const translations: Record<Language, Translations> = {
@@ -590,6 +713,129 @@ const translations: Record<Language, Translations> = {
     pressEnterToSend: 'Press Enter to send, Shift+Enter for new line',
     closePreview: 'Close Preview',
     closeThePreviewPane: 'Close the preview pane',
+    
+    // MCP 组件补充翻译
+    addMCPServer: 'Add MCP Server',
+    configureNewMCPServer: 'Configure a new Model Context Protocol server',
+    serverNameRequired: 'Server name is required',
+    command: 'Command',
+    commandRequired: 'Command is required',
+    arguments: 'Arguments',
+    argumentsOptional: 'Arguments (optional)',
+    spaceSeperatedArguments: 'Space-separated command arguments',
+    scope: 'Scope',
+    localProjectOnly: 'Local (this project only)',
+    projectSharedViaMcp: 'Project (shared via .mcp.json)',
+    userAllProjects: 'User (all projects)',
+    addingServer: 'Adding Server...',
+    addStdioServer: 'Add Stdio Server',
+    addSSEServer: 'Add SSE Server',
+    url: 'URL',
+    urlRequired: 'URL is required',
+    sseEndpointUrl: 'The SSE endpoint URL',
+    exampleCommands: 'Example Commands',
+    failedToAddServer: 'Failed to add server',
+    uniqueNameToIdentify: 'A unique name to identify this server',
+    commandToExecuteServer: 'The command to execute the server',
+    showFull: 'Show full',
+    hide: 'Hide',
+    copy: 'Copy',
+    copied: 'Copied!',
+    localProjectSpecific: 'Local (Project-specific)',
+    projectSharedViaJson: 'Project (Shared via .mcp.json)',
+    userAllProjectsScope: 'User (All projects)',
+    
+    // CheckpointSettings 组件翻译
+    checkpointSettings: 'Checkpoint Settings',
+    experimentalFeature: 'Experimental Feature',
+    checkpointingMayAffectStructure: 'Checkpointing may affect directory structure or cause data loss. Use with caution.',
+    automaticCheckpoints: 'Automatic Checkpoints',
+    automaticallyCreateCheckpoints: 'Automatically create checkpoints based on the selected strategy',
+    checkpointStrategy: 'Checkpoint Strategy',
+    manualOnly: 'Manual Only',
+    afterEachPrompt: 'After Each Prompt',
+    afterToolUse: 'After Tool Use',
+    smartRecommended: 'Smart (Recommended)',
+    checkpointsWillOnlyBeCreatedManually: 'Checkpoints will only be created manually',
+    checkpointWillBeCreatedAfterEachPrompt: 'A checkpoint will be created after each user prompt',
+    checkpointWillBeCreatedAfterToolUse: 'A checkpoint will be created after each tool use',
+    checkpointsWillBeCreatedAfterDestructive: 'Checkpoints will be created after destructive operations',
+    storageManagement: 'Storage Management',
+    totalCheckpoints: 'Total checkpoints',
+    failedToLoadCheckpointSettings: 'Failed to load checkpoint settings',
+    settingsSavedSuccessfully: 'Settings saved successfully',
+    failedToSaveCheckpointSettings: 'Failed to save checkpoint settings',
+    removedOldCheckpoints: 'Removed {count} old checkpoints',
+    failedToCleanupCheckpoints: 'Failed to cleanup checkpoints',
+    
+    // AgentRunView 组件翻译
+    executionHistory: 'Execution History',
+    copyOutput: 'Copy Output',
+    task: 'Task',
+    runNotFound: 'Run not found',
+    goBack: 'Go Back',
+    
+    // WebviewPreview 组件翻译
+    webPreview: 'Web preview',
+    enterUrl: 'Enter URL...',
+    invalidUrl: 'Invalid URL',
+    exitFullScreenEsc: 'Exit full screen (ESC)',
+    enterFullScreen: 'Enter full screen',
+    
+    // 通用状态和操作
+    somethingWentWrong: 'Something went wrong',
+    
+    // MCPImportExport 组件补充翻译
+    importExport: 'Import & Export',
+    importMCPServersFromOtherSources: 'Import MCP servers from other sources or export your configuration',
+    importScope: 'Import Scope',
+    chooseWhereToSaveImportedServers: 'Choose where to save imported servers from JSON files',
+    importFromClaudeDesktop: 'Import from Claude Desktop',
+    automaticallyImportsAllMCPServers: 'Automatically imports all MCP servers from Claude Desktop. Installs to user scope (available across all projects).',
+    importFromJSON: 'Import from JSON',
+    importServerConfigurationFromJSON: 'Import server configuration from a JSON file',
+    importing: 'Importing...',
+    chooseJSONFile: 'Choose JSON File',
+    exportConfiguration: 'Export Configuration',
+    exportYourMCPServerConfiguration: 'Export your MCP server configuration',
+    exportComingSoon: 'Export (Coming Soon)',
+    useClaudeCodeAsMCPServer: 'Use Claude Code as MCP Server',
+    startClaudeCodeAsMCPServer: 'Start Claude Code as an MCP server that other applications can connect to',
+    startMCPServer: 'Start MCP Server',
+    jsonFormatExamples: 'JSON Format Examples',
+    singleServer: 'Single server:',
+    multipleServers: 'Multiple servers (.mcp.json format):',
+    
+    // CheckpointSettings 组件补充翻译
+    closeButton: 'Close',
+    cleanupOldCheckpoints: 'Cleanup Old Checkpoints',
+    keepMostRecent: 'Keep most recent',
+    cleanupNow: 'Cleanup Now',
+    
+    // AgentRunView 组件补充翻译
+    failedToLoadExecutionDetails: 'Failed to load execution details',
+    agentExecution: 'Agent Execution',
+    model: 'Model',
+    date: 'Date',
+    cost: 'Cost',
+    tokens: 'Tokens',
+    systemInitialization: 'System Initialization',
+    sessionId: 'Session ID',
+    workingDirectory: 'Working Directory',
+    tools: 'Tools',
+    assistant: 'Assistant',
+    user: 'User',
+    toolResult: 'Tool Result',
+    
+    // WebviewPreview 组件补充翻译
+    goForward: 'Go Forward',
+    goHome: 'Go Home',
+    screenshot: 'Screenshot',
+    minimize: 'Minimize',
+    maximize: 'Maximize',
+    captureScreenshot: 'Capture Screenshot',
+    screenshotCaptured: 'Screenshot captured',
+    failedToCaptureScreenshot: 'Failed to capture screenshot',
   },
   
   zh: {
@@ -885,6 +1131,129 @@ const translations: Record<Language, Translations> = {
     pressEnterToSend: '按 Enter 发送，Shift+Enter 换行',
     closePreview: '关闭预览',
     closeThePreviewPane: '关闭预览面板',
+    
+    // MCP 组件补充翻译
+    addMCPServer: '添加 MCP 服务器',
+    configureNewMCPServer: '配置新的模型上下文协议服务器',
+    serverNameRequired: '服务器名称是必需的',
+    command: '命令',
+    commandRequired: '命令是必需的',
+    arguments: '参数',
+    argumentsOptional: '参数（可选）',
+    spaceSeperatedArguments: '空格分隔的命令参数',
+    scope: '范围',
+    localProjectOnly: '本地（仅此项目）',
+    projectSharedViaMcp: '项目（通过 .mcp.json 共享）',
+    userAllProjects: '用户（所有项目）',
+    addingServer: '正在添加服务器...',
+    addStdioServer: '添加 Stdio 服务器',
+    addSSEServer: '添加 SSE 服务器',
+    url: 'URL',
+    urlRequired: 'URL 是必需的',
+    sseEndpointUrl: 'SSE 端点 URL',
+    exampleCommands: '示例命令',
+    failedToAddServer: '添加服务器失败',
+    uniqueNameToIdentify: '用于标识此服务器的唯一名称',
+    commandToExecuteServer: '执行服务器的命令',
+    showFull: '显示完整',
+    hide: '隐藏',
+    copy: '复制',
+    copied: '已复制！',
+    localProjectSpecific: '本地（项目特定）',
+    projectSharedViaJson: '项目（通过 .mcp.json 共享）',
+    userAllProjectsScope: '用户（所有项目）',
+    
+    // CheckpointSettings 组件翻译
+    checkpointSettings: '检查点设置',
+    experimentalFeature: '实验性功能',
+    checkpointingMayAffectStructure: '检查点功能可能影响目录结构或导致数据丢失。请谨慎使用。',
+    automaticCheckpoints: '自动检查点',
+    automaticallyCreateCheckpoints: '根据选定的策略自动创建检查点',
+    checkpointStrategy: '检查点策略',
+    manualOnly: '仅手动',
+    afterEachPrompt: '每次提示后',
+    afterToolUse: '工具使用后',
+    smartRecommended: '智能（推荐）',
+    checkpointsWillOnlyBeCreatedManually: '检查点将仅手动创建',
+    checkpointWillBeCreatedAfterEachPrompt: '每次用户提示后将创建检查点',
+    checkpointWillBeCreatedAfterToolUse: '每次工具使用后将创建检查点',
+    checkpointsWillBeCreatedAfterDestructive: '破坏性操作后将创建检查点',
+    storageManagement: '存储管理',
+    totalCheckpoints: '总检查点数',
+    failedToLoadCheckpointSettings: '加载检查点设置失败',
+    settingsSavedSuccessfully: '设置保存成功',
+    failedToSaveCheckpointSettings: '保存检查点设置失败',
+    removedOldCheckpoints: '已移除 {count} 个旧检查点',
+    failedToCleanupCheckpoints: '清理检查点失败',
+    
+    // AgentRunView 组件翻译
+    executionHistory: '执行历史',
+    copyOutput: '复制输出',
+    task: '任务',
+    runNotFound: '未找到运行记录',
+    goBack: '返回',
+    
+    // WebviewPreview 组件翻译
+    webPreview: '网页预览',
+    enterUrl: '输入 URL...',
+    invalidUrl: '无效的 URL',
+    exitFullScreenEsc: '退出全屏（ESC）',
+    enterFullScreen: '进入全屏',
+    
+    // 通用状态和操作
+    somethingWentWrong: '出现了错误',
+    
+    // MCPImportExport 组件补充翻译
+    importExport: '导入导出',
+    importMCPServersFromOtherSources: '从其他来源导入 MCP 服务器或导出您的配置',
+    importScope: '导入范围',
+    chooseWhereToSaveImportedServers: '选择从 JSON 文件导入的服务器保存位置',
+    importFromClaudeDesktop: '从 Claude Desktop 导入',
+    automaticallyImportsAllMCPServers: '自动从 Claude Desktop 导入所有 MCP 服务器。安装到用户范围（在所有项目中可用）。',
+    importFromJSON: '从 JSON 导入',
+    importServerConfigurationFromJSON: '从 JSON 文件导入服务器配置',
+    importing: '正在导入...',
+    chooseJSONFile: '选择 JSON 文件',
+    exportConfiguration: '导出配置',
+    exportYourMCPServerConfiguration: '导出您的 MCP 服务器配置',
+    exportComingSoon: '导出（即将推出）',
+    useClaudeCodeAsMCPServer: '将 Claude Code 用作 MCP 服务器',
+    startClaudeCodeAsMCPServer: '将 Claude Code 启动为其他应用程序可以连接的 MCP 服务器',
+    startMCPServer: '启动 MCP 服务器',
+    jsonFormatExamples: 'JSON 格式示例',
+    singleServer: '单个服务器：',
+    multipleServers: '多个服务器（.mcp.json 格式）：',
+    
+    // CheckpointSettings 组件补充翻译
+    closeButton: '关闭',
+    cleanupOldCheckpoints: '清理旧检查点',
+    keepMostRecent: '保留最近的',
+    cleanupNow: '立即清理',
+    
+    // AgentRunView 组件补充翻译
+    failedToLoadExecutionDetails: '加载执行详情失败',
+    agentExecution: '代理执行',
+    model: '模型',
+    date: '日期',
+    cost: '成本',
+    tokens: '令牌',
+    systemInitialization: '系统初始化',
+    sessionId: '会话 ID',
+    workingDirectory: '工作目录',
+    tools: '工具',
+    assistant: '助手',
+    user: '用户',
+    toolResult: '工具结果',
+    
+    // WebviewPreview 组件补充翻译
+    goForward: '前进',
+    goHome: '首页',
+    screenshot: '截图',
+    minimize: '最小化',
+    maximize: '最大化',
+    captureScreenshot: '截取屏幕',
+    screenshotCaptured: '截图已保存',
+    failedToCaptureScreenshot: '截图失败',
   }
 };
 
