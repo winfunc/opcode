@@ -16,11 +16,11 @@
 
 ## 📦 Available Agents
 
-| Agent | Model | Permissions | Description | Default Task |
-|-------|-------|-------------|-------------|--------------|
-| **🎯 Git Commit Bot**<br/>🤖 `bot` | <img src="https://img.shields.io/badge/Sonnet-blue?style=flat-square" alt="Sonnet"> | ✅ File Read<br/>✅ File Write<br/>✅ Network<br/>❌ Sandbox | **Automate your Git workflow with intelligent commit messages**<br/><br/>Analyzes Git repository changes, generates detailed commit messages following Conventional Commits specification, and pushes changes to remote repository. | "Push all changes." |
-| **🛡️ Security Scanner**<br/>🛡️ `shield` | <img src="https://img.shields.io/badge/Opus-purple?style=flat-square" alt="Opus"> | ✅ File Read<br/>✅ File Write<br/>❌ Network<br/>❌ Sandbox | **Advanced AI-powered Static Application Security Testing (SAST)**<br/><br/>Performs comprehensive security audits by spawning specialized sub-agents for: codebase intelligence gathering, threat modeling (STRIDE), vulnerability scanning (OWASP Top 10, CWE), exploit validation, remediation design, and professional report generation. | "Review the codebase for security issues." |
-| **🧪 Unit Tests Bot**<br/>💻 `code` | <img src="https://img.shields.io/badge/Opus-purple?style=flat-square" alt="Opus"> | ✅ File Read<br/>✅ File Write<br/>❌ Network<br/>❌ Sandbox | **Automated comprehensive unit test generation for any codebase**<br/><br/>Analyzes codebase and generates comprehensive unit tests by: analyzing code structure, creating test plans, writing tests matching your style, verifying execution, optimizing coverage (>80% overall, 100% critical paths), and generating documentation. | "Generate unit tests for this codebase." |
+| Agent | Model | Description | Default Task |
+|-------|-------|-------------|--------------|
+| **🎯 Git Commit Bot**<br/>🤖 `bot` | <img src="https://img.shields.io/badge/Sonnet-blue?style=flat-square" alt="Sonnet"> | **Automate your Git workflow with intelligent commit messages**<br/><br/>Analyzes Git repository changes, generates detailed commit messages following Conventional Commits specification, and pushes changes to remote repository. | "Push all changes." |
+| **🛡️ Security Scanner**<br/>🛡️ `shield` | <img src="https://img.shields.io/badge/Opus-purple?style=flat-square" alt="Opus"> | **Advanced AI-powered Static Application Security Testing (SAST)**<br/><br/>Performs comprehensive security audits by spawning specialized sub-agents for: codebase intelligence gathering, threat modeling (STRIDE), vulnerability scanning (OWASP Top 10, CWE), exploit validation, remediation design, and professional report generation. | "Review the codebase for security issues." |
+| **🧪 Unit Tests Bot**<br/>💻 `code` | <img src="https://img.shields.io/badge/Opus-purple?style=flat-square" alt="Opus"> | **Automated comprehensive unit test generation for any codebase**<br/><br/>Analyzes codebase and generates comprehensive unit tests by: analyzing code structure, creating test plans, writing tests matching your style, verifying execution, optimizing coverage (>80% overall, 100% critical paths), and generating documentation. | "Generate unit tests for this codebase." |
 
 ### Available Icons
 
@@ -76,11 +76,7 @@ All agents are stored in `.claudia.json` format with the following structure:
     "icon": "bot",
     "model": "opus|sonnet|haiku",
     "system_prompt": "Your agent's instructions...",
-    "default_task": "Default task description",
-    "sandbox_enabled": false,
-    "enable_file_read": true,
-    "enable_file_write": true,
-    "enable_network": false
+    "default_task": "Default task description"
   }
 }
 ```
@@ -109,9 +105,8 @@ The agent import/export system is built on a robust architecture:
 
 1. **Version Control**: Each agent export includes version metadata
 2. **Duplicate Prevention**: Automatic naming conflict resolution
-3. **Permission System**: Granular control over file, network, and sandbox access
-4. **Model Selection**: Choose between Opus, Sonnet, and Haiku models
-5. **GitHub Integration**: Direct import from the official repository
+3. **Model Selection**: Choose between Opus, Sonnet, and Haiku models
+4. **GitHub Integration**: Direct import from the official repository
 
 ## 🤝 Contributing
 
@@ -133,7 +128,6 @@ Export your agent to a `.claudia.json` file with a descriptive name.
 
 - **Single Purpose**: Each agent should excel at one specific task
 - **Clear Documentation**: Write comprehensive system prompts
-- **Safe Defaults**: Be conservative with permissions
 - **Model Choice**: Use Haiku for simple tasks, Sonnet for general purpose, Opus for complex reasoning
 - **Naming**: Use descriptive names that clearly indicate the agent's function
 

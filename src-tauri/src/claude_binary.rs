@@ -353,7 +353,7 @@ fn select_best_installation(installations: Vec<ClaudeInstallation>) -> Option<Cl
             (None, Some(_)) => Ordering::Less,
             // Neither have version info: prefer the one that is not just
             // the bare "claude" lookup from PATH, because that may fail
-            // at runtime if PATH is sandbox-stripped.
+            // at runtime if PATH is modified.
             (None, None) => {
                 if a.path == "claude" && b.path != "claude" {
                     Ordering::Less

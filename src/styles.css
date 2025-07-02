@@ -463,9 +463,9 @@ button:focus-visible,
 /* Rotating symbol animation */
 @keyframes rotate-symbol {
   0%   { content: "◐"; transform: scale(1); }
-  25%  { content: "◓"; transform: scale(10); }
+  25%  { content: "◓"; transform: scale(1); }
   50%  { content: "◑"; transform: scale(1); }
-  75%  { content: "◒"; transform: scale(10); }
+  75%  { content: "◒"; transform: scale(1); }
   100% { content: "◐"; transform: scale(1); }
 }
 

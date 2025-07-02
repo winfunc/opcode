@@ -1,4 +1,3 @@
-use crate::sandbox::profile::ProfileBuilder;
 use anyhow::Result;
 use chrono;
 use log::{debug, error, info, warn};
@@ -6,7 +5,6 @@ use reqwest;
 use rusqlite::{params, Connection, Result as SqliteResult};
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
-use std::path::PathBuf;
 use std::process::Stdio;
 use std::sync::Mutex;
 use tauri::{AppHandle, Emitter, Manager, State};
@@ -28,7 +26,6 @@ pub struct Agent {
     pub system_prompt: String,
     pub default_task: Option<String>,
     pub model: String,
-    pub sandbox_enabled: bool,
     pub enable_file_read: bool,
     pub enable_file_write: bool,
     pub enable_network: bool,
@@ -88,10 +85,6 @@ pub struct AgentData {
     pub system_prompt: String,
     pub default_task: Option<String>,
     pub model: String,
-    pub sandbox_enabled: bool,
-    pub enable_file_read: bool,
-    pub enable_file_write: bool,
-    pub enable_network: bool,
 }
 
 /// Database connection state
@@ -235,7 +228,6 @@ pub fn init_database(app: &AppHandle) -> SqliteResult<Connection> {
             system_prompt TEXT NOT NULL,
             default_task TEXT,
             model TEXT NOT NULL DEFAULT 'sonnet',
-            sandbox_enabled BOOLEAN NOT NULL DEFAULT 1,
             enable_file_read BOOLEAN NOT NULL DEFAULT 1,
             enable_file_write BOOLEAN NOT NULL DEFAULT 1,
             enable_network BOOLEAN NOT NULL DEFAULT 0,
@@ -249,14 +241,6 @@ pub fn init_database(app: &AppHandle) -> SqliteResult<Connection> {
     let _ = conn.execute("ALTER TABLE agents ADD COLUMN default_task TEXT", []);
     let _ = conn.execute(
         "ALTER TABLE agents ADD COLUMN model TEXT DEFAULT 'sonnet'",
-        [],
-    );
-    let _ = conn.execute(
-        "ALTER TABLE agents ADD COLUMN sandbox_profile_id INTEGER REFERENCES sandbox_profiles(id)",
-        [],
-    );
-    let _ = conn.execute(
-        "ALTER TABLE agents ADD COLUMN sandbox_enabled BOOLEAN DEFAULT 1",
         [],
     );
     let _ = conn.execute(
@@ -329,75 +313,6 @@ pub fn init_database(app: &AppHandle) -> SqliteResult<Connection> {
         [],
     )?;
 
-    // Create sandbox profiles table
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS sandbox_profiles (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL UNIQUE,
-            description TEXT,
-            is_active BOOLEAN NOT NULL DEFAULT 0,
-            is_default BOOLEAN NOT NULL DEFAULT 0,
-            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-        )",
-        [],
-    )?;
-
-    // Create sandbox rules table
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS sandbox_rules (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            profile_id INTEGER NOT NULL,
-            operation_type TEXT NOT NULL,
-            pattern_type TEXT NOT NULL,
-            pattern_value TEXT NOT NULL,
-            enabled BOOLEAN NOT NULL DEFAULT 1,
-            platform_support TEXT,
-            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (profile_id) REFERENCES sandbox_profiles(id) ON DELETE CASCADE
-        )",
-        [],
-    )?;
-
-    // Create trigger to update sandbox profile timestamp
-    conn.execute(
-        "CREATE TRIGGER IF NOT EXISTS update_sandbox_profile_timestamp 
-         AFTER UPDATE ON sandbox_profiles 
-         FOR EACH ROW
-         BEGIN
-             UPDATE sandbox_profiles SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
-         END",
-        [],
-    )?;
-
-    // Create sandbox violations table
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS sandbox_violations (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            profile_id INTEGER,
-            agent_id INTEGER,
-            agent_run_id INTEGER,
-            operation_type TEXT NOT NULL,
-            pattern_value TEXT,
-            process_name TEXT,
-            pid INTEGER,
-            denied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (profile_id) REFERENCES sandbox_profiles(id) ON DELETE CASCADE,
-            FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE,
-            FOREIGN KEY (agent_run_id) REFERENCES agent_runs(id) ON DELETE CASCADE
-        )",
-        [],
-    )?;
-
-    // Create index for efficient querying
-    conn.execute(
-        "CREATE INDEX IF NOT EXISTS idx_sandbox_violations_denied_at 
-         ON sandbox_violations(denied_at DESC)",
-        [],
-    )?;
-
-    // Create default sandbox profiles if they don't exist
-    crate::sandbox::defaults::create_default_profiles(&conn)?;
 
     // Create settings table for app-wide settings
     conn.execute(
@@ -430,7 +345,7 @@ pub async fn list_agents(db: State<'_, AgentDb>) -> Result<Vec<Agent>, String> {
     let conn = db.0.lock().map_err(|e| e.to_string())?;
 
     let mut stmt = conn
-        .prepare("SELECT id, name, icon, system_prompt, default_task, model, sandbox_enabled, enable_file_read, enable_file_write, enable_network, created_at, updated_at FROM agents ORDER BY created_at DESC")
+        .prepare("SELECT id, name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, created_at, updated_at FROM agents ORDER BY created_at DESC")
         .map_err(|e| e.to_string())?;
 
     let agents = stmt
@@ -444,12 +359,11 @@ pub async fn list_agents(db: State<'_, AgentDb>) -> Result<Vec<Agent>, String> {
                 model: row
                     .get::<_, String>(5)
                     .unwrap_or_else(|_| "sonnet".to_string()),
-                sandbox_enabled: row.get::<_, bool>(6).unwrap_or(true),
-                enable_file_read: row.get::<_, bool>(7).unwrap_or(true),
-                enable_file_write: row.get::<_, bool>(8).unwrap_or(true),
-                enable_network: row.get::<_, bool>(9).unwrap_or(false),
-                created_at: row.get(10)?,
-                updated_at: row.get(11)?,
+                enable_file_read: row.get::<_, bool>(6).unwrap_or(true),
+                enable_file_write: row.get::<_, bool>(7).unwrap_or(true),
+                enable_network: row.get::<_, bool>(8).unwrap_or(false),
+                created_at: row.get(9)?,
+                updated_at: row.get(10)?,
             })
         })
         .map_err(|e| e.to_string())?
@@ -468,21 +382,19 @@ pub async fn create_agent(
     system_prompt: String,
     default_task: Option<String>,
     model: Option<String>,
-    sandbox_enabled: Option<bool>,
     enable_file_read: Option<bool>,
     enable_file_write: Option<bool>,
     enable_network: Option<bool>,
 ) -> Result<Agent, String> {
     let conn = db.0.lock().map_err(|e| e.to_string())?;
     let model = model.unwrap_or_else(|| "sonnet".to_string());
-    let sandbox_enabled = sandbox_enabled.unwrap_or(true);
     let enable_file_read = enable_file_read.unwrap_or(true);
     let enable_file_write = enable_file_write.unwrap_or(true);
     let enable_network = enable_network.unwrap_or(false);
 
     conn.execute(
-        "INSERT INTO agents (name, icon, system_prompt, default_task, model, sandbox_enabled, enable_file_read, enable_file_write, enable_network) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
-        params![name, icon, system_prompt, default_task, model, sandbox_enabled, enable_file_read, enable_file_write, enable_network],
+        "INSERT INTO agents (name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+        params![name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network],
     )
     .map_err(|e| e.to_string())?;
 
@@ -491,7 +403,7 @@ pub async fn create_agent(
     // Fetch the created agent
     let agent = conn
         .query_row(
-            "SELECT id, name, icon, system_prompt, default_task, model, sandbox_enabled, enable_file_read, enable_file_write, enable_network, created_at, updated_at FROM agents WHERE id = ?1",
+            "SELECT id, name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, created_at, updated_at FROM agents WHERE id = ?1",
             params![id],
             |row| {
                 Ok(Agent {
@@ -501,12 +413,11 @@ pub async fn create_agent(
                     system_prompt: row.get(3)?,
                     default_task: row.get(4)?,
                     model: row.get(5)?,
-                    sandbox_enabled: row.get(6)?,
-                    enable_file_read: row.get(7)?,
-                    enable_file_write: row.get(8)?,
-                    enable_network: row.get(9)?,
-                    created_at: row.get(10)?,
-                    updated_at: row.get(11)?,
+                    enable_file_read: row.get(6)?,
+                    enable_file_write: row.get(7)?,
+                    enable_network: row.get(8)?,
+                    created_at: row.get(9)?,
+                    updated_at: row.get(10)?,
                 })
             },
         )
@@ -525,7 +436,6 @@ pub async fn update_agent(
     system_prompt: String,
     default_task: Option<String>,
     model: Option<String>,
-    sandbox_enabled: Option<bool>,
     enable_file_read: Option<bool>,
     enable_file_write: Option<bool>,
     enable_network: Option<bool>,
@@ -546,11 +456,6 @@ pub async fn update_agent(
     ];
     let mut param_count = 5;
 
-    if let Some(se) = sandbox_enabled {
-        param_count += 1;
-        query.push_str(&format!(", sandbox_enabled = ?{}", param_count));
-        params_vec.push(Box::new(se));
-    }
     if let Some(efr) = enable_file_read {
         param_count += 1;
         query.push_str(&format!(", enable_file_read = ?{}", param_count));
@@ -580,7 +485,7 @@ pub async fn update_agent(
     // Fetch the updated agent
     let agent = conn
         .query_row(
-            "SELECT id, name, icon, system_prompt, default_task, model, sandbox_enabled, enable_file_read, enable_file_write, enable_network, created_at, updated_at FROM agents WHERE id = ?1",
+            "SELECT id, name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, created_at, updated_at FROM agents WHERE id = ?1",
             params![id],
             |row| {
                 Ok(Agent {
@@ -590,12 +495,11 @@ pub async fn update_agent(
                     system_prompt: row.get(3)?,
                     default_task: row.get(4)?,
                     model: row.get(5)?,
-                    sandbox_enabled: row.get(6)?,
-                    enable_file_read: row.get(7)?,
-                    enable_file_write: row.get(8)?,
-                    enable_network: row.get(9)?,
-                    created_at: row.get(10)?,
-                    updated_at: row.get(11)?,
+                    enable_file_read: row.get(6)?,
+                    enable_file_write: row.get(7)?,
+                    enable_network: row.get(8)?,
+                    created_at: row.get(9)?,
+                    updated_at: row.get(10)?,
                 })
             },
         )
@@ -622,7 +526,7 @@ pub async fn get_agent(db: State<'_, AgentDb>, id: i64) -> Result<Agent, String>
 
     let agent = conn
         .query_row(
-            "SELECT id, name, icon, system_prompt, default_task, model, sandbox_enabled, enable_file_read, enable_file_write, enable_network, created_at, updated_at FROM agents WHERE id = ?1",
+            "SELECT id, name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, created_at, updated_at FROM agents WHERE id = ?1",
             params![id],
             |row| {
                 Ok(Agent {
@@ -632,12 +536,11 @@ pub async fn get_agent(db: State<'_, AgentDb>, id: i64) -> Result<Agent, String>
                     system_prompt: row.get(3)?,
                     default_task: row.get(4)?,
                     model: row.get::<_, String>(5).unwrap_or_else(|_| "sonnet".to_string()),
-                    sandbox_enabled: row.get::<_, bool>(6).unwrap_or(true),
-                    enable_file_read: row.get::<_, bool>(7).unwrap_or(true),
-                    enable_file_write: row.get::<_, bool>(8).unwrap_or(true),
-                    enable_network: row.get::<_, bool>(9).unwrap_or(false),
-                    created_at: row.get(10)?,
-                    updated_at: row.get(11)?,
+                    enable_file_read: row.get::<_, bool>(6).unwrap_or(true),
+                    enable_file_write: row.get::<_, bool>(7).unwrap_or(true),
+                    enable_network: row.get::<_, bool>(8).unwrap_or(false),
+                    created_at: row.get(9)?,
+                    updated_at: row.get(10)?,
                 })
             },
         )
@@ -788,411 +691,30 @@ pub async fn execute_agent(
         conn.last_insert_rowid()
     };
 
-    // Create sandbox rules based on agent-specific permissions (no database dependency)
-    let sandbox_profile = if !agent.sandbox_enabled {
-        info!("🔓 Agent '{}': Sandbox DISABLED", agent.name);
-        None
-    } else {
-        info!(
-            "🔒 Agent '{}': Sandbox enabled | File Read: {} | File Write: {} | Network: {}",
-            agent.name, agent.enable_file_read, agent.enable_file_write, agent.enable_network
-        );
-
-        // Create rules dynamically based on agent permissions
-        let mut rules = Vec::new();
-
-        // Add file read rules if enabled
-        if agent.enable_file_read {
-            // Project directory access
-            rules.push(crate::sandbox::profile::SandboxRule {
-                id: Some(1),
-                profile_id: 0,
-                operation_type: "file_read_all".to_string(),
-                pattern_type: "subpath".to_string(),
-                pattern_value: "{{PROJECT_PATH}}".to_string(),
-                enabled: true,
-                platform_support: Some(r#"["linux", "macos", "windows"]"#.to_string()),
-                created_at: String::new(),
-            });
-
-            // System libraries (for language runtimes, etc.)
-            rules.push(crate::sandbox::profile::SandboxRule {
-                id: Some(2),
-                profile_id: 0,
-                operation_type: "file_read_all".to_string(),
-                pattern_type: "subpath".to_string(),
-                pattern_value: "/usr/lib".to_string(),
-                enabled: true,
-                platform_support: Some(r#"["linux", "macos"]"#.to_string()),
-                created_at: String::new(),
-            });
-
-            rules.push(crate::sandbox::profile::SandboxRule {
-                id: Some(3),
-                profile_id: 0,
-                operation_type: "file_read_all".to_string(),
-                pattern_type: "subpath".to_string(),
-                pattern_value: "/usr/local/lib".to_string(),
-                enabled: true,
-                platform_support: Some(r#"["linux", "macos"]"#.to_string()),
-                created_at: String::new(),
-            });
-
-            rules.push(crate::sandbox::profile::SandboxRule {
-                id: Some(4),
-                profile_id: 0,
-                operation_type: "file_read_all".to_string(),
-                pattern_type: "subpath".to_string(),
-                pattern_value: "/System/Library".to_string(),
-                enabled: true,
-                platform_support: Some(r#"["macos"]"#.to_string()),
-                created_at: String::new(),
-            });
-
-            rules.push(crate::sandbox::profile::SandboxRule {
-                id: Some(5),
-                profile_id: 0,
-                operation_type: "file_read_metadata".to_string(),
-                pattern_type: "subpath".to_string(),
-                pattern_value: "/".to_string(),
-                enabled: true,
-                platform_support: Some(r#"["macos"]"#.to_string()),
-                created_at: String::new(),
-            });
-        }
-
-        // Add network rules if enabled
-        if agent.enable_network {
-            rules.push(crate::sandbox::profile::SandboxRule {
-                id: Some(6),
-                profile_id: 0,
-                operation_type: "network_outbound".to_string(),
-                pattern_type: "all".to_string(),
-                pattern_value: "".to_string(),
-                enabled: true,
-                platform_support: Some(r#"["linux", "macos"]"#.to_string()),
-                created_at: String::new(),
-            });
-        }
-
-        // Always add essential system paths (needed for executables to run)
-        rules.push(crate::sandbox::profile::SandboxRule {
-            id: Some(7),
-            profile_id: 0,
-            operation_type: "file_read_all".to_string(),
-            pattern_type: "subpath".to_string(),
-            pattern_value: "/usr/bin".to_string(),
-            enabled: true,
-            platform_support: Some(r#"["linux", "macos"]"#.to_string()),
-            created_at: String::new(),
-        });
-
-        rules.push(crate::sandbox::profile::SandboxRule {
-            id: Some(8),
-            profile_id: 0,
-            operation_type: "file_read_all".to_string(),
-            pattern_type: "subpath".to_string(),
-            pattern_value: "/opt/homebrew/bin".to_string(),
-            enabled: true,
-            platform_support: Some(r#"["macos"]"#.to_string()),
-            created_at: String::new(),
-        });
-
-        rules.push(crate::sandbox::profile::SandboxRule {
-            id: Some(9),
-            profile_id: 0,
-            operation_type: "file_read_all".to_string(),
-            pattern_type: "subpath".to_string(),
-            pattern_value: "/usr/local/bin".to_string(),
-            enabled: true,
-            platform_support: Some(r#"["linux", "macos"]"#.to_string()),
-            created_at: String::new(),
-        });
-
-        rules.push(crate::sandbox::profile::SandboxRule {
-            id: Some(10),
-            profile_id: 0,
-            operation_type: "file_read_all".to_string(),
-            pattern_type: "subpath".to_string(),
-            pattern_value: "/bin".to_string(),
-            enabled: true,
-            platform_support: Some(r#"["linux", "macos"]"#.to_string()),
-            created_at: String::new(),
-        });
-
-        // System libraries (needed for executables to link)
-        rules.push(crate::sandbox::profile::SandboxRule {
-            id: Some(11),
-            profile_id: 0,
-            operation_type: "file_read_all".to_string(),
-            pattern_type: "subpath".to_string(),
-            pattern_value: "/usr/lib".to_string(),
-            enabled: true,
-            platform_support: Some(r#"["linux", "macos"]"#.to_string()),
-            created_at: String::new(),
-        });
-
-        rules.push(crate::sandbox::profile::SandboxRule {
-            id: Some(12),
-            profile_id: 0,
-            operation_type: "file_read_all".to_string(),
-            pattern_type: "subpath".to_string(),
-            pattern_value: "/System/Library".to_string(),
-            enabled: true,
-            platform_support: Some(r#"["macos"]"#.to_string()),
-            created_at: String::new(),
-        });
-
-        // Always add system info reading (minimal requirement)
-        rules.push(crate::sandbox::profile::SandboxRule {
-            id: Some(13),
-            profile_id: 0,
-            operation_type: "system_info_read".to_string(),
-            pattern_type: "all".to_string(),
-            pattern_value: "".to_string(),
-            enabled: true,
-            platform_support: Some(r#"["linux", "macos"]"#.to_string()),
-            created_at: String::new(),
-        });
-
-        Some(("Agent-specific".to_string(), rules))
-    };
-
     // Build the command
-    let mut cmd = if let Some((_profile_name, rules)) = sandbox_profile {
-        info!("🧪 DEBUG: Testing Claude command first without sandbox...");
-        // Quick test to see if Claude is accessible at all
-        let claude_path = match find_claude_binary(&app) {
-            Ok(path) => path,
-            Err(e) => {
-                error!("❌ Claude binary not found: {}", e);
-                return Err(e);
-            }
-        };
-        match std::process::Command::new(&claude_path)
-            .arg("--version")
-            .output()
-        {
-            Ok(output) => {
-                if output.status.success() {
-                    info!(
-                        "✅ Claude command works: {}",
-                        String::from_utf8_lossy(&output.stdout).trim()
-                    );
-                } else {
-                    warn!("⚠️ Claude command failed with status: {}", output.status);
-                    warn!("   stdout: {}", String::from_utf8_lossy(&output.stdout));
-                    warn!("   stderr: {}", String::from_utf8_lossy(&output.stderr));
-                }
-            }
-            Err(e) => {
-                error!("❌ Claude command not found or not executable: {}", e);
-                error!("   This could be why the agent is failing to start");
-            }
+    info!("Running agent '{}'", agent.name);
+    let claude_path = match find_claude_binary(&app) {
+        Ok(path) => path,
+        Err(e) => {
+            error!("Failed to find claude binary: {}", e);
+            return Err(e);
         }
-
-        // Test if Claude can actually start a session (this might reveal auth issues)
-        info!("🧪 Testing Claude with exact same arguments as agent (without sandbox env vars)...");
-        let mut test_cmd = std::process::Command::new(&claude_path);
-        test_cmd
-            .arg("-p")
-            .arg(&task)
-            .arg("--system-prompt")
-            .arg(&agent.system_prompt)
-            .arg("--model")
-            .arg(&execution_model)
-            .arg("--output-format")
-            .arg("stream-json")
-            .arg("--verbose")
-            .arg("--dangerously-skip-permissions")
-            .current_dir(&project_path);
-
-        info!("🧪 Testing command: claude -p \"{}\" --system-prompt \"{}\" --model {} --output-format stream-json --verbose --dangerously-skip-permissions", 
-              task, agent.system_prompt, execution_model);
-
-        // Start the test process and give it 5 seconds to produce output
-        match test_cmd.spawn() {
-            Ok(mut child) => {
-                // Wait for 5 seconds to see if it produces output
-                let start = std::time::Instant::now();
-                let mut output_received = false;
-
-                while start.elapsed() < std::time::Duration::from_secs(5) {
-                    match child.try_wait() {
-                        Ok(Some(status)) => {
-                            info!("🧪 Test process exited with status: {}", status);
-                            output_received = true;
-                            break;
-                        }
-                        Ok(None) => {
-                            // Still running
-                            std::thread::sleep(std::time::Duration::from_millis(100));
-                        }
-                        Err(e) => {
-                            warn!("🧪 Error checking test process: {}", e);
-                            break;
-                        }
-                    }
-                }
-
-                if !output_received {
-                    warn!("🧪 Test process is still running after 5 seconds - this suggests Claude might be waiting for input");
-                    // Kill the test process
-                    let _ = child.kill();
-                    let _ = child.wait();
-                } else {
-                    info!("🧪 Test process completed quickly - command seems to work");
-                }
-            }
-            Err(e) => {
-                error!("❌ Failed to spawn test Claude process: {}", e);
-            }
-        }
-
-        info!("🧪 End of Claude test, proceeding with sandbox...");
-
-        // Build the gaol profile using agent-specific permissions
-        let project_path_buf = PathBuf::from(&project_path);
-
-        match ProfileBuilder::new(project_path_buf.clone()) {
-            Ok(builder) => {
-                // Build agent-specific profile with permission filtering
-                match builder.build_agent_profile(
-                    rules,
-                    agent.sandbox_enabled,
-                    agent.enable_file_read,
-                    agent.enable_file_write,
-                    agent.enable_network,
-                ) {
-                    Ok(build_result) => {
-                        // Create the enhanced sandbox executor
-                        #[cfg(unix)]
-                        let executor =
-                            crate::sandbox::executor::SandboxExecutor::new_with_serialization(
-                                build_result.profile,
-                                project_path_buf.clone(),
-                                build_result.serialized,
-                            );
-
-                        #[cfg(not(unix))]
-                        let executor =
-                            crate::sandbox::executor::SandboxExecutor::new_with_serialization(
-                                (),
-                                project_path_buf.clone(),
-                                build_result.serialized,
-                            );
-
-                        // Prepare the sandboxed command
-                        let args = vec![
-                            "-p",
-                            &task,
-                            "--system-prompt",
-                            &agent.system_prompt,
-                            "--model",
-                            &execution_model,
-                            "--output-format",
-                            "stream-json",
-                            "--verbose",
-                            "--dangerously-skip-permissions",
-                        ];
-
-                        let claude_path = match find_claude_binary(&app) {
-                            Ok(path) => path,
-                            Err(e) => {
-                                error!("Failed to find claude binary: {}", e);
-                                return Err(e);
-                            }
-                        };
-                        executor.prepare_sandboxed_command(&claude_path, &args, &project_path_buf)
-                    }
-                    Err(e) => {
-                        error!("Failed to build agent-specific sandbox profile: {}, falling back to non-sandboxed", e);
-                        let claude_path = match find_claude_binary(&app) {
-                            Ok(path) => path,
-                            Err(e) => {
-                                error!("Failed to find claude binary: {}", e);
-                                return Err(e);
-                            }
-                        };
-                        let mut cmd = create_command_with_env(&claude_path);
-                        cmd.arg("-p")
-                            .arg(&task)
-                            .arg("--system-prompt")
-                            .arg(&agent.system_prompt)
-                            .arg("--model")
-                            .arg(&execution_model)
-                            .arg("--output-format")
-                            .arg("stream-json")
-                            .arg("--verbose")
-                            .arg("--dangerously-skip-permissions")
-                            .current_dir(&project_path)
-                            .stdout(Stdio::piped())
-                            .stderr(Stdio::piped());
-                        cmd
-                    }
-                }
-            }
-            Err(e) => {
-                error!(
-                    "Failed to create ProfileBuilder: {}, falling back to non-sandboxed",
-                    e
-                );
-
-                // Fall back to non-sandboxed command
-                let claude_path = match find_claude_binary(&app) {
-                    Ok(path) => path,
-                    Err(e) => {
-                        error!("Failed to find claude binary: {}", e);
-                        return Err(e);
-                    }
-                };
-                let mut cmd = create_command_with_env(&claude_path);
-                cmd.arg("-p")
-                    .arg(&task)
-                    .arg("--system-prompt")
-                    .arg(&agent.system_prompt)
-                    .arg("--model")
-                    .arg(&execution_model)
-                    .arg("--output-format")
-                    .arg("stream-json")
-                    .arg("--verbose")
-                    .arg("--dangerously-skip-permissions")
-                    .current_dir(&project_path)
-                    .stdout(Stdio::piped())
-                    .stderr(Stdio::piped());
-                cmd
-            }
-        }
-    } else {
-        // No sandbox or sandbox disabled, use regular command
-        warn!(
-            "🚨 Running agent '{}' WITHOUT SANDBOX - full system access!",
-            agent.name
-        );
-        let claude_path = match find_claude_binary(&app) {
-            Ok(path) => path,
-            Err(e) => {
-                error!("Failed to find claude binary: {}", e);
-                return Err(e);
-            }
-        };
-        let mut cmd = create_command_with_env(&claude_path);
-        cmd.arg("-p")
-            .arg(&task)
-            .arg("--system-prompt")
-            .arg(&agent.system_prompt)
-            .arg("--model")
-            .arg(&execution_model)
-            .arg("--output-format")
-            .arg("stream-json")
-            .arg("--verbose")
-            .arg("--dangerously-skip-permissions")
-            .current_dir(&project_path)
-            .stdin(Stdio::null()) // Don't pipe stdin - we have no input to send
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped());
-        cmd
     };
+    let mut cmd = create_command_with_env(&claude_path);
+    cmd.arg("-p")
+        .arg(&task)
+        .arg("--system-prompt")
+        .arg(&agent.system_prompt)
+        .arg("--model")
+        .arg(&execution_model)
+        .arg("--output-format")
+        .arg("stream-json")
+        .arg("--verbose")
+        .arg("--dangerously-skip-permissions")
+        .current_dir(&project_path)
+        .stdin(Stdio::null()) // Don't pipe stdin - we have no input to send
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
 
     // Spawn the process
     info!("🚀 Spawning Claude process...");
@@ -1385,7 +907,7 @@ pub async fn execute_agent(
             warn!("⏰ TIMEOUT: No output from Claude process after 30 seconds");
             warn!("💡 This usually means:");
             warn!("   1. Claude process is waiting for user input");
-            warn!("   2. Sandbox permissions are too restrictive");
+
             warn!("   3. Claude failed to initialize but didn't report an error");
             warn!("   4. Network connectivity issues");
             warn!("   5. Authentication issues (API key not found/invalid)");
@@ -1466,15 +988,19 @@ pub async fn execute_agent(
 
 /// List all currently running agent sessions
 #[tauri::command]
-pub async fn list_running_sessions(db: State<'_, AgentDb>) -> Result<Vec<AgentRun>, String> {
+pub async fn list_running_sessions(
+    db: State<'_, AgentDb>,
+    registry: State<'_, crate::process::ProcessRegistryState>,
+) -> Result<Vec<AgentRun>, String> {
     let conn = db.0.lock().map_err(|e| e.to_string())?;
 
+    // First get all running sessions from the database
     let mut stmt = conn.prepare(
         "SELECT id, agent_id, agent_name, agent_icon, task, model, project_path, session_id, status, pid, process_started_at, created_at, completed_at 
          FROM agent_runs WHERE status = 'running' ORDER BY process_started_at DESC"
     ).map_err(|e| e.to_string())?;
 
-    let runs = stmt
+    let mut runs = stmt
         .query_map([], |row| {
             Ok(AgentRun {
                 id: Some(row.get(0)?),
@@ -1501,6 +1027,27 @@ pub async fn list_running_sessions(db: State<'_, AgentDb>) -> Result<Vec<AgentRu
         .map_err(|e| e.to_string())?
         .collect::<Result<Vec<_>, _>>()
         .map_err(|e| e.to_string())?;
+
+    drop(stmt);
+    drop(conn);
+
+    // Cross-check with the process registry to ensure accuracy
+    // Get actually running processes from the registry
+    let registry_processes = registry.0.get_running_agent_processes()?;
+    let registry_run_ids: std::collections::HashSet<i64> = registry_processes
+        .iter()
+        .map(|p| p.run_id)
+        .collect();
+
+    // Filter out any database entries that aren't actually running in the registry
+    // This handles cases where processes crashed without updating the database
+    runs.retain(|run| {
+        if let Some(run_id) = run.id {
+            registry_run_ids.contains(&run_id)
+        } else {
+            false
+        }
+    });
 
     Ok(runs)
 }
@@ -1782,7 +1329,7 @@ pub async fn export_agent(db: State<'_, AgentDb>, id: i64) -> Result<String, Str
     // Fetch the agent
     let agent = conn
         .query_row(
-            "SELECT name, icon, system_prompt, default_task, model, sandbox_enabled, enable_file_read, enable_file_write, enable_network FROM agents WHERE id = ?1",
+            "SELECT name, icon, system_prompt, default_task, model FROM agents WHERE id = ?1",
             params![id],
             |row| {
                 Ok(serde_json::json!({
@@ -1790,11 +1337,7 @@ pub async fn export_agent(db: State<'_, AgentDb>, id: i64) -> Result<String, Str
                     "icon": row.get::<_, String>(1)?,
                     "system_prompt": row.get::<_, String>(2)?,
                     "default_task": row.get::<_, Option<String>>(3)?,
-                    "model": row.get::<_, String>(4)?,
-                    "sandbox_enabled": row.get::<_, bool>(5)?,
-                    "enable_file_read": row.get::<_, bool>(6)?,
-                    "enable_file_write": row.get::<_, bool>(7)?,
-                    "enable_network": row.get::<_, bool>(8)?
+                    "model": row.get::<_, String>(4)?
                 }))
             },
         )
@@ -1985,17 +1528,13 @@ pub async fn import_agent(db: State<'_, AgentDb>, json_data: String) -> Result<A
 
     // Create the agent
     conn.execute(
-        "INSERT INTO agents (name, icon, system_prompt, default_task, model, sandbox_enabled, enable_file_read, enable_file_write, enable_network) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+        "INSERT INTO agents (name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network) VALUES (?1, ?2, ?3, ?4, ?5, 1, 1, 0)",
         params![
             final_name,
             agent_data.icon,
             agent_data.system_prompt,
             agent_data.default_task,
-            agent_data.model,
-            agent_data.sandbox_enabled,
-            agent_data.enable_file_read,
-            agent_data.enable_file_write,
-            agent_data.enable_network
+            agent_data.model
         ],
     )
     .map_err(|e| format!("Failed to create agent: {}", e))?;
@@ -2005,7 +1544,7 @@ pub async fn import_agent(db: State<'_, AgentDb>, json_data: String) -> Result<A
     // Fetch the created agent
     let agent = conn
         .query_row(
-            "SELECT id, name, icon, system_prompt, default_task, model, sandbox_enabled, enable_file_read, enable_file_write, enable_network, created_at, updated_at FROM agents WHERE id = ?1",
+            "SELECT id, name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, created_at, updated_at FROM agents WHERE id = ?1",
             params![id],
             |row| {
                 Ok(Agent {
@@ -2015,12 +1554,11 @@ pub async fn import_agent(db: State<'_, AgentDb>, json_data: String) -> Result<A
                     system_prompt: row.get(3)?,
                     default_task: row.get(4)?,
                     model: row.get(5)?,
-                    sandbox_enabled: row.get(6)?,
-                    enable_file_read: row.get(7)?,
-                    enable_file_write: row.get(8)?,
-                    enable_network: row.get(9)?,
-                    created_at: row.get(10)?,
-                    updated_at: row.get(11)?,
+                    enable_file_read: row.get(6)?,
+                    enable_file_write: row.get(7)?,
+                    enable_network: row.get(8)?,
+                    created_at: row.get(9)?,
+                    updated_at: row.get(10)?,
                 })
             },
         )

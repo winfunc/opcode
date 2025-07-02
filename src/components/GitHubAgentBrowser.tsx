@@ -314,9 +314,6 @@ export const GitHubAgentBrowser: React.FC<GitHubAgentBrowserProps> = ({
                         </h3>
                         <div className="flex items-center gap-2 mt-1">
                           <Badge variant="outline">{selectedAgent.data.agent.model}</Badge>
-                          {selectedAgent.data.agent.sandbox_enabled && (
-                            <Badge variant="secondary">Sandbox</Badge>
-                          )}
                         </div>
                       </div>
                     </div>
@@ -341,21 +338,7 @@ export const GitHubAgentBrowser: React.FC<GitHubAgentBrowserProps> = ({
                       </div>
                     )}
 
-                    {/* Permissions */}
-                    <div>
-                      <h4 className="text-sm font-medium mb-2">Permissions</h4>
-                      <div className="flex flex-wrap gap-2">
-                        <Badge variant={selectedAgent.data.agent.enable_file_read ? "default" : "secondary"}>
-                          File Read: {selectedAgent.data.agent.enable_file_read ? "Yes" : "No"}
-                        </Badge>
-                        <Badge variant={selectedAgent.data.agent.enable_file_write ? "default" : "secondary"}>
-                          File Write: {selectedAgent.data.agent.enable_file_write ? "Yes" : "No"}
-                        </Badge>
-                        <Badge variant={selectedAgent.data.agent.enable_network ? "default" : "secondary"}>
-                          Network: {selectedAgent.data.agent.enable_network ? "Yes" : "No"}
-                        </Badge>
-                      </div>
-                    </div>
+
 
                     {/* Metadata */}
                     <div className="text-xs text-muted-foreground">

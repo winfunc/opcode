@@ -5,7 +5,6 @@ mod checkpoint;
 mod claude_binary;
 mod commands;
 mod process;
-mod sandbox;
 
 use checkpoint::state::CheckpointState;
 use commands::agents::{
@@ -21,26 +20,20 @@ use commands::claude::{
     cancel_claude_execution, check_auto_checkpoint, check_claude_version, cleanup_old_checkpoints,
     clear_checkpoint_manager, continue_claude_code, create_checkpoint, execute_claude_code,
     find_claude_md_files, fork_from_checkpoint, get_checkpoint_diff, get_checkpoint_settings,
-    get_checkpoint_state_stats, get_claude_settings, get_project_sessions,
+    get_checkpoint_state_stats, get_claude_session_output, get_claude_settings, get_project_sessions,
     get_recently_modified_files, get_session_timeline, get_system_prompt, list_checkpoints,
-    list_directory_contents, list_projects, load_session_history, open_new_session,
-    read_claude_md_file, restore_checkpoint, resume_claude_code, save_claude_md_file,
-    save_claude_settings, save_system_prompt, search_files, track_checkpoint_message,
-    track_session_messages, update_checkpoint_settings, ClaudeProcessState,
+    list_directory_contents, list_projects, list_running_claude_sessions, load_session_history,
+    open_new_session, read_claude_md_file, restore_checkpoint, resume_claude_code,
+    save_claude_md_file, save_claude_settings, save_system_prompt, search_files,
+    track_checkpoint_message, track_session_messages, update_checkpoint_settings,
+    ClaudeProcessState,
 };
 use commands::mcp::{
     mcp_add, mcp_add_from_claude_desktop, mcp_add_json, mcp_get, mcp_get_server_status, mcp_list,
     mcp_read_project_config, mcp_remove, mcp_reset_project_choices, mcp_save_project_config,
     mcp_serve, mcp_test_connection,
 };
-use commands::sandbox::{
-    clear_sandbox_violations, create_sandbox_profile, create_sandbox_rule, delete_sandbox_profile,
-    delete_sandbox_rule, export_all_sandbox_profiles, export_sandbox_profile,
-    get_platform_capabilities, get_sandbox_profile, get_sandbox_violation_stats,
-    import_sandbox_profiles, list_sandbox_profiles, list_sandbox_rules, list_sandbox_violations,
-    log_sandbox_violation, test_sandbox_profile, update_sandbox_profile, update_sandbox_rule,
-};
-use commands::screenshot::{capture_url_screenshot, cleanup_screenshot_temp_files};
+
 use commands::usage::{
     get_session_stats, get_usage_by_date_range, get_usage_details, get_usage_stats,
 };
@@ -52,14 +45,6 @@ fn main() {
     // Initialize logger
     env_logger::init();
 
-    // Check if we need to activate sandbox in this process
-    if sandbox::executor::should_activate_sandbox() {
-        // This is a child process that needs sandbox activation
-        if let Err(e) = sandbox::executor::SandboxExecutor::activate_sandbox_in_child() {
-            log::error!("Failed to activate sandbox: {}", e);
-            // Continue without sandbox rather than crashing
-        }
-    }
 
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
@@ -114,6 +99,8 @@ fn main() {
             continue_claude_code,
             resume_claude_code,
             cancel_claude_execution,
+            list_running_claude_sessions,
+            get_claude_session_output,
             list_directory_contents,
             search_files,
             create_checkpoint,
@@ -158,24 +145,6 @@ fn main() {
             fetch_github_agents,
             fetch_github_agent_content,
             import_agent_from_github,
-            list_sandbox_profiles,
-            get_sandbox_profile,
-            create_sandbox_profile,
-            update_sandbox_profile,
-            delete_sandbox_profile,
-            list_sandbox_rules,
-            create_sandbox_rule,
-            update_sandbox_rule,
-            delete_sandbox_rule,
-            test_sandbox_profile,
-            get_platform_capabilities,
-            list_sandbox_violations,
-            log_sandbox_violation,
-            clear_sandbox_violations,
-            get_sandbox_violation_stats,
-            export_sandbox_profile,
-            export_all_sandbox_profiles,
-            import_sandbox_profiles,
             get_usage_stats,
             get_usage_by_date_range,
             get_usage_details,
@@ -191,9 +160,7 @@ fn main() {
             mcp_reset_project_choices,
             mcp_get_server_status,
             mcp_read_project_config,
-            mcp_save_project_config,
-            capture_url_screenshot,
-            cleanup_screenshot_temp_files
+            mcp_save_project_config
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

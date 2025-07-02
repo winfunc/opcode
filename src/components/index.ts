@@ -27,4 +27,5 @@ export * from "./ui/tooltip";
 export * from "./ui/popover";
 export * from "./ui/pagination";
 export * from "./ui/split-pane";
-export * from "./ui/scroll-area"; 
+export * from "./ui/scroll-area";
+export * from "./RunningClaudeSessions"; 

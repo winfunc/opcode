@@ -3,13 +3,15 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
   ArrowLeft,
   Terminal,
-  Loader2,
   FolderOpen,
   Copy,
   ChevronDown,
   GitBranch,
   Settings,
-  Globe
+  Globe,
+  ChevronUp,
+  X,
+  Hash
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,7 +24,6 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { StreamMessage } from "./StreamMessage";
 import { FloatingPromptInput, type FloatingPromptInputRef } from "./FloatingPromptInput";
 import { ErrorBoundary } from "./ErrorBoundary";
-import { TokenCounter } from "./TokenCounter";
 import { TimelineNavigator } from "./TimelineNavigator";
 import { CheckpointSettings } from "./CheckpointSettings";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -49,6 +50,10 @@ interface ClaudeCodeSessionProps {
    * Optional className for styling
    */
   className?: string;
+  /**
+   * Callback when streaming state changes
+   */
+  onStreamingChange?: (isStreaming: boolean, sessionId: string | null) => void;
 }
 
 /**
@@ -62,6 +67,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   initialProjectPath = "",
   onBack,
   className,
+  onStreamingChange,
 }) => {
   const [projectPath, setProjectPath] = useState(initialProjectPath || session?.project_path || "");
   const [messages, setMessages] = useState<ClaudeStreamMessage[]>([]);
@@ -79,7 +85,9 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   const [showForkDialog, setShowForkDialog] = useState(false);
   const [forkCheckpointId, setForkCheckpointId] = useState<string | null>(null);
   const [forkSessionName, setForkSessionName] = useState("");
-  const [isCancelling, setIsCancelling] = useState(false);
+  
+  // Queued prompts state
+  const [queuedPrompts, setQueuedPrompts] = useState<Array<{ id: string; prompt: string; model: "sonnet" | "opus" }>>([]);
   
   // New state for preview feature
   const [showPreview, setShowPreview] = useState(false);
@@ -88,10 +96,21 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   const [splitPosition, setSplitPosition] = useState(50);
   const [isPreviewMaximized, setIsPreviewMaximized] = useState(false);
   
+  // Add collapsed state for queued prompts
+  const [queuedPromptsCollapsed, setQueuedPromptsCollapsed] = useState(false);
+  
   const parentRef = useRef<HTMLDivElement>(null);
   const unlistenRefs = useRef<UnlistenFn[]>([]);
   const hasActiveSessionRef = useRef(false);
   const floatingPromptRef = useRef<FloatingPromptInputRef>(null);
+  const queuedPromptsRef = useRef<Array<{ id: string; prompt: string; model: "sonnet" | "opus" }>>([]);
+  const isMountedRef = useRef(true);
+  const isListeningRef = useRef(false);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    queuedPromptsRef.current = queuedPrompts;
+  }, [queuedPrompts]);
 
   // Get effective session info (from prop or extracted) - use useMemo to ensure it updates
   const effectiveSession = useMemo(() => {
@@ -192,10 +211,26 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   // Load session history if resuming
   useEffect(() => {
     if (session) {
-      loadSessionHistory();
+      // Set the claudeSessionId immediately when we have a session
+      setClaudeSessionId(session.id);
+      
+      // Load session history first, then check for active session
+      const initializeSession = async () => {
+        await loadSessionHistory();
+        // After loading history, check if the session is still active
+        if (isMountedRef.current) {
+          await checkForActiveSession();
+        }
+      };
+      
+      initializeSession();
     }
-  }, [session]);
+  }, [session]); // Remove hasLoadedSession dependency to ensure it runs on mount
 
+  // Report streaming state changes
+  useEffect(() => {
+    onStreamingChange?.(isLoading, claudeSessionId);
+  }, [isLoading, claudeSessionId, onStreamingChange]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -246,6 +281,97 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     }
   };
 
+  const checkForActiveSession = async () => {
+    // If we have a session prop, check if it's still active
+    if (session) {
+      try {
+        const activeSessions = await api.listRunningClaudeSessions();
+        const activeSession = activeSessions.find((s: any) => {
+          if ('process_type' in s && s.process_type && 'ClaudeSession' in s.process_type) {
+            return (s.process_type as any).ClaudeSession.session_id === session.id;
+          }
+          return false;
+        });
+        
+        if (activeSession) {
+          // Session is still active, reconnect to its stream
+          console.log('[ClaudeCodeSession] Found active session, reconnecting:', session.id);
+          // IMPORTANT: Set claudeSessionId before reconnecting
+          setClaudeSessionId(session.id);
+          
+          // Don't add buffered messages here - they've already been loaded by loadSessionHistory
+          // Just set up listeners for new messages
+          
+          // Set up listeners for the active session
+          reconnectToSession(session.id);
+        }
+      } catch (err) {
+        console.error('Failed to check for active sessions:', err);
+      }
+    }
+  };
+
+  const reconnectToSession = async (sessionId: string) => {
+    console.log('[ClaudeCodeSession] Reconnecting to session:', sessionId);
+    
+    // Prevent duplicate listeners
+    if (isListeningRef.current) {
+      console.log('[ClaudeCodeSession] Already listening to session, skipping reconnect');
+      return;
+    }
+    
+    // Clean up previous listeners
+    unlistenRefs.current.forEach(unlisten => unlisten());
+    unlistenRefs.current = [];
+    
+    // IMPORTANT: Set the session ID before setting up listeners
+    setClaudeSessionId(sessionId);
+    
+    // Mark as listening
+    isListeningRef.current = true;
+    
+    // Set up session-specific listeners
+    const outputUnlisten = await listen<string>(`claude-output:${sessionId}`, async (event) => {
+      try {
+        console.log('[ClaudeCodeSession] Received claude-output on reconnect:', event.payload);
+        
+        if (!isMountedRef.current) return;
+        
+        // Store raw JSONL
+        setRawJsonlOutput(prev => [...prev, event.payload]);
+        
+        // Parse and display
+        const message = JSON.parse(event.payload) as ClaudeStreamMessage;
+        setMessages(prev => [...prev, message]);
+      } catch (err) {
+        console.error("Failed to parse message:", err, event.payload);
+      }
+    });
+
+    const errorUnlisten = await listen<string>(`claude-error:${sessionId}`, (event) => {
+      console.error("Claude error:", event.payload);
+      if (isMountedRef.current) {
+        setError(event.payload);
+      }
+    });
+
+    const completeUnlisten = await listen<boolean>(`claude-complete:${sessionId}`, async (event) => {
+      console.log('[ClaudeCodeSession] Received claude-complete on reconnect:', event.payload);
+      if (isMountedRef.current) {
+        setIsLoading(false);
+        hasActiveSessionRef.current = false;
+      }
+    });
+
+    unlistenRefs.current = [outputUnlisten, errorUnlisten, completeUnlisten];
+    
+    // Mark as loading to show the session is active
+    if (isMountedRef.current) {
+      setIsLoading(true);
+      hasActiveSessionRef.current = true;
+    }
+  };
+
   const handleSelectPath = async () => {
     try {
       const selected = await open({
@@ -266,10 +392,21 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   };
 
   const handleSendPrompt = async (prompt: string, model: "sonnet" | "opus") => {
-    console.log('[ClaudeCodeSession] handleSendPrompt called with:', { prompt, model, projectPath });
+    console.log('[ClaudeCodeSession] handleSendPrompt called with:', { prompt, model, projectPath, claudeSessionId, effectiveSession });
     
     if (!projectPath) {
       setError("Please select a project directory first");
+      return;
+    }
+
+    // If already loading, queue the prompt
+    if (isLoading) {
+      const newPrompt = {
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        prompt,
+        model
+      };
+      setQueuedPrompts(prev => [...prev, newPrompt]);
       return;
     }
 
@@ -278,114 +415,185 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       setError(null);
       hasActiveSessionRef.current = true;
       
-      // Clean up previous listeners
-      unlistenRefs.current.forEach(unlisten => unlisten());
-      unlistenRefs.current = [];
+      // For resuming sessions, ensure we have the session ID
+      if (effectiveSession && !claudeSessionId) {
+        setClaudeSessionId(effectiveSession.id);
+      }
       
-      // Set up event listeners before executing
-      console.log('[ClaudeCodeSession] Setting up event listeners...');
-      
-      // If we already have a Claude session ID, use isolated listeners
-      const eventSuffix = claudeSessionId ? `:${claudeSessionId}` : '';
-      
-      const outputUnlisten = await listen<string>(`claude-output${eventSuffix}`, async (event) => {
-        try {
-          console.log('[ClaudeCodeSession] Received claude-output:', event.payload);
-          
-          // Store raw JSONL
-          setRawJsonlOutput(prev => [...prev, event.payload]);
-          
-          // Parse and display
-          const message = JSON.parse(event.payload) as ClaudeStreamMessage;
-          console.log('[ClaudeCodeSession] Parsed message:', message);
-          
-          setMessages(prev => {
-            console.log('[ClaudeCodeSession] Adding message to state. Previous count:', prev.length);
-            return [...prev, message];
-          });
-          
-          // Extract session info from system init message
-          if (message.type === "system" && message.subtype === "init" && message.session_id) {
-            console.log('[ClaudeCodeSession] Extracting session info from init message');
-            // Extract project ID from the project path
-            const projectId = projectPath.replace(/[^a-zA-Z0-9]/g, '-');
-            
-            // Set both claudeSessionId and extractedSessionInfo
-            if (!claudeSessionId) {
-              setClaudeSessionId(message.session_id);
-            }
-            
-            if (!extractedSessionInfo) {
-              setExtractedSessionInfo({
-                sessionId: message.session_id,
-                projectId: projectId
-              });
-            }
-          }
-        } catch (err) {
-          console.error("Failed to parse message:", err, event.payload);
-        }
-      });
-
-      const errorUnlisten = await listen<string>(`claude-error${eventSuffix}`, (event) => {
-        console.error("Claude error:", event.payload);
-        setError(event.payload);
-      });
-
-      const completeUnlisten = await listen<boolean>(`claude-complete${eventSuffix}`, async (event) => {
-        console.log('[ClaudeCodeSession] Received claude-complete:', event.payload);
-        setIsLoading(false);
-        hasActiveSessionRef.current = false;
+      // Only clean up and set up new listeners if not already listening
+      if (!isListeningRef.current) {
+        // Clean up previous listeners
+        unlistenRefs.current.forEach(unlisten => unlisten());
+        unlistenRefs.current = [];
         
-        // Check if we should create an auto checkpoint after completion
-        if (effectiveSession && event.payload) {
+        // Mark as setting up listeners
+        isListeningRef.current = true;
+        
+        // --------------------------------------------------------------------
+        // 1️⃣  Event Listener Setup Strategy
+        // --------------------------------------------------------------------
+        // Claude Code may emit a *new* session_id even when we pass --resume. If
+        // we listen only on the old session-scoped channel we will miss the
+        // stream until the user navigates away & back. To avoid this we:
+        //   • Always start with GENERIC listeners (no suffix) so we catch the
+        //     very first "system:init" message regardless of the session id.
+        //   • Once that init message provides the *actual* session_id, we
+        //     dynamically switch to session-scoped listeners and stop the
+        //     generic ones to prevent duplicate handling.
+        // --------------------------------------------------------------------
+
+        console.log('[ClaudeCodeSession] Setting up generic event listeners first');
+
+        let currentSessionId: string | null = claudeSessionId || effectiveSession?.id || null;
+
+        // Helper to attach session-specific listeners **once we are sure**
+        const attachSessionSpecificListeners = async (sid: string) => {
+          console.log('[ClaudeCodeSession] Attaching session-specific listeners for', sid);
+
+          const specificOutputUnlisten = await listen<string>(`claude-output:${sid}`, (evt) => {
+            handleStreamMessage(evt.payload);
+          });
+
+          const specificErrorUnlisten = await listen<string>(`claude-error:${sid}`, (evt) => {
+            console.error('Claude error (scoped):', evt.payload);
+            setError(evt.payload);
+          });
+
+          const specificCompleteUnlisten = await listen<boolean>(`claude-complete:${sid}`, (evt) => {
+            console.log('[ClaudeCodeSession] Received claude-complete (scoped):', evt.payload);
+            processComplete(evt.payload);
+          });
+
+          // Replace existing unlisten refs with these new ones (after cleaning up)
+          unlistenRefs.current.forEach((u) => u());
+          unlistenRefs.current = [specificOutputUnlisten, specificErrorUnlisten, specificCompleteUnlisten];
+        };
+
+        // Generic listeners (catch-all)
+        const genericOutputUnlisten = await listen<string>('claude-output', async (event) => {
+          handleStreamMessage(event.payload);
+
+          // Attempt to extract session_id on the fly (for the very first init)
           try {
-            const settings = await api.getCheckpointSettings(
-              effectiveSession.id,
-              effectiveSession.project_id,
-              projectPath
-            );
+            const msg = JSON.parse(event.payload) as ClaudeStreamMessage;
+            if (msg.type === 'system' && msg.subtype === 'init' && msg.session_id) {
+              if (!currentSessionId || currentSessionId !== msg.session_id) {
+                console.log('[ClaudeCodeSession] Detected new session_id from generic listener:', msg.session_id);
+                currentSessionId = msg.session_id;
+                setClaudeSessionId(msg.session_id);
+
+                // If we haven't extracted session info before, do it now
+                if (!extractedSessionInfo) {
+                  const projectId = projectPath.replace(/[^a-zA-Z0-9]/g, '-');
+                  setExtractedSessionInfo({ sessionId: msg.session_id, projectId });
+                }
+
+                // Switch to session-specific listeners
+                await attachSessionSpecificListeners(msg.session_id);
+              }
+            }
+          } catch {
+            /* ignore parse errors */
+          }
+        });
+
+        // Helper to process any JSONL stream message string
+        function handleStreamMessage(payload: string) {
+          try {
+            // Don't process if component unmounted
+            if (!isMountedRef.current) return;
             
-            if (settings.auto_checkpoint_enabled) {
-              await api.checkAutoCheckpoint(
+            // Store raw JSONL
+            setRawJsonlOutput((prev) => [...prev, payload]);
+
+            const message = JSON.parse(payload) as ClaudeStreamMessage;
+            setMessages((prev) => [...prev, message]);
+          } catch (err) {
+            console.error('Failed to parse message:', err, payload);
+          }
+        }
+
+        // Helper to handle completion events (both generic and scoped)
+        const processComplete = async (success: boolean) => {
+          setIsLoading(false);
+          hasActiveSessionRef.current = false;
+          isListeningRef.current = false; // Reset listening state
+
+          if (effectiveSession && success) {
+            try {
+              const settings = await api.getCheckpointSettings(
                 effectiveSession.id,
                 effectiveSession.project_id,
-                projectPath,
-                prompt
+                projectPath
               );
-              // Reload timeline to show new checkpoint
-              setTimelineVersion((v) => v + 1);
+
+              if (settings.auto_checkpoint_enabled) {
+                await api.checkAutoCheckpoint(
+                  effectiveSession.id,
+                  effectiveSession.project_id,
+                  projectPath,
+                  prompt
+                );
+                // Reload timeline to show new checkpoint
+                setTimelineVersion((v) => v + 1);
+              }
+            } catch (err) {
+              console.error('Failed to check auto checkpoint:', err);
             }
-          } catch (err) {
-            console.error('Failed to check auto checkpoint:', err);
           }
-        }
-      });
 
-      unlistenRefs.current = [outputUnlisten, errorUnlisten, completeUnlisten];
-      
-      // Add the user message immediately to the UI (after setting up listeners)
-      const userMessage: ClaudeStreamMessage = {
-        type: "user",
-        message: {
-          content: [
-            {
-              type: "text",
-              text: prompt
-            }
-          ]
-        }
-      };
-      setMessages(prev => [...prev, userMessage]);
+          // Process queued prompts after completion
+          if (queuedPromptsRef.current.length > 0) {
+            const [nextPrompt, ...remainingPrompts] = queuedPromptsRef.current;
+            setQueuedPrompts(remainingPrompts);
+            
+            // Small delay to ensure UI updates
+            setTimeout(() => {
+              handleSendPrompt(nextPrompt.prompt, nextPrompt.model);
+            }, 100);
+          }
+        };
 
-      // Execute the appropriate command
-      if (effectiveSession && !isFirstPrompt) {
-        console.log('[ClaudeCodeSession] Resuming session:', effectiveSession.id);
-        await api.resumeClaudeCode(projectPath, effectiveSession.id, prompt, model);
-      } else {
-        console.log('[ClaudeCodeSession] Starting new session');
-        setIsFirstPrompt(false);
-        await api.executeClaudeCode(projectPath, prompt, model);
+        const genericErrorUnlisten = await listen<string>('claude-error', (evt) => {
+          console.error('Claude error:', evt.payload);
+          setError(evt.payload);
+        });
+
+        const genericCompleteUnlisten = await listen<boolean>('claude-complete', (evt) => {
+          console.log('[ClaudeCodeSession] Received claude-complete (generic):', evt.payload);
+          processComplete(evt.payload);
+        });
+
+        // Store the generic unlisteners for now; they may be replaced later.
+        unlistenRefs.current = [genericOutputUnlisten, genericErrorUnlisten, genericCompleteUnlisten];
+
+        // --------------------------------------------------------------------
+        // 2️⃣  Auto-checkpoint logic moved after listener setup (unchanged)
+        // --------------------------------------------------------------------
+
+        // Add the user message immediately to the UI (after setting up listeners)
+        const userMessage: ClaudeStreamMessage = {
+          type: "user",
+          message: {
+            content: [
+              {
+                type: "text",
+                text: prompt
+              }
+            ]
+          }
+        };
+        setMessages(prev => [...prev, userMessage]);
+
+        // Execute the appropriate command
+        if (effectiveSession && !isFirstPrompt) {
+          console.log('[ClaudeCodeSession] Resuming session:', effectiveSession.id);
+          await api.resumeClaudeCode(projectPath, effectiveSession.id, prompt, model);
+        } else {
+          console.log('[ClaudeCodeSession] Starting new session');
+          setIsFirstPrompt(false);
+          await api.executeClaudeCode(projectPath, prompt, model);
+        }
       }
     } catch (err) {
       console.error("Failed to send prompt:", err);
@@ -481,36 +689,54 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   };
 
   const handleCancelExecution = async () => {
-    if (!isLoading || isCancelling) return;
+    if (!claudeSessionId || !isLoading) return;
     
     try {
-      setIsCancelling(true);
-      
-      // Cancel the Claude execution with session ID if available
-      await api.cancelClaudeExecution(claudeSessionId || undefined);
+      await api.cancelClaudeExecution(claudeSessionId);
       
       // Clean up listeners
       unlistenRefs.current.forEach(unlisten => unlisten());
       unlistenRefs.current = [];
       
-      // Add a system message indicating cancellation
-      const cancelMessage: ClaudeStreamMessage = {
-        type: "system",
-        subtype: "cancelled",
-        result: "Execution cancelled by user",
-        timestamp: new Date().toISOString()
-      };
-      setMessages(prev => [...prev, cancelMessage]);
-      
       // Reset states
       setIsLoading(false);
       hasActiveSessionRef.current = false;
+      isListeningRef.current = false;
       setError(null);
+      
+      // Clear queued prompts
+      setQueuedPrompts([]);
+      
+      // Add a message indicating the session was cancelled
+      const cancelMessage: ClaudeStreamMessage = {
+        type: "system",
+        subtype: "info",
+        result: "Session cancelled by user",
+        timestamp: new Date().toISOString()
+      };
+      setMessages(prev => [...prev, cancelMessage]);
     } catch (err) {
       console.error("Failed to cancel execution:", err);
-      setError("Failed to cancel execution");
-    } finally {
-      setIsCancelling(false);
+      
+      // Even if backend fails, we should update UI to reflect stopped state
+      // Add error message but still stop the UI loading state
+      const errorMessage: ClaudeStreamMessage = {
+        type: "system",
+        subtype: "error",
+        result: `Failed to cancel execution: ${err instanceof Error ? err.message : 'Unknown error'}. The process may still be running in the background.`,
+        timestamp: new Date().toISOString()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+      
+      // Clean up listeners anyway
+      unlistenRefs.current.forEach(unlisten => unlisten());
+      unlistenRefs.current = [];
+      
+      // Reset states to allow user to continue
+      setIsLoading(false);
+      hasActiveSessionRef.current = false;
+      isListeningRef.current = false;
+      setError(null);
     }
   };
 
@@ -566,17 +792,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     // Keep the previewUrl so it can be restored when reopening
   };
 
-  const handlePreviewScreenshot = async (imagePath: string) => {
-    console.log("Screenshot captured:", imagePath);
-    
-    // Add the screenshot to the floating prompt input
-    if (floatingPromptRef.current) {
-      floatingPromptRef.current.addImage(imagePath);
-      
-      // Show a subtle animation/feedback that the image was added
-      // You could add a toast notification here if desired
-    }
-  };
+
 
   const handlePreviewUrlChange = (url: string) => {
     console.log('[ClaudeCodeSession] Preview URL changed to:', url);
@@ -591,10 +807,19 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     }
   };
 
-  // Clean up listeners on component unmount
+  // Cleanup event listeners and track mount state
   useEffect(() => {
+    isMountedRef.current = true;
+    
     return () => {
+      console.log('[ClaudeCodeSession] Component unmounting, cleaning up listeners');
+      isMountedRef.current = false;
+      isListeningRef.current = false;
+      
+      // Clean up listeners
       unlistenRefs.current.forEach(unlisten => unlisten());
+      unlistenRefs.current = [];
+      
       // Clear checkpoint manager when session ends
       if (effectiveSession) {
         api.clearCheckpointManager(effectiveSession.id).catch(err => {
@@ -602,20 +827,21 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         });
       }
     };
-  }, []);
+  }, [effectiveSession]);
 
   const messagesList = (
     <div
       ref={parentRef}
-      className="flex-1 overflow-y-auto relative"
+      className="flex-1 overflow-y-auto relative pb-40"
       style={{
         contain: 'strict',
       }}
     >
       <div
-        className="relative w-full max-w-5xl mx-auto px-4 py-4"
+        className="relative w-full max-w-5xl mx-auto px-4 pt-8 pb-4"
         style={{
-          height: `${rowVirtualizer.getTotalSize()}px`,
+          height: `${Math.max(rowVirtualizer.getTotalSize(), 100)}px`,
+          minHeight: '100px',
         }}
       >
         <AnimatePresence>
@@ -646,28 +872,27 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         </AnimatePresence>
       </div>
 
-      {/* Loading and Error indicators positioned relative to the scroll container */}
-      <div className="sticky bottom-0 w-full flex flex-col items-center pb-40">
-        {isLoading && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="flex items-center justify-center py-4 mt-4"
-          >
-            <Loader2 className="h-6 w-6 animate-spin text-primary" />
-          </motion.div>
-        )}
-        
-        {error && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive mt-4 w-full max-w-5xl mx-auto"
-          >
-            {error}
-          </motion.div>
-        )}
-      </div>
+      {/* Loading indicator under the latest message */}
+      {isLoading && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="flex items-center justify-center py-4 mb-40"
+        >
+          <div className="rotating-symbol text-primary text-2xl" />
+        </motion.div>
+      )}
+
+      {/* Error indicator */}
+      {error && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive mb-40 w-full max-w-5xl mx-auto"
+        >
+          {error}
+        </motion.div>
+      )}
     </div>
   );
 
@@ -716,7 +941,6 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
           <WebviewPreview
             initialUrl={previewUrl}
             onClose={handleClosePreview}
-            onScreenshot={handlePreviewScreenshot}
             isMaximized={isPreviewMaximized}
             onToggleMaximize={handleTogglePreviewMaximize}
             onUrlChange={handlePreviewUrlChange}
@@ -743,7 +967,6 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
               size="icon"
               onClick={onBack}
               className="h-8 w-8"
-              disabled={isLoading}
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
@@ -849,13 +1072,14 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                 onOpenChange={setCopyPopoverOpen}
               />
             )}
-            
-            <TokenCounter tokens={totalTokens} />
           </div>
         </motion.div>
 
         {/* Main Content Area */}
-        <div className="flex-1 overflow-hidden">
+        <div className={cn(
+          "flex-1 overflow-hidden transition-all duration-300",
+          showTimeline && "sm:mr-96"
+        )}>
           {showPreview ? (
             // Split pane layout when preview is active
             <SplitPane
@@ -869,7 +1093,6 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                 <WebviewPreview
                   initialUrl={previewUrl}
                   onClose={handleClosePreview}
-                  onScreenshot={handlePreviewScreenshot}
                   isMaximized={isPreviewMaximized}
                   onToggleMaximize={handleTogglePreviewMaximize}
                   onUrlChange={handlePreviewUrlChange}
@@ -886,45 +1109,218 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
             <div className="h-full flex flex-col max-w-5xl mx-auto">
               {projectPathInput}
               {messagesList}
-            </div>
-          )}
-
-          {isLoading && messages.length === 0 && (
-            <div className="flex items-center justify-center h-full">
-              <div className="flex items-center gap-3">
-                <Loader2 className="h-6 w-6 animate-spin" />
-                <span className="text-sm text-muted-foreground">
-                  {session ? "Loading session history..." : "Initializing Claude Code..."}
-                </span>
-              </div>
+              
+              {isLoading && messages.length === 0 && (
+                <div className="flex items-center justify-center h-full">
+                  <div className="flex items-center gap-3">
+                    <div className="rotating-symbol text-primary text-2xl" />
+                    <span className="text-sm text-muted-foreground">
+                      {session ? "Loading session history..." : "Initializing Claude Code..."}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
 
         {/* Floating Prompt Input - Always visible */}
         <ErrorBoundary>
-          <FloatingPromptInput
-            ref={floatingPromptRef}
-            onSend={handleSendPrompt}
-            onCancel={handleCancelExecution}
-            isLoading={isLoading}
-            disabled={!projectPath}
-            projectPath={projectPath}
-          />
+          {/* Queued Prompts Display */}
+          <AnimatePresence>
+            {queuedPrompts.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
+                className="fixed bottom-24 left-1/2 -translate-x-1/2 z-30 w-full max-w-3xl px-4"
+              >
+                <div className="bg-background/95 backdrop-blur-md border rounded-lg shadow-lg p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs font-medium text-muted-foreground mb-1">
+                      Queued Prompts ({queuedPrompts.length})
+                    </div>
+                    <Button variant="ghost" size="icon" onClick={() => setQueuedPromptsCollapsed(prev => !prev)}>
+                      {queuedPromptsCollapsed ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                    </Button>
+                  </div>
+                  {!queuedPromptsCollapsed && queuedPrompts.map((queuedPrompt, index) => (
+                    <motion.div
+                      key={queuedPrompt.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="flex items-start gap-2 bg-muted/50 rounded-md p-2"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-medium text-muted-foreground">#{index + 1}</span>
+                          <span className="text-xs px-1.5 py-0.5 bg-primary/10 text-primary rounded">
+                            {queuedPrompt.model === "opus" ? "Opus" : "Sonnet"}
+                          </span>
+                        </div>
+                        <p className="text-sm line-clamp-2 break-words">{queuedPrompt.prompt}</p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 flex-shrink-0"
+                        onClick={() => setQueuedPrompts(prev => prev.filter(p => p.id !== queuedPrompt.id))}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </motion.div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Navigation Arrows - positioned above prompt bar with spacing */}
+          {displayableMessages.length > 5 && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              transition={{ delay: 0.5 }}
+              className="fixed bottom-32 right-6 z-50"
+            >
+              <div className="flex items-center bg-background/95 backdrop-blur-md border rounded-full shadow-lg overflow-hidden">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    // Use virtualizer to scroll to the first item
+                    if (displayableMessages.length > 0) {
+                      // Scroll to top of the container
+                      parentRef.current?.scrollTo({
+                        top: 0,
+                        behavior: 'smooth'
+                      });
+                      
+                      // After smooth scroll completes, trigger a small scroll to ensure rendering
+                      setTimeout(() => {
+                        if (parentRef.current) {
+                          // Scroll down 1px then back to 0 to trigger virtualizer update
+                          parentRef.current.scrollTop = 1;
+                          requestAnimationFrame(() => {
+                            if (parentRef.current) {
+                              parentRef.current.scrollTop = 0;
+                            }
+                          });
+                        }
+                      }, 500); // Wait for smooth scroll to complete
+                    }
+                  }}
+                  className="px-3 py-2 hover:bg-accent rounded-none"
+                  title="Scroll to top"
+                >
+                  <ChevronUp className="h-4 w-4" />
+                </Button>
+                <div className="w-px h-4 bg-border" />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    // Use virtualizer to scroll to the last item
+                    if (displayableMessages.length > 0) {
+                      // Scroll to bottom of the container
+                      const scrollElement = parentRef.current;
+                      if (scrollElement) {
+                        scrollElement.scrollTo({
+                          top: scrollElement.scrollHeight,
+                          behavior: 'smooth'
+                        });
+                      }
+                    }
+                  }}
+                  className="px-3 py-2 hover:bg-accent rounded-none"
+                  title="Scroll to bottom"
+                >
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </div>
+            </motion.div>
+          )}
+
+          <div className={cn(
+            "fixed bottom-0 left-0 right-0 transition-all duration-300 z-50",
+            showTimeline && "sm:right-96"
+          )}>
+            <FloatingPromptInput
+              ref={floatingPromptRef}
+              onSend={handleSendPrompt}
+              onCancel={handleCancelExecution}
+              isLoading={isLoading}
+              disabled={!projectPath}
+              projectPath={projectPath}
+            />
+          </div>
+
+          {/* Token Counter - positioned under the Send button */}
+          {totalTokens > 0 && (
+            <div className="fixed bottom-0 left-0 right-0 z-30 pointer-events-none">
+              <div className="max-w-5xl mx-auto">
+                <div className="flex justify-end px-4 pb-2">
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    className="bg-background/95 backdrop-blur-md border rounded-full px-3 py-1 shadow-lg pointer-events-auto"
+                  >
+                    <div className="flex items-center gap-1.5 text-xs">
+                      <Hash className="h-3 w-3 text-muted-foreground" />
+                      <span className="font-mono">{totalTokens.toLocaleString()}</span>
+                      <span className="text-muted-foreground">tokens</span>
+                    </div>
+                  </motion.div>
+                </div>
+              </div>
+            </div>
+          )}
         </ErrorBoundary>
 
         {/* Timeline */}
-        {showTimeline && effectiveSession && (
-          <TimelineNavigator
-            sessionId={effectiveSession.id}
-            projectId={effectiveSession.project_id}
-            projectPath={projectPath}
-            currentMessageIndex={messages.length - 1}
-            onCheckpointSelect={handleCheckpointSelect}
-            onFork={handleFork}
-            refreshVersion={timelineVersion}
-          />
-        )}
+        <AnimatePresence>
+          {showTimeline && effectiveSession && (
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 20, stiffness: 300 }}
+              className="fixed right-0 top-0 h-full w-full sm:w-96 bg-background border-l border-border shadow-xl z-30 overflow-hidden"
+            >
+              <div className="h-full flex flex-col">
+                {/* Timeline Header */}
+                <div className="flex items-center justify-between p-4 border-b border-border">
+                  <h3 className="text-lg font-semibold">Session Timeline</h3>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setShowTimeline(false)}
+                    className="h-8 w-8"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                
+                {/* Timeline Content */}
+                <div className="flex-1 overflow-y-auto p-4">
+                  <TimelineNavigator
+                    sessionId={effectiveSession.id}
+                    projectId={effectiveSession.project_id}
+                    projectPath={projectPath}
+                    currentMessageIndex={messages.length - 1}
+                    onCheckpointSelect={handleCheckpointSelect}
+                    onFork={handleFork}
+                    refreshVersion={timelineVersion}
+                  />
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Fork Dialog */}

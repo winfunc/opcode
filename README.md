@@ -37,7 +37,7 @@ Think of Claudia as your command center for Claude Code - bridging the gap betwe
 - [✨ Features](#-features)
   - [🗂️ Project & Session Management](#️-project--session-management)
   - [🤖 CC Agents](#-cc-agents)
-  - [🛡️ Advanced Sandboxing](#️-advanced-sandboxing)
+  
   - [📊 Usage Analytics Dashboard](#-usage-analytics-dashboard)
   - [🔌 MCP Server Management](#-mcp-server-management)
   - [⏰ Timeline & Checkpoints](#-timeline--checkpoints)
@@ -67,14 +67,10 @@ Think of Claudia as your command center for Claude Code - bridging the gap betwe
 ### 🤖 **CC Agents**
 - **Custom AI Agents**: Create specialized agents with custom system prompts and behaviors
 - **Agent Library**: Build a collection of purpose-built agents for different tasks
-- **Secure Execution**: Run agents in sandboxed environments with fine-grained permissions
+- **Background Execution**: Run agents in separate processes for non-blocking operations
 - **Execution History**: Track all agent runs with detailed logs and performance metrics
 
-### 🛡️ **Advanced Sandboxing**
-- **OS-Level Security**: Platform-specific sandboxing (seccomp on Linux, Seatbelt on macOS)
-- **Permission Profiles**: Create reusable security profiles with granular access controls
-- **Violation Tracking**: Monitor and log all security violations in real-time
-- **Import/Export**: Share sandbox profiles across teams and systems
+
 
 ### 📊 **Usage Analytics Dashboard**
 - **Cost Tracking**: Monitor your Claude API usage and costs in real-time
@@ -127,7 +123,7 @@ CC Agents → Create Agent → Configure → Execute
 
 1. **Design Your Agent**: Set name, icon, and system prompt
 2. **Configure Model**: Choose between available Claude models
-3. **Set Sandbox Profile**: Apply security restrictions
+3. **Set Permissions**: Configure file read/write and network access
 4. **Execute Tasks**: Run your agent on any project
 
 ### Tracking Usage
@@ -351,8 +347,8 @@ claudia/
 ├── src-tauri/             # Rust backend
 │   ├── src/
 │   │   ├── commands/      # Tauri command handlers
-│   │   ├── sandbox/       # Security sandboxing
-│   │   └── checkpoint/    # Timeline management
+│   │   ├── checkpoint/    # Timeline management
+│   │   └── process/       # Process management
 │   └── tests/             # Rust test suite
 └── public/                # Public assets
 ```
@@ -378,13 +374,13 @@ cd src-tauri && cargo fmt
 
 ## 🔒 Security
 
-Claudia implements multiple layers of security:
+Claudia prioritizes your privacy and security:
 
-1. **Process Isolation**: Agents run in separate sandboxed processes
-2. **Filesystem Access Control**: Whitelist-based file access
-3. **Network Restrictions**: Control external connections
-4. **Audit Logging**: All security violations are logged
-5. **No Data Collection**: Everything stays local on your machine
+1. **Process Isolation**: Agents run in separate processes
+2. **Permission Control**: Configure file and network access per agent
+3. **Local Storage**: All data stays on your machine
+4. **No Telemetry**: No data collection or tracking
+5. **Open Source**: Full transparency through open source code
 
 ## 🤝 Contributing
 
