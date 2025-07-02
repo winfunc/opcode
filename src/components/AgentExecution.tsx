@@ -71,7 +71,12 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
 }) => {
   const [projectPath, setProjectPath] = useState("");
   const [task, setTask] = useState(agent.default_task || "");
-  const [model, setModel] = useState(agent.model || "sonnet");
+  
+  // Initialize model state - if agent has a custom model, set it as custom
+  const isCustomModel = agent.model && !["sonnet", "opus"].includes(agent.model);
+  const [model, setModel] = useState(isCustomModel ? "custom" : (agent.model || "sonnet"));
+  const [customModel, setCustomModel] = useState(isCustomModel ? agent.model : "");
+  
   const [isRunning, setIsRunning] = useState(false);
   const [messages, setMessages] = useState<ClaudeStreamMessage[]>([]);
   const [rawJsonlOutput, setRawJsonlOutput] = useState<string[]>([]);
@@ -266,6 +271,13 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
     }
   };
 
+  const getEffectiveModel = () => {
+    if (model === "custom") {
+      return customModel.trim() || "sonnet";
+    }
+    return model;
+  };
+
   const handleExecute = async () => {
     try {
       setIsRunning(true);
@@ -279,7 +291,8 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
       unlistenRefs.current = [];
       
       // Execute the agent and get the run ID
-      const executionRunId = await api.executeAgent(agent.id!, projectPath, task, model);
+      const effectiveModel = getEffectiveModel();
+      const executionRunId = await api.executeAgent(agent.id!, projectPath, task, effectiveModel);
       console.log("Agent execution started with run ID:", executionRunId);
       setRunId(executionRunId);
       
@@ -419,10 +432,20 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
     setCopyPopoverOpen(false);
   };
 
+  const getModelDisplayName = (modelName: string) => {
+    switch (modelName) {
+      case "sonnet": return "Claude 4 Sonnet";
+      case "opus": return "Claude 4 Opus";
+      case "haiku": return "Claude 3.5 Haiku";
+      case "custom": return `Custom (${customModel})`;
+      default: return modelName;
+    }
+  };
+
   const handleCopyAsMarkdown = async () => {
     let markdown = `# Agent Execution: ${agent.name}\n\n`;
     markdown += `**Task:** ${task}\n`;
-    markdown += `**Model:** ${model === 'opus' ? 'Claude 4 Opus' : 'Claude 4 Sonnet'}\n`;
+    markdown += `**Model:** ${getModelDisplayName(model)}\n`;
     markdown += `**Date:** ${new Date().toISOString()}\n\n`;
     markdown += `---\n\n`;
 
@@ -626,12 +649,12 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
             {/* Model Selection */}
             <div className="space-y-2">
               <Label>Model</Label>
-              <div className="flex gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                 <button
                   type="button"
                   onClick={() => !isRunning && setModel("sonnet")}
                   className={cn(
-                    "flex-1 px-3.5 py-2 rounded-full border-2 font-medium transition-all text-sm",
+                    "px-3 py-2 rounded-full border-2 font-medium transition-all text-xs",
                     !isRunning && "hover:scale-[1.02] active:scale-[0.98]",
                     isRunning && "opacity-50 cursor-not-allowed",
                     model === "sonnet" 
@@ -640,16 +663,16 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
                   )}
                   disabled={isRunning}
                 >
-                  <div className="flex items-center justify-center gap-2">
+                  <div className="flex items-center justify-center gap-1.5">
                     <div className={cn(
-                      "w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center flex-shrink-0",
+                      "w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0",
                       model === "sonnet" ? "border-primary-foreground" : "border-current"
                     )}>
                       {model === "sonnet" && (
-                        <div className="w-1.5 h-1.5 rounded-full bg-primary-foreground" />
+                        <div className="w-1 h-1 rounded-full bg-primary-foreground" />
                       )}
                     </div>
-                    <span>Claude 4 Sonnet</span>
+                    <span>Sonnet</span>
                   </div>
                 </button>
                 
@@ -657,7 +680,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
                   type="button"
                   onClick={() => !isRunning && setModel("opus")}
                   className={cn(
-                    "flex-1 px-3.5 py-2 rounded-full border-2 font-medium transition-all text-sm",
+                    "px-3 py-2 rounded-full border-2 font-medium transition-all text-xs",
                     !isRunning && "hover:scale-[1.02] active:scale-[0.98]",
                     isRunning && "opacity-50 cursor-not-allowed",
                     model === "opus" 
@@ -666,19 +689,62 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
                   )}
                   disabled={isRunning}
                 >
-                  <div className="flex items-center justify-center gap-2">
+                  <div className="flex items-center justify-center gap-1.5">
                     <div className={cn(
-                      "w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center flex-shrink-0",
+                      "w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0",
                       model === "opus" ? "border-primary-foreground" : "border-current"
                     )}>
                       {model === "opus" && (
-                        <div className="w-1.5 h-1.5 rounded-full bg-primary-foreground" />
+                        <div className="w-1 h-1 rounded-full bg-primary-foreground" />
                       )}
                     </div>
-                    <span>Claude 4 Opus</span>
+                    <span>Opus</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => !isRunning && setModel("custom")}
+                  className={cn(
+                    "px-3 py-2 rounded-full border-2 font-medium transition-all text-xs",
+                    !isRunning && "hover:scale-[1.02] active:scale-[0.98]",
+                    isRunning && "opacity-50 cursor-not-allowed",
+                    model === "custom" 
+                      ? "border-primary bg-primary text-primary-foreground shadow-lg" 
+                      : "border-muted-foreground/30 hover:border-muted-foreground/50"
+                  )}
+                  disabled={isRunning}
+                >
+                  <div className="flex items-center justify-center gap-1.5">
+                    <div className={cn(
+                      "w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0",
+                      model === "custom" ? "border-primary-foreground" : "border-current"
+                    )}>
+                      {model === "custom" && (
+                        <div className="w-1 h-1 rounded-full bg-primary-foreground" />
+                      )}
+                    </div>
+                    <span>Custom</span>
                   </div>
                 </button>
               </div>
+
+              {/* Custom Model Input */}
+              {model === "custom" && (
+                <div className="mt-2 space-y-1">
+                  <Input
+                    type="text"
+                    placeholder="e.g., us.anthropic.claude-sonnet-4-20250514-v1"
+                    value={customModel}
+                    onChange={(e) => setCustomModel(e.target.value)}
+                    disabled={isRunning}
+                    className="text-xs"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Enter the full model identifier (Bedrock, Vertex AI, etc.)
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Task Input */}

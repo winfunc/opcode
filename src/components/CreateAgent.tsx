@@ -46,13 +46,25 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
   const [selectedIcon, setSelectedIcon] = useState<AgentIconName>((agent?.icon as AgentIconName) || "bot");
   const [systemPrompt, setSystemPrompt] = useState(agent?.system_prompt || "");
   const [defaultTask, setDefaultTask] = useState(agent?.default_task || "");
-  const [model, setModel] = useState(agent?.model || "sonnet");
+  
+  // Initialize model state - if agent has a custom model, set it as custom
+  const isCustomModel = agent?.model && !["sonnet", "opus"].includes(agent.model);
+  const [model, setModel] = useState(isCustomModel ? "custom" : (agent?.model || "sonnet"));
+  const [customModel, setCustomModel] = useState(isCustomModel ? agent.model : "");
+  
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [showIconPicker, setShowIconPicker] = useState(false);
 
   const isEditMode = !!agent;
+
+  const getEffectiveModel = () => {
+    if (model === "custom") {
+      return customModel.trim() || "sonnet";
+    }
+    return model;
+  };
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -65,9 +77,16 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
       return;
     }
 
+    if (model === "custom" && !customModel.trim()) {
+      setError("Custom model name is required when using custom model");
+      return;
+    }
+
     try {
       setSaving(true);
       setError(null);
+      
+      const effectiveModel = getEffectiveModel();
       
       if (isEditMode && agent.id) {
         await api.updateAgent(
@@ -76,7 +95,7 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
           selectedIcon, 
           systemPrompt, 
           defaultTask || undefined, 
-          model
+          effectiveModel
         );
       } else {
         await api.createAgent(
@@ -84,7 +103,7 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
           selectedIcon, 
           systemPrompt, 
           defaultTask || undefined, 
-          model
+          effectiveModel
         );
       }
       
@@ -106,7 +125,8 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
          selectedIcon !== (agent?.icon || "bot") || 
          systemPrompt !== (agent?.system_prompt || "") ||
          defaultTask !== (agent?.default_task || "") ||
-         model !== (agent?.model || "sonnet")) && 
+         model !== (agent?.model || "sonnet") ||
+         getEffectiveModel() !== (agent?.model || "sonnet")) && 
         !confirm("You have unsaved changes. Are you sure you want to leave?")) {
       return;
     }
@@ -219,12 +239,12 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
               {/* Model Selection */}
               <div className="space-y-2">
                 <Label>Model</Label>
-                <div className="flex flex-col sm:flex-row gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   <button
                     type="button"
                     onClick={() => setModel("sonnet")}
                     className={cn(
-                      "flex-1 px-4 py-2.5 rounded-full border-2 font-medium transition-all",
+                      "px-4 py-2.5 rounded-full border-2 font-medium transition-all",
                       "hover:scale-[1.02] active:scale-[0.98]",
                       model === "sonnet" 
                         ? "border-primary bg-primary text-primary-foreground shadow-lg" 
@@ -242,7 +262,7 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
                       </div>
                       <div className="text-left">
                         <div className="text-sm font-semibold">Claude 4 Sonnet</div>
-                        <div className="text-xs opacity-80">Faster, efficient for most tasks</div>
+                        <div className="text-xs opacity-80">Balanced, efficient for most tasks</div>
                       </div>
                     </div>
                   </button>
@@ -251,7 +271,7 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
                     type="button"
                     onClick={() => setModel("opus")}
                     className={cn(
-                      "flex-1 px-4 py-2.5 rounded-full border-2 font-medium transition-all",
+                      "px-4 py-2.5 rounded-full border-2 font-medium transition-all",
                       "hover:scale-[1.02] active:scale-[0.98]",
                       model === "opus" 
                         ? "border-primary bg-primary text-primary-foreground shadow-lg" 
@@ -269,11 +289,57 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
                       </div>
                       <div className="text-left">
                         <div className="text-sm font-semibold">Claude 4 Opus</div>
-                        <div className="text-xs opacity-80">More capable, better for complex tasks</div>
+                        <div className="text-xs opacity-80">Most capable, complex tasks</div>
+                      </div>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setModel("custom")}
+                    className={cn(
+                      "px-4 py-2.5 rounded-full border-2 font-medium transition-all",
+                      "hover:scale-[1.02] active:scale-[0.98]",
+                      model === "custom" 
+                        ? "border-primary bg-primary text-primary-foreground shadow-lg" 
+                        : "border-muted-foreground/30 hover:border-muted-foreground/50"
+                    )}
+                  >
+                    <div className="flex items-center justify-center gap-2.5">
+                      <div className={cn(
+                        "w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0",
+                        model === "custom" ? "border-primary-foreground" : "border-current"
+                      )}>
+                        {model === "custom" && (
+                          <div className="w-2 h-2 rounded-full bg-primary-foreground" />
+                        )}
+                      </div>
+                      <div className="text-left">
+                        <div className="text-sm font-semibold">Custom Model</div>
+                        <div className="text-xs opacity-80">Bedrock, Vertex AI, etc.</div>
                       </div>
                     </div>
                   </button>
                 </div>
+
+                {/* Custom Model Input */}
+                {model === "custom" && (
+                  <div className="mt-3 space-y-2">
+                    <Label htmlFor="custom-model">Custom Model Name</Label>
+                    <Input
+                      id="custom-model"
+                      type="text"
+                      placeholder="e.g., us.anthropic.claude-sonnet-4-20250514-v1"
+                      value={customModel}
+                      onChange={(e) => setCustomModel(e.target.value)}
+                      className="max-w-lg"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Enter the full model identifier for Bedrock, Vertex AI, or other providers. 
+                      Make sure the corresponding environment variables are configured in Settings.
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Default Task */}
