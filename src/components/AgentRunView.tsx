@@ -20,6 +20,7 @@ import { StreamMessage } from "./StreamMessage";
 import { AGENT_ICONS } from "./CCAgents";
 import type { ClaudeStreamMessage } from "./AgentExecution";
 import { ErrorBoundary } from "./ErrorBoundary";
+import { t } from "@/lib/i18n";
 
 interface AgentRunViewProps {
   /**
@@ -82,7 +83,7 @@ export const AgentRunView: React.FC<AgentRunViewProps> = ({
       }
     } catch (err) {
       console.error("Failed to load run:", err);
-      setError("Failed to load execution details");
+      setError(t('failedToLoadExecutionDetails'));
     } finally {
       setLoading(false);
     }
@@ -97,25 +98,25 @@ export const AgentRunView: React.FC<AgentRunViewProps> = ({
   const handleCopyAsMarkdown = async () => {
     if (!run) return;
     
-    let markdown = `# Agent Execution: ${run.agent_name}\n\n`;
-    markdown += `**Task:** ${run.task}\n`;
-    markdown += `**Model:** ${run.model === 'opus' ? 'Claude 4 Opus' : 'Claude 4 Sonnet'}\n`;
-    markdown += `**Date:** ${formatISOTimestamp(run.created_at)}\n`;
-    if (run.metrics?.duration_ms) markdown += `**Duration:** ${(run.metrics.duration_ms / 1000).toFixed(2)}s\n`;
-    if (run.metrics?.total_tokens) markdown += `**Total Tokens:** ${run.metrics.total_tokens}\n`;
-    if (run.metrics?.cost_usd) markdown += `**Cost:** $${run.metrics.cost_usd.toFixed(4)} USD\n`;
+    let markdown = `# ${t('agentExecution')}: ${run.agent_name}\n\n`;
+    markdown += `**${t('task')}:** ${run.task}\n`;
+    markdown += `**${t('model')}:** ${run.model === 'opus' ? 'Claude 4 Opus' : 'Claude 4 Sonnet'}\n`;
+    markdown += `**${t('date')}:** ${formatISOTimestamp(run.created_at)}\n`;
+    if (run.metrics?.duration_ms) markdown += `**${t('duration')}:** ${(run.metrics.duration_ms / 1000).toFixed(2)}s\n`;
+    if (run.metrics?.total_tokens) markdown += `**${t('tokens')}:** ${run.metrics.total_tokens}\n`;
+    if (run.metrics?.cost_usd) markdown += `**${t('cost')}:** $${run.metrics.cost_usd.toFixed(4)} USD\n`;
     markdown += `\n---\n\n`;
 
     for (const msg of messages) {
       if (msg.type === "system" && msg.subtype === "init") {
-        markdown += `## System Initialization\n\n`;
-        markdown += `- Session ID: \`${msg.session_id || 'N/A'}\`\n`;
-        markdown += `- Model: \`${msg.model || 'default'}\`\n`;
-        if (msg.cwd) markdown += `- Working Directory: \`${msg.cwd}\`\n`;
-        if (msg.tools?.length) markdown += `- Tools: ${msg.tools.join(', ')}\n`;
+        markdown += `## ${t('systemInitialization')}\n\n`;
+        markdown += `- ${t('sessionId')}: \`${msg.session_id || 'N/A'}\`\n`;
+        markdown += `- ${t('model')}: \`${msg.model || 'default'}\`\n`;
+        if (msg.cwd) markdown += `- ${t('workingDirectory')}: \`${msg.cwd}\`\n`;
+        if (msg.tools?.length) markdown += `- ${t('tools')}: ${msg.tools.join(', ')}\n`;
         markdown += `\n`;
       } else if (msg.type === "assistant" && msg.message) {
-        markdown += `## Assistant\n\n`;
+        markdown += `## ${t('assistant')}\n\n`;
         for (const content of msg.message.content || []) {
           if (content.type === "text") {
             markdown += `${content.text}\n\n`;
@@ -125,25 +126,25 @@ export const AgentRunView: React.FC<AgentRunViewProps> = ({
           }
         }
         if (msg.message.usage) {
-          markdown += `*Tokens: ${msg.message.usage.input_tokens} in, ${msg.message.usage.output_tokens} out*\n\n`;
+          markdown += `*${t('tokens')}: ${msg.message.usage.input_tokens} in, ${msg.message.usage.output_tokens} out*\n\n`;
         }
       } else if (msg.type === "user" && msg.message) {
-        markdown += `## User\n\n`;
+        markdown += `## ${t('user')}\n\n`;
         for (const content of msg.message.content || []) {
           if (content.type === "text") {
             markdown += `${content.text}\n\n`;
           } else if (content.type === "tool_result") {
-            markdown += `### Tool Result\n\n`;
+            markdown += `### ${t('toolResult')}\n\n`;
             markdown += `\`\`\`\n${content.content}\n\`\`\`\n\n`;
           }
         }
       } else if (msg.type === "result") {
-        markdown += `## Execution Result\n\n`;
+        markdown += `## ${t('executionResult')}\n\n`;
         if (msg.result) {
           markdown += `${msg.result}\n\n`;
         }
         if (msg.error) {
-          markdown += `**Error:** ${msg.error}\n\n`;
+          markdown += `**${t('error')}:** ${msg.error}\n\n`;
         }
       }
     }
@@ -168,8 +169,8 @@ export const AgentRunView: React.FC<AgentRunViewProps> = ({
   if (error || !run) {
     return (
       <div className={cn("flex flex-col items-center justify-center h-full", className)}>
-        <p className="text-destructive mb-4">{error || "Run not found"}</p>
-        <Button onClick={onBack}>Go Back</Button>
+        <p className="text-destructive mb-4">{error || t('runNotFound')}</p>
+        <Button onClick={onBack}>{t('goBack')}</Button>
       </div>
     );
   }
@@ -197,7 +198,7 @@ export const AgentRunView: React.FC<AgentRunViewProps> = ({
               {renderIcon(run.agent_icon)}
               <div>
                 <h2 className="text-lg font-semibold">{run.agent_name}</h2>
-                <p className="text-xs text-muted-foreground">Execution History</p>
+                <p className="text-xs text-muted-foreground">{t('executionHistory')}</p>
               </div>
             </div>
           </div>
@@ -205,38 +206,40 @@ export const AgentRunView: React.FC<AgentRunViewProps> = ({
           <Popover
             trigger={
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
-                className="flex items-center gap-2"
+                className="gap-2"
+                onClick={() => setCopyPopoverOpen(!copyPopoverOpen)}
               >
                 <Copy className="h-4 w-4" />
-                Copy Output
+                {t('copyOutput')}
                 <ChevronDown className="h-3 w-3" />
               </Button>
             }
             content={
-              <div className="w-44 p-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full justify-start"
-                  onClick={handleCopyAsJsonl}
-                >
-                  Copy as JSONL
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full justify-start"
-                  onClick={handleCopyAsMarkdown}
-                >
-                  Copy as Markdown
-                </Button>
+              <div className="mt-2 w-48 bg-popover border rounded-md shadow-md">
+                <div className="p-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={handleCopyAsJsonl}
+                  >
+                    {t('copyAsJsonl')}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={handleCopyAsMarkdown}
+                  >
+                    {t('copyAsMarkdown')}
+                  </Button>
+                </div>
               </div>
             }
             open={copyPopoverOpen}
             onOpenChange={setCopyPopoverOpen}
-            align="end"
           />
         </motion.div>
         
@@ -245,7 +248,7 @@ export const AgentRunView: React.FC<AgentRunViewProps> = ({
           <CardContent className="p-4">
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <h3 className="text-sm font-medium">Task:</h3>
+                <h3 className="text-sm font-medium">{t('task')}:</h3>
                 <p className="text-sm text-muted-foreground flex-1">{run.task}</p>
                 <Badge variant="outline" className="text-xs">
                   {run.model === 'opus' ? 'Claude 4 Opus' : 'Claude 4 Sonnet'}

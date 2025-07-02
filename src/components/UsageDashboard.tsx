@@ -16,6 +16,7 @@ import {
   FileText,
   Briefcase
 } from "lucide-react";
+import { t } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 interface UsageDashboardProps {
@@ -38,10 +39,24 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
   const [sessionStats, setSessionStats] = useState<ProjectUsage[] | null>(null);
   const [selectedDateRange, setSelectedDateRange] = useState<"all" | "7d" | "30d">("all");
   const [activeTab, setActiveTab] = useState("overview");
+  const [, forceUpdate] = useState({});
 
   useEffect(() => {
     loadUsageStats();
   }, [selectedDateRange]);
+
+  // 监听语言变化
+  useEffect(() => {
+    const handleLanguageChange = () => {
+      forceUpdate({});
+    };
+
+    window.addEventListener('languageChanged', handleLanguageChange);
+    
+    return () => {
+      window.removeEventListener('languageChanged', handleLanguageChange);
+    };
+  }, []);
 
   const loadUsageStats = async () => {
     try {
@@ -146,9 +161,9 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div>
-              <h1 className="text-lg font-semibold">Usage Dashboard</h1>
+              <h1 className="text-lg font-semibold">{t('usageDashboard')}</h1>
               <p className="text-xs text-muted-foreground">
-                Track your Claude Code usage and costs
+                {t('trackUsageAndCosts')}
               </p>
             </div>
           </div>
@@ -165,7 +180,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                   onClick={() => setSelectedDateRange(range)}
                   className="text-xs"
                 >
-                  {range === "all" ? "All Time" : range === "7d" ? "Last 7 Days" : "Last 30 Days"}
+                  {range === "all" ? t('allTime') : range === "7d" ? t('last7Days') : t('last30Days')}
                 </Button>
               ))}
             </div>
@@ -179,7 +194,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mx-auto mb-4" />
-              <p className="text-sm text-muted-foreground">Loading usage statistics...</p>
+              <p className="text-sm text-muted-foreground">{t('loadingUsageStats')}</p>
             </div>
           </div>
         ) : error ? (
@@ -187,7 +202,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
             <div className="text-center max-w-md">
               <p className="text-sm text-destructive mb-4">{error}</p>
               <Button onClick={loadUsageStats} size="sm">
-                Try Again
+                {t('tryAgain')}
               </Button>
             </div>
           </div>
@@ -204,7 +219,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
               <Card className="p-4 shimmer-hover">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs text-muted-foreground">Total Cost</p>
+                    <p className="text-xs text-muted-foreground">{t('totalCost')}</p>
                     <p className="text-2xl font-bold mt-1">
                       {formatCurrency(stats.total_cost)}
                     </p>
@@ -217,7 +232,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
               <Card className="p-4 shimmer-hover">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs text-muted-foreground">Total Sessions</p>
+                    <p className="text-xs text-muted-foreground">{t('totalSessions')}</p>
                     <p className="text-2xl font-bold mt-1">
                       {formatNumber(stats.total_sessions)}
                     </p>
@@ -230,7 +245,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
               <Card className="p-4 shimmer-hover">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs text-muted-foreground">Total Tokens</p>
+                    <p className="text-xs text-muted-foreground">{t('totalTokens')}</p>
                     <p className="text-2xl font-bold mt-1">
                       {formatTokens(stats.total_tokens)}
                     </p>
@@ -243,7 +258,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
               <Card className="p-4 shimmer-hover">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs text-muted-foreground">Avg Cost/Session</p>
+                    <p className="text-xs text-muted-foreground">{t('avgCostPerSession')}</p>
                     <p className="text-2xl font-bold mt-1">
                       {formatCurrency(
                         stats.total_sessions > 0 
@@ -260,32 +275,32 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
             {/* Tabs for different views */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="grid w-full grid-cols-5">
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="models">By Model</TabsTrigger>
-                <TabsTrigger value="projects">By Project</TabsTrigger>
-                <TabsTrigger value="sessions">By Session</TabsTrigger>
-                <TabsTrigger value="timeline">Timeline</TabsTrigger>
+                <TabsTrigger value="overview">{t('overview')}</TabsTrigger>
+                <TabsTrigger value="models">{t('byModel')}</TabsTrigger>
+                <TabsTrigger value="projects">{t('byProject')}</TabsTrigger>
+                <TabsTrigger value="sessions">{t('bySession')}</TabsTrigger>
+                <TabsTrigger value="timeline">{t('timeline')}</TabsTrigger>
               </TabsList>
 
               {/* Overview Tab */}
               <TabsContent value="overview" className="space-y-4">
                 <Card className="p-6">
-                  <h3 className="text-sm font-semibold mb-4">Token Breakdown</h3>
+                  <h3 className="text-sm font-semibold mb-4">{t('tokenBreakdown')}</h3>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div>
-                      <p className="text-xs text-muted-foreground">Input Tokens</p>
+                      <p className="text-xs text-muted-foreground">{t('inputTokens')}</p>
                       <p className="text-lg font-semibold">{formatTokens(stats.total_input_tokens)}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">Output Tokens</p>
+                      <p className="text-xs text-muted-foreground">{t('outputTokens')}</p>
                       <p className="text-lg font-semibold">{formatTokens(stats.total_output_tokens)}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">Cache Write</p>
+                      <p className="text-xs text-muted-foreground">{t('cacheWrite')}</p>
                       <p className="text-lg font-semibold">{formatTokens(stats.total_cache_creation_tokens)}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">Cache Read</p>
+                      <p className="text-xs text-muted-foreground">{t('cacheRead')}</p>
                       <p className="text-lg font-semibold">{formatTokens(stats.total_cache_read_tokens)}</p>
                     </div>
                   </div>
@@ -294,7 +309,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                 {/* Quick Stats */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Card className="p-6">
-                    <h3 className="text-sm font-semibold mb-4">Most Used Models</h3>
+                    <h3 className="text-sm font-semibold mb-4">{t('mostUsedModels')}</h3>
                     <div className="space-y-3">
                       {stats.by_model.slice(0, 3).map((model) => (
                         <div key={model.model} className="flex items-center justify-between">
@@ -303,7 +318,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                               {getModelDisplayName(model.model)}
                             </Badge>
                             <span className="text-xs text-muted-foreground">
-                              {model.session_count} sessions
+                              {model.session_count} {t('sessions')}
                             </span>
                           </div>
                           <span className="text-sm font-medium">
@@ -315,7 +330,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                   </Card>
 
                   <Card className="p-6">
-                    <h3 className="text-sm font-semibold mb-4">Top Projects</h3>
+                    <h3 className="text-sm font-semibold mb-4">{t('topProjects')}</h3>
                     <div className="space-y-3">
                       {stats.by_project.slice(0, 3).map((project) => (
                         <div key={project.project_path} className="flex items-center justify-between">
@@ -324,7 +339,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                               {project.project_path}
                             </span>
                             <span className="text-xs text-muted-foreground">
-                              {project.session_count} sessions
+                              {project.session_count} {t('sessions')}
                             </span>
                           </div>
                           <span className="text-sm font-medium">

@@ -31,6 +31,7 @@ import { SplitPane } from "@/components/ui/split-pane";
 import { WebviewPreview } from "./WebviewPreview";
 import type { ClaudeStreamMessage } from "./AgentExecution";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { t } from "@/lib/i18n";
 
 interface ClaudeCodeSessionProps {
   /**
@@ -795,7 +796,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       className="p-4 border-b border-border flex-shrink-0"
     >
       <Label htmlFor="project-path" className="text-sm font-medium">
-        Project Directory
+        {t('projectDirectory')}
       </Label>
       <div className="flex items-center gap-2 mt-1">
         <Input
@@ -866,9 +867,9 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
             <div className="flex items-center gap-2">
               <Terminal className="h-5 w-5" />
               <div>
-                <h2 className="text-lg font-semibold">Claude Code Session</h2>
+                <h2 className="text-lg font-semibold">{t('claudeCodeSession')}</h2>
                 <p className="text-xs text-muted-foreground">
-                  {session ? `Resuming session ${session.id.slice(0, 8)}...` : 'Interactive session'}
+                  {session ? `Resuming session ${session.id.slice(0, 8)}...` : t('interactiveSession')}
                 </p>
               </div>
             </div>
@@ -916,13 +917,13 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                     className="flex items-center gap-2"
                   >
                     <Globe className="h-4 w-4" />
-                    {showPreview ? "Close Preview" : "Preview"}
+                    {showPreview ? t('closePreview') : t('preview')}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
                   {showPreview 
-                    ? "Close the preview pane" 
-                    : "Open a browser preview to test your web applications"
+                    ? t('closeThePreviewPane') 
+                    : t('openBrowserPreviewToTest')
                   }
                 </TooltipContent>
               </Tooltip>

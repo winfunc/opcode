@@ -25,6 +25,7 @@ import { StreamMessage } from "./StreamMessage";
 import { ExecutionControlBar } from "./ExecutionControlBar";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { t } from "@/lib/i18n";
 
 interface AgentExecutionProps {
   /**
@@ -251,7 +252,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
       const selected = await open({
         directory: true,
         multiple: false,
-        title: "Select Project Directory"
+        title: t('selectProjectDirectory')
       });
       
       if (selected) {
@@ -520,12 +521,12 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
                       {isRunning && (
                         <div className="flex items-center gap-1">
                           <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                          <span className="text-xs text-green-600 font-medium">Running</span>
+                          <span className="text-xs text-green-600 font-medium">{t('running')}</span>
                         </div>
                       )}
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {isRunning ? "Click back to return to main menu - view in CC Agents > Running Sessions" : "Execute CC Agent"}
+                      {isRunning ? "Click back to return to main menu - view in CC Agents > Running Sessions" : t('executeAgentTitle')}
                     </p>
                   </div>
                 </div>
@@ -541,7 +542,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
                       className="flex items-center gap-2"
                     >
                       <Maximize2 className="h-4 w-4" />
-                      Fullscreen
+                      {t('fullscreenMode')}
                     </Button>
                     <Popover
                       trigger={
@@ -551,7 +552,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
                           className="flex items-center gap-2"
                         >
                           <Copy className="h-4 w-4" />
-                          Copy Output
+                          {t('executionOutput')}
                           <ChevronDown className="h-3 w-3" />
                         </Button>
                       }
@@ -563,7 +564,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
                             className="w-full justify-start"
                             onClick={handleCopyAsJsonl}
                           >
-                            Copy as JSONL
+                            {t('copyAsJsonl')}
                           </Button>
                           <Button
                             variant="ghost"
@@ -571,7 +572,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
                             className="w-full justify-start"
                             onClick={handleCopyAsMarkdown}
                           >
-                            Copy as Markdown
+                            {t('copyAsMarkdown')}
                           </Button>
                         </div>
                       }
@@ -603,12 +604,12 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
 
             {/* Project Path */}
             <div className="space-y-2">
-              <Label>Project Path</Label>
+              <Label>{t('projectDirectory')}</Label>
               <div className="flex gap-2">
                 <Input
                   value={projectPath}
                   onChange={(e) => setProjectPath(e.target.value)}
-                  placeholder="Select or enter project path"
+                  placeholder={t('selectProjectPath')}
                   disabled={isRunning}
                   className="flex-1"
                 />
@@ -625,7 +626,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
 
             {/* Model Selection */}
             <div className="space-y-2">
-              <Label>Model</Label>
+              <Label>{t('selectModel')}</Label>
               <div className="flex gap-3">
                 <button
                   type="button"
@@ -649,7 +650,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
                         <div className="w-1.5 h-1.5 rounded-full bg-primary-foreground" />
                       )}
                     </div>
-                    <span>Claude 4 Sonnet</span>
+                    <span>{t('claudeSonnet')}</span>
                   </div>
                 </button>
                 

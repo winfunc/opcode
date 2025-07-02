@@ -19,6 +19,7 @@ import { FilePicker } from "./FilePicker";
 import { ImagePreview } from "./ImagePreview";
 import { type FileEntry } from "@/lib/api";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { t } from "@/lib/i18n";
 
 interface FloatingPromptInputProps {
   /**
@@ -808,7 +809,7 @@ const FloatingPromptInputInner = (
             </div>
 
             <div className="mt-2 text-xs text-muted-foreground">
-              Press Enter to send, Shift+Enter for new line{projectPath?.trim() && ", @ to mention files, drag & drop images"}
+              {t('pressEnterToSend')}{projectPath?.trim() && ", @ to mention files, drag & drop images"}
             </div>
           </div>
         </div>
