@@ -14,6 +14,7 @@
     <a href="#features"><img src="https://img.shields.io/badge/Features-✨-blue?style=for-the-badge" alt="Features"></a>
     <a href="#installation"><img src="https://img.shields.io/badge/Install-🚀-green?style=for-the-badge" alt="Installation"></a>
     <a href="#usage"><img src="https://img.shields.io/badge/Usage-📖-purple?style=for-the-badge" alt="Usage"></a>
+    <a href="./docs/api/README.md"><img src="https://img.shields.io/badge/API_Docs-📚-red?style=for-the-badge" alt="API Documentation"></a>
     <a href="#development"><img src="https://img.shields.io/badge/Develop-🛠️-orange?style=for-the-badge" alt="Development"></a>
   </p>
 </div>
@@ -381,6 +382,14 @@ Claudia prioritizes your privacy and security:
 3. **Local Storage**: All data stays on your machine
 4. **No Telemetry**: No data collection or tracking
 5. **Open Source**: Full transparency through open source code
+
+## 📚 Documentation
+
+Comprehensive documentation is available in the [`docs/`](./docs/) directory:
+
+- **[API Documentation](./docs/api/README.md)** - Complete developer reference for integrating with Claudia
+- **User Guides** *(coming soon)* - How to use the Claudia desktop application
+- **Development** *(coming soon)* - Contributing and development setup guides
 
 ## 🤝 Contributing
 
