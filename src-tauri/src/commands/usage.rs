@@ -155,10 +155,17 @@ fn parse_jsonl_file(
 
         // OPTIMIZATION: Only process the last 500 lines of each file
         // Most usage data is at the end of the session
-        let lines: Vec<&str> = content.lines().collect();
-        let start_idx = lines.len().saturating_sub(500);
-        
-        for line in &lines[start_idx..] {
+        let mut lines = VecDeque::with_capacity(500);
+        for line in reader.lines() {
+            if let Ok(line) = line {
+                if lines.len() == 500 {
+                    lines.pop_front();
+                }
+                lines.push_back(line);
+            }
+        }
+
+        for line in &lines {
             if line.trim().is_empty() {
                 continue;
             }
