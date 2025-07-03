@@ -1,10 +1,9 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Loader2, Bot, FolderCode } from "lucide-react";
+import { Plus, Loader2 } from "lucide-react";
 import { api, type Project, type Session, type ClaudeMdFile } from "@/lib/api";
 import { OutputCacheProvider } from "@/lib/outputCache";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { ProjectList } from "@/components/ProjectList";
 import { SessionList } from "@/components/SessionList";
 import { RunningClaudeSessions } from "@/components/RunningClaudeSessions";
@@ -19,13 +18,16 @@ import { MCPManager } from "@/components/MCPManager";
 import { NFOCredits } from "@/components/NFOCredits";
 import { ClaudeBinaryDialog } from "@/components/ClaudeBinaryDialog";
 import { Toast, ToastContainer } from "@/components/ui/toast";
+import { I18nProvider, useTranslations } from "@/lib/i18n/useI18n";
+import { WelcomePage } from "@/components/WelcomePage";
 
 type View = "welcome" | "projects" | "agents" | "editor" | "settings" | "claude-file-editor" | "claude-code-session" | "usage-dashboard" | "mcp";
 
 /**
  * Main App component - Manages the Claude directory browser UI
  */
-function App() {
+function AppContent() {
+  const t = useTranslations();
   const [view, setView] = useState<View>("welcome");
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
@@ -160,62 +162,7 @@ function App() {
   const renderContent = () => {
     switch (view) {
       case "welcome":
-        return (
-          <div className="flex items-center justify-center p-4" style={{ height: "100%" }}>
-            <div className="w-full max-w-4xl">
-              {/* Welcome Header */}
-              <motion.div
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                className="mb-12 text-center"
-              >
-                <h1 className="text-4xl font-bold tracking-tight">
-                  <span className="rotating-symbol"></span>
-                  Welcome to Claudia
-                </h1>
-              </motion.div>
-
-              {/* Navigation Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
-                {/* CC Agents Card */}
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.5, delay: 0.1 }}
-                >
-                  <Card 
-                    className="h-64 cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-lg border border-border/50 shimmer-hover"
-                    onClick={() => handleViewChange("agents")}
-                  >
-                    <div className="h-full flex flex-col items-center justify-center p-8">
-                      <Bot className="h-16 w-16 mb-4 text-primary" />
-                      <h2 className="text-xl font-semibold">CC Agents</h2>
-                    </div>
-                  </Card>
-                </motion.div>
-
-                {/* CC Projects Card */}
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.5, delay: 0.2 }}
-                >
-                  <Card 
-                    className="h-64 cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-lg border border-border/50 shimmer-hover"
-                    onClick={() => handleViewChange("projects")}
-                  >
-                    <div className="h-full flex flex-col items-center justify-center p-8">
-                      <FolderCode className="h-16 w-16 mb-4 text-primary" />
-                      <h2 className="text-xl font-semibold">CC Projects</h2>
-                    </div>
-                  </Card>
-                </motion.div>
-
-              </div>
-            </div>
-          </div>
-        );
+        return <WelcomePage onViewChange={handleViewChange} />;
 
       case "agents":
         return (
@@ -255,12 +202,12 @@ function App() {
                   onClick={() => handleViewChange("welcome")}
                   className="mb-4"
                 >
-                  ← Back to Home
+                  ← {t('ui.backToHome')}
                 </Button>
                 <div className="text-center">
-                  <h1 className="text-3xl font-bold tracking-tight">CC Projects</h1>
+                  <h1 className="text-3xl font-bold tracking-tight">{t('navigation.projects')}</h1>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Browse your Claude Code sessions
+                    {t('projects.browseDescription')}
                   </p>
                 </div>
               </motion.div>
@@ -280,6 +227,7 @@ function App() {
               {loading && (
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  <span className="ml-2 text-sm text-muted-foreground">{t('ui.loading')}</span>
                 </div>
               )}
 
@@ -322,7 +270,7 @@ function App() {
                           className="w-full"
                         >
                           <Plus className="mr-2 h-4 w-4" />
-                          New Claude Code session
+                          {t('projects.newSession')}
                         </Button>
                       </motion.div>
 
@@ -338,7 +286,7 @@ function App() {
                       ) : (
                         <div className="py-8 text-center">
                           <p className="text-sm text-muted-foreground">
-                            No projects found in ~/.claude/projects
+                            {t('projects.noProjects')}
                           </p>
                         </div>
                       )}
@@ -390,48 +338,56 @@ function App() {
 
   return (
     <OutputCacheProvider>
-      <div className="h-screen bg-background flex flex-col">
-        {/* Topbar */}
-        <Topbar
-          onClaudeClick={() => handleViewChange("editor")}
-          onSettingsClick={() => handleViewChange("settings")}
-          onUsageClick={() => handleViewChange("usage-dashboard")}
-          onMCPClick={() => handleViewChange("mcp")}
-          onInfoClick={() => setShowNFO(true)}
-        />
-        
-        {/* Main Content */}
-        <div className="flex-1 overflow-y-auto">
-          {renderContent()}
+        <div className="h-screen bg-background flex flex-col">
+          {/* Topbar */}
+          <Topbar
+            onClaudeClick={() => handleViewChange("editor")}
+            onSettingsClick={() => handleViewChange("settings")}
+            onUsageClick={() => handleViewChange("usage-dashboard")}
+            onMCPClick={() => handleViewChange("mcp")}
+            onInfoClick={() => setShowNFO(true)}
+          />
+          
+          {/* Main Content */}
+          <div className="flex-1 overflow-y-auto">
+            {renderContent()}
+          </div>
+          
+          {/* NFO Credits Modal */}
+          {showNFO && <NFOCredits onClose={() => setShowNFO(false)} />}
+          
+          {/* Claude Binary Dialog */}
+          <ClaudeBinaryDialog
+            open={showClaudeBinaryDialog}
+            onOpenChange={setShowClaudeBinaryDialog}
+            onSuccess={() => {
+              setToast({ message: "Claude binary path saved successfully", type: "success" });
+              // Trigger a refresh of the Claude version check
+              window.location.reload();
+            }}
+            onError={(message) => setToast({ message, type: "error" })}
+          />
+          
+          {/* Toast Container */}
+          <ToastContainer>
+            {toast && (
+              <Toast
+                message={toast.message}
+                type={toast.type}
+                onDismiss={() => setToast(null)}
+              />
+            )}
+          </ToastContainer>
         </div>
-        
-        {/* NFO Credits Modal */}
-        {showNFO && <NFOCredits onClose={() => setShowNFO(false)} />}
-        
-        {/* Claude Binary Dialog */}
-        <ClaudeBinaryDialog
-          open={showClaudeBinaryDialog}
-          onOpenChange={setShowClaudeBinaryDialog}
-          onSuccess={() => {
-            setToast({ message: "Claude binary path saved successfully", type: "success" });
-            // Trigger a refresh of the Claude version check
-            window.location.reload();
-          }}
-          onError={(message) => setToast({ message, type: "error" })}
-        />
-        
-        {/* Toast Container */}
-        <ToastContainer>
-          {toast && (
-            <Toast
-              message={toast.message}
-              type={toast.type}
-              onDismiss={() => setToast(null)}
-            />
-          )}
-        </ToastContainer>
-      </div>
-    </OutputCacheProvider>
+      </OutputCacheProvider>
+    );
+}
+
+function App() {
+  return (
+    <I18nProvider>
+      <AppContent />
+    </I18nProvider>
   );
 }
 
