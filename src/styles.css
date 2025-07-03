@@ -1,32 +1,235 @@
 @import "tailwindcss";
 
-/* Dark theme configuration */
+/* Enhanced color system with semantic tokens */
 @theme {
-  /* Colors */
-  --color-background: oklch(0.12 0.01 240);
-  --color-foreground: oklch(0.98 0.01 240);
-  --color-card: oklch(0.14 0.01 240);
-  --color-card-foreground: oklch(0.98 0.01 240);
-  --color-popover: oklch(0.12 0.01 240);
-  --color-popover-foreground: oklch(0.98 0.01 240);
-  --color-primary: oklch(0.98 0.01 240);
-  --color-primary-foreground: oklch(0.17 0.01 240);
-  --color-secondary: oklch(0.16 0.01 240);
-  --color-secondary-foreground: oklch(0.98 0.01 240);
-  --color-muted: oklch(0.16 0.01 240);
-  --color-muted-foreground: oklch(0.68 0.01 240);
-  --color-accent: oklch(0.16 0.01 240);
-  --color-accent-foreground: oklch(0.98 0.01 240);
-  --color-destructive: oklch(0.6 0.2 25);
-  --color-destructive-foreground: oklch(0.98 0.01 240);
-  --color-border: oklch(0.16 0.01 240);
-  --color-input: oklch(0.16 0.01 240);
-  --color-ring: oklch(0.52 0.015 240);
+  /* Base color palette - expanded with shades */
+  /* Slate/Gray shades for neutral colors */
+  --color-slate-50: oklch(0.98 0.01 240);
+  --color-slate-100: oklch(0.96 0.01 240);
+  --color-slate-200: oklch(0.92 0.01 240);
+  --color-slate-300: oklch(0.86 0.01 240);
+  --color-slate-400: oklch(0.68 0.01 240);
+  --color-slate-500: oklch(0.52 0.01 240);
+  --color-slate-600: oklch(0.40 0.01 240);
+  --color-slate-700: oklch(0.28 0.01 240);
+  --color-slate-800: oklch(0.16 0.01 240);
+  --color-slate-900: oklch(0.12 0.01 240);
+  --color-slate-950: oklch(0.08 0.01 240);
   
-  /* Additional colors for status messages */
-  --color-green-500: oklch(0.72 0.20 142);
-  --color-green-600: oklch(0.64 0.22 142);
+  /* Brand orange - based on #d97757 */
+  --color-orange-50: oklch(0.96 0.05 40);
+  --color-orange-100: oklch(0.92 0.08 40);
+  --color-orange-200: oklch(0.86 0.12 40);
+  --color-orange-300: oklch(0.78 0.16 40);
+  --color-orange-400: oklch(0.70 0.18 40);
+  --color-orange-500: oklch(0.62 0.18 40); /* #d97757 equivalent */
+  --color-orange-600: oklch(0.54 0.18 40);
+  --color-orange-700: oklch(0.46 0.16 40);
+  --color-orange-800: oklch(0.38 0.14 40);
+  --color-orange-900: oklch(0.30 0.12 40);
+  
+  /* Primary purple/blue gradient base */
+  --color-purple-50: oklch(0.98 0.02 265);
+  --color-purple-100: oklch(0.95 0.04 265);
+  --color-purple-200: oklch(0.88 0.08 265);
+  --color-purple-300: oklch(0.78 0.14 265);
+  --color-purple-400: oklch(0.68 0.20 265);
+  --color-purple-500: oklch(0.58 0.22 265);
+  --color-purple-600: oklch(0.48 0.20 265);
+  --color-purple-700: oklch(0.38 0.18 265);
+  --color-purple-800: oklch(0.28 0.14 265);
+  --color-purple-900: oklch(0.20 0.10 265);
+  
+  /* Success green */
+  --color-green-50: oklch(0.96 0.04 142);
+  --color-green-100: oklch(0.92 0.08 142);
+  --color-green-200: oklch(0.86 0.12 142);
+  --color-green-300: oklch(0.78 0.16 142);
+  --color-green-400: oklch(0.72 0.18 142);
+  --color-green-500: oklch(0.64 0.20 142);
+  --color-green-600: oklch(0.56 0.20 142);
+  --color-green-700: oklch(0.48 0.18 142);
+  --color-green-800: oklch(0.38 0.14 142);
+  --color-green-900: oklch(0.28 0.10 142);
+  
+  /* Warning amber */
+  --color-amber-50: oklch(0.96 0.04 85);
+  --color-amber-100: oklch(0.92 0.08 85);
+  --color-amber-200: oklch(0.86 0.12 85);
+  --color-amber-300: oklch(0.78 0.16 85);
+  --color-amber-400: oklch(0.72 0.18 85);
+  --color-amber-500: oklch(0.66 0.18 85);
+  --color-amber-600: oklch(0.58 0.18 85);
+  --color-amber-700: oklch(0.50 0.16 85);
+  --color-amber-800: oklch(0.42 0.14 85);
+  --color-amber-900: oklch(0.34 0.10 85);
+  
+  /* Error red */
+  --color-red-50: oklch(0.96 0.04 25);
+  --color-red-100: oklch(0.92 0.08 25);
+  --color-red-200: oklch(0.86 0.12 25);
+  --color-red-300: oklch(0.78 0.16 25);
+  --color-red-400: oklch(0.70 0.18 25);
+  --color-red-500: oklch(0.60 0.20 25);
+  --color-red-600: oklch(0.50 0.20 25);
+  --color-red-700: oklch(0.42 0.18 25);
+  --color-red-800: oklch(0.34 0.14 25);
+  --color-red-900: oklch(0.26 0.10 25);
+  
+  /* Info blue */
+  --color-blue-50: oklch(0.96 0.04 240);
+  --color-blue-100: oklch(0.92 0.08 240);
+  --color-blue-200: oklch(0.86 0.12 240);
+  --color-blue-300: oklch(0.78 0.16 240);
+  --color-blue-400: oklch(0.70 0.18 240);
+  --color-blue-500: oklch(0.60 0.20 240);
+  --color-blue-600: oklch(0.50 0.20 240);
+  --color-blue-700: oklch(0.40 0.18 240);
+  --color-blue-800: oklch(0.32 0.14 240);
+  --color-blue-900: oklch(0.24 0.10 240);
+  
+  /* Gradient definitions */
+  --gradient-primary: linear-gradient(135deg, var(--color-purple-500), var(--color-blue-500));
+  --gradient-primary-hover: linear-gradient(135deg, var(--color-purple-600), var(--color-blue-600));
+  --gradient-accent: linear-gradient(135deg, var(--color-orange-400), var(--color-orange-600));
+  --gradient-success: linear-gradient(135deg, var(--color-green-400), var(--color-green-600));
+  --gradient-warning: linear-gradient(135deg, var(--color-amber-400), var(--color-amber-600));
+  --gradient-error: linear-gradient(135deg, var(--color-red-400), var(--color-red-600));
+  --gradient-subtle: linear-gradient(135deg, var(--color-slate-800), var(--color-slate-900));
+}
 
+/* Dark theme configuration (default) */
+:root {
+  /* Semantic color tokens */
+  --color-background: var(--color-slate-950);
+  --color-foreground: var(--color-slate-50);
+  --color-card: var(--color-slate-900);
+  --color-card-foreground: var(--color-slate-50);
+  --color-popover: var(--color-slate-900);
+  --color-popover-foreground: var(--color-slate-50);
+  --color-primary: var(--color-purple-500);
+  --color-primary-foreground: var(--color-slate-50);
+  --color-secondary: var(--color-slate-800);
+  --color-secondary-foreground: var(--color-slate-50);
+  --color-muted: var(--color-slate-800);
+  --color-muted-foreground: var(--color-slate-400);
+  --color-accent: var(--color-orange-500);
+  --color-accent-foreground: var(--color-slate-50);
+  --color-destructive: var(--color-red-500);
+  --color-destructive-foreground: var(--color-slate-50);
+  --color-border: var(--color-slate-800);
+  --color-input: var(--color-slate-800);
+  --color-ring: var(--color-purple-500);
+  
+  /* Status colors */
+  --color-success: var(--color-green-500);
+  --color-success-foreground: var(--color-slate-50);
+  --color-warning: var(--color-amber-500);
+  --color-warning-foreground: var(--color-slate-900);
+  --color-error: var(--color-red-500);
+  --color-error-foreground: var(--color-slate-50);
+  --color-info: var(--color-blue-500);
+  --color-info-foreground: var(--color-slate-50);
+  
+  /* Gradient variables for easy access */
+  --gradient-brand: var(--gradient-primary);
+  --gradient-brand-hover: var(--gradient-primary-hover);
+  
+  /* Focus and ring colors */
+  --focus-ring-color: var(--color-purple-400);
+  --focus-ring-offset: 2px;
+}
+
+/* Light theme configuration */
+[data-theme="light"] {
+  /* Semantic color tokens */
+  --color-background: var(--color-slate-50);
+  --color-foreground: var(--color-slate-900);
+  --color-card: #ffffff;
+  --color-card-foreground: var(--color-slate-900);
+  --color-popover: #ffffff;
+  --color-popover-foreground: var(--color-slate-900);
+  --color-primary: var(--color-purple-600);
+  --color-primary-foreground: #ffffff;
+  --color-secondary: var(--color-slate-100);
+  --color-secondary-foreground: var(--color-slate-900);
+  --color-muted: var(--color-slate-100);
+  --color-muted-foreground: var(--color-slate-600);
+  --color-accent: var(--color-orange-500);
+  --color-accent-foreground: #ffffff;
+  --color-destructive: var(--color-red-600);
+  --color-destructive-foreground: #ffffff;
+  --color-border: var(--color-slate-200);
+  --color-input: var(--color-slate-200);
+  --color-ring: var(--color-purple-600);
+  
+  /* Status colors */
+  --color-success: var(--color-green-600);
+  --color-success-foreground: #ffffff;
+  --color-warning: var(--color-amber-600);
+  --color-warning-foreground: #ffffff;
+  --color-error: var(--color-red-600);
+  --color-error-foreground: #ffffff;
+  --color-info: var(--color-blue-600);
+  --color-info-foreground: #ffffff;
+  
+  /* Gradient variables for easy access */
+  --gradient-brand: var(--gradient-primary);
+  --gradient-brand-hover: var(--gradient-primary-hover);
+  
+  /* Focus and ring colors */
+  --focus-ring-color: var(--color-purple-500);
+  --focus-ring-offset: 2px;
+}
+
+/* System preference detection */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    /* Copy light theme values */
+    --color-background: var(--color-slate-50);
+    --color-foreground: var(--color-slate-900);
+    --color-card: #ffffff;
+    --color-card-foreground: var(--color-slate-900);
+    --color-popover: #ffffff;
+    --color-popover-foreground: var(--color-slate-900);
+    --color-primary: var(--color-purple-600);
+    --color-primary-foreground: #ffffff;
+    --color-secondary: var(--color-slate-100);
+    --color-secondary-foreground: var(--color-slate-900);
+    --color-muted: var(--color-slate-100);
+    --color-muted-foreground: var(--color-slate-600);
+    --color-accent: var(--color-orange-500);
+    --color-accent-foreground: #ffffff;
+    --color-destructive: var(--color-red-600);
+    --color-destructive-foreground: #ffffff;
+    --color-border: var(--color-slate-200);
+    --color-input: var(--color-slate-200);
+    --color-ring: var(--color-purple-600);
+    --color-success: var(--color-green-600);
+    --color-success-foreground: #ffffff;
+    --color-warning: var(--color-amber-600);
+    --color-warning-foreground: #ffffff;
+    --color-error: var(--color-red-600);
+    --color-error-foreground: #ffffff;
+    --color-info: var(--color-blue-600);
+    --color-info-foreground: #ffffff;
+    --gradient-brand: var(--gradient-primary);
+    --gradient-brand-hover: var(--gradient-primary-hover);
+    --focus-ring-color: var(--color-purple-500);
+  }
+}
+
+/* Theme transition for smooth switching */
+* {
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+/* Disable transitions on theme switch to prevent flashing */
+.theme-transitioning * {
+  transition: none !important;
+}
+
+@theme {
   /* Border radius */
   --radius-sm: 0.25rem;
   --radius-base: 0.375rem;
@@ -80,47 +283,119 @@ button:disabled,
   cursor: not-allowed !important;
 }
 
-/* Remove all focus styles globally */
+/* Enhanced focus styles with brand colors */
 * {
-  outline: none !important;
-  outline-offset: 0 !important;
+  outline: none;
+  outline-offset: 0;
 }
 
-*:focus,
-*:focus-visible,
-*:focus-within {
-  outline: none !important;
-  box-shadow: none !important;
+/* Keyboard navigation focus styles */
+*:focus-visible {
+  outline: 2px solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+  transition: outline-color 0.2s ease;
 }
 
-/* Specifically remove focus styles from form elements */
+/* Form elements focus styles */
 input:focus,
 input:focus-visible,
 textarea:focus,
 textarea:focus-visible,
 select:focus,
-select:focus-visible,
-button:focus,
-button:focus-visible,
-[role="button"]:focus,
-[role="button"]:focus-visible,
-[role="combobox"]:focus,
-[role="combobox"]:focus-visible {
-  outline: none !important;
-  box-shadow: none !important;
-  border-color: var(--color-input) !important;
+select:focus-visible {
+  outline: none;
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.1);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-/* Remove ring styles */
-.ring-0,
-.ring-1,
-.ring-2,
-.ring,
-.ring-offset-0,
-.ring-offset-1,
-.ring-offset-2,
+/* Enhanced input hover state */
+input:hover:not(:focus),
+textarea:hover:not(:focus),
+select:hover:not(:focus) {
+  border-color: var(--color-border);
+  transition: border-color 0.2s ease;
+}
+
+/* Button focus styles */
+button:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid var(--focus-ring-color);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(var(--color-primary-rgb), 0.1);
+}
+
+/* Gradient button focus enhancement */
+button[class*="gradient"]:focus-visible {
+  box-shadow: 
+    0 0 0 3px rgba(var(--color-primary-rgb), 0.3),
+    0 4px 12px rgba(var(--color-primary-rgb), 0.2);
+}
+
+/* Combobox and dropdown focus */
+[role="combobox"]:focus,
+[role="combobox"]:focus-visible {
+  outline: none;
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.1);
+}
+
+/* Ring utility classes with brand colors */
+.ring-0 {
+  box-shadow: 0 0 0 0px rgba(var(--color-primary-rgb), 0.5);
+}
+
+.ring-1 {
+  box-shadow: 0 0 0 1px rgba(var(--color-primary-rgb), 0.5);
+}
+
+.ring-2 {
+  box-shadow: 0 0 0 2px rgba(var(--color-primary-rgb), 0.5);
+}
+
+.ring {
+  box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.5);
+}
+
+/* Ring offset utilities */
+.ring-offset-0 {
+  --tw-ring-offset-width: 0px;
+}
+
+.ring-offset-1 {
+  --tw-ring-offset-width: 1px;
+}
+
+.ring-offset-2 {
+  --tw-ring-offset-width: 2px;
+}
+
 .ring-offset {
-  box-shadow: none !important;
+  --tw-ring-offset-width: 2px;
+}
+
+/* Custom focus effects for different input types */
+input[type="checkbox"]:focus,
+input[type="radio"]:focus {
+  box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.2);
+  transition: box-shadow 0.2s ease;
+}
+
+/* Switch component focus */
+[role="switch"]:focus-visible {
+  box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.2);
+}
+
+/* Tab focus enhancement */
+[role="tab"]:focus-visible {
+  box-shadow: inset 0 -2px 0 var(--color-primary);
+  outline: none;
+}
+
+/* Disable focus styles for mouse users */
+:focus:not(:focus-visible) {
+  outline: none;
+  box-shadow: none;
 }
 
 /* Custom utilities */
@@ -660,4 +935,634 @@ code::-webkit-scrollbar-thumb:hover,
 
 .image-move-to-input {
   animation: moveToInput 0.8s ease-in-out forwards;
+}
+
+/* Enhanced Button Gradient Effects */
+.bg-gradient-to-r {
+  background-image: var(--gradient-brand);
+}
+
+.from-purple-500 {
+  --tw-gradient-from: var(--color-purple-500);
+  --tw-gradient-to: rgb(var(--color-purple-500) / 0);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
+.to-blue-500 {
+  --tw-gradient-to: var(--color-blue-500);
+}
+
+.from-orange-400 {
+  --tw-gradient-from: var(--color-orange-400);
+  --tw-gradient-to: rgb(var(--color-orange-400) / 0);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
+.to-orange-600 {
+  --tw-gradient-to: var(--color-orange-600);
+}
+
+.from-green-400 {
+  --tw-gradient-from: var(--color-green-400);
+  --tw-gradient-to: rgb(var(--color-green-400) / 0);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
+.to-green-600 {
+  --tw-gradient-to: var(--color-green-600);
+}
+
+.from-amber-400 {
+  --tw-gradient-from: var(--color-amber-400);
+  --tw-gradient-to: rgb(var(--color-amber-400) / 0);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
+.to-amber-600 {
+  --tw-gradient-to: var(--color-amber-600);
+}
+
+.from-red-400 {
+  --tw-gradient-from: var(--color-red-400);
+  --tw-gradient-to: rgb(var(--color-red-400) / 0);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
+.to-red-600 {
+  --tw-gradient-to: var(--color-red-600);
+}
+
+.from-slate-700 {
+  --tw-gradient-from: var(--color-slate-700);
+  --tw-gradient-to: rgb(var(--color-slate-700) / 0);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
+.to-slate-800 {
+  --tw-gradient-to: var(--color-slate-800);
+}
+
+/* Button shadow enhancements */
+.shadow-md {
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+.shadow-lg {
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
+/* Smooth gradient button transitions */
+button[class*="gradient"] {
+  position: relative;
+  transform-style: preserve-3d;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+button[class*="gradient"]:hover {
+  transform: translateY(-1px);
+}
+
+button[class*="gradient"]:active {
+  transform: translateY(0);
+}
+
+/* Badge color utilities */
+.bg-green-500 { background-color: var(--color-green-500); }
+.bg-green-600 { background-color: var(--color-green-600); }
+.bg-green-50 { background-color: var(--color-green-50); }
+.bg-green-100 { background-color: var(--color-green-100); }
+.bg-green-950 { background-color: oklch(0.14 0.08 142); }
+.bg-green-900 { background-color: var(--color-green-900); }
+
+.bg-amber-500 { background-color: var(--color-amber-500); }
+.bg-amber-600 { background-color: var(--color-amber-600); }
+.bg-amber-50 { background-color: var(--color-amber-50); }
+.bg-amber-100 { background-color: var(--color-amber-100); }
+.bg-amber-950 { background-color: oklch(0.14 0.08 85); }
+.bg-amber-900 { background-color: var(--color-amber-900); }
+
+.bg-red-500 { background-color: var(--color-red-500); }
+.bg-red-600 { background-color: var(--color-red-600); }
+.bg-red-50 { background-color: var(--color-red-50); }
+.bg-red-100 { background-color: var(--color-red-100); }
+.bg-red-950 { background-color: oklch(0.14 0.08 25); }
+.bg-red-900 { background-color: var(--color-red-900); }
+
+.bg-blue-500 { background-color: var(--color-blue-500); }
+.bg-blue-600 { background-color: var(--color-blue-600); }
+.bg-blue-50 { background-color: var(--color-blue-50); }
+.bg-blue-100 { background-color: var(--color-blue-100); }
+.bg-blue-950 { background-color: oklch(0.14 0.08 240); }
+.bg-blue-900 { background-color: var(--color-blue-900); }
+
+.text-green-700 { color: var(--color-green-700); }
+.text-green-300 { color: var(--color-green-300); }
+.text-amber-700 { color: var(--color-amber-700); }
+.text-amber-300 { color: var(--color-amber-300); }
+.text-red-700 { color: var(--color-red-700); }
+.text-red-300 { color: var(--color-red-300); }
+.text-blue-700 { color: var(--color-blue-700); }
+.text-blue-300 { color: var(--color-blue-300); }
+
+.border-green-200 { border-color: var(--color-green-200); }
+.border-green-800 { border-color: var(--color-green-800); }
+.border-amber-200 { border-color: var(--color-amber-200); }
+.border-amber-800 { border-color: var(--color-amber-800); }
+.border-red-200 { border-color: var(--color-red-200); }
+.border-red-800 { border-color: var(--color-red-800); }
+.border-blue-200 { border-color: var(--color-blue-200); }
+.border-blue-800 { border-color: var(--color-blue-800); }
+
+/* Hover color utilities */
+.hover\:bg-green-600:hover { background-color: var(--color-green-600); }
+.hover\:bg-green-700:hover { background-color: var(--color-green-700); }
+.hover\:bg-green-100:hover { background-color: var(--color-green-100); }
+.hover\:bg-green-900:hover { background-color: var(--color-green-900); }
+
+.hover\:bg-amber-600:hover { background-color: var(--color-amber-600); }
+.hover\:bg-amber-700:hover { background-color: var(--color-amber-700); }
+.hover\:bg-amber-100:hover { background-color: var(--color-amber-100); }
+.hover\:bg-amber-900:hover { background-color: var(--color-amber-900); }
+
+.hover\:bg-red-600:hover { background-color: var(--color-red-600); }
+.hover\:bg-red-700:hover { background-color: var(--color-red-700); }
+.hover\:bg-red-100:hover { background-color: var(--color-red-100); }
+.hover\:bg-red-900:hover { background-color: var(--color-red-900); }
+
+.hover\:bg-blue-600:hover { background-color: var(--color-blue-600); }
+.hover\:bg-blue-700:hover { background-color: var(--color-blue-700); }
+.hover\:bg-blue-100:hover { background-color: var(--color-blue-100); }
+.hover\:bg-blue-900:hover { background-color: var(--color-blue-900); }
+
+/* Scale transform utilities */
+.hover\:scale-105:hover { transform: scale(1.05); }
+
+/* Glassmorphism effects */
+.glass-card {
+  backdrop-filter: blur(12px) saturate(150%);
+  -webkit-backdrop-filter: blur(12px) saturate(150%);
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.05) 0%,
+    rgba(255, 255, 255, 0.02) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.glass-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.1) 0%,
+    transparent 40%,
+    transparent 60%,
+    rgba(255, 255, 255, 0.05) 100%
+  );
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.glass-card:hover::before {
+  opacity: 1;
+}
+
+.glass-card-subtle {
+  backdrop-filter: blur(8px) saturate(120%);
+  -webkit-backdrop-filter: blur(8px) saturate(120%);
+  background: linear-gradient(
+    135deg,
+    rgba(var(--color-card-rgb), 0.4) 0%,
+    rgba(var(--color-card-rgb), 0.2) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Light theme glassmorphism adjustments */
+[data-theme="light"] .glass-card {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.7) 0%,
+    rgba(255, 255, 255, 0.5) 100%
+  );
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .glass-card::before {
+  background: linear-gradient(
+    135deg,
+    rgba(0, 0, 0, 0.05) 0%,
+    transparent 40%,
+    transparent 60%,
+    rgba(0, 0, 0, 0.02) 100%
+  );
+}
+
+[data-theme="light"] .glass-card-subtle {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.8) 0%,
+    rgba(255, 255, 255, 0.6) 100%
+  );
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* Dialog/Modal glassmorphism effect */
+.glass-modal {
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  background: linear-gradient(
+    135deg,
+    rgba(var(--color-background-rgb), 0.85) 0%,
+    rgba(var(--color-background-rgb), 0.75) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 
+    0 8px 32px 0 rgba(0, 0, 0, 0.37),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="light"] .glass-modal {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(255, 255, 255, 0.85) 100%
+  );
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 
+    0 8px 32px 0 rgba(0, 0, 0, 0.12),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+}
+
+/* Add RGB color values for glassmorphism calculations */
+@theme {
+  --color-background-rgb: 12 17 23; /* dark theme default */
+  --color-card-rgb: 22 27 34; /* dark theme default */
+  --color-border-rgb: 48 54 61; /* dark theme default */
+}
+
+[data-theme="light"] {
+  --color-background-rgb: 248 250 252; /* light theme */
+  --color-card-rgb: 255 255 255; /* light theme */
+  --color-border-rgb: 226 232 240; /* light theme */
+}
+
+/* Enhanced hover states and animations */
+/* Glow effect on hover */
+.hover-glow {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-glow:hover {
+  box-shadow: 
+    0 0 20px rgba(var(--color-primary-rgb), 0.4),
+    0 0 40px rgba(var(--color-primary-rgb), 0.2);
+}
+
+/* Lift effect on hover */
+.hover-lift {
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.2);
+}
+
+/* Pulse animation */
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Subtle shake animation */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-2px); }
+  75% { transform: translateX(2px); }
+}
+
+.hover-shake:hover {
+  animation: shake 0.3s ease-in-out;
+}
+
+/* Enhanced button hover with ripple effect */
+.button-ripple {
+  position: relative;
+  overflow: hidden;
+}
+
+.button-ripple::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.button-ripple:hover::before {
+  width: 300px;
+  height: 300px;
+}
+
+/* Card hover with border gradient animation */
+@keyframes borderGradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.hover-border-gradient {
+  position: relative;
+  background-clip: padding-box;
+  border: 2px solid transparent;
+}
+
+.hover-border-gradient::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: linear-gradient(45deg, var(--color-purple-500), var(--color-blue-500), var(--color-purple-500));
+  background-size: 300% 300%;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: -1;
+}
+
+.hover-border-gradient:hover::before {
+  opacity: 1;
+  animation: borderGradient 3s ease infinite;
+}
+
+/* Interactive list items */
+.list-item-hover {
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.list-item-hover::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 3px;
+  background: var(--gradient-brand);
+  transform: scaleY(0);
+  transition: transform 0.2s ease;
+}
+
+.list-item-hover:hover {
+  padding-left: 12px;
+  background-color: rgba(var(--color-accent-rgb), 0.05);
+}
+
+.list-item-hover:hover::before {
+  transform: scaleY(1);
+}
+
+/* Focus-within effects for form groups */
+.form-group:focus-within {
+  transform: translateY(-1px);
+  transition: transform 0.2s ease;
+}
+
+.form-group:focus-within label {
+  color: var(--color-primary);
+  transition: color 0.2s ease;
+}
+
+/* Icon hover rotation */
+.icon-hover-rotate {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.icon-hover-rotate:hover {
+  transform: rotate(15deg) scale(1.1);
+}
+
+/* Text link hover with underline animation */
+.link-hover-underline {
+  position: relative;
+  text-decoration: none;
+}
+
+.link-hover-underline::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -2px;
+  width: 100%;
+  height: 2px;
+  background: var(--gradient-brand);
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 0.3s ease;
+}
+
+.link-hover-underline:hover::after {
+  transform: scaleX(1);
+  transform-origin: left;
+}
+
+/* Add primary RGB for glow effects */
+@theme {
+  --color-primary-rgb: 88 101 242; /* purple-500 default */
+  --color-accent-rgb: 217 119 87; /* orange-500 default */
+}
+
+[data-theme="light"] {
+  --color-primary-rgb: 79 70 229; /* purple-600 for light theme */
+  --color-accent-rgb: 217 119 87; /* orange-500 for light theme */
+}
+
+/* Gradient text effects */
+.gradient-text {
+  background: var(--gradient-brand);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-text-primary {
+  background: linear-gradient(135deg, var(--color-purple-500), var(--color-blue-500));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-text-accent {
+  background: linear-gradient(135deg, var(--color-orange-400), var(--color-orange-600));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-text-success {
+  background: linear-gradient(135deg, var(--color-green-400), var(--color-green-600));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-text-warning {
+  background: linear-gradient(135deg, var(--color-amber-400), var(--color-amber-600));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-text-error {
+  background: linear-gradient(135deg, var(--color-red-400), var(--color-red-600));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Animated gradient text */
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.gradient-text-animated {
+  background: linear-gradient(
+    90deg,
+    var(--color-purple-500),
+    var(--color-blue-500),
+    var(--color-purple-500),
+    var(--color-orange-500),
+    var(--color-purple-500)
+  );
+  background-size: 300% 300%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradientShift 5s ease infinite;
+}
+
+/* Subtle gradient text for light backgrounds */
+.gradient-text-subtle {
+  background: linear-gradient(135deg, var(--color-foreground), var(--color-muted-foreground));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Gradient text with hover effect */
+.gradient-text-hover {
+  position: relative;
+  color: var(--color-foreground);
+  transition: opacity 0.3s ease;
+}
+
+.gradient-text-hover::before {
+  content: attr(data-text);
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--gradient-brand);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.gradient-text-hover:hover {
+  opacity: 0;
+}
+
+.gradient-text-hover:hover::before {
+  opacity: 1;
+}
+
+/* Enhanced heading styles */
+h1.gradient-heading,
+h2.gradient-heading,
+h3.gradient-heading {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, var(--color-purple-500), var(--color-blue-500));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Glow effect for gradient text */
+.gradient-text-glow {
+  background: var(--gradient-brand);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 20px rgba(var(--color-primary-rgb), 0.3));
+}
+
+/* Metallic gradient text effect */
+.gradient-text-metallic {
+  background: linear-gradient(
+    135deg,
+    #B8B8B8 0%,
+    #F5F5F5 25%,
+    #B8B8B8 50%,
+    #F5F5F5 75%,
+    #B8B8B8 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Rainbow gradient text */
+.gradient-text-rainbow {
+  background: linear-gradient(
+    90deg,
+    #ff0000,
+    #ff7f00,
+    #ffff00,
+    #00ff00,
+    #0000ff,
+    #4b0082,
+    #9400d3
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 } 

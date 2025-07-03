@@ -10,7 +10,10 @@ import {
   Code,
   Settings2,
   Terminal,
-  Loader2
+  Loader2,
+  Sun,
+  Moon,
+  Monitor
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +21,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { 
   api, 
   type ClaudeSettings,
@@ -26,6 +30,13 @@ import {
 import { cn } from "@/lib/utils";
 import { Toast, ToastContainer } from "@/components/ui/toast";
 import { ClaudeVersionSelector } from "./ClaudeVersionSelector";
+import { 
+  Theme, 
+  getStoredTheme, 
+  setStoredTheme, 
+  getActiveTheme, 
+  applyTheme 
+} from "@/lib/theme";
 
 interface SettingsProps {
   /**
@@ -75,12 +86,17 @@ export const Settings: React.FC<SettingsProps> = ({
   const [currentBinaryPath, setCurrentBinaryPath] = useState<string | null>(null);
   const [selectedInstallation, setSelectedInstallation] = useState<ClaudeInstallation | null>(null);
   const [binaryPathChanged, setBinaryPathChanged] = useState(false);
+  
+  // Theme state
+  const [theme, setTheme] = useState<Theme>('system');
 
 
   // Load settings on mount
   useEffect(() => {
     loadSettings();
     loadClaudeBinaryPath();
+    // Load theme preference
+    setTheme(getStoredTheme());
   }, []);
 
   /**
@@ -281,6 +297,15 @@ export const Settings: React.FC<SettingsProps> = ({
     setSelectedInstallation(installation);
     setBinaryPathChanged(installation.path !== currentBinaryPath);
   };
+  
+  /**
+   * Handle theme change
+   */
+  const handleThemeChange = (newTheme: Theme) => {
+    setTheme(newTheme);
+    setStoredTheme(newTheme);
+    applyTheme(getActiveTheme(newTheme));
+  };
 
   return (
     <div className={cn("flex flex-col h-full bg-background text-foreground", className)}>
@@ -378,6 +403,37 @@ export const Settings: React.FC<SettingsProps> = ({
                   <h3 className="text-base font-semibold mb-4">General Settings</h3>
                   
                   <div className="space-y-4">
+                    {/* Theme Selector */}
+                    <div className="space-y-3">
+                      <Label className="text-sm font-medium">Theme</Label>
+                      <RadioGroup value={theme} onValueChange={(value) => handleThemeChange(value as Theme)}>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="system" id="system-theme" />
+                          <Label htmlFor="system-theme" className="flex items-center gap-2 cursor-pointer">
+                            <Monitor className="h-4 w-4" />
+                            System
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="light" id="light-theme" />
+                          <Label htmlFor="light-theme" className="flex items-center gap-2 cursor-pointer">
+                            <Sun className="h-4 w-4" />
+                            Light
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="dark" id="dark-theme" />
+                          <Label htmlFor="dark-theme" className="flex items-center gap-2 cursor-pointer">
+                            <Moon className="h-4 w-4" />
+                            Dark
+                          </Label>
+                        </div>
+                      </RadioGroup>
+                      <p className="text-xs text-muted-foreground">
+                        Choose your preferred color scheme or follow system settings
+                      </p>
+                    </div>
+                    
                     {/* Include Co-authored By */}
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5 flex-1">

@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
  * Button variants configuration using class-variance-authority
  */
 const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-all duration-200 disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       variant: {
@@ -20,6 +20,20 @@ const buttonVariants = cva(
           "bg-secondary text-secondary-foreground shadow-xs hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
+        gradient:
+          "bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]",
+        "gradient-primary":
+          "relative overflow-hidden text-white shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] before:absolute before:inset-0 before:bg-gradient-to-r before:from-purple-500 before:to-blue-500 before:transition-all before:duration-300 hover:before:scale-105 [&>*]:relative [&>*]:z-10",
+        "gradient-accent":
+          "bg-gradient-to-r from-orange-400 to-orange-600 text-white shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]",
+        "gradient-success":
+          "bg-gradient-to-r from-green-400 to-green-600 text-white shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]",
+        "gradient-warning":
+          "bg-gradient-to-r from-amber-400 to-amber-600 text-white shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]",
+        "gradient-error":
+          "bg-gradient-to-r from-red-400 to-red-600 text-white shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]",
+        "gradient-subtle":
+          "relative overflow-hidden text-foreground shadow-xs hover:shadow-md hover:scale-[1.01] active:scale-[0.99] before:absolute before:inset-0 before:bg-gradient-to-r before:from-slate-700 before:to-slate-800 dark:before:from-slate-700 dark:before:to-slate-800 before:transition-all before:duration-300 hover:before:scale-105 [&>*]:relative [&>*]:z-10",
       },
       size: {
         default: "h-9 px-4 py-2",

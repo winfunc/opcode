@@ -1,11 +1,37 @@
 import * as React from "react";
+import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
+
+/**
+ * Card variants configuration
+ */
+const cardVariants = cva(
+  "rounded-lg border transition-all duration-300",
+  {
+    variants: {
+      variant: {
+        default: "shadow-xs",
+        elevated: "shadow-md hover:shadow-lg",
+        glass: "glass-card shadow-lg hover:shadow-xl",
+        "glass-subtle": "glass-card-subtle shadow-md hover:shadow-lg",
+        bordered: "shadow-none border-2",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+    },
+  }
+);
+
+export interface CardProps
+  extends React.HTMLAttributes<HTMLDivElement>,
+    VariantProps<typeof cardVariants> {}
 
 /**
  * Card component - A container with consistent styling and sections
  * 
  * @example
- * <Card>
+ * <Card variant="glass">
  *   <CardHeader>
  *     <CardTitle>Card Title</CardTitle>
  *     <CardDescription>Card description</CardDescription>
@@ -18,24 +44,25 @@ import { cn } from "@/lib/utils";
  *   </CardFooter>
  * </Card>
  */
-const Card = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn(
-      "rounded-lg border shadow-xs",
-      className
-    )}
-    style={{
-      borderColor: "var(--color-border)",
-      backgroundColor: "var(--color-card)",
-      color: "var(--color-card-foreground)"
-    }}
-    {...props}
-  />
-));
+const Card = React.forwardRef<HTMLDivElement, CardProps>(
+  ({ className, variant, style, ...props }, ref) => {
+    const isGlass = variant?.includes('glass');
+    
+    return (
+      <div
+        ref={ref}
+        className={cn(cardVariants({ variant }), className)}
+        style={{
+          borderColor: isGlass ? "rgba(var(--color-border-rgb), 0.2)" : "var(--color-border)",
+          backgroundColor: isGlass ? "transparent" : "var(--color-card)",
+          color: "var(--color-card-foreground)",
+          ...style
+        }}
+        {...props}
+      />
+    );
+  }
+);
 Card.displayName = "Card";
 
 /**
