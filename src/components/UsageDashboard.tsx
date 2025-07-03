@@ -67,9 +67,17 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
             return `${year}${month}${day}`;
         }
 
+        // Format dates as YYYY-MM-DD for the API
+        const formatDateForRange = (date: Date) => {
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        };
+        
         statsData = await api.getUsageByDateRange(
-          startDate.toISOString(),
-          endDate.toISOString()
+          formatDateForRange(startDate),
+          formatDateForRange(endDate)
         );
         sessionData = await api.getSessionStats(
             formatDateForApi(startDate),
@@ -78,11 +86,37 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
         );
       }
       
-      setStats(statsData);
-      setSessionStats(sessionData);
+      // Validate the data before setting state
+      if (statsData) {
+        // Ensure all arrays exist
+        statsData.by_model = statsData.by_model || [];
+        statsData.by_date = statsData.by_date || [];
+        statsData.by_project = statsData.by_project || [];
+        setStats(statsData);
+      }
+      
+      if (sessionData) {
+        setSessionStats(sessionData);
+      }
     } catch (err) {
       console.error("Failed to load usage stats:", err);
-      setError("Failed to load usage statistics. Please try again.");
+      const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
+      setError(`Failed to load usage statistics: ${errorMessage}`);
+      
+      // Set empty data to prevent crashes
+      setStats({
+        total_cost: 0,
+        total_tokens: 0,
+        total_input_tokens: 0,
+        total_output_tokens: 0,
+        total_cache_creation_tokens: 0,
+        total_cache_read_tokens: 0,
+        total_sessions: 0,
+        by_model: [],
+        by_date: [],
+        by_project: []
+      });
+      setSessionStats([]);
     } finally {
       setLoading(false);
     }
@@ -296,18 +330,18 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                   <Card className="p-6">
                     <h3 className="text-sm font-semibold mb-4">Most Used Models</h3>
                     <div className="space-y-3">
-                      {stats.by_model.slice(0, 3).map((model) => (
+                      {(stats.by_model || []).slice(0, 3).map((model) => (
                         <div key={model.model} className="flex items-center justify-between">
                           <div className="flex items-center space-x-2">
                             <Badge variant="outline" className={cn("text-xs", getModelColor(model.model))}>
                               {getModelDisplayName(model.model)}
                             </Badge>
                             <span className="text-xs text-muted-foreground">
-                              {model.session_count} sessions
+                              {model.session_count || 0} sessions
                             </span>
                           </div>
                           <span className="text-sm font-medium">
-                            {formatCurrency(model.total_cost)}
+                            {formatCurrency(model.total_cost || 0)}
                           </span>
                         </div>
                       ))}
@@ -317,18 +351,18 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                   <Card className="p-6">
                     <h3 className="text-sm font-semibold mb-4">Top Projects</h3>
                     <div className="space-y-3">
-                      {stats.by_project.slice(0, 3).map((project) => (
+                      {(stats.by_project || []).slice(0, 3).map((project) => (
                         <div key={project.project_path} className="flex items-center justify-between">
                           <div className="flex flex-col">
                             <span className="text-sm font-medium truncate max-w-[200px]" title={project.project_path}>
-                              {project.project_path}
+                              {project.project_path || "Unknown Project"}
                             </span>
                             <span className="text-xs text-muted-foreground">
-                              {project.session_count} sessions
+                              {project.session_count || 0} sessions
                             </span>
                           </div>
                           <span className="text-sm font-medium">
-                            {formatCurrency(project.total_cost)}
+                            {formatCurrency(project.total_cost || 0)}
                           </span>
                         </div>
                       ))}
@@ -342,7 +376,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                 <Card className="p-6">
                   <h3 className="text-sm font-semibold mb-4">Usage by Model</h3>
                   <div className="space-y-4">
-                    {stats.by_model.map((model) => (
+                    {(stats.by_model || []).map((model) => (
                       <div key={model.model} className="space-y-2">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-3">
@@ -389,7 +423,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                 <Card className="p-6">
                   <h3 className="text-sm font-semibold mb-4">Usage by Project</h3>
                   <div className="space-y-3">
-                    {stats.by_project.map((project) => (
+                    {(stats.by_project || []).map((project) => (
                       <div key={project.project_path} className="flex items-center justify-between py-2 border-b border-border last:border-0">
                         <div className="flex flex-col truncate">
                           <span className="text-sm font-medium truncate" title={project.project_path}>
@@ -421,7 +455,8 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                   <Card className="p-6">
                       <h3 className="text-sm font-semibold mb-4">Usage by Session</h3>
                       <div className="space-y-3">
-                          {sessionStats?.map((session) => (
+                          {sessionStats && sessionStats.length > 0 ? (
+                            sessionStats.map((session) => (
                               <div key={`${session.project_path}-${session.project_name}`} className="flex items-center justify-between py-2 border-b border-border last:border-0">
                                   <div className="flex flex-col">
                                       <div className="flex items-center space-x-2">
@@ -441,7 +476,12 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                                       </p>
                                   </div>
                               </div>
-                          ))}
+                          ))
+                          ) : (
+                            <div className="text-center py-4 text-sm text-muted-foreground">
+                              No session data available
+                            </div>
+                          )}
                       </div>
                   </Card>
               </TabsContent>
@@ -453,9 +493,10 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                     <Calendar className="h-4 w-4" />
                     <span>Daily Usage</span>
                   </h3>
-                  {stats.by_date.length > 0 ? (() => {
-                    const maxCost = Math.max(...stats.by_date.map(d => d.total_cost), 0);
-                    const halfMaxCost = maxCost / 2;
+                  {stats.by_date && stats.by_date.length > 0 ? (() => {
+                    try {
+                      const maxCost = Math.max(...stats.by_date.map(d => d.total_cost || 0), 0);
+                      const halfMaxCost = maxCost / 2;
 
                     return (
                       <div className="relative pl-8 pr-4">
@@ -470,7 +511,22 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                         <div className="flex items-end space-x-2 h-64 border-l border-b border-border pl-4">
                           {stats.by_date.slice().reverse().map((day) => {
                             const heightPercent = maxCost > 0 ? (day.total_cost / maxCost) * 100 : 0;
-                            const date = new Date(day.date.replace(/-/g, '/'));
+                            // Parse date safely - handle both YYYY-MM-DD and ISO formats
+                            let date: Date;
+                            try {
+                              // First try parsing as ISO date
+                              date = new Date(day.date);
+                              // Check if date is valid
+                              if (isNaN(date.getTime())) {
+                                // If not valid, try replacing - with /
+                                date = new Date(day.date.replace(/-/g, '/'));
+                              }
+                            } catch {
+                              // Fallback to current date if parsing fails
+                              console.warn(`Failed to parse date: ${day.date}`);
+                              date = new Date();
+                            }
+                            
                             const formattedDate = date.toLocaleDateString('en-US', {
                               weekday: 'short',
                               month: 'short',
@@ -520,7 +576,15 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                           Daily Usage Over Time
                         </div>
                       </div>
-                    )
+                    );
+                    } catch (error) {
+                      console.error("Error rendering timeline chart:", error);
+                      return (
+                        <div className="text-center py-8 text-sm text-muted-foreground">
+                          <p>Error rendering chart. Please refresh and try again.</p>
+                        </div>
+                      );
+                    }
                   })() : (
                     <div className="text-center py-8 text-sm text-muted-foreground">
                       No usage data available for the selected period
