@@ -6,6 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "build:executables": "bun run scripts/fetch-and-build.js",
+    "build:executables:current": "bun run scripts/fetch-and-build.js current",
+    "build:executables:linux": "bun run scripts/fetch-and-build.js linux",
+    "build:executables:macos": "bun run scripts/fetch-and-build.js macos",
+    "build:executables:windows": "bun run scripts/fetch-and-build.js windows",
     "preview": "vite preview",
     "tauri": "tauri"
   },
