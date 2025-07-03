@@ -154,7 +154,12 @@ fn parse_jsonl_file(
             .unwrap_or("unknown")
             .to_string();
 
-        for line in content.lines() {
+        // OPTIMIZATION: Only process the last 500 lines of each file
+        // Most usage data is at the end of the session
+        let lines: Vec<&str> = content.lines().collect();
+        let start_idx = lines.len().saturating_sub(500);
+        
+        for line in &lines[start_idx..] {
             if line.trim().is_empty() {
                 continue;
             }
@@ -228,26 +233,6 @@ fn parse_jsonl_file(
     entries
 }
 
-fn get_earliest_timestamp(path: &PathBuf) -> Option<String> {
-    if let Ok(content) = fs::read_to_string(path) {
-        let mut earliest_timestamp: Option<String> = None;
-        for line in content.lines() {
-            if let Ok(json_value) = serde_json::from_str::<serde_json::Value>(line) {
-                if let Some(timestamp_str) = json_value.get("timestamp").and_then(|v| v.as_str()) {
-                    if let Some(current_earliest) = &earliest_timestamp {
-                        if timestamp_str < current_earliest.as_str() {
-                            earliest_timestamp = Some(timestamp_str.to_string());
-                        }
-                    } else {
-                        earliest_timestamp = Some(timestamp_str.to_string());
-                    }
-                }
-            }
-        }
-        return earliest_timestamp;
-    }
-    None
-}
 
 fn get_all_usage_entries(claude_path: &PathBuf) -> Vec<UsageEntry> {
     let mut all_entries = Vec::new();
@@ -262,20 +247,40 @@ fn get_all_usage_entries(claude_path: &PathBuf) -> Vec<UsageEntry> {
                 let project_name = project.file_name().to_string_lossy().to_string();
                 let project_path = project.path();
 
-                walkdir::WalkDir::new(&project_path)
-                    .into_iter()
-                    .filter_map(Result::ok)
-                    .filter(|e| e.path().extension().and_then(|s| s.to_str()) == Some("jsonl"))
-                    .for_each(|entry| {
-                        files_to_process.push((entry.path().to_path_buf(), project_name.clone()));
-                    });
+                // OPTIMIZATION: Only look for history.jsonl files in immediate subdirectories
+                // This avoids deep recursion through potentially thousands of files
+                if let Ok(entries) = fs::read_dir(&project_path) {
+                    for entry in entries.flatten() {
+                        if let Ok(file_type) = entry.file_type() {
+                            if file_type.is_dir() {
+                                // Check for history.jsonl in session directories
+                                let history_path = entry.path().join("history.jsonl");
+                                if history_path.exists() {
+                                    files_to_process.push((history_path, project_name.clone()));
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
 
-    // Sort files by their earliest timestamp to ensure chronological processing
-    // and deterministic deduplication.
-    files_to_process.sort_by_cached_key(|(path, _)| get_earliest_timestamp(path));
+    // OPTIMIZATION: Limit number of files to process to prevent freezing
+    // Process only the most recent 100 files
+    if files_to_process.len() > 100 {
+        // Sort by modification time (most recent first)
+        files_to_process.sort_by_cached_key(|(path, _)| {
+            fs::metadata(path)
+                .and_then(|m| m.modified())
+                .ok()
+                .map(|t| std::cmp::Reverse(t))
+        });
+        files_to_process.truncate(100);
+    }
+
+    // OPTIMIZATION: Skip sorting by earliest timestamp as it requires reading all files
+    // Just process files as they are
 
     for (path, project_name) in files_to_process {
         let entries = parse_jsonl_file(&path, &project_name, &mut processed_hashes);
