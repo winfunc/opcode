@@ -146,10 +146,9 @@ fn parse_jsonl_file(
     let mut actual_project_path: Option<String> = None;
 
     if let Ok(content) = fs::read_to_string(path) {
-        // Extract session ID from the file path
+        // Extract session ID from the file name (UUID.jsonl)
         let session_id = path
-            .parent()
-            .and_then(|p| p.file_name())
+            .file_stem()
             .and_then(|n| n.to_str())
             .unwrap_or("unknown")
             .to_string();
@@ -247,18 +246,13 @@ fn get_all_usage_entries(claude_path: &PathBuf) -> Vec<UsageEntry> {
                 let project_name = project.file_name().to_string_lossy().to_string();
                 let project_path = project.path();
 
-                // OPTIMIZATION: Only look for history.jsonl files in immediate subdirectories
+                // OPTIMIZATION: Only look for .jsonl files in the project directory
                 // This avoids deep recursion through potentially thousands of files
                 if let Ok(entries) = fs::read_dir(&project_path) {
                     for entry in entries.flatten() {
-                        if let Ok(file_type) = entry.file_type() {
-                            if file_type.is_dir() {
-                                // Check for history.jsonl in session directories
-                                let history_path = entry.path().join("history.jsonl");
-                                if history_path.exists() {
-                                    files_to_process.push((history_path, project_name.clone()));
-                                }
-                            }
+                        let path = entry.path();
+                        if path.extension().and_then(|s| s.to_str()) == Some("jsonl") {
+                            files_to_process.push((path, project_name.clone()));
                         }
                     }
                 }
