@@ -7,6 +7,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { ClaudeMemoriesDropdown } from "@/components/ClaudeMemoriesDropdown";
 import { cn } from "@/lib/utils";
 import { formatUnixTimestamp, formatISOTimestamp, truncateText, getFirstLine } from "@/lib/date-utils";
+import { useTranslations } from "@/lib/i18n/useI18n";
 import type { Session, ClaudeMdFile } from "@/lib/api";
 
 interface SessionListProps {
@@ -57,6 +58,7 @@ export const SessionList: React.FC<SessionListProps> = ({
   onEditClaudeFile,
   className,
 }) => {
+  const t = useTranslations();
   const [currentPage, setCurrentPage] = useState(1);
   
   // Calculate pagination
@@ -89,7 +91,7 @@ export const SessionList: React.FC<SessionListProps> = ({
         <div className="flex-1 min-w-0">
           <h2 className="text-base font-medium truncate">{projectPath}</h2>
           <p className="text-xs text-muted-foreground">
-            {sessions.length} session{sessions.length !== 1 ? 's' : ''}
+            {sessions.length} {sessions.length === 1 ? t('projects.session') : t('projects.sessions')}
           </p>
         </div>
       </motion.div>
@@ -149,7 +151,7 @@ export const SessionList: React.FC<SessionListProps> = ({
                             <div className="space-y-1">
                               <div className="flex items-center space-x-1 text-xs text-muted-foreground">
                                 <MessageSquare className="h-3 w-3" />
-                                <span>First message:</span>
+                                <span>{t('projects.firstMessage')}:</span>
                               </div>
                               <p className="text-xs line-clamp-2 text-foreground/80">
                                 {truncateText(getFirstLine(session.first_message), 100)}
@@ -173,7 +175,7 @@ export const SessionList: React.FC<SessionListProps> = ({
                             {session.todo_data && (
                               <div className="flex items-center space-x-1">
                                 <Calendar className="h-3 w-3" />
-                                <span>Has todo</span>
+                                <span>{t('projects.hasTodo')}</span>
                               </div>
                             )}
                           </div>

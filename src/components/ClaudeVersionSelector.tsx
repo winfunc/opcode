@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Loader2, Terminal, Package, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "@/lib/i18n/useI18n";
 
 interface ClaudeVersionSelectorProps {
   /**
@@ -52,6 +53,7 @@ export const ClaudeVersionSelector: React.FC<ClaudeVersionSelectorProps> = ({
   onSave,
   isSaving = false,
 }) => {
+  const t = useTranslations();
   const [installations, setInstallations] = useState<ClaudeInstallation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -91,7 +93,7 @@ export const ClaudeVersionSelector: React.FC<ClaudeVersionSelectorProps> = ({
       }
     } catch (err) {
       console.error("Failed to load Claude installations:", err);
-      setError(err instanceof Error ? err.message : "Failed to load Claude installations");
+      setError(err instanceof Error ? err.message : t('claudeVersion.failedToLoad', 'Failed to load Claude installations'));
     } finally {
       setLoading(false);
     }
@@ -140,7 +142,7 @@ export const ClaudeVersionSelector: React.FC<ClaudeVersionSelectorProps> = ({
     return (
       <Card className={cn("p-4", className)}>
         <div className="text-sm text-muted-foreground">
-          No Claude Code installations found on your system.
+          {t('claudeVersion.noInstallations', 'No Claude Code installations found on your system.')}
         </div>
       </Card>
     );
@@ -150,7 +152,7 @@ export const ClaudeVersionSelector: React.FC<ClaudeVersionSelectorProps> = ({
     <div className={cn("space-y-4", className)}>
       <div>
         <Label className="text-sm font-medium mb-3 block">
-          Select Claude Code Installation
+          {t('claudeVersion.selectInstallation', 'Select Claude Code Installation')}
         </Label>
         <RadioGroup
           value={selectedInstallation?.path}
@@ -193,7 +195,7 @@ export const ClaudeVersionSelector: React.FC<ClaudeVersionSelectorProps> = ({
                       {selectedPath === installation.path && (
                         <Badge variant="default" className="text-xs">
                           <Check className="w-3 h-3 mr-1" />
-                          Current
+                          {t('claudeVersion.current', 'Current')}
                         </Badge>
                       )}
                     </div>
@@ -218,10 +220,10 @@ export const ClaudeVersionSelector: React.FC<ClaudeVersionSelectorProps> = ({
             {isSaving ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Saving...
+                {t('settings.saving', 'Saving...')}
               </>
             ) : (
-              "Save Selection"
+              t('claudeVersion.saveSelection', 'Save Selection')
             )}
           </Button>
         </div>

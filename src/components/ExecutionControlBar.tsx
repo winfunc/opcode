@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { StopCircle, Clock, Hash } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "@/lib/i18n/useI18n";
 
 interface ExecutionControlBarProps {
   isExecuting: boolean;
@@ -23,6 +24,7 @@ export const ExecutionControlBar: React.FC<ExecutionControlBarProps> = ({
   elapsedTime = 0,
   className 
 }) => {
+  const t = useTranslations();
   // Format elapsed time
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -78,7 +80,7 @@ export const ExecutionControlBar: React.FC<ExecutionControlBarProps> = ({
             {/* Tokens */}
             <div className="flex items-center gap-1.5">
               <Hash className="h-3.5 w-3.5" />
-              <span>{formatTokens(totalTokens)} tokens</span>
+              <span>{formatTokens(totalTokens)} {t('dashboard.tokens')}</span>
             </div>
           </div>
 
