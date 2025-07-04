@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=Claudia
+Comment=AI-powered coding assistant
+GenericName=AI Assistant
+Exec=/usr/bin/claudia %U
+Icon=claudia
+Type=Application
+StartupNotify=true
+Categories=Development;IDE;Utility;
+MimeType=text/plain;text/x-python;text/x-java;text/x-csrc;text/x-c++src;text/x-chdr;text/x-c++hdr;text/x-makefile;text/x-shellscript;text/x-yaml;text/x-json;
+Keywords=AI;Assistant;Coding;Development;Claude;
+Terminal=false
