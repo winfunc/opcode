@@ -19,6 +19,7 @@ import { FilePicker } from "./FilePicker";
 import { ImagePreview } from "./ImagePreview";
 import { type FileEntry } from "@/lib/api";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { useTranslations } from "@/lib/i18n/useI18n";
 
 interface FloatingPromptInputProps {
   /**
@@ -55,62 +56,25 @@ export interface FloatingPromptInputRef {
   addImage: (imagePath: string) => void;
 }
 
-/**
- * Thinking mode type definition
- */
-type ThinkingMode = "auto" | "think" | "think_hard" | "think_harder" | "ultrathink";
+// 1. 型別宣告
+export type Model = {
+  id: "sonnet" | "opus";
+  name: string;
+  description: string;
+  icon: React.ReactNode;
+};
 
-/**
- * Thinking mode configuration
- */
-type ThinkingModeConfig = {
+export type ThinkingMode = "auto" | "think" | "think_hard" | "think_harder" | "ultrathink";
+
+export type ThinkingModeConfig = {
   id: ThinkingMode;
   name: string;
   description: string;
-  level: number; // 0-4 for visual indicator
-  phrase?: string; // The phrase to append
+  level: number;
+  phrase?: string;
 };
 
-const THINKING_MODES: ThinkingModeConfig[] = [
-  {
-    id: "auto",
-    name: "Auto",
-    description: "Let Claude decide",
-    level: 0
-  },
-  {
-    id: "think",
-    name: "Think",
-    description: "Basic reasoning",
-    level: 1,
-    phrase: "think"
-  },
-  {
-    id: "think_hard",
-    name: "Think Hard",
-    description: "Deeper analysis",
-    level: 2,
-    phrase: "think hard"
-  },
-  {
-    id: "think_harder",
-    name: "Think Harder",
-    description: "Extensive reasoning",
-    level: 3,
-    phrase: "think harder"
-  },
-  {
-    id: "ultrathink",
-    name: "Ultrathink",
-    description: "Maximum computation",
-    level: 4,
-    phrase: "ultrathink"
-  }
-];
-
-/**
- * ThinkingModeIndicator component - Shows visual indicator bars for thinking level
- */
+// 2. ThinkingModeIndicator 元件
 const ThinkingModeIndicator: React.FC<{ level: number }> = ({ level }) => {
   return (
     <div className="flex items-center gap-0.5">
@@ -126,28 +90,6 @@ const ThinkingModeIndicator: React.FC<{ level: number }> = ({ level }) => {
     </div>
   );
 };
-
-type Model = {
-  id: "sonnet" | "opus";
-  name: string;
-  description: string;
-  icon: React.ReactNode;
-};
-
-const MODELS: Model[] = [
-  {
-    id: "sonnet",
-    name: "Claude 4 Sonnet",
-    description: "Faster, efficient for most tasks",
-    icon: <Zap className="h-4 w-4" />
-  },
-  {
-    id: "opus",
-    name: "Claude 4 Opus",
-    description: "More capable, better for complex tasks",
-    icon: <Sparkles className="h-4 w-4" />
-  }
-];
 
 /**
  * FloatingPromptInput component - Fixed position prompt input with model picker
@@ -172,6 +114,7 @@ const FloatingPromptInputInner = (
   }: FloatingPromptInputProps,
   ref: React.Ref<FloatingPromptInputRef>,
 ) => {
+  const t = useTranslations();
   const [prompt, setPrompt] = useState("");
   const [selectedModel, setSelectedModel] = useState<"sonnet" | "opus">(defaultModel);
   const [selectedThinkingMode, setSelectedThinkingMode] = useState<ThinkingMode>("auto");
@@ -187,6 +130,59 @@ const FloatingPromptInputInner = (
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const expandedTextareaRef = useRef<HTMLTextAreaElement>(null);
   const unlistenDragDropRef = useRef<(() => void) | null>(null);
+
+  // THINKING_MODES 與 MODELS 需在 t 可用時宣告
+  const THINKING_MODES: ThinkingModeConfig[] = [
+    {
+      id: "auto",
+      name: t('floatingPrompt.auto'),
+      description: t('floatingPrompt.letClaudeDecide'),
+      level: 0
+    },
+    {
+      id: "think",
+      name: t('floatingPrompt.think'),
+      description: t('floatingPrompt.thinkDesc'),
+      level: 1,
+      phrase: "think"
+    },
+    {
+      id: "think_hard",
+      name: t('floatingPrompt.thinkHard'),
+      description: t('floatingPrompt.thinkHardDesc'),
+      level: 2,
+      phrase: "think hard"
+    },
+    {
+      id: "think_harder",
+      name: t('floatingPrompt.thinkHarder'),
+      description: t('floatingPrompt.thinkHarderDesc'),
+      level: 3,
+      phrase: "think harder"
+    },
+    {
+      id: "ultrathink",
+      name: t('floatingPrompt.ultrathink'),
+      description: t('floatingPrompt.ultrathinkDesc'),
+      level: 4,
+      phrase: "ultrathink"
+    }
+  ];
+
+  const MODELS: Model[] = [
+    {
+      id: "sonnet",
+      name: t('floatingPrompt.model_sonnet'),
+      description: t('floatingPrompt.model_sonnet_desc'),
+      icon: <Zap className="h-4 w-4" />
+    },
+    {
+      id: "opus",
+      name: t('floatingPrompt.model_opus'),
+      description: t('floatingPrompt.model_opus_desc'),
+      icon: <Sparkles className="h-4 w-4" />
+    }
+  ];
 
   // Expose a method to add images programmatically
   React.useImperativeHandle(
@@ -490,7 +486,7 @@ const FloatingPromptInputInner = (
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-medium">Compose your prompt</h3>
+                <h3 className="text-sm font-medium">{t('floatingPrompt.compose')}</h3>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -514,7 +510,7 @@ const FloatingPromptInputInner = (
                 ref={expandedTextareaRef}
                 value={prompt}
                 onChange={handleTextChange}
-                placeholder="Type your prompt here..."
+                placeholder={t('floatingPrompt.typeHere')}
                 className="min-h-[200px] resize-none"
                 disabled={disabled}
                 onDragEnter={handleDrag}
@@ -526,7 +522,7 @@ const FloatingPromptInputInner = (
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">Model:</span>
+                    <span className="text-xs text-muted-foreground">{t('floatingPrompt.model')}:</span>
                     <Button
                       variant="outline"
                       size="sm"
@@ -539,7 +535,7 @@ const FloatingPromptInputInner = (
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">Thinking:</span>
+                    <span className="text-xs text-muted-foreground">{t('floatingPrompt.thinking')}:</span>
                     <Popover
                       trigger={
                         <TooltipProvider>
@@ -756,7 +752,7 @@ const FloatingPromptInputInner = (
                   value={prompt}
                   onChange={handleTextChange}
                   onKeyDown={handleKeyDown}
-                  placeholder={dragActive ? "Drop images here..." : "Ask Claude anything..."}
+                  placeholder={dragActive ? t('floatingPrompt.dropImages') : t('floatingPrompt.askAnything')}
                   disabled={disabled}
                   className={cn(
                     "min-h-[44px] max-h-[120px] resize-none pr-10",
@@ -799,7 +795,7 @@ const FloatingPromptInputInner = (
                 {isLoading ? (
                   <>
                     <Square className="h-4 w-4 mr-1" />
-                    Stop
+                    {t('floatingPrompt.stop')}
                   </>
                 ) : (
                   <Send className="h-4 w-4" />
@@ -808,7 +804,7 @@ const FloatingPromptInputInner = (
             </div>
 
             <div className="mt-2 text-xs text-muted-foreground">
-              Press Enter to send, Shift+Enter for new line{projectPath?.trim() && ", @ to mention files, drag & drop images"}
+              {t('floatingPrompt.sendHint') + (projectPath?.trim() ? ', @ to mention files, drag & drop images' : '')}
             </div>
           </div>
         </div>

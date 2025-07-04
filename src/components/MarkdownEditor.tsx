@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Toast, ToastContainer } from "@/components/ui/toast";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "@/lib/i18n/useI18n";
 
 interface MarkdownEditorProps {
   /**
@@ -28,6 +29,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
   onBack,
   className,
 }) => {
+  const t = useTranslations();
   const [content, setContent] = useState<string>("");
   const [originalContent, setOriginalContent] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -106,7 +108,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
             <div>
               <h2 className="text-lg font-semibold">CLAUDE.md</h2>
               <p className="text-xs text-muted-foreground">
-                Edit your Claude Code system prompt
+                {t('file.editSystemPrompt')}
               </p>
             </div>
           </div>
@@ -121,7 +123,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
             ) : (
               <Save className="mr-2 h-4 w-4" />
             )}
-            {saving ? "Saving..." : "Save"}
+            {saving ? t('common.saving') : t('common.save')}
           </Button>
         </motion.div>
         

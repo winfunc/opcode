@@ -32,6 +32,7 @@ import { SplitPane } from "@/components/ui/split-pane";
 import { WebviewPreview } from "./WebviewPreview";
 import type { ClaudeStreamMessage } from "./AgentExecution";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { useTranslations } from "@/lib/i18n/useI18n";
 
 interface ClaudeCodeSessionProps {
   /**
@@ -69,6 +70,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   className,
   onStreamingChange,
 }) => {
+  const t = useTranslations();
   const [projectPath, setProjectPath] = useState(initialProjectPath || session?.project_path || "");
   const [messages, setMessages] = useState<ClaudeStreamMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -275,7 +277,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       setIsFirstPrompt(false);
     } catch (err) {
       console.error("Failed to load session history:", err);
-      setError("Failed to load session history");
+      setError(t('claudeSession.failedLoadHistory', 'Failed to load session history'));
     } finally {
       setIsLoading(false);
     }
@@ -387,7 +389,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     } catch (err) {
       console.error("Failed to select directory:", err);
       const errorMessage = err instanceof Error ? err.message : String(err);
-      setError(`Failed to select directory: ${errorMessage}`);
+      setError(t('claudeSession.failedSelectDir', 'Failed to select directory: {msg}').replace('{msg}', errorMessage));
     }
   };
 
@@ -395,7 +397,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     console.log('[ClaudeCodeSession] handleSendPrompt called with:', { prompt, model, projectPath, claudeSessionId, effectiveSession });
     
     if (!projectPath) {
-      setError("Please select a project directory first");
+      setError(t('claudeSession.selectProjectDir', 'Please select a project directory first'));
       return;
     }
 
@@ -597,7 +599,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       }
     } catch (err) {
       console.error("Failed to send prompt:", err);
-      setError("Failed to send prompt");
+      setError(t('claudeSession.failedSendPrompt', 'Failed to send prompt'));
       setIsLoading(false);
       hasActiveSessionRef.current = false;
     }
@@ -904,14 +906,14 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       className="p-4 border-b border-border flex-shrink-0"
     >
       <Label htmlFor="project-path" className="text-sm font-medium">
-        Project Directory
+        {t('claudeSession.projectDir', 'Project Directory')}
       </Label>
       <div className="flex items-center gap-2 mt-1">
         <Input
           id="project-path"
           value={projectPath}
           onChange={(e) => setProjectPath(e.target.value)}
-          placeholder="/path/to/your/project"
+          placeholder={t('claudeSession.projectDirPlaceholder', '/path/to/your/project')}
           className="flex-1"
           disabled={isLoading}
         />
@@ -973,9 +975,11 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
             <div className="flex items-center gap-2">
               <Terminal className="h-5 w-5" />
               <div>
-                <h2 className="text-lg font-semibold">Claude Code Session</h2>
+                <h2 className="text-lg font-semibold">{t('claudeSession.title', 'Claude Code Session')}</h2>
                 <p className="text-xs text-muted-foreground">
-                  {session ? `Resuming session ${session.id.slice(0, 8)}...` : 'Interactive session'}
+                  {session
+                    ? t('claudeSession.resuming', 'Resuming session {id}...').replace('{id}', session.id.slice(0, 8))
+                    : t('claudeSession.interactive', 'Interactive session')}
                 </p>
               </div>
             </div>
@@ -991,7 +995,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                   className="flex items-center gap-2"
                 >
                   <Settings className="h-4 w-4" />
-                  Settings
+                  {t('claudeSession.settingsBtn', 'Settings')}
                 </Button>
                 <Button
                   variant="outline"
@@ -1000,7 +1004,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                   className="flex items-center gap-2"
                 >
                   <GitBranch className="h-4 w-4" />
-                  Timeline
+                  {t('claudeSession.timelineBtn', 'Timeline')}
                 </Button>
               </>
             )}
@@ -1023,14 +1027,13 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                     className="flex items-center gap-2"
                   >
                     <Globe className="h-4 w-4" />
-                    {showPreview ? "Close Preview" : "Preview"}
+                    {showPreview ? t('ui.close') + " " + t('webview.preview') : t('webview.preview')}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
                   {showPreview 
-                    ? "Close the preview pane" 
-                    : "Open a browser preview to test your web applications"
-                  }
+                    ? t('claudeSession.closePreview', 'Close the preview pane')
+                    : t('claudeSession.openPreview', 'Open a browser preview to test your web applications')}
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -1044,7 +1047,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                     className="flex items-center gap-2"
                   >
                     <Copy className="h-4 w-4" />
-                    Copy Output
+                    {t('claudeSession.copyOutput', 'Copy Output')}
                     <ChevronDown className="h-3 w-3" />
                   </Button>
                 }
@@ -1056,7 +1059,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                       onClick={handleCopyAsMarkdown}
                       className="w-full justify-start"
                     >
-                      Copy as Markdown
+                      {t('claudeSession.copyAsMarkdown', 'Copy as Markdown')}
                     </Button>
                     <Button
                       variant="ghost"
@@ -1064,7 +1067,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                       onClick={handleCopyAsJsonl}
                       className="w-full justify-start"
                     >
-                      Copy as JSONL
+                      {t('claudeSession.copyAsJsonl', 'Copy as JSONL')}
                     </Button>
                   </div>
                 }
@@ -1115,7 +1118,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                   <div className="flex items-center gap-3">
                     <div className="rotating-symbol text-primary text-2xl" />
                     <span className="text-sm text-muted-foreground">
-                      {session ? "Loading session history..." : "Initializing Claude Code..."}
+                      {session ? t('claudeSession.loadingHistory', 'Loading session history...') : t('claudeSession.initializing', 'Initializing Claude Code...')}
                     </span>
                   </div>
                 </div>
@@ -1138,7 +1141,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                 <div className="bg-background/95 backdrop-blur-md border rounded-lg shadow-lg p-3 space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="text-xs font-medium text-muted-foreground mb-1">
-                      Queued Prompts ({queuedPrompts.length})
+                      {t('claudeSession.queuedPrompts', 'Queued Prompts').replace('{count}', String(queuedPrompts.length))}
                     </div>
                     <Button variant="ghost" size="icon" onClick={() => setQueuedPromptsCollapsed(prev => !prev)}>
                       {queuedPromptsCollapsed ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
@@ -1214,7 +1217,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                     }
                   }}
                   className="px-3 py-2 hover:bg-accent rounded-none"
-                  title="Scroll to top"
+                  title={t('claudeSession.scrollTop', 'Scroll to top')}
                 >
                   <ChevronUp className="h-4 w-4" />
                 </Button>
@@ -1236,7 +1239,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                     }
                   }}
                   className="px-3 py-2 hover:bg-accent rounded-none"
-                  title="Scroll to bottom"
+                  title={t('claudeSession.scrollBottom', 'Scroll to bottom')}
                 >
                   <ChevronDown className="h-4 w-4" />
                 </Button>
@@ -1272,7 +1275,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                     <div className="flex items-center gap-1.5 text-xs">
                       <Hash className="h-3 w-3 text-muted-foreground" />
                       <span className="font-mono">{totalTokens.toLocaleString()}</span>
-                      <span className="text-muted-foreground">tokens</span>
+                      <span className="text-muted-foreground">{t('dashboard.tokens')}</span>
                     </div>
                   </motion.div>
                 </div>

@@ -8,6 +8,7 @@ import { Toast, ToastContainer } from '@/components/ui/toast';
 import { SessionOutputViewer } from './SessionOutputViewer';
 import { api } from '@/lib/api';
 import type { AgentRun } from '@/lib/api';
+import { useTranslations } from '@/lib/i18n/useI18n';
 
 interface RunningSessionsViewProps {
   className?: string;
@@ -16,6 +17,7 @@ interface RunningSessionsViewProps {
 }
 
 export function RunningSessionsView({ className, showBackButton = false, onBack }: RunningSessionsViewProps) {
+  const t = useTranslations();
   const [runningSessions, setRunningSessions] = useState<AgentRun[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -28,7 +30,7 @@ export function RunningSessionsView({ className, showBackButton = false, onBack 
       setRunningSessions(sessions);
     } catch (error) {
       console.error('Failed to load running sessions:', error);
-      setToast({ message: 'Failed to load running sessions', type: 'error' });
+      setToast({ message: t('agents.failedToLoad'), type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -41,10 +43,10 @@ export function RunningSessionsView({ className, showBackButton = false, onBack 
       await api.cleanupFinishedProcesses();
       // Then reload the list
       await loadRunningSessions();
-      setToast({ message: 'Running sessions list has been updated', type: 'success' });
+      setToast({ message: t('agents.runningSessionsUpdated'), type: 'success' });
     } catch (error) {
       console.error('Failed to refresh sessions:', error);
-      setToast({ message: 'Failed to refresh sessions', type: 'error' });
+      setToast({ message: t('agents.failedToRefresh'), type: 'error' });
     } finally {
       setRefreshing(false);
     }
@@ -54,15 +56,15 @@ export function RunningSessionsView({ className, showBackButton = false, onBack 
     try {
       const success = await api.killAgentSession(runId);
       if (success) {
-        setToast({ message: `${agentName} session has been stopped`, type: 'success' });
+        setToast({ message: t('agents.sessionStopped').replace('{agentName}', agentName), type: 'success' });
         // Refresh the list after killing
         await loadRunningSessions();
       } else {
-        setToast({ message: 'Session may have already finished', type: 'error' });
+        setToast({ message: t('agents.sessionMayFinished'), type: 'error' });
       }
     } catch (error) {
       console.error('Failed to kill session:', error);
-      setToast({ message: 'Failed to terminate session', type: 'error' });
+      setToast({ message: t('agents.failedToTerminate'), type: 'error' });
     }
   };
 
@@ -78,9 +80,9 @@ export function RunningSessionsView({ className, showBackButton = false, onBack 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'running':
-        return <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">Running</Badge>;
+        return <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">{t('agents.running')}</Badge>;
       case 'pending':
-        return <Badge variant="secondary">Pending</Badge>;
+        return <Badge variant="secondary">{t('agents.pending')}</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -104,7 +106,7 @@ export function RunningSessionsView({ className, showBackButton = false, onBack 
       <div className={`flex items-center justify-center p-8 ${className}`}>
         <div className="flex items-center space-x-2">
           <RefreshCw className="h-4 w-4 animate-spin" />
-          <span>Loading running sessions...</span>
+          <span>{t('agents.loadingRunningSessions')}</span>
         </div>
       </div>
     );
@@ -125,7 +127,7 @@ export function RunningSessionsView({ className, showBackButton = false, onBack 
             </Button>
           )}
           <Play className="h-5 w-5" />
-          <h2 className="text-lg font-semibold">Running Agent Sessions</h2>
+          <h2 className="text-lg font-semibold">{t('agents.runningSessions')}</h2>
           <Badge variant="secondary">{runningSessions.length}</Badge>
         </div>
         <Button
@@ -136,7 +138,7 @@ export function RunningSessionsView({ className, showBackButton = false, onBack 
           className="flex items-center space-x-2"
         >
           <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-          <span>Refresh</span>
+          <span>{t('ui.refresh')}</span>
         </Button>
       </div>
 
@@ -145,7 +147,7 @@ export function RunningSessionsView({ className, showBackButton = false, onBack 
           <CardContent className="flex items-center justify-center p-8">
             <div className="text-center space-y-2">
               <Clock className="h-8 w-8 mx-auto text-muted-foreground" />
-              <p className="text-muted-foreground">No agent sessions are currently running</p>
+              <p className="text-muted-foreground">{t('agents.noRunningSessions')}</p>
             </div>
           </CardContent>
         </Card>
@@ -187,7 +189,7 @@ export function RunningSessionsView({ className, showBackButton = false, onBack 
                         className="flex items-center space-x-2"
                       >
                         <Eye className="h-4 w-4" />
-                        <span>View Output</span>
+                        <span>{t('agents.viewOutput')}</span>
                       </Button>
                       <Button
                         variant="destructive"
@@ -196,7 +198,7 @@ export function RunningSessionsView({ className, showBackButton = false, onBack 
                         className="flex items-center space-x-2"
                       >
                         <Square className="h-4 w-4" />
-                        <span>Stop</span>
+                        <span>{t('agents.stop')}</span>
                       </Button>
                     </div>
                   </div>
@@ -204,28 +206,28 @@ export function RunningSessionsView({ className, showBackButton = false, onBack 
                 <CardContent className="pt-0">
                   <div className="space-y-2">
                     <div>
-                      <p className="text-sm text-muted-foreground">Task</p>
+                      <p className="text-sm text-muted-foreground">{t('agents.task')}</p>
                       <p className="text-sm font-medium truncate">{session.task}</p>
                     </div>
                     
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
-                        <p className="text-muted-foreground">Model</p>
+                        <p className="text-muted-foreground">{t('agents.model')}</p>
                         <p className="font-medium">{session.model}</p>
                       </div>
                       <div>
-                        <p className="text-muted-foreground">Duration</p>
+                        <p className="text-muted-foreground">{t('agents.duration')}</p>
                         <p className="font-medium">
                           {session.process_started_at 
                             ? formatDuration(session.process_started_at)
-                            : 'Unknown'
+                            : t('agents.unknown')
                           }
                         </p>
                       </div>
                     </div>
                     
                     <div>
-                      <p className="text-sm text-muted-foreground">Project Path</p>
+                      <p className="text-sm text-muted-foreground">{t('agents.projectPath')}</p>
                       <p className="text-xs font-mono bg-muted px-2 py-1 rounded truncate">
                         {session.project_path}
                       </p>
@@ -233,7 +235,7 @@ export function RunningSessionsView({ className, showBackButton = false, onBack 
                     
                     {session.session_id && (
                       <div>
-                        <p className="text-sm text-muted-foreground">Session ID</p>
+                        <p className="text-sm text-muted-foreground">{t('agents.sessionId')}</p>
                         <p className="text-xs font-mono bg-muted px-2 py-1 rounded truncate">
                           {session.session_id}
                         </p>
