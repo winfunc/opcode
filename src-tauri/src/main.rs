@@ -37,6 +37,9 @@ use commands::mcp::{
 use commands::usage::{
     get_session_stats, get_usage_by_date_range, get_usage_details, get_usage_stats,
 };
+use commands::pentest::{
+    execute_nmap, get_available_pentest_tools,
+};
 use process::ProcessRegistryState;
 use std::sync::Mutex;
 use tauri::Manager;
@@ -160,7 +163,9 @@ fn main() {
             mcp_reset_project_choices,
             mcp_get_server_status,
             mcp_read_project_config,
-            mcp_save_project_config
+            mcp_save_project_config,
+            execute_nmap,
+            get_available_pentest_tools
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

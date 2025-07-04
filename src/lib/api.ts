@@ -1495,4 +1495,32 @@ export const api = {
       throw error;
     }
   },
+
+  /**
+   * Executes nmap scan
+   * @param target - Target IP, domain, or CIDR range
+   * @param options - Nmap command line options
+   * @returns Promise resolving to scan results
+   */
+  async executeNmap(target: string, options?: string): Promise<any> {
+    try {
+      return await invoke("execute_nmap", { target, options });
+    } catch (error) {
+      console.error("Failed to execute nmap:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Gets available penetration testing tools
+   * @returns Promise resolving to list of available tool names
+   */
+  async getAvailablePentestTools(): Promise<string[]> {
+    try {
+      return await invoke<string[]>("get_available_pentest_tools");
+    } catch (error) {
+      console.error("Failed to get available pentest tools:", error);
+      throw error;
+    }
+  },
 };

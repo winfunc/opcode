@@ -36,7 +36,8 @@ import {
   LSResultWidget,
   ThinkingWidget,
   WebSearchWidget,
-  WebFetchWidget
+  WebFetchWidget,
+  NmapWidget
 } from "./ToolWidgets";
 
 interface StreamMessageProps {
@@ -253,6 +254,12 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                         return <WebFetchWidget url={input.url} prompt={input.prompt} result={toolResult} />;
                       }
                       
+                      // Nmap tool
+                      if (toolName === "nmap" && input?.target) {
+                        renderedSomething = true;
+                        return <NmapWidget target={input.target} options={input.options} result={toolResult} />;
+                      }
+                      
                       // Default - return null
                       return null;
                     };
@@ -368,7 +375,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                           const toolUse = prevMsg.message.content.find((c: any) => c.type === 'tool_use' && c.id === content.tool_use_id);
                           if (toolUse) {
                             const toolName = toolUse.name?.toLowerCase();
-                            const toolsWithWidgets = ['task','edit','multiedit','todowrite','ls','read','glob','bash','write','grep','websearch','webfetch'];
+                            const toolsWithWidgets = ['task','edit','multiedit','todowrite','ls','read','glob','bash','write','grep','websearch','webfetch','nmap'];
                             if (toolsWithWidgets.includes(toolName) || toolUse.name?.startsWith('mcp__')) {
                               hasCorrespondingWidget = true;
                             }

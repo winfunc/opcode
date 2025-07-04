@@ -41,6 +41,9 @@ import {
   FileCode,
   Folder,
   ChevronUp,
+  Shield,
+  Activity,
+  Target,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -1805,6 +1808,7 @@ export const SystemInitializedWidget: React.FC<{
     'todoread': ListChecks,
     'todowrite': ListPlus,
     'websearch': Globe2,
+    'nmap': Shield,
   };
   
   // Get icon for a tool, fallback to Wrench
@@ -2285,6 +2289,294 @@ export const ThinkingWidget: React.FC<{
           </pre>
         </div>
       )}
+    </div>
+  );
+};
+
+/**
+ * Widget for Nmap tool - displays network scanning with security warnings
+ */
+export const NmapWidget: React.FC<{ 
+  target: string;
+  options?: string;
+  result?: any;
+}> = ({ target, options, result }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [showFullOutput, setShowFullOutput] = useState(false);
+  
+  // Extract result content if available
+  let scanResult = null;
+  let isLoading = !result;
+  let hasError = false;
+  let warnings: string[] = [];
+  
+  if (result) {
+    if (typeof result.content === 'string') {
+      try {
+        scanResult = JSON.parse(result.content);
+      } catch {
+        scanResult = { raw_output: result.content, is_error: true };
+      }
+    } else if (result.content && typeof result.content === 'object') {
+      scanResult = result.content;
+    }
+    
+    if (scanResult) {
+      hasError = scanResult.is_error || false;
+      warnings = scanResult.warnings || [];
+    }
+  }
+  
+  // Parse nmap output to extract key information
+  const parseNmapOutput = (output: string) => {
+    const lines = output.split('\n');
+    const hosts: Array<{
+      host: string;
+      ports: Array<{
+        port: string;
+        protocol: string;
+        state: string;
+        service: string;
+      }>;
+      info: string[];
+    }> = [];
+    let currentHost: {
+      host: string;
+      ports: Array<{
+        port: string;
+        protocol: string;
+        state: string;
+        service: string;
+      }>;
+      info: string[];
+    } | null = null;
+    
+    for (const line of lines) {
+      const trimmed = line.trim();
+      
+      // Host discovery
+      if (trimmed.includes('Nmap scan report for')) {
+        if (currentHost) hosts.push(currentHost);
+        const hostMatch = trimmed.match(/Nmap scan report for (.+)/);
+        currentHost = {
+          host: hostMatch ? hostMatch[1] : 'Unknown',
+          ports: [] as Array<{
+            port: string;
+            protocol: string;
+            state: string;
+            service: string;
+          }>,
+          info: [] as string[]
+        };
+      }
+      
+      // Port information
+      if (trimmed.match(/^\d+\/\w+\s+\w+/)) {
+        const portMatch = trimmed.match(/^(\d+)\/(\w+)\s+(\w+)\s*(.*)$/);
+        if (portMatch && currentHost) {
+          currentHost.ports.push({
+            port: portMatch[1],
+            protocol: portMatch[2],
+            state: portMatch[3],
+            service: portMatch[4] || ''
+          });
+        }
+      }
+      
+      // Additional info
+      if (trimmed.includes('MAC Address:') || trimmed.includes('OS:') || trimmed.includes('Service:')) {
+        if (currentHost) {
+          currentHost.info.push(trimmed);
+        }
+      }
+    }
+    
+    if (currentHost) hosts.push(currentHost);
+    return hosts;
+  };
+  
+  const hosts = scanResult?.raw_output ? parseNmapOutput(scanResult.raw_output) : [];
+  const maxPreviewLength = 800;
+  const isTruncated = scanResult?.raw_output && scanResult.raw_output.length > maxPreviewLength;
+  const previewOutput = isTruncated && !showFullOutput
+    ? scanResult.raw_output.substring(0, maxPreviewLength) + '...'
+    : scanResult?.raw_output || '';
+
+  return (
+    <div className="rounded-lg border border-red-500/20 bg-gradient-to-br from-red-500/5 to-orange-500/5 overflow-hidden">
+      {/* Header */}
+      <div className="px-4 py-3 bg-gradient-to-r from-red-500/10 to-orange-500/10 border-b border-red-500/20">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <Shield className="h-4 w-4 text-red-500" />
+              <Target className="h-2.5 w-2.5 text-red-400 absolute -top-1 -right-1" />
+            </div>
+            <span className="text-sm font-medium text-red-600 dark:text-red-400">Nmap 扫描</span>
+            {scanResult?.execution_time && (
+              <Badge variant="outline" className="text-xs border-red-500/30 text-red-600 dark:text-red-400">
+                {scanResult.execution_time}
+              </Badge>
+            )}
+          </div>
+          
+          {/* Status indicator */}
+          <div className="flex items-center gap-2">
+            {isLoading && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Activity className="h-3 w-3 animate-pulse" />
+                <span>扫描中...</span>
+              </div>
+            )}
+            {hasError && (
+              <AlertCircle className="h-4 w-4 text-red-500" />
+            )}
+            {scanResult && !hasError && (
+              <CheckCircle2 className="h-4 w-4 text-green-500" />
+            )}
+          </div>
+        </div>
+      </div>
+      
+      {/* Content */}
+      <div className="p-4 space-y-4">
+        {/* Target and Options */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-sm">
+            <Target className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-muted-foreground">目标:</span>
+            <code className="bg-muted px-2 py-1 rounded text-xs font-mono">{target}</code>
+          </div>
+          {options && (
+            <div className="flex items-center gap-2 text-sm">
+              <Settings className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-muted-foreground">选项:</span>
+              <code className="bg-muted px-2 py-1 rounded text-xs font-mono">{options}</code>
+            </div>
+          )}
+        </div>
+
+        {/* Warnings */}
+        {warnings.length > 0 && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
+              <AlertCircle className="h-3.5 w-3.5" />
+              <span className="font-medium">安全警告</span>
+            </div>
+            {warnings.map((warning, idx) => (
+              <div key={idx} className="bg-amber-500/10 border border-amber-500/20 rounded-md p-3">
+                <p className="text-xs text-amber-700 dark:text-amber-300">{warning}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Results Summary */}
+        {hosts.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <Activity className="h-3.5 w-3.5 text-green-500" />
+              <span>扫描结果 ({hosts.length} 个主机)</span>
+            </div>
+            
+            {hosts.map((host, idx) => (
+              <div key={idx} className="border border-muted rounded-lg p-3 space-y-2">
+                <div className="font-medium text-sm">{host.host}</div>
+                
+                {host.ports.length > 0 && (
+                  <div className="space-y-1">
+                    <div className="text-xs text-muted-foreground">开放端口:</div>
+                    <div className="grid grid-cols-1 gap-1">
+                      {host.ports.slice(0, 5).map((port, pidx) => (
+                        <div key={pidx} className="flex items-center gap-2 text-xs">
+                          <code className="bg-green-100 dark:bg-green-900/30 px-1.5 py-0.5 rounded text-green-700 dark:text-green-300">
+                            {port.port}/{port.protocol}
+                          </code>
+                          <span className="text-muted-foreground">{port.state}</span>
+                          {port.service && <span className="text-muted-foreground">{port.service}</span>}
+                        </div>
+                      ))}
+                      {host.ports.length > 5 && (
+                        <div className="text-xs text-muted-foreground">
+                          ... 还有 {host.ports.length - 5} 个端口
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
+                {host.info.length > 0 && (
+                  <div className="space-y-1">
+                    <div className="text-xs text-muted-foreground">主机信息:</div>
+                    {host.info.map((info, iidx) => (
+                      <div key={iidx} className="text-xs text-muted-foreground">{info}</div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Raw Output */}
+        {scanResult?.raw_output && (
+          <div className="space-y-2">
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Terminal className="h-3.5 w-3.5" />
+              <span>原始输出</span>
+              <ChevronDown className={cn(
+                "h-3 w-3 transition-transform",
+                isExpanded && "rotate-180"
+              )} />
+            </button>
+            
+            {isExpanded && (
+              <div className="space-y-2">
+                <div className="bg-muted/50 rounded-md">
+                  <SyntaxHighlighter
+                    language="bash"
+                    style={claudeSyntaxTheme}
+                    customStyle={{
+                      margin: 0,
+                      borderRadius: '6px',
+                      fontSize: '0.75rem',
+                      maxHeight: showFullOutput ? 'none' : '200px',
+                      overflow: 'auto'
+                    }}
+                  >
+                    {previewOutput}
+                  </SyntaxHighlighter>
+                </div>
+                
+                {isTruncated && (
+                  <button
+                    onClick={() => setShowFullOutput(!showFullOutput)}
+                    className="text-xs text-blue-500 hover:text-blue-600 transition-colors"
+                  >
+                    {showFullOutput ? '收起' : '显示完整输出'}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Error state */}
+        {hasError && scanResult?.raw_output && (
+          <div className="bg-red-500/10 border border-red-500/20 rounded-md p-3">
+            <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400 mb-2">
+              <AlertCircle className="h-3.5 w-3.5" />
+              <span className="font-medium">执行错误</span>
+            </div>
+            <pre className="text-xs text-red-700 dark:text-red-300 whitespace-pre-wrap">
+              {scanResult.raw_output}
+            </pre>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
