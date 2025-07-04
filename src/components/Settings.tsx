@@ -6,7 +6,12 @@ import {
   Trash2, 
   Save, 
   AlertCircle,
+  Shield,
+  Code,
+  Settings2,
+  Terminal,
   Loader2,
+  Palette
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +29,8 @@ import { Toast, ToastContainer } from "@/components/ui/toast";
 import { ClaudeVersionSelector } from "./ClaudeVersionSelector";
 import { StorageTab } from "./StorageTab";
 import { HooksEditor } from "./HooksEditor";
+import { usePreferences } from "@/contexts/PreferencesContext";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface SettingsProps {
   /**
@@ -76,6 +83,8 @@ export const Settings: React.FC<SettingsProps> = ({
   const [userHooksChanged, setUserHooksChanged] = useState(false);
   const getUserHooks = React.useRef<(() => any) | null>(null);
   
+  // App preferences
+  const { preferences, updateFontSize, updatePanelWidth, updateKeyboardLayout } = usePreferences();
   // Load settings on mount
   useEffect(() => {
     loadSettings();
@@ -357,8 +366,9 @@ export const Settings: React.FC<SettingsProps> = ({
       ) : (
         <div className="flex-1 overflow-y-auto p-4">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-6">
+            <TabsList className="grid grid-cols-7">
               <TabsTrigger value="general">General</TabsTrigger>
+              <TabsTrigger value="appearance">Appearance</TabsTrigger>
               <TabsTrigger value="permissions">Permissions</TabsTrigger>
               <TabsTrigger value="environment">Environment</TabsTrigger>
               <TabsTrigger value="advanced">Advanced</TabsTrigger>
@@ -439,6 +449,94 @@ export const Settings: React.FC<SettingsProps> = ({
                           ⚠️ Claude binary path has been changed. Remember to save your settings.
                         </p>
                       )}
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            </TabsContent>
+            
+            {/* Appearance Settings */}
+            <TabsContent value="appearance" className="space-y-6">
+              <Card className="p-6 space-y-6">
+                <div>
+                  <h3 className="text-base font-semibold mb-4">Appearance Settings</h3>
+                  <p className="text-sm text-muted-foreground mb-6">
+                    Customize the look and feel of the application
+                  </p>
+                  
+                  <div className="space-y-6">
+                    {/* Font Size Setting */}
+                    <div className="space-y-2">
+                      <Label htmlFor="font-size">Font Size</Label>
+                      <Select
+                        value={preferences.fontSize}
+                        onValueChange={(value) => updateFontSize(value as any)}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select font size" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="small">Small (12px)</SelectItem>
+                          <SelectItem value="default">Default (14px)</SelectItem>
+                          <SelectItem value="medium">Medium (16px)</SelectItem>
+                          <SelectItem value="large">Large (18px)</SelectItem>
+                          <SelectItem value="extra-large">Extra Large (20px)</SelectItem>
+                          <SelectItem value="huge">Huge (24px)</SelectItem>
+                          <SelectItem value="massive">Massive (28px)</SelectItem>
+                          <SelectItem value="giant">Giant (32px)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Adjusts font size for all text throughout the application
+                      </p>
+                    </div>
+
+                    {/* Panel Width Setting */}
+                    <div className="space-y-2">
+                      <Label htmlFor="panel-width">Panel Width</Label>
+                      <Select
+                        value={preferences.panelWidth}
+                        onValueChange={(value) => updatePanelWidth(value as any)}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select panel width" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="compact">Compact (768px)</SelectItem>
+                          <SelectItem value="comfortable">Comfortable (1024px)</SelectItem>
+                          <SelectItem value="spacious">Spacious (1280px)</SelectItem>
+                          <SelectItem value="wide">Wide (1440px)</SelectItem>
+                          <SelectItem value="wider">Wider (1600px)</SelectItem>
+                          <SelectItem value="widest">Widest (1760px)</SelectItem>
+                          <SelectItem value="ultra-wide">Ultra Wide (1920px)</SelectItem>
+                          <SelectItem value="full">Full Width</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Sets the maximum width of the main content panel
+                      </p>
+                    </div>
+
+                    {/* Keyboard Layout Setting */}
+                    <div className="space-y-2">
+                      <Label htmlFor="keyboard-layout">Keyboard Layout</Label>
+                      <Select
+                        value={preferences.keyboardLayout}
+                        onValueChange={(value) => updateKeyboardLayout(value as any)}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select keyboard layout" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="qwerty">QWERTY</SelectItem>
+                          <SelectItem value="colemak">COLEMAK</SelectItem>
+                          <SelectItem value="dvorak">DVORAK</SelectItem>
+                          <SelectItem value="workman">WORKMAN</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Translates keyboard input to match your physical keyboard layout
+                      </p>
                     </div>
                   </div>
                 </div>

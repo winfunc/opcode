@@ -41,6 +41,20 @@
   /* Transitions */
   --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+  /* Font scaling system */
+  --font-scale: 0.875; /* Default scale (14px base) */
+  --font-size-xs: calc(0.75rem * var(--font-scale));
+  --font-size-sm: calc(0.875rem * var(--font-scale));
+  --font-size-base: calc(1rem * var(--font-scale));
+  --font-size-lg: calc(1.125rem * var(--font-scale));
+  --font-size-xl: calc(1.25rem * var(--font-scale));
+  --font-size-2xl: calc(1.5rem * var(--font-scale));
+  --font-size-3xl: calc(1.875rem * var(--font-scale));
+  --font-size-4xl: calc(2.25rem * var(--font-scale));
+
+  /* Panel width system */
+  --panel-max-width: 1280px; /* Default spacious width */
 }
 
 /* Reset and base styles */
@@ -716,4 +730,26 @@ code::-webkit-scrollbar-thumb:hover,
 
 .image-move-to-input {
   animation: moveToInput 0.8s ease-in-out forwards;
+}
+
+/* Global font scaling - override Tailwind utilities to use scaled sizes */
+.text-xs { font-size: var(--font-size-xs) !important; }
+.text-sm { font-size: var(--font-size-sm) !important; }
+.text-base { font-size: var(--font-size-base) !important; }
+.text-lg { font-size: var(--font-size-lg) !important; }
+.text-xl { font-size: var(--font-size-xl) !important; }
+.text-2xl { font-size: var(--font-size-2xl) !important; }
+.text-3xl { font-size: var(--font-size-3xl) !important; }
+.text-4xl { font-size: var(--font-size-4xl) !important; }
+
+/* Panel width overrides */
+.max-w-5xl {
+  max-width: var(--panel-max-width) !important;
+}
+
+/* Full width mode with padding */
+[data-panel-width="full"] .max-w-5xl {
+  max-width: calc(100% - 4rem) !important;
+  padding-left: 2rem;
+  padding-right: 2rem;
 } 
