@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Circle, FileText, Settings, ExternalLink, BarChart3, Network, Info } from "lucide-react";
+import { Circle, FileText, Settings, ExternalLink, BarChart3, Network, Info, Terminal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover } from "@/components/ui/popover";
 import { api, type ClaudeVersionStatus } from "@/lib/api";
@@ -23,6 +23,10 @@ interface TopbarProps {
    * Callback when MCP is clicked
    */
   onMCPClick: () => void;
+  /**
+   * Callback when Commands is clicked
+   */
+  onCommandsClick?: () => void;
   /**
    * Callback when Info is clicked
    */
@@ -49,6 +53,7 @@ export const Topbar: React.FC<TopbarProps> = ({
   onSettingsClick,
   onUsageClick,
   onMCPClick,
+  onCommandsClick,
   onInfoClick,
   className,
 }) => {
@@ -202,6 +207,18 @@ export const Topbar: React.FC<TopbarProps> = ({
           <Network className="mr-2 h-3 w-3" />
           MCP
         </Button>
+        
+        {onCommandsClick && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onCommandsClick}
+            className="text-xs"
+          >
+            <Terminal className="mr-2 h-3 w-3" />
+            Commands
+          </Button>
+        )}
         
         <Button
           variant="ghost"

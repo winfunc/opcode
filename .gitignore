@@ -6,7 +6,10 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
-
+.claude*
+trees-*
+utils*
+*.bun-build
 node_modules
 dist
 dist-ssr

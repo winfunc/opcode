@@ -17,7 +17,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { FilePicker } from "./FilePicker";
 import { ImagePreview } from "./ImagePreview";
-import { type FileEntry } from "@/lib/api";
+import { CommandAutocomplete, type CommandAutocompleteRef } from "./CommandAutocomplete";
+import { api, type FileEntry, type ClaudeCommand } from "@/lib/api";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 
 interface FloatingPromptInputProps {
@@ -183,10 +184,14 @@ const FloatingPromptInputInner = (
   const [cursorPosition, setCursorPosition] = useState(0);
   const [embeddedImages, setEmbeddedImages] = useState<string[]>([]);
   const [dragActive, setDragActive] = useState(false);
+  const [showCommandAutocomplete, setShowCommandAutocomplete] = useState(false);
+  const [commandQuery, setCommandQuery] = useState("");
+  const [escapedSlashPosition, setEscapedSlashPosition] = useState<number | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const expandedTextareaRef = useRef<HTMLTextAreaElement>(null);
   const unlistenDragDropRef = useRef<(() => void) | null>(null);
+  const commandAutocompleteRef = useRef<CommandAutocompleteRef>(null);
 
   // Expose a method to add images programmatically
   React.useImperativeHandle(
@@ -235,7 +240,7 @@ const FloatingPromptInputInner = (
       console.log('[extractImagePaths] Processing path:', path);
       // Convert relative path to absolute if needed
       const fullPath = path.startsWith('/') ? path : (projectPath ? `${projectPath}/${path}` : path);
-      console.log('[extractImagePaths] Full path:', fullPath, 'Is image:', isImageFile(fullPath));
+      // Check if file is an image
       if (isImageFile(fullPath)) {
         pathsSet.add(fullPath); // Add to Set (automatically handles duplicates)
       }
@@ -250,7 +255,7 @@ const FloatingPromptInputInner = (
   useEffect(() => {
     console.log('[useEffect] Prompt changed:', prompt);
     const imagePaths = extractImagePaths(prompt);
-    console.log('[useEffect] Setting embeddedImages to:', imagePaths);
+    // Update embedded images state
     setEmbeddedImages(imagePaths);
   }, [prompt, projectPath]);
 
@@ -334,6 +339,15 @@ const FloatingPromptInputInner = (
     }
   }, [isExpanded]);
 
+  // Clear command cache when project changes
+  useEffect(() => {
+    if (projectPath) {
+      api.clearCommandsCache().catch((err: unknown) => {
+        console.error('[FloatingPromptInput] Failed to clear commands cache:', err);
+      });
+    }
+  }, [projectPath]);
+
   const handleSend = () => {
     if (prompt.trim() && !disabled) {
       let finalPrompt = prompt.trim();
@@ -347,6 +361,7 @@ const FloatingPromptInputInner = (
       onSend(finalPrompt, selectedModel);
       setPrompt("");
       setEmbeddedImages([]);
+      setEscapedSlashPosition(null); // Clear escaped position when sending
     }
   };
 
@@ -360,6 +375,17 @@ const FloatingPromptInputInner = (
       setShowFilePicker(true);
       setFilePickerQuery("");
       setCursorPosition(newCursorPosition);
+      setShowCommandAutocomplete(false);
+    }
+    // Check if / was just typed (for commands)
+    else if (newValue.length > prompt.length && newValue[newCursorPosition - 1] === '/') {
+      console.log('[FloatingPromptInput] / detected for commands');
+      // Clear escaped position since this is a new slash
+      setEscapedSlashPosition(null);
+      setShowCommandAutocomplete(true);
+      setCommandQuery("");
+      setCursorPosition(newCursorPosition);
+      setShowFilePicker(false);
     }
 
     // Check if we're typing after @ (for search query)
@@ -387,14 +413,53 @@ const FloatingPromptInputInner = (
       }
     }
 
+    // Check if we're typing after / (for command search)
+    if (newCursorPosition >= cursorPosition) {
+      // Find the / position before cursor
+      let slashPosition = -1;
+      for (let i = newCursorPosition - 1; i >= 0; i--) {
+        if (newValue[i] === '/') {
+          slashPosition = i;
+          break;
+        }
+        // Stop if we hit whitespace (new word)
+        if (newValue[i] === ' ' || newValue[i] === '\n') {
+          break;
+        }
+      }
+
+      if (slashPosition !== -1) {
+        // Check if this is the escaped slash position
+        if (slashPosition === escapedSlashPosition) {
+          // Don't show autocomplete for this slash
+          setShowCommandAutocomplete(false);
+          setCommandQuery("");
+        } else if (showCommandAutocomplete) {
+          // Update query for active autocomplete
+          const query = newValue.substring(slashPosition + 1, newCursorPosition);
+          setCommandQuery(query);
+        }
+      } else {
+        // / was removed or cursor moved away
+        setShowCommandAutocomplete(false);
+        setCommandQuery("");
+        // Clear escaped position if slash was deleted
+        if (escapedSlashPosition !== null && newValue[escapedSlashPosition] !== '/') {
+          setEscapedSlashPosition(null);
+        }
+      }
+    }
+
     setPrompt(newValue);
     setCursorPosition(newCursorPosition);
   };
 
   const handleFileSelect = (entry: FileEntry) => {
-    if (textareaRef.current) {
+    // Use the appropriate textarea ref based on expanded state
+    const textarea = isExpanded ? expandedTextareaRef.current : textareaRef.current;
+    
+    if (textarea) {
       // Replace the @ and partial query with the selected path (file or directory)
-      const textarea = textareaRef.current;
       const beforeAt = prompt.substring(0, cursorPosition - 1);
       const afterCursor = prompt.substring(cursorPosition + filePickerQuery.length);
       const relativePath = entry.path.startsWith(projectPath || '')
@@ -424,15 +489,86 @@ const FloatingPromptInputInner = (
     }, 0);
   };
 
+  const handleCommandSelect = (command: ClaudeCommand) => {
+    // Use the appropriate textarea ref based on expanded state
+    const textarea = isExpanded ? expandedTextareaRef.current : textareaRef.current;
+    
+    if (textarea) {
+      // Find the slash position
+      let slashPosition = -1;
+      for (let i = cursorPosition - 1; i >= 0; i--) {
+        if (prompt[i] === '/') {
+          slashPosition = i;
+          break;
+        }
+        // Stop if we hit whitespace (new word)
+        if (prompt[i] === ' ' || prompt[i] === '\n') {
+          break;
+        }
+      }
+
+      if (slashPosition !== -1) {
+        // Get the text before the slash and after the command query
+        const beforeSlash = prompt.substring(0, slashPosition);
+        const afterQuery = prompt.substring(slashPosition + 1 + commandQuery.length);
+
+        // Insert the command name without any prefix
+        const commandName = command.name.replace(/^project:/, '');
+        const newPrompt = `${beforeSlash}/${commandName} ${afterQuery}`;
+        setPrompt(newPrompt);
+        setShowCommandAutocomplete(false);
+        setCommandQuery("");
+        setEscapedSlashPosition(null); // Clear escaped position when command is selected
+
+        // Focus back on textarea and set cursor position after the inserted command
+        setTimeout(() => {
+          textarea.focus();
+          const insertedText = `/${commandName} `;
+          const newCursorPos = beforeSlash.length + insertedText.length;
+          textarea.setSelectionRange(newCursorPos, newCursorPos);
+        }, 0);
+      }
+    }
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (showFilePicker && e.key === 'Escape') {
+    // Let command autocomplete handle arrow keys, enter, and tab first
+    if (showCommandAutocomplete && commandAutocompleteRef.current) {
+      const handled = commandAutocompleteRef.current.handleKeyDown(e);
+      if (handled) {
+        return;
+      }
+    }
+
+    if ((showFilePicker || showCommandAutocomplete) && e.key === 'Escape') {
       e.preventDefault();
+      
+      // If escaping command autocomplete, remember the slash position
+      if (showCommandAutocomplete) {
+        // Find the slash position before cursor
+        const textarea = isExpanded ? expandedTextareaRef.current : textareaRef.current;
+        if (textarea) {
+          const currentPos = textarea.selectionStart || 0;
+          for (let i = currentPos - 1; i >= 0; i--) {
+            if (prompt[i] === '/') {
+              setEscapedSlashPosition(i);
+              break;
+            }
+            if (prompt[i] === ' ' || prompt[i] === '\n') {
+              break;
+            }
+          }
+        }
+      }
+      
       setShowFilePicker(false);
+      setShowCommandAutocomplete(false);
       setFilePickerQuery("");
+      setCommandQuery("");
       return;
     }
 
-    if (e.key === "Enter" && !e.shiftKey && !isExpanded && !showFilePicker) {
+    if (e.key === "Enter" && !e.shiftKey && !isExpanded && !showFilePicker && !showCommandAutocomplete) {
       e.preventDefault();
       handleSend();
     }
@@ -751,6 +887,18 @@ const FloatingPromptInputInner = (
 
               {/* Prompt Input */}
               <div className="flex-1 relative">
+                {/* Command Autocomplete - positioned above the input */}
+                {showCommandAutocomplete && (
+                  <CommandAutocomplete
+                    ref={commandAutocompleteRef}
+                    trigger={<div />}
+                    onSelect={handleCommandSelect}
+                    searchQuery={commandQuery}
+                    open={showCommandAutocomplete}
+                    projectPath={projectPath}
+                  />
+                )}
+                
                 <Textarea
                   ref={textareaRef}
                   value={prompt}
@@ -808,7 +956,7 @@ const FloatingPromptInputInner = (
             </div>
 
             <div className="mt-2 text-xs text-muted-foreground">
-              Press Enter to send, Shift+Enter for new line{projectPath?.trim() && ", @ to mention files, drag & drop images"}
+              Press Enter to send, Shift+Enter for new line{projectPath?.trim() && ", @ to mention files, drag & drop images"}, / to use commands
             </div>
           </div>
         </div>

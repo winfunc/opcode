@@ -399,6 +399,34 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       return;
     }
 
+    // Check if this is a command execution (starts with /)
+    const isCommandExecution = prompt.trim().startsWith('/');
+    let commandName = '';
+    let commandArgs = '';
+    let prefix = 'user';
+    
+    if (isCommandExecution) {
+      // Support both /commandname and /prefix:commandname syntax
+      const commandMatch = prompt.trim().match(/^\/(\S+)(?:\s+(.*))?$/);
+      if (commandMatch) {
+        // No prefix parsing needed - we'll determine user vs project based on availability
+        commandName = commandMatch[1];
+        commandArgs = commandMatch[2] || ''; // Arguments after command name
+        
+        console.log('[ClaudeCodeSession] Detected command execution:', {
+          prefix,
+          commandName,
+          commandArgs,
+          sessionId: claudeSessionId || effectiveSession?.id || '',
+          projectPath,
+          model
+        });
+      } else {
+        setError("Invalid command format. Use /commandname or /user:commandname");
+        return;
+      }
+    }
+
     // If already loading, queue the prompt
     if (isLoading) {
       const newPrompt = {
@@ -572,13 +600,15 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         // --------------------------------------------------------------------
 
         // Add the user message immediately to the UI (after setting up listeners)
+        // For commands, show the command in the UI rather than the expanded prompt
+        const displayPrompt = isCommandExecution && commandName ? `/${commandName}` : prompt;
         const userMessage: ClaudeStreamMessage = {
           type: "user",
           message: {
             content: [
               {
                 type: "text",
-                text: prompt
+                text: displayPrompt
               }
             ]
           }
@@ -586,7 +616,26 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         setMessages(prev => [...prev, userMessage]);
 
         // Execute the appropriate command
-        if (effectiveSession && !isFirstPrompt) {
+        if (isCommandExecution && commandName) {
+          // Execute command in the context of the current session
+          if (!claudeSessionId && !effectiveSession?.id) {
+            setError("No active session for command execution. Please send a regular prompt first.");
+            setIsLoading(false);
+            hasActiveSessionRef.current = false;
+            isListeningRef.current = false;
+            return;
+          }
+          
+          console.log('[ClaudeCodeSession] Executing command:', commandName, 'with args:', commandArgs, 'prefix:', prefix);
+          await api.executeClaudeCommand(
+            claudeSessionId || effectiveSession?.id || '', 
+            commandName, 
+            projectPath,
+            model,
+            commandArgs,
+            prefix
+          );
+        } else if (effectiveSession && !isFirstPrompt) {
           console.log('[ClaudeCodeSession] Resuming session:', effectiveSession.id);
           await api.resumeClaudeCode(projectPath, effectiveSession.id, prompt, model);
         } else {
