@@ -17,7 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { FilePicker } from "./FilePicker";
 import { ImagePreview } from "./ImagePreview";
-import { CommandAutocomplete } from "./CommandAutocomplete";
+import { CommandAutocomplete, type CommandAutocompleteRef } from "./CommandAutocomplete";
 import { type FileEntry, type ClaudeCommand } from "@/lib/api";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 
@@ -191,6 +191,7 @@ const FloatingPromptInputInner = (
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const expandedTextareaRef = useRef<HTMLTextAreaElement>(null);
   const unlistenDragDropRef = useRef<(() => void) | null>(null);
+  const commandAutocompleteRef = useRef<CommandAutocompleteRef>(null);
 
   // Expose a method to add images programmatically
   React.useImperativeHandle(
@@ -522,6 +523,14 @@ const FloatingPromptInputInner = (
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    // Let command autocomplete handle arrow keys, enter, and tab first
+    if (showCommandAutocomplete && commandAutocompleteRef.current) {
+      const handled = commandAutocompleteRef.current.handleKeyDown(e);
+      if (handled) {
+        return;
+      }
+    }
+
     if ((showFilePicker || showCommandAutocomplete) && e.key === 'Escape') {
       e.preventDefault();
       
@@ -869,6 +878,18 @@ const FloatingPromptInputInner = (
 
               {/* Prompt Input */}
               <div className="flex-1 relative">
+                {/* Command Autocomplete - positioned above the input */}
+                {showCommandAutocomplete && (
+                  <CommandAutocomplete
+                    ref={commandAutocompleteRef}
+                    trigger={<div />}
+                    onSelect={handleCommandSelect}
+                    searchQuery={commandQuery}
+                    open={showCommandAutocomplete}
+                    projectPath={projectPath}
+                  />
+                )}
+                
                 <Textarea
                   ref={textareaRef}
                   value={prompt}
@@ -901,15 +922,6 @@ const FloatingPromptInputInner = (
                       onSelect={handleFileSelect}
                       onClose={handleFilePickerClose}
                       initialQuery={filePickerQuery}
-                    />
-                  )}
-                  {showCommandAutocomplete && (
-                    <CommandAutocomplete
-                      trigger={<div />}
-                      onSelect={handleCommandSelect}
-                      searchQuery={commandQuery}
-                      open={showCommandAutocomplete}
-                      projectPath={projectPath}
                     />
                   )}
                 </AnimatePresence>
