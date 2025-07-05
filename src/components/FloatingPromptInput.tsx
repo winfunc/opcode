@@ -18,7 +18,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { FilePicker } from "./FilePicker";
 import { ImagePreview } from "./ImagePreview";
 import { CommandAutocomplete, type CommandAutocompleteRef } from "./CommandAutocomplete";
-import { type FileEntry, type ClaudeCommand } from "@/lib/api";
+import { api, type FileEntry, type ClaudeCommand } from "@/lib/api";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 
 interface FloatingPromptInputProps {
@@ -240,7 +240,7 @@ const FloatingPromptInputInner = (
       console.log('[extractImagePaths] Processing path:', path);
       // Convert relative path to absolute if needed
       const fullPath = path.startsWith('/') ? path : (projectPath ? `${projectPath}/${path}` : path);
-      console.log('[extractImagePaths] Full path:', fullPath, 'Is image:', isImageFile(fullPath));
+      // Check if file is an image
       if (isImageFile(fullPath)) {
         pathsSet.add(fullPath); // Add to Set (automatically handles duplicates)
       }
@@ -255,7 +255,7 @@ const FloatingPromptInputInner = (
   useEffect(() => {
     console.log('[useEffect] Prompt changed:', prompt);
     const imagePaths = extractImagePaths(prompt);
-    console.log('[useEffect] Setting embeddedImages to:', imagePaths);
+    // Update embedded images state
     setEmbeddedImages(imagePaths);
   }, [prompt, projectPath]);
 
@@ -338,6 +338,15 @@ const FloatingPromptInputInner = (
       textareaRef.current.focus();
     }
   }, [isExpanded]);
+
+  // Clear command cache when project changes
+  useEffect(() => {
+    if (projectPath) {
+      api.clearCommandsCache().catch((err: unknown) => {
+        console.error('[FloatingPromptInput] Failed to clear commands cache:', err);
+      });
+    }
+  }, [projectPath]);
 
   const handleSend = () => {
     if (prompt.trim() && !disabled) {

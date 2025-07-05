@@ -17,6 +17,8 @@ pub use claude_commands_simple::{
     set_command_executable,
     export_commands,
     import_commands,
+    import_commands_with_overwrite,
+    clear_commands_cache,
     execute_claude_command,
     export_commands_to_file,
     get_command_history,

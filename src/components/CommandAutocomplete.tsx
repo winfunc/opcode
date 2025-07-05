@@ -19,7 +19,6 @@ export interface CommandAutocompleteRef {
 }
 
 export const CommandAutocomplete = forwardRef<CommandAutocompleteRef, CommandAutocompleteProps>(({
-  trigger,
   onSelect,
   searchQuery = '',
   open: externalOpen,

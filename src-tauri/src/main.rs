@@ -45,7 +45,8 @@ use commands::{
     list_claude_commands, get_claude_command, create_claude_command, update_claude_command,
     delete_claude_command, search_claude_commands, export_commands, import_commands,
     get_command_history, get_command_stats, rename_claude_command, set_command_executable,
-    execute_claude_command, export_commands_to_file,
+    execute_claude_command, export_commands_to_file, import_commands_with_overwrite,
+    clear_commands_cache,
 };
 use process::ProcessRegistryState;
 use std::sync::Mutex;
@@ -194,6 +195,8 @@ fn main() {
             set_command_executable,
             execute_claude_command,
             export_commands_to_file,
+            import_commands_with_overwrite,
+            clear_commands_cache,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

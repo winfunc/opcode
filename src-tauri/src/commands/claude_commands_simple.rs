@@ -533,22 +533,45 @@ impl CommandsManager {
         cache.search_cache.clear();
         cache.last_refresh = Utc::now();
     }
+    
+    /// Clear cache for project context changes
+    pub async fn clear_cache_for_project_change(&self) {
+        // This ensures that when switching projects, we don't serve stale
+        // command lists that might include project-specific commands from
+        // the previous project
+        self.invalidate_cache().await;
+    }
 }
 
 /// Export format for commands
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CommandsExport {
     pub version: u32,
     pub exported_at: DateTime<Utc>,
     pub commands: Vec<ExportedCommand>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExportedCommand {
     pub name: String,
     pub content: String,
     pub description: Option<String>,
     pub is_executable: bool,
+}
+
+/// Import result with detailed information
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ImportResult {
+    pub imported: Vec<String>,
+    pub skipped: Vec<String>,
+    pub conflicts: Vec<String>,
+    pub failed: Vec<ImportFailure>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ImportFailure {
+    pub name: String,
+    pub reason: String,
 }
 
 impl CommandsManager {
@@ -573,15 +596,40 @@ impl CommandsManager {
         })
     }
     
-    /// Import commands
-    pub async fn import_commands(&self, data: CommandsExport) -> Result<(usize, usize)> {
-        let mut imported = 0;
-        let mut failed = 0;
+    /// Import commands with conflict detection
+    pub async fn import_commands(&self, data: CommandsExport) -> Result<ImportResult> {
+        let mut result = ImportResult {
+            imported: Vec::new(),
+            skipped: Vec::new(),
+            conflicts: Vec::new(),
+            failed: Vec::new(),
+        };
+        
+        // First, detect conflicts
+        let existing_commands = self.list_commands(None).await?;
+        let existing_names: std::collections::HashSet<_> = existing_commands
+            .iter()
+            .map(|cmd| cmd.name.clone())
+            .collect();
         
         for cmd in data.commands {
+            // Check if command already exists
+            if existing_names.contains(&cmd.name) {
+                // Compare content to see if it's actually different
+                if let Ok(existing) = self.get_command(&cmd.name, None).await {
+                    if existing.content != cmd.content {
+                        result.conflicts.push(cmd.name.clone());
+                    } else {
+                        result.skipped.push(cmd.name.clone());
+                    }
+                }
+                continue;
+            }
+            
+            // Try to create the command
             match self.create_command(&cmd.name, &cmd.content).await {
                 Ok(_) => {
-                    imported += 1;
+                    result.imported.push(cmd.name.clone());
                     
                     // Set executable if needed
                     if cmd.is_executable {
@@ -589,20 +637,52 @@ impl CommandsManager {
                     }
                 }
                 Err(e) => {
-                    // Try updating if it already exists
-                    if e.to_string().contains("already exists") {
-                        match self.update_command(&cmd.name, &cmd.content).await {
-                            Ok(_) => imported += 1,
-                            Err(_) => failed += 1,
+                    result.failed.push(ImportFailure {
+                        name: cmd.name.clone(),
+                        reason: e.to_string(),
+                    });
+                }
+            }
+        }
+        
+        Ok(result)
+    }
+    
+    /// Import commands with overwrite option
+    pub async fn import_commands_with_overwrite(&self, data: CommandsExport, overwrite_conflicts: Vec<String>) -> Result<ImportResult> {
+        let mut result = self.import_commands(data.clone()).await?;
+        
+        // Handle conflicts that user wants to overwrite
+        for cmd in data.commands {
+            if overwrite_conflicts.contains(&cmd.name) {
+                match self.update_command(&cmd.name, &cmd.content).await {
+                    Ok(_) => {
+                        // Move from conflicts to imported
+                        if let Some(pos) = result.conflicts.iter().position(|x| x == &cmd.name) {
+                            result.conflicts.remove(pos);
+                            result.imported.push(cmd.name.clone());
                         }
-                    } else {
-                        failed += 1;
+                        
+                        // Set executable if needed
+                        if cmd.is_executable {
+                            let _ = self.set_executable(&cmd.name, true).await;
+                        }
+                    }
+                    Err(e) => {
+                        // Move from conflicts to failed
+                        if let Some(pos) = result.conflicts.iter().position(|x| x == &cmd.name) {
+                            result.conflicts.remove(pos);
+                            result.failed.push(ImportFailure {
+                                name: cmd.name.clone(),
+                                reason: e.to_string(),
+                            });
+                        }
                     }
                 }
             }
         }
         
-        Ok((imported, failed))
+        Ok(result)
     }
 }
 
@@ -700,16 +780,29 @@ pub async fn export_commands() -> Result<CommandsExport, String> {
 }
 
 #[tauri::command]
-pub async fn import_commands(data: CommandsExport) -> Result<serde_json::Value, String> {
+pub async fn import_commands(data: CommandsExport) -> Result<ImportResult, String> {
     let manager = get_commands_manager().await?;
-    let (imported, failed) = manager.import_commands(data)
+    manager.import_commands(data)
         .await
-        .map_err(|e| e.to_string())?;
-    
-    Ok(serde_json::json!({
-        "imported": imported,
-        "failed": failed
-    }))
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn import_commands_with_overwrite(
+    data: CommandsExport,
+    overwrite_conflicts: Vec<String>
+) -> Result<ImportResult, String> {
+    let manager = get_commands_manager().await?;
+    manager.import_commands_with_overwrite(data, overwrite_conflicts)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn clear_commands_cache() -> Result<(), String> {
+    let manager = get_commands_manager().await?;
+    manager.clear_cache_for_project_change().await;
+    Ok(())
 }
 
 // Execute a command by reading its content and sending to Claude

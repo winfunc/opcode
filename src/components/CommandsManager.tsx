@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { api, ClaudeCommand, CommandsExport } from '../lib/api';
+import { api, ClaudeCommand, CommandsExport, ImportResult } from '../lib/api';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card } from './ui/card';
@@ -7,6 +7,7 @@ import { ScrollArea } from './ui/scroll-area';
 import { Toast, ToastContainer, ToastType } from './ui/toast';
 import { CommandCard } from './CommandCard';
 import { CommandEditor } from './CommandEditor';
+import { ImportConflictDialog } from './ImportConflictDialog';
 import { Search, Plus, Upload, Download, Loader2, ChevronLeft } from 'lucide-react';
 import {
   Dialog,
@@ -29,6 +30,10 @@ export const CommandsManager: React.FC<CommandsManagerProps> = ({ onBack }) => {
   const [selectedCommand, setSelectedCommand] = useState<ClaudeCommand | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [commandToDelete, setCommandToDelete] = useState<string | null>(null);
+  const [importConflictOpen, setImportConflictOpen] = useState(false);
+  const [importConflicts, setImportConflicts] = useState<string[]>([]);
+  const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [pendingImportData, setPendingImportData] = useState<CommandsExport | null>(null);
   const [toast, setToast] = useState<{ show: boolean; message: string; type: ToastType }>({
     show: false,
     message: '',
@@ -44,9 +49,7 @@ export const CommandsManager: React.FC<CommandsManagerProps> = ({ onBack }) => {
   const loadCommands = useCallback(async () => {
     setIsLoading(true);
     try {
-      console.log('Loading commands...');
       const cmds = await api.listClaudeCommands();
-      console.log('Loaded commands:', cmds.length);
       setCommands(cmds);
     } catch (error) {
       showToast('Failed to load commands', 'error');
@@ -112,10 +115,8 @@ export const CommandsManager: React.FC<CommandsManagerProps> = ({ onBack }) => {
     if (!commandToDelete) return;
     
     try {
-      console.log('Deleting command:', commandToDelete);
       await api.deleteClaudeCommand(commandToDelete);
       showToast(`Command '${commandToDelete}' deleted successfully`, 'success');
-      console.log('Command deleted, refreshing list...');
       await loadCommands();
       // Close dialog after successful deletion
       setDeleteConfirmOpen(false);
@@ -131,7 +132,6 @@ export const CommandsManager: React.FC<CommandsManagerProps> = ({ onBack }) => {
       if (selectedCommand) {
         // Check if name changed - if so, we need to rename
         if (name !== selectedCommand.name) {
-          console.log('Renaming command from', selectedCommand.name, 'to', name);
           // First update the content
           await api.updateClaudeCommand(selectedCommand.name, content);
           // Then rename the command
@@ -139,12 +139,10 @@ export const CommandsManager: React.FC<CommandsManagerProps> = ({ onBack }) => {
           showToast(`Command renamed to '${name}' and updated successfully`, 'success');
         } else {
           // Just update content
-          console.log('Updating command:', selectedCommand.name);
           await api.updateClaudeCommand(selectedCommand.name, content);
           showToast(`Command '${selectedCommand.name}' updated successfully`, 'success');
         }
       } else {
-        console.log('Creating command:', name);
         await api.createClaudeCommand(name, content);
         showToast(`Command '${name}' created successfully`, 'success');
       }
@@ -152,7 +150,6 @@ export const CommandsManager: React.FC<CommandsManagerProps> = ({ onBack }) => {
       setEditorOpen(false);
       // Clear selected command to ensure create works next time
       setSelectedCommand(null);
-      console.log('Command saved, refreshing list...');
       // Add a small delay to ensure backend cache invalidation has completed
       await new Promise(resolve => setTimeout(resolve, 100));
       await loadCommands();
@@ -186,7 +183,7 @@ export const CommandsManager: React.FC<CommandsManagerProps> = ({ onBack }) => {
     }
   }, []);
 
-  // Import commands
+  // Import commands with conflict detection
   const handleImport = useCallback(async () => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -200,15 +197,82 @@ export const CommandsManager: React.FC<CommandsManagerProps> = ({ onBack }) => {
         const data: CommandsExport = JSON.parse(text);
         const result = await api.importCommands(data);
         
-        showToast(`Imported ${result.imported} commands, ${result.failed} failed`, 'success');
-        
-        await loadCommands();
+        // Check if there are conflicts
+        if (result.conflicts && result.conflicts.length > 0) {
+          // Store the data and result for later use
+          setPendingImportData(data);
+          setImportResult(result);
+          setImportConflicts(result.conflicts);
+          setImportConflictOpen(true);
+        } else {
+          // No conflicts, show success message
+          const importedCount = result.imported.length;
+          const skippedCount = result.skipped.length;
+          const failedCount = result.failed.length;
+          
+          let message = `Imported ${importedCount} command${importedCount !== 1 ? 's' : ''}`;
+          if (skippedCount > 0) {
+            message += `, skipped ${skippedCount} identical`;
+          }
+          if (failedCount > 0) {
+            message += `, ${failedCount} failed`;
+          }
+          
+          showToast(message, 'success');
+          await loadCommands();
+        }
       } catch (error) {
         showToast('Failed to import commands', 'error');
       }
     };
     input.click();
   }, [loadCommands]);
+
+  // Handle conflict resolution
+  const handleResolveConflicts = useCallback(async (overwriteList: string[]) => {
+    if (!pendingImportData || !importResult) return;
+    
+    try {
+      if (overwriteList.length > 0) {
+        // Import with overwrite
+        const result = await api.importCommandsWithOverwrite(pendingImportData, overwriteList);
+        
+        const totalImported = result.imported.length;
+        const skippedCount = result.skipped.length;
+        const failedCount = result.failed.length;
+        
+        let message = `Imported ${totalImported} command${totalImported !== 1 ? 's' : ''}`;
+        if (skippedCount > 0) {
+          message += `, skipped ${skippedCount}`;
+        }
+        if (failedCount > 0) {
+          message += `, ${failedCount} failed`;
+        }
+        
+        showToast(message, 'success');
+      } else {
+        // User chose to skip conflicts
+        const importedCount = importResult.imported.length;
+        const skippedCount = importResult.skipped.length + importResult.conflicts.length;
+        
+        let message = `Imported ${importedCount} command${importedCount !== 1 ? 's' : ''}`;
+        if (skippedCount > 0) {
+          message += `, skipped ${skippedCount}`;
+        }
+        
+        showToast(message, 'info');
+      }
+      
+      await loadCommands();
+    } catch (error) {
+      showToast('Failed to resolve conflicts', 'error');
+    } finally {
+      // Clean up
+      setPendingImportData(null);
+      setImportResult(null);
+      setImportConflicts([]);
+    }
+  }, [pendingImportData, importResult, loadCommands]);
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
@@ -344,6 +408,17 @@ export const CommandsManager: React.FC<CommandsManagerProps> = ({ onBack }) => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Import Conflict Dialog */}
+      {importResult && (
+        <ImportConflictDialog
+          open={importConflictOpen}
+          onOpenChange={setImportConflictOpen}
+          conflicts={importConflicts}
+          onResolve={handleResolveConflicts}
+          initialResult={importResult}
+        />
+      )}
 
     </div>
   );

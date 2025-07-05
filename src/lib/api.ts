@@ -43,6 +43,20 @@ export interface CommandStats {
   average_size: number;
 }
 
+/** Import result with detailed information */
+export interface ImportResult {
+  imported: string[];
+  skipped: string[];
+  conflicts: string[];
+  failed: ImportFailure[];
+}
+
+/** Import failure details */
+export interface ImportFailure {
+  name: string;
+  reason: string;
+}
+
 /** Process type for tracking in ProcessRegistry */
 export type ProcessType = 
   | { AgentRun: { agent_id: number; agent_name: string } }
@@ -529,7 +543,7 @@ export const api = {
   async getClaudeSettings(): Promise<ClaudeSettings> {
     try {
       const result = await invoke<{ data: ClaudeSettings }>("get_claude_settings");
-      console.log("Raw result from get_claude_settings:", result);
+      // Process the result from get_claude_settings
       
       // The Rust backend returns ClaudeSettings { data: ... }
       // We need to extract the data field
@@ -1384,9 +1398,7 @@ export const api = {
    */
   async mcpList(): Promise<MCPServer[]> {
     try {
-      console.log("API: Calling mcp_list...");
       const result = await invoke<MCPServer[]>("mcp_list");
-      console.log("API: mcp_list returned:", result);
       return result;
     } catch (error) {
       console.error("API: Failed to list MCP servers:", error);
@@ -1806,15 +1818,43 @@ export const api = {
   },
 
   /**
-   * Imports Claude commands
+   * Imports Claude commands with conflict detection
    * @param data - The export data to import
-   * @returns Promise resolving to import statistics
+   * @returns Promise resolving to detailed import result
    */
-  async importCommands(data: CommandsExport): Promise<{ imported: number; failed: number }> {
+  async importCommands(data: CommandsExport): Promise<ImportResult> {
     try {
-      return await invoke<{ imported: number; failed: number }>("import_commands", { data });
+      return await invoke<ImportResult>("import_commands", { data });
     } catch (error) {
       console.error("Failed to import commands:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Imports commands with overwrite option for conflicts
+   * @param data - The export data to import
+   * @param overwriteConflicts - List of command names to overwrite
+   * @returns Promise resolving to detailed import result
+   */
+  async importCommandsWithOverwrite(data: CommandsExport, overwriteConflicts: string[]): Promise<ImportResult> {
+    try {
+      return await invoke<ImportResult>("import_commands_with_overwrite", { data, overwriteConflicts });
+    } catch (error) {
+      console.error("Failed to import commands with overwrite:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Clear commands cache when project context changes
+   * @returns Promise resolving when cache is cleared
+   */
+  async clearCommandsCache(): Promise<void> {
+    try {
+      return await invoke<void>("clear_commands_cache");
+    } catch (error) {
+      console.error("Failed to clear commands cache:", error);
       throw error;
     }
   },
