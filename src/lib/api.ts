@@ -25,6 +25,20 @@ export interface ExportedCommand {
   description?: string;
 }
 
+/** Command history entry interface */
+export interface CommandHistoryEntry {
+  event_type: string;
+  timestamp: string;
+  details: Record<string, any>;
+}
+
+/** Command statistics interface */
+export interface CommandStats {
+  total_commands: number;
+  total_size: number;
+  average_size: number;
+}
+
 /** Process type for tracking in ProcessRegistry */
 export type ProcessType = 
   | { AgentRun: { agent_id: number; agent_name: string } }
@@ -1825,9 +1839,9 @@ export const api = {
    * @param name - The command name
    * @returns Promise resolving to command history entries
    */
-  async getCommandHistory(name: string): Promise<any[]> {
+  async getCommandHistory(name: string): Promise<CommandHistoryEntry[]> {
     try {
-      return await invoke<any[]>("get_command_history", { name });
+      return await invoke<CommandHistoryEntry[]>("get_command_history", { name });
     } catch (error) {
       console.error("Failed to get command history:", error);
       throw error;
@@ -1838,9 +1852,9 @@ export const api = {
    * Gets command statistics
    * @returns Promise resolving to command statistics
    */
-  async getCommandStats(): Promise<any> {
+  async getCommandStats(): Promise<CommandStats> {
     try {
-      return await invoke<any>("get_command_stats");
+      return await invoke<CommandStats>("get_command_stats");
     } catch (error) {
       console.error("Failed to get command stats:", error);
       throw error;
