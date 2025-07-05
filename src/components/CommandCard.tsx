@@ -49,9 +49,9 @@ export const CommandCard: React.FC<CommandCardProps> = ({ command, onEdit, onDel
 
   return (
     <>
-    <Card className="p-4 hover:shadow-lg transition-shadow">
+    <Card className="p-4 hover:shadow-lg transition-shadow overflow-hidden">
       <div className="flex items-start justify-between gap-4">
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 overflow-hidden">
           <div className="flex items-center gap-2 mb-2">
             <Terminal className="h-5 w-5 text-muted-foreground" />
             <h3 className="font-semibold text-lg truncate">{command.name}</h3>
@@ -64,7 +64,7 @@ export const CommandCard: React.FC<CommandCardProps> = ({ command, onEdit, onDel
           </div>
           
           {command.description && (
-            <p className="text-sm text-muted-foreground mb-3">{command.description}</p>
+            <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{command.description}</p>
           )}
           
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
@@ -79,8 +79,8 @@ export const CommandCard: React.FC<CommandCardProps> = ({ command, onEdit, onDel
           </div>
 
           {/* Command preview */}
-          <div className="mt-3 p-2 bg-muted rounded-md">
-            <pre className="text-xs font-mono text-muted-foreground line-clamp-2">
+          <div className="mt-3 p-2 bg-muted rounded-md overflow-hidden">
+            <pre className="text-xs font-mono text-muted-foreground line-clamp-2 whitespace-pre-wrap break-all">
               {command.content}
             </pre>
           </div>
