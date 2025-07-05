@@ -186,6 +186,7 @@ const FloatingPromptInputInner = (
   const [dragActive, setDragActive] = useState(false);
   const [showCommandAutocomplete, setShowCommandAutocomplete] = useState(false);
   const [commandQuery, setCommandQuery] = useState("");
+  const [escapedSlashPosition, setEscapedSlashPosition] = useState<number | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const expandedTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -350,6 +351,7 @@ const FloatingPromptInputInner = (
       onSend(finalPrompt, selectedModel);
       setPrompt("");
       setEmbeddedImages([]);
+      setEscapedSlashPosition(null); // Clear escaped position when sending
     }
   };
 
@@ -368,6 +370,8 @@ const FloatingPromptInputInner = (
     // Check if / was just typed (for commands)
     else if (newValue.length > prompt.length && newValue[newCursorPosition - 1] === '/') {
       console.log('[FloatingPromptInput] / detected for commands');
+      // Clear escaped position since this is a new slash
+      setEscapedSlashPosition(null);
       setShowCommandAutocomplete(true);
       setCommandQuery("");
       setCursorPosition(newCursorPosition);
@@ -400,7 +404,7 @@ const FloatingPromptInputInner = (
     }
 
     // Check if we're typing after / (for command search)
-    if (showCommandAutocomplete && newCursorPosition >= cursorPosition) {
+    if (newCursorPosition >= cursorPosition) {
       // Find the / position before cursor
       let slashPosition = -1;
       for (let i = newCursorPosition - 1; i >= 0; i--) {
@@ -415,12 +419,24 @@ const FloatingPromptInputInner = (
       }
 
       if (slashPosition !== -1) {
-        const query = newValue.substring(slashPosition + 1, newCursorPosition);
-        setCommandQuery(query);
+        // Check if this is the escaped slash position
+        if (slashPosition === escapedSlashPosition) {
+          // Don't show autocomplete for this slash
+          setShowCommandAutocomplete(false);
+          setCommandQuery("");
+        } else if (showCommandAutocomplete) {
+          // Update query for active autocomplete
+          const query = newValue.substring(slashPosition + 1, newCursorPosition);
+          setCommandQuery(query);
+        }
       } else {
         // / was removed or cursor moved away
         setShowCommandAutocomplete(false);
         setCommandQuery("");
+        // Clear escaped position if slash was deleted
+        if (escapedSlashPosition !== null && newValue[escapedSlashPosition] !== '/') {
+          setEscapedSlashPosition(null);
+        }
       }
     }
 
@@ -492,6 +508,7 @@ const FloatingPromptInputInner = (
         setPrompt(newPrompt);
         setShowCommandAutocomplete(false);
         setCommandQuery("");
+        setEscapedSlashPosition(null); // Clear escaped position when command is selected
 
         // Focus back on textarea and set cursor position after the inserted command
         setTimeout(() => {
@@ -507,6 +524,25 @@ const FloatingPromptInputInner = (
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if ((showFilePicker || showCommandAutocomplete) && e.key === 'Escape') {
       e.preventDefault();
+      
+      // If escaping command autocomplete, remember the slash position
+      if (showCommandAutocomplete) {
+        // Find the slash position before cursor
+        const textarea = isExpanded ? expandedTextareaRef.current : textareaRef.current;
+        if (textarea) {
+          const currentPos = textarea.selectionStart || 0;
+          for (let i = currentPos - 1; i >= 0; i--) {
+            if (prompt[i] === '/') {
+              setEscapedSlashPosition(i);
+              break;
+            }
+            if (prompt[i] === ' ' || prompt[i] === '\n') {
+              break;
+            }
+          }
+        }
+      }
+      
       setShowFilePicker(false);
       setShowCommandAutocomplete(false);
       setFilePickerQuery("");
