@@ -152,6 +152,21 @@ Menu → MCP Manager → Add Server → Configure
 
 - **Claude Code CLI**: Install from [Claude's official site](https://claude.ai/code)
 
+### macOS Quick Install
+
+For macOS users, you can use our automated installation script:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/getAsterisk/claudia/main/scripts/macos/install.sh | bash
+```
+
+This script will:
+- Check all dependencies (Rust, Bun, Git)
+- Clone and build Claudia
+- Install it to your Applications folder
+
+For more details, see [macOS installation scripts](scripts/macos/README.md).
+
 ### Release Executables Will Be Published Soon
 
 ## 🔨 Build from Source
