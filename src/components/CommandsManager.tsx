@@ -20,9 +20,10 @@ import {
 
 interface CommandsManagerProps {
   onBack?: () => void;
+  projectPath?: string;
 }
 
-export const CommandsManager: React.FC<CommandsManagerProps> = ({ onBack }) => {
+export const CommandsManager: React.FC<CommandsManagerProps> = ({ onBack, projectPath }) => {
   const [commands, setCommands] = useState<ClaudeCommand[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -49,18 +50,27 @@ export const CommandsManager: React.FC<CommandsManagerProps> = ({ onBack }) => {
   const loadCommands = useCallback(async () => {
     setIsLoading(true);
     try {
-      const cmds = await api.listClaudeCommands();
+      const cmds = await api.listClaudeCommands(projectPath);
       setCommands(cmds);
     } catch (error) {
       showToast('Failed to load commands', 'error');
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [projectPath]);
 
   useEffect(() => {
     loadCommands();
   }, [loadCommands]);
+
+  // Clear cache when project context changes
+  useEffect(() => {
+    if (projectPath !== undefined) {
+      api.clearCommandsCache().catch((err: unknown) => {
+        console.error('[CommandsManager] Failed to clear commands cache:', err);
+      });
+    }
+  }, [projectPath]);
 
   // Search commands
   const handleSearch = useCallback(async () => {
@@ -71,14 +81,14 @@ export const CommandsManager: React.FC<CommandsManagerProps> = ({ onBack }) => {
 
     setIsLoading(true);
     try {
-      const results = await api.searchClaudeCommands(searchQuery);
+      const results = await api.searchClaudeCommands(searchQuery, projectPath);
       setCommands(results);
     } catch (error) {
       showToast('Failed to search commands', 'error');
     } finally {
       setIsLoading(false);
     }
-  }, [searchQuery, loadCommands]);
+  }, [searchQuery, projectPath, loadCommands]);
 
   // Create new command
   const handleCreateCommand = useCallback(() => {

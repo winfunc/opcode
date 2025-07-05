@@ -387,7 +387,7 @@ function App() {
       case "commands":
         return (
           <div className="h-full">
-            <CommandsManager />
+            <CommandsManager projectPath={selectedProject?.path} />
           </div>
         );
       
