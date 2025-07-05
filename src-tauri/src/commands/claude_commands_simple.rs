@@ -111,16 +111,24 @@ impl CommandsManager {
                 continue;
             }
             
-            // Read command name from filename (no extension for CLI compatibility)
-            let name = path.file_name()
+            // Read command name from filename
+            let filename = path.file_name()
                 .and_then(|n| n.to_str())
                 .ok_or_else(|| anyhow::anyhow!("Invalid filename"))?
                 .to_string();
             
             // Skip hidden files and backup files
-            if name.starts_with('.') || name.ends_with('~') {
+            if filename.starts_with('.') || filename.ends_with('~') {
                 continue;
             }
+            
+            // Only process .md files
+            if !filename.ends_with(".md") {
+                continue;
+            }
+            
+            // Extract command name by removing .md extension
+            let name = filename.strip_suffix(".md").unwrap().to_string();
             
             // Read the command
             if let Ok(cmd) = self.read_command(&name, Some(dir)).await {
@@ -148,7 +156,7 @@ impl CommandsManager {
     /// Read a single command from disk
     async fn read_command(&self, name: &str, dir: Option<&Path>) -> Result<ClaudeCommand> {
         let base_dir = dir.unwrap_or(&self.commands_dir);
-        let file_path = base_dir.join(name);
+        let file_path = base_dir.join(format!("{}.md", name));
         
         if !file_path.exists() {
             anyhow::bail!("Command '{}' not found", name);
@@ -190,7 +198,7 @@ impl CommandsManager {
     pub async fn create_command(&self, name: &str, content: &str) -> Result<()> {
         self.validate_command_name(name)?;
         
-        let file_path = self.commands_dir.join(name);
+        let file_path = self.commands_dir.join(format!("{}.md", name));
         if file_path.exists() {
             anyhow::bail!("Command '{}' already exists", name);
         }
@@ -208,7 +216,7 @@ impl CommandsManager {
     pub async fn update_command(&self, name: &str, content: &str) -> Result<()> {
         self.validate_command_name(name)?;
         
-        let file_path = self.commands_dir.join(name);
+        let file_path = self.commands_dir.join(format!("{}.md", name));
         if !file_path.exists() {
             anyhow::bail!("Command '{}' not found", name);
         }
@@ -224,7 +232,7 @@ impl CommandsManager {
     
     /// Delete a command
     pub async fn delete_command(&self, name: &str) -> Result<()> {
-        let file_path = self.commands_dir.join(name);
+        let file_path = self.commands_dir.join(format!("{}.md", name));
         if !file_path.exists() {
             anyhow::bail!("Command '{}' not found", name);
         }
@@ -242,8 +250,8 @@ impl CommandsManager {
     pub async fn rename_command(&self, old_name: &str, new_name: &str) -> Result<()> {
         self.validate_command_name(new_name)?;
         
-        let old_path = self.commands_dir.join(old_name);
-        let new_path = self.commands_dir.join(new_name);
+        let old_path = self.commands_dir.join(format!("{}.md", old_name));
+        let new_path = self.commands_dir.join(format!("{}.md", new_name));
         
         if !old_path.exists() {
             anyhow::bail!("Command '{}' not found", old_name);
@@ -360,7 +368,7 @@ impl CommandsManager {
     pub async fn set_executable(&self, name: &str, executable: bool) -> Result<()> {
         use std::os::unix::fs::PermissionsExt;
         
-        let file_path = self.commands_dir.join(name);
+        let file_path = self.commands_dir.join(format!("{}.md", name));
         if !file_path.exists() {
             anyhow::bail!("Command '{}' not found", name);
         }
@@ -655,7 +663,7 @@ pub async fn import_commands(data: CommandsExport) -> Result<serde_json::Value, 
     }))
 }
 
-// The execute_claude_command function remains the same as it just passes through to Claude
+// Execute a command by reading its content and sending to Claude
 #[tauri::command]
 pub async fn execute_claude_command(
     app: tauri::AppHandle,
@@ -668,19 +676,27 @@ pub async fn execute_claude_command(
 ) -> Result<(), String> {
     use crate::commands::claude::resume_claude_code;
     
-    // Send the command syntax - Claude Code will read the file and handle all special syntax
-    let command_syntax = if let Some(args) = args.filter(|a| !a.is_empty()) {
-        format!("/{} {}", command_name, args)
+    // Get the command content
+    let manager = get_commands_manager().await?;
+    let command = manager
+        .get_command(&command_name, Some(&project_path))
+        .await
+        .map_err(|e| format!("Command '{}' not found: {}", command_name, e))?;
+    
+    // Prepare the full prompt with the command content
+    let full_prompt = if let Some(args) = args.filter(|a| !a.is_empty()) {
+        // Replace any placeholders or append args as needed
+        format!("{}\n\nArguments: {}", command.content, args)
     } else {
-        format!("/{}", command_name)
+        command.content.clone()
     };
     
-    // Resume in existing session with the session ID
+    // Resume in existing session with the actual command content
     resume_claude_code(
         app,
         project_path,
         session_id,
-        command_syntax,
+        full_prompt,
         model,
     ).await
 }
