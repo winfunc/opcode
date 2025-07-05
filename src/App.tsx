@@ -16,11 +16,12 @@ import { CCAgents } from "@/components/CCAgents";
 import { ClaudeCodeSession } from "@/components/ClaudeCodeSession";
 import { UsageDashboard } from "@/components/UsageDashboard";
 import { MCPManager } from "@/components/MCPManager";
+import { CommandsManager } from "@/components/CommandsManager";
 import { NFOCredits } from "@/components/NFOCredits";
 import { ClaudeBinaryDialog } from "@/components/ClaudeBinaryDialog";
 import { Toast, ToastContainer } from "@/components/ui/toast";
 
-type View = "welcome" | "projects" | "agents" | "editor" | "settings" | "claude-file-editor" | "claude-code-session" | "usage-dashboard" | "mcp";
+type View = "welcome" | "projects" | "agents" | "editor" | "settings" | "claude-file-editor" | "claude-code-session" | "usage-dashboard" | "mcp" | "commands";
 
 /**
  * Main App component - Manages the Claude directory browser UI
@@ -383,6 +384,13 @@ function App() {
           <MCPManager onBack={() => handleViewChange("welcome")} />
         );
       
+      case "commands":
+        return (
+          <div className="h-full">
+            <CommandsManager />
+          </div>
+        );
+      
       default:
         return null;
     }
@@ -397,6 +405,7 @@ function App() {
           onSettingsClick={() => handleViewChange("settings")}
           onUsageClick={() => handleViewChange("usage-dashboard")}
           onMCPClick={() => handleViewChange("mcp")}
+          onCommandsClick={() => handleViewChange("commands")}
           onInfoClick={() => setShowNFO(true)}
         />
         

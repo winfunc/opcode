@@ -41,6 +41,12 @@ use commands::storage::{
     storage_list_tables, storage_read_table, storage_update_row, storage_delete_row,
     storage_insert_row, storage_execute_sql, storage_reset_database,
 };
+use commands::claude_commands::{
+    list_claude_commands, get_claude_command, create_claude_command, update_claude_command,
+    delete_claude_command, search_claude_commands, export_commands, import_commands,
+    get_command_history, get_command_stats, rename_claude_command, set_command_executable,
+    execute_claude_command, export_commands_to_file,
+};
 use process::ProcessRegistryState;
 use std::sync::Mutex;
 use tauri::Manager;
@@ -55,7 +61,7 @@ fn main() {
         .plugin(tauri_plugin_shell::init())
         .setup(|app| {
             // Initialize agents database
-            let conn = init_database(&app.handle()).expect("Failed to initialize agents database");
+            let conn = init_database(app.handle()).expect("Failed to initialize agents database");
             app.manage(AgentDb(Mutex::new(conn)));
 
             // Initialize checkpoint state
@@ -63,7 +69,7 @@ fn main() {
 
             // Set the Claude directory path
             if let Ok(claude_dir) = dirs::home_dir()
-                .ok_or_else(|| "Could not find home directory")
+                .ok_or("Could not find home directory")
                 .and_then(|home| {
                     let claude_path = home.join(".claude");
                     claude_path
@@ -174,6 +180,20 @@ fn main() {
             storage_insert_row,
             storage_execute_sql,
             storage_reset_database,
+            list_claude_commands,
+            get_claude_command,
+            create_claude_command,
+            update_claude_command,
+            delete_claude_command,
+            search_claude_commands,
+            export_commands,
+            import_commands,
+            get_command_history,
+            get_command_stats,
+            rename_claude_command,
+            set_command_executable,
+            execute_claude_command,
+            export_commands_to_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

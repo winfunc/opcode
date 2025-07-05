@@ -47,6 +47,8 @@ sha2 = "0.10"
 zstd = "0.13"
 uuid = { version = "1.6", features = ["v4", "serde"] }
 walkdir = "2"
+lazy_static = "1.4"
+yaml-rust2 = "0.8"
 
 
 [target.'cfg(target_os = "macos")'.dependencies]

@@ -1,5 +1,30 @@
 import { invoke } from "@tauri-apps/api/core";
 
+/** Claude Command interface */
+export interface ClaudeCommand {
+  name: string;
+  content: string;
+  description?: string;
+  created_at: string;
+  modified_at: string;
+  file_size: number;
+  is_executable: boolean;
+}
+
+/** Commands export interface */
+export interface CommandsExport {
+  version: number;
+  exported_at: string;
+  commands: ExportedCommand[];
+}
+
+/** Exported command interface */
+export interface ExportedCommand {
+  name: string;
+  content: string;
+  description?: string;
+}
+
 /** Process type for tracking in ProcessRegistry */
 export type ProcessType = 
   | { AgentRun: { agent_id: number; agent_name: string } }
@@ -1645,5 +1670,212 @@ export const api = {
       throw error;
     }
   },
+
+  // Claude Commands API
+
+  /**
+   * Lists all Claude commands
+   * @param projectPath - Optional project path to include project commands
+   * @returns Promise resolving to list of commands
+   */
+  async listClaudeCommands(projectPath?: string): Promise<ClaudeCommand[]> {
+    try {
+      return await invoke<ClaudeCommand[]>("list_claude_commands", { projectPath });
+    } catch (error) {
+      console.error("Failed to list commands:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Gets a specific Claude command
+   * @param name - The command name
+   * @returns Promise resolving to the command
+   */
+  async getClaudeCommand(name: string): Promise<ClaudeCommand> {
+    try {
+      return await invoke<ClaudeCommand>("get_claude_command", { name });
+    } catch (error) {
+      console.error("Failed to get command:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Creates a new Claude command
+   * @param name - The command name
+   * @param content - The command content
+   * @returns Promise resolving when the command is created
+   */
+  async createClaudeCommand(name: string, content: string): Promise<void> {
+    try {
+      return await invoke<void>("create_claude_command", { name, content });
+    } catch (error) {
+      console.error("Failed to create command:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Updates an existing Claude command
+   * @param name - The command name
+   * @param content - The new command content
+   * @returns Promise resolving when the command is updated
+   */
+  async updateClaudeCommand(name: string, content: string): Promise<void> {
+    try {
+      return await invoke<void>("update_claude_command", { name, content });
+    } catch (error) {
+      console.error("Failed to update command:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Deletes a Claude command
+   * @param name - The command name
+   * @returns Promise resolving when the command is deleted
+   */
+  async deleteClaudeCommand(name: string): Promise<void> {
+    try {
+      return await invoke<void>("delete_claude_command", { name });
+    } catch (error) {
+      console.error("Failed to delete command:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Searches Claude commands
+   * @param query - The search query
+   * @param projectPath - Optional project path to include project commands
+   * @returns Promise resolving to list of matching commands
+   */
+  async searchClaudeCommands(query: string, projectPath?: string): Promise<ClaudeCommand[]> {
+    try {
+      return await invoke<ClaudeCommand[]>("search_claude_commands", { query, projectPath });
+    } catch (error) {
+      console.error("Failed to search commands:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Exports all Claude commands
+   * @returns Promise resolving to export data
+   */
+  async exportCommands(includeHistory: boolean = false): Promise<CommandsExport> {
+    try {
+      return await invoke<CommandsExport>("export_commands", { includeHistory });
+    } catch (error) {
+      console.error("Failed to export commands:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Exports commands directly to a file using native save dialog
+   * @param data - JSON string of the export data
+   * @returns The file path where it was saved
+   */
+  async exportCommandsToFile(data: string): Promise<string> {
+    try {
+      return await invoke<string>("export_commands_to_file", { data });
+    } catch (error) {
+      console.error("Failed to save export file:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Imports Claude commands
+   * @param data - The export data to import
+   * @returns Promise resolving to import statistics
+   */
+  async importCommands(data: CommandsExport): Promise<{ imported: number; failed: number }> {
+    try {
+      return await invoke<{ imported: number; failed: number }>("import_commands", { data });
+    } catch (error) {
+      console.error("Failed to import commands:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Executes a Claude command in the current session
+   * @param sessionId - The session ID
+   * @param commandName - The command name to execute
+   * @param projectPath - The project path
+   * @param model - The model to use (e.g., "sonnet" or "opus")
+   * @returns Promise resolving when the command is executed
+   */
+  async executeClaudeCommand(sessionId: string, commandName: string, projectPath: string, model: string, args?: string, prefix?: string): Promise<void> {
+    try {
+      return await invoke<void>("execute_claude_command", { sessionId, commandName, projectPath, model, args, prefix });
+    } catch (error) {
+      console.error("Failed to execute command:", error);
+      throw error;
+    }
+  },
+
+  // CQRS-specific methods
+
+  /**
+   * Gets command history for a specific command
+   * @param name - The command name
+   * @returns Promise resolving to command history entries
+   */
+  async getCommandHistory(name: string): Promise<any[]> {
+    try {
+      return await invoke<any[]>("get_command_history", { name });
+    } catch (error) {
+      console.error("Failed to get command history:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Gets command statistics
+   * @returns Promise resolving to command statistics
+   */
+  async getCommandStats(): Promise<any> {
+    try {
+      return await invoke<any>("get_command_stats");
+    } catch (error) {
+      console.error("Failed to get command stats:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Renames a Claude command
+   * @param oldName - The current command name
+   * @param newName - The new command name
+   * @returns Promise resolving when the command is renamed
+   */
+  async renameClaudeCommand(oldName: string, newName: string): Promise<void> {
+    try {
+      return await invoke<void>("rename_claude_command", { oldName, newName });
+    } catch (error) {
+      console.error("Failed to rename command:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Sets the executable flag on a command
+   * @param name - The command name
+   * @param executable - Whether the command should be executable
+   * @returns Promise resolving when the flag is set
+   */
+  async setCommandExecutable(name: string, executable: boolean): Promise<void> {
+    try {
+      return await invoke<void>("set_command_executable", { name, executable });
+    } catch (error) {
+      console.error("Failed to set executable flag:", error);
+      throw error;
+    }
+  },
+
 
 };
