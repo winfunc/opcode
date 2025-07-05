@@ -165,8 +165,8 @@ export const CommandAutocomplete = forwardRef<CommandAutocompleteRef, CommandAut
                       )}
                     >
                       <div className="flex items-center gap-2 mb-1">
-                        <div className="font-medium">{command.name.replace(/^project:/, '')}</div>
-                        {command.name.startsWith('project:') && (
+                        <div className="font-medium">{command.name}</div>
+                        {command.scope === 'project' && (
                           <Badge variant="outline" className="text-xs">project</Badge>
                         )}
                       </div>

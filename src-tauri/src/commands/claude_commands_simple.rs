@@ -19,6 +19,14 @@ pub struct ClaudeCommand {
     pub modified_at: DateTime<Utc>,
     pub file_size: u64,
     pub is_executable: bool,
+    pub scope: CommandScope,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum CommandScope {
+    User,
+    Project,
 }
 
 /// Simple in-memory cache to avoid repeated file reads
@@ -76,7 +84,8 @@ impl CommandsManager {
         if let Some(project) = project_path {
             let project_dir = self.get_commands_dir(Some(project));
             if project_dir.exists() {
-                for cmd in self.read_commands_from_dir(&project_dir).await? {
+                for mut cmd in self.read_commands_from_dir(&project_dir).await? {
+                    cmd.scope = CommandScope::Project;
                     seen_names.insert(cmd.name.clone());
                     all_commands.push(cmd);
                 }
@@ -84,8 +93,9 @@ impl CommandsManager {
         }
         
         // Load user commands (skip if already in project)
-        for cmd in self.read_commands_from_dir(&self.commands_dir).await? {
+        for mut cmd in self.read_commands_from_dir(&self.commands_dir).await? {
             if !seen_names.contains(&cmd.name) {
+                cmd.scope = CommandScope::User;
                 all_commands.push(cmd);
             }
         }
@@ -144,13 +154,16 @@ impl CommandsManager {
         // Check project directory first
         if let Some(project) = project_path {
             let project_dir = self.get_commands_dir(Some(project));
-            if let Ok(cmd) = self.read_command(name, Some(&project_dir)).await {
+            if let Ok(mut cmd) = self.read_command(name, Some(&project_dir)).await {
+                cmd.scope = CommandScope::Project;
                 return Ok(cmd);
             }
         }
         
         // Fall back to user directory
-        self.read_command(name, None).await
+        let mut cmd = self.read_command(name, None).await?;
+        cmd.scope = CommandScope::User;
+        Ok(cmd)
     }
     
     /// Read a single command from disk
@@ -183,6 +196,13 @@ impl CommandsManager {
         #[cfg(not(unix))]
         let is_executable = false;
         
+        // Determine scope based on directory
+        let scope = if dir.is_some() && dir != Some(&self.commands_dir) {
+            CommandScope::Project
+        } else {
+            CommandScope::User
+        };
+        
         Ok(ClaudeCommand {
             name: name.to_string(),
             content,
@@ -191,6 +211,7 @@ impl CommandsManager {
             modified_at: metadata.modified()?.into(),
             file_size,
             is_executable,
+            scope,
         })
     }
     
@@ -396,7 +417,7 @@ impl CommandsManager {
         Ok(())
     }
     
-    /// Validate command name
+    /// Validate command name for proper file naming
     fn validate_command_name(&self, name: &str) -> Result<()> {
         if name.is_empty() {
             anyhow::bail!("Command name cannot be empty");
@@ -416,11 +437,39 @@ impl CommandsManager {
             anyhow::bail!("Command name cannot start with '.'");
         }
         
-        // Warn about special characters but don't block
-        let special_chars = ['<', '>', ':', '"', '|', '?', '*'];
-        if name.chars().any(|c| special_chars.contains(&c)) {
-            // Just log a warning, don't fail
-            eprintln!("Warning: Command name contains special characters that may cause issues on some systems");
+        // Don't allow spaces in command names
+        if name.contains(' ') {
+            anyhow::bail!("Command name cannot contain spaces. Use hyphens (-) or underscores (_) instead");
+        }
+        
+        // Don't allow special characters that are problematic for filenames
+        let forbidden_chars = ['<', '>', ':', '"', '|', '?', '*', '\0'];
+        if name.chars().any(|c| forbidden_chars.contains(&c)) {
+            anyhow::bail!("Command name contains invalid characters: < > : \" | ? * \\0");
+        }
+        
+        // Don't allow control characters
+        if name.chars().any(|c| c.is_control()) {
+            anyhow::bail!("Command name cannot contain control characters");
+        }
+        
+        // Don't allow names that end with dots or spaces (Windows compatibility)
+        if name.ends_with('.') || name.ends_with(' ') {
+            anyhow::bail!("Command name cannot end with a dot or space");
+        }
+        
+        // Don't allow reserved Windows filenames
+        let reserved_names = ["CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4",
+                             "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2", 
+                             "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"];
+        let name_upper = name.to_uppercase();
+        if reserved_names.contains(&name_upper.as_str()) {
+            anyhow::bail!("Command name '{}' is a reserved system name", name);
+        }
+        
+        // Recommend using kebab-case or snake_case
+        if !name.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_') {
+            eprintln!("Note: Command names work best with only letters, numbers, hyphens (-), and underscores (_)");
         }
         
         Ok(())

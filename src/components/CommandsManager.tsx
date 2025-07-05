@@ -129,9 +129,20 @@ export const CommandsManager: React.FC<CommandsManagerProps> = ({ onBack }) => {
   const handleSaveCommand = useCallback(async (name: string, content: string) => {
     try {
       if (selectedCommand) {
-        console.log('Updating command:', selectedCommand.name);
-        await api.updateClaudeCommand(selectedCommand.name, content);
-        showToast(`Command '${selectedCommand.name}' updated successfully`, 'success');
+        // Check if name changed - if so, we need to rename
+        if (name !== selectedCommand.name) {
+          console.log('Renaming command from', selectedCommand.name, 'to', name);
+          // First update the content
+          await api.updateClaudeCommand(selectedCommand.name, content);
+          // Then rename the command
+          await api.renameClaudeCommand(selectedCommand.name, name);
+          showToast(`Command renamed to '${name}' and updated successfully`, 'success');
+        } else {
+          // Just update content
+          console.log('Updating command:', selectedCommand.name);
+          await api.updateClaudeCommand(selectedCommand.name, content);
+          showToast(`Command '${selectedCommand.name}' updated successfully`, 'success');
+        }
       } else {
         console.log('Creating command:', name);
         await api.createClaudeCommand(name, content);
@@ -139,6 +150,8 @@ export const CommandsManager: React.FC<CommandsManagerProps> = ({ onBack }) => {
       }
       // First close the dialog
       setEditorOpen(false);
+      // Clear selected command to ensure create works next time
+      setSelectedCommand(null);
       console.log('Command saved, refreshing list...');
       // Add a small delay to ensure backend cache invalidation has completed
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -275,7 +288,13 @@ export const CommandsManager: React.FC<CommandsManagerProps> = ({ onBack }) => {
       {/* Command Editor */}
       <CommandEditor
         open={editorOpen}
-        onOpenChange={setEditorOpen}
+        onOpenChange={(open) => {
+          setEditorOpen(open);
+          // Clear selected command when dialog closes
+          if (!open) {
+            setSelectedCommand(null);
+          }
+        }}
         command={selectedCommand}
         onSave={handleSaveCommand}
       />

@@ -24,7 +24,35 @@ export const CommandEditor: React.FC<CommandEditorProps> = ({
   const [name, setName] = useState('');
   const [content, setContent] = useState('');
   const [error, setError] = useState('');
+  const [nameError, setNameError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+
+  // Validation function for command names (matching backend rules)
+  const validateCommandName = (name: string): string | null => {
+    if (!name || name.trim() === '') return 'Command name is required';
+    if (name.length > 255) return 'Command name too long (max 255 characters)';
+    if (/[\/\\]/.test(name)) return 'Command name cannot contain / or \\';
+    if (name.startsWith('.')) return 'Command name cannot start with .';
+    if (name.includes(' ')) return 'Command name cannot contain spaces. Use hyphens (-) or underscores (_) instead';
+    if (/[<>:"|?*\0]/.test(name)) return 'Command name contains invalid characters: < > : " | ? * \\0';
+    if (/[\x00-\x1F\x7F]/.test(name)) return 'Command name cannot contain control characters';
+    if (name.endsWith('.') || name.endsWith(' ')) return 'Command name cannot end with a dot or space';
+    
+    // Check for Windows reserved names
+    const reserved = ['CON', 'PRN', 'AUX', 'NUL', 'COM1', 'COM2', 'COM3', 'COM4',
+                     'COM5', 'COM6', 'COM7', 'COM8', 'COM9', 'LPT1', 'LPT2', 
+                     'LPT3', 'LPT4', 'LPT5', 'LPT6', 'LPT7', 'LPT8', 'LPT9'];
+    if (reserved.includes(name.toUpperCase())) {
+      return `Command name '${name}' is a reserved system name`;
+    }
+    
+    // Recommend best practices
+    if (!/^[a-zA-Z0-9-_]+$/.test(name)) {
+      return 'Command names should only contain letters, numbers, hyphens (-), and underscores (_)';
+    }
+    
+    return null;
+  };
 
   useEffect(() => {
     if (command) {
@@ -35,12 +63,23 @@ export const CommandEditor: React.FC<CommandEditorProps> = ({
       setContent('');
     }
     setError('');
+    setNameError('');
   }, [command, open]);
 
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newName = e.target.value;
+    setName(newName);
+    
+    // Validate on change for immediate feedback
+    const validationError = validateCommandName(newName);
+    setNameError(validationError || '');
+  };
+
   const handleSave = async () => {
-    // Validate inputs
-    if (!name.trim()) {
-      setError('Command name is required');
+    // Validate command name
+    const nameValidationError = validateCommandName(name);
+    if (nameValidationError) {
+      setNameError(nameValidationError);
       return;
     }
 
@@ -49,8 +88,9 @@ export const CommandEditor: React.FC<CommandEditorProps> = ({
       return;
     }
 
-    // Clear error and save
+    // Clear errors and save
     setError('');
+    setNameError('');
     setIsSaving(true);
     
     try {
@@ -89,14 +129,16 @@ export const CommandEditor: React.FC<CommandEditorProps> = ({
                 id="command-name"
                 placeholder="my-awesome-command"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={handleNameChange}
                 onKeyDown={handleKeyDown}
-                disabled={!!command}
-                className={command ? 'opacity-50' : ''}
+                className={nameError ? 'border-destructive' : ''}
               />
-              {command && (
-                <p className="text-xs text-muted-foreground">
-                  Command names cannot be changed after creation
+              {nameError && (
+                <p className="text-xs text-destructive">{nameError}</p>
+              )}
+              {command && name !== command.name && (
+                <p className="text-xs text-amber-600">
+                  Note: Renaming will create a new file and delete the old one
                 </p>
               )}
             </div>

@@ -1,5 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 
+/** Command scope enum */
+export type CommandScope = 'user' | 'project';
+
 /** Claude Command interface */
 export interface ClaudeCommand {
   name: string;
@@ -9,6 +12,7 @@ export interface ClaudeCommand {
   modified_at: string;
   file_size: number;
   is_executable: boolean;
+  scope: CommandScope;
 }
 
 /** Commands export interface */

@@ -55,6 +55,11 @@ export const CommandCard: React.FC<CommandCardProps> = ({ command, onEdit, onDel
           <div className="flex items-center gap-2 mb-2">
             <Terminal className="h-5 w-5 text-muted-foreground" />
             <h3 className="font-semibold text-lg truncate">{command.name}</h3>
+            {command.scope === 'project' && (
+              <Badge variant="outline" className="shrink-0">
+                Project
+              </Badge>
+            )}
             {command.is_executable && (
               <Badge variant="secondary" className="shrink-0">
                 <FileCode className="h-3 w-3 mr-1" />
