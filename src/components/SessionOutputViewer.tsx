@@ -109,6 +109,47 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
       }
 
       setLoading(true);
+
+      // If we have a session_id, try to load from JSONL file first
+      if (session.session_id && session.session_id !== '') {
+        try {
+          const history = await api.loadAgentSessionHistory(session.session_id);
+          
+          // Convert history to messages format using AgentExecution style
+          const loadedMessages: ClaudeStreamMessage[] = history.map(entry => ({
+            ...entry,
+            type: entry.type || "assistant"
+          }));
+          
+          setMessages(loadedMessages);
+          setRawJsonlOutput(history.map(h => JSON.stringify(h)));
+          
+          // Update cache
+          setCachedOutput(session.id, {
+            output: history.map(h => JSON.stringify(h)).join('\n'),
+            messages: loadedMessages,
+            lastUpdated: Date.now(),
+            status: session.status
+          });
+          
+          // Set up live event listeners for running sessions
+          if (session.status === 'running') {
+            setupLiveEventListeners();
+            
+            try {
+              await api.streamSessionOutput(session.id);
+            } catch (streamError) {
+              console.warn('Failed to start streaming, will poll instead:', streamError);
+            }
+          }
+          
+          return;
+        } catch (err) {
+          console.warn('Failed to load from JSONL, falling back to regular output:', err);
+        }
+      }
+
+      // Fallback to the original method if JSONL loading fails or no session_id
       const rawOutput = await api.getSessionOutput(session.id);
       
       // Parse JSONL output into messages using AgentExecution style

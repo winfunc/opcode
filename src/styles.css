@@ -442,10 +442,13 @@ button:focus-visible,
 
 .rotating-symbol {
   display: inline-block;
-  vertical-align: text-bottom;
+  vertical-align: middle;
   line-height: 1;
   animation: fade-in 0.2s ease-out;
   font-weight: normal;
+  font-size: 1.5rem; /* Make it bigger! */
+  position: relative;
+  top: -2px;
 }
 
 .rotating-symbol::before {
@@ -458,11 +461,7 @@ button:focus-visible,
   transform-origin: center;
 }
 
-/* Make the rotating symbol more prominent at larger sizes */
-.rotating-symbol.text-xl::before,
-.rotating-symbol.text-2xl::before {
-  font-weight: 900;
-}
+/* Removed special font-weight for larger sizes to maintain consistency */
 
 /* Shimmer hover effect */
 @keyframes shimmer {
@@ -498,6 +497,63 @@ button:focus-visible,
 .shimmer-hover:hover::before {
   left: 100%;
   animation: shimmer 0.5s;
+}
+
+/* Trailing border effect */
+@property --angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes trail-rotate {
+  to {
+    --angle: 360deg;
+  }
+}
+
+.trailing-border {
+  position: relative;
+  background: var(--color-card);
+  z-index: 0;
+  overflow: visible;
+}
+
+/* The correctly traveling border line */
+.trailing-border::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  padding: 2px;
+  border-radius: inherit;
+  background: conic-gradient(
+    from var(--angle),
+    transparent 0%,
+    transparent 85%,
+    #d97757 90%,
+    #ff9a7a 92.5%,
+    #d97757 95%,
+    transparent 100%
+  );
+  -webkit-mask: 
+    linear-gradient(#fff 0 0) content-box, 
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: -1;
+}
+
+.trailing-border:hover::after {
+  opacity: 1;
+  animation: trail-rotate 2s linear infinite;
+}
+
+/* Ensure the card content stays above the border effect */
+.trailing-border > * {
+  position: relative;
+  z-index: 1;
 }
 
 /* --- THEME-MATCHING SCROLLBARS --- */

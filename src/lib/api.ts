@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import type { HooksConfiguration } from '@/types/hooks';
 
 /** Process type for tracking in ProcessRegistry */
 export type ProcessType = 
@@ -98,12 +99,14 @@ export interface FileEntry {
  * Represents a Claude installation found on the system
  */
 export interface ClaudeInstallation {
-  /** Full path to the Claude binary */
+  /** Full path to the Claude binary (or "claude-code" for sidecar) */
   path: string;
   /** Version string if available */
   version?: string;
-  /** Source of discovery (e.g., "nvm", "system", "homebrew", "which") */
+  /** Source of discovery (e.g., "nvm", "system", "homebrew", "which", "bundled") */
   source: string;
+  /** Type of installation */
+  installation_type: "Bundled" | "System" | "Custom";
 }
 
 // Agent API types
@@ -114,6 +117,7 @@ export interface Agent {
   system_prompt: string;
   default_task?: string;
   model: string;
+  hooks?: string; // JSON string of HooksConfiguration
   created_at: string;
   updated_at: string;
 }
@@ -127,6 +131,7 @@ export interface AgentExport {
     system_prompt: string;
     default_task?: string;
     model: string;
+    hooks?: string;
   };
 }
 
@@ -633,6 +638,7 @@ export const api = {
    * @param system_prompt - The system prompt for the agent
    * @param default_task - Optional default task
    * @param model - Optional model (defaults to 'sonnet')
+   * @param hooks - Optional hooks configuration as JSON string
    * @returns Promise resolving to the created agent
    */
   async createAgent(
@@ -640,7 +646,8 @@ export const api = {
     icon: string, 
     system_prompt: string, 
     default_task?: string, 
-    model?: string
+    model?: string,
+    hooks?: string
   ): Promise<Agent> {
     try {
       return await invoke<Agent>('create_agent', { 
@@ -648,7 +655,8 @@ export const api = {
         icon, 
         systemPrompt: system_prompt,
         defaultTask: default_task,
-        model
+        model,
+        hooks
       });
     } catch (error) {
       console.error("Failed to create agent:", error);
@@ -664,6 +672,7 @@ export const api = {
    * @param system_prompt - The updated system prompt
    * @param default_task - Optional default task
    * @param model - Optional model
+   * @param hooks - Optional hooks configuration as JSON string
    * @returns Promise resolving to the updated agent
    */
   async updateAgent(
@@ -672,7 +681,8 @@ export const api = {
     icon: string, 
     system_prompt: string, 
     default_task?: string, 
-    model?: string
+    model?: string,
+    hooks?: string
   ): Promise<Agent> {
     try {
       return await invoke<Agent>('update_agent', { 
@@ -681,7 +691,8 @@ export const api = {
         icon, 
         systemPrompt: system_prompt,
         defaultTask: default_task,
-        model
+        model,
+        hooks
       });
     } catch (error) {
       console.error("Failed to update agent:", error);
@@ -921,6 +932,21 @@ export const api = {
    */
   async loadSessionHistory(sessionId: string, projectId: string): Promise<any[]> {
     return invoke("load_session_history", { sessionId, projectId });
+  },
+
+  /**
+   * Loads the JSONL history for a specific agent session
+   * Similar to loadSessionHistory but searches across all project directories
+   * @param sessionId - The session ID (UUID)
+   * @returns Promise resolving to array of session messages
+   */
+  async loadAgentSessionHistory(sessionId: string): Promise<any[]> {
+    try {
+      return await invoke<any[]>('load_agent_session_history', { sessionId });
+    } catch (error) {
+      console.error("Failed to load agent session history:", error);
+      throw error;
+    }
   },
 
   /**
@@ -1481,8 +1507,6 @@ export const api = {
     }
   },
 
-
-
   /**
    * List all available Claude installations on the system
    * @returns Promise resolving to an array of Claude installations
@@ -1495,4 +1519,210 @@ export const api = {
       throw error;
     }
   },
+
+  // Storage API methods
+
+  /**
+   * Lists all tables in the SQLite database
+   * @returns Promise resolving to an array of table information
+   */
+  async storageListTables(): Promise<any[]> {
+    try {
+      return await invoke<any[]>("storage_list_tables");
+    } catch (error) {
+      console.error("Failed to list tables:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Reads table data with pagination
+   * @param tableName - Name of the table to read
+   * @param page - Page number (1-indexed)
+   * @param pageSize - Number of rows per page
+   * @param searchQuery - Optional search query
+   * @returns Promise resolving to table data with pagination info
+   */
+  async storageReadTable(
+    tableName: string,
+    page: number,
+    pageSize: number,
+    searchQuery?: string
+  ): Promise<any> {
+    try {
+      return await invoke<any>("storage_read_table", {
+        tableName,
+        page,
+        pageSize,
+        searchQuery,
+      });
+    } catch (error) {
+      console.error("Failed to read table:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Updates a row in a table
+   * @param tableName - Name of the table
+   * @param primaryKeyValues - Map of primary key column names to values
+   * @param updates - Map of column names to new values
+   * @returns Promise resolving when the row is updated
+   */
+  async storageUpdateRow(
+    tableName: string,
+    primaryKeyValues: Record<string, any>,
+    updates: Record<string, any>
+  ): Promise<void> {
+    try {
+      return await invoke<void>("storage_update_row", {
+        tableName,
+        primaryKeyValues,
+        updates,
+      });
+    } catch (error) {
+      console.error("Failed to update row:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Deletes a row from a table
+   * @param tableName - Name of the table
+   * @param primaryKeyValues - Map of primary key column names to values
+   * @returns Promise resolving when the row is deleted
+   */
+  async storageDeleteRow(
+    tableName: string,
+    primaryKeyValues: Record<string, any>
+  ): Promise<void> {
+    try {
+      return await invoke<void>("storage_delete_row", {
+        tableName,
+        primaryKeyValues,
+      });
+    } catch (error) {
+      console.error("Failed to delete row:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Inserts a new row into a table
+   * @param tableName - Name of the table
+   * @param values - Map of column names to values
+   * @returns Promise resolving to the last insert row ID
+   */
+  async storageInsertRow(
+    tableName: string,
+    values: Record<string, any>
+  ): Promise<number> {
+    try {
+      return await invoke<number>("storage_insert_row", {
+        tableName,
+        values,
+      });
+    } catch (error) {
+      console.error("Failed to insert row:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Executes a raw SQL query
+   * @param query - SQL query string
+   * @returns Promise resolving to query result
+   */
+  async storageExecuteSql(query: string): Promise<any> {
+    try {
+      return await invoke<any>("storage_execute_sql", { query });
+    } catch (error) {
+      console.error("Failed to execute SQL:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Resets the entire database
+   * @returns Promise resolving when the database is reset
+   */
+  async storageResetDatabase(): Promise<void> {
+    try {
+      return await invoke<void>("storage_reset_database");
+    } catch (error) {
+      console.error("Failed to reset database:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get hooks configuration for a specific scope
+   * @param scope - The configuration scope: 'user', 'project', or 'local'
+   * @param projectPath - Project path (required for project and local scopes)
+   * @returns Promise resolving to the hooks configuration
+   */
+  async getHooksConfig(scope: 'user' | 'project' | 'local', projectPath?: string): Promise<HooksConfiguration> {
+    try {
+      return await invoke<HooksConfiguration>("get_hooks_config", { scope, projectPath });
+    } catch (error) {
+      console.error("Failed to get hooks config:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Update hooks configuration for a specific scope
+   * @param scope - The configuration scope: 'user', 'project', or 'local'
+   * @param hooks - The hooks configuration to save
+   * @param projectPath - Project path (required for project and local scopes)
+   * @returns Promise resolving to success message
+   */
+  async updateHooksConfig(
+    scope: 'user' | 'project' | 'local',
+    hooks: HooksConfiguration,
+    projectPath?: string
+  ): Promise<string> {
+    try {
+      return await invoke<string>("update_hooks_config", { scope, projectPath, hooks });
+    } catch (error) {
+      console.error("Failed to update hooks config:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Validate a hook command syntax
+   * @param command - The shell command to validate
+   * @returns Promise resolving to validation result
+   */
+  async validateHookCommand(command: string): Promise<{ valid: boolean; message: string }> {
+    try {
+      return await invoke<{ valid: boolean; message: string }>("validate_hook_command", { command });
+    } catch (error) {
+      console.error("Failed to validate hook command:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get merged hooks configuration (respecting priority)
+   * @param projectPath - The project path
+   * @returns Promise resolving to merged hooks configuration
+   */
+  async getMergedHooksConfig(projectPath: string): Promise<HooksConfiguration> {
+    try {
+      const [userHooks, projectHooks, localHooks] = await Promise.all([
+        this.getHooksConfig('user'),
+        this.getHooksConfig('project', projectPath),
+        this.getHooksConfig('local', projectPath)
+      ]);
+
+      // Import HooksManager for merging
+      const { HooksManager } = await import('@/lib/hooksManager');
+      return HooksManager.mergeConfigs(userHooks, projectHooks, localHooks);
+    } catch (error) {
+      console.error("Failed to get merged hooks config:", error);
+      throw error;
+    }
+  }
 };

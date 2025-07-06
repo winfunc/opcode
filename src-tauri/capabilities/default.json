@@ -11,6 +11,36 @@
     "shell:allow-execute",
     "shell:allow-spawn",
     "shell:allow-open",
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        {
+          "name": "claude-code",
+          "sidecar": true,
+          "args": true
+        },
+        {
+          "name": "claude",
+          "sidecar": false,
+          "args": true
+        }
+      ]
+    },
+    {
+      "identifier": "shell:allow-spawn",
+      "allow": [
+        {
+          "name": "claude-code",
+          "sidecar": true,
+          "args": true
+        },
+        {
+          "name": "claude",
+          "sidecar": false,
+          "args": true
+        }
+      ]
+    },
     "fs:default",
     "fs:allow-mkdir",
     "fs:allow-read",

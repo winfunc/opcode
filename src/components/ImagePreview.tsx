@@ -56,6 +56,16 @@ export const ImagePreview: React.FC<ImagePreviewProps> = ({
     onRemove(index);
   };
 
+  // Helper to get the image source - handles both file paths and data URLs
+  const getImageSrc = (imagePath: string): string => {
+    // If it's already a data URL, return as-is
+    if (imagePath.startsWith('data:')) {
+      return imagePath;
+    }
+    // Otherwise, convert the file path
+    return convertFileSrc(imagePath);
+  };
+
   if (displayImages.length === 0) return null;
 
   return (
@@ -83,7 +93,7 @@ export const ImagePreview: React.FC<ImagePreviewProps> = ({
                   </div>
                 ) : (
                   <img
-                    src={convertFileSrc(imagePath)}
+                    src={getImageSrc(imagePath)}
                     alt={`Preview ${index + 1}`}
                     className="w-full h-full object-cover"
                     onError={() => handleImageError(index)}
@@ -131,7 +141,7 @@ export const ImagePreview: React.FC<ImagePreviewProps> = ({
           {selectedImageIndex !== null && (
             <div className="relative w-full h-full flex items-center justify-center p-4">
               <img
-                src={convertFileSrc(displayImages[selectedImageIndex])}
+                src={getImageSrc(displayImages[selectedImageIndex])}
                 alt={`Full preview ${selectedImageIndex + 1}`}
                 className="max-w-full max-h-full object-contain"
                 onError={() => handleImageError(selectedImageIndex)}
