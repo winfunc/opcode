@@ -361,14 +361,14 @@ export const Settings: React.FC<SettingsProps> = ({
       ) : (
         <div className="flex-1 overflow-y-auto p-4">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-7">
-              <TabsTrigger value="general">General</TabsTrigger>
-              <TabsTrigger value="appearance">Appearance</TabsTrigger>
-              <TabsTrigger value="permissions">Permissions</TabsTrigger>
-              <TabsTrigger value="environment">Environment</TabsTrigger>
-              <TabsTrigger value="advanced">Advanced</TabsTrigger>
-              <TabsTrigger value="hooks">Hooks</TabsTrigger>
-              <TabsTrigger value="storage">Storage</TabsTrigger>
+            <TabsList className="grid grid-cols-4 md:grid-cols-7 gap-1 h-auto p-1">
+              <TabsTrigger value="general" className="text-xs sm:text-sm px-2 py-1.5">General</TabsTrigger>
+              <TabsTrigger value="appearance" className="text-xs sm:text-sm px-2 py-1.5">Appearance</TabsTrigger>
+              <TabsTrigger value="permissions" className="text-xs sm:text-sm px-2 py-1.5">Permissions</TabsTrigger>
+              <TabsTrigger value="environment" className="text-xs sm:text-sm px-2 py-1.5">Environment</TabsTrigger>
+              <TabsTrigger value="advanced" className="text-xs sm:text-sm px-2 py-1.5">Advanced</TabsTrigger>
+              <TabsTrigger value="hooks" className="text-xs sm:text-sm px-2 py-1.5">Hooks</TabsTrigger>
+              <TabsTrigger value="storage" className="text-xs sm:text-sm px-2 py-1.5">Storage</TabsTrigger>
             </TabsList>
             
             {/* General Settings */}

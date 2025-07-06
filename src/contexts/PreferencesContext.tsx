@@ -33,7 +33,7 @@ interface PreferencesContextType {
 
 const defaultPreferences: Preferences = {
   fontSize: 'default',
-  panelWidth: 'spacious',
+  panelWidth: 'wider', // Changed to 1600px default
   keyboardLayout: 'qwerty'
 };
 
@@ -62,9 +62,9 @@ export const PreferencesProvider: React.FC<{ children: ReactNode }> = ({ childre
   const panelWidthMap: Record<PanelWidth, string> = {
     'compact': '768px',      // sm
     'comfortable': '1024px', // lg
-    'spacious': '1280px',    // xl (default)
+    'spacious': '1280px',    // xl
     'wide': '1440px',        // custom
-    'wider': '1600px',       // custom
+    'wider': '1600px',       // custom (default)
     'widest': '1760px',      // custom
     'ultra-wide': '1920px',  // custom
     'full': '100%'           // full width

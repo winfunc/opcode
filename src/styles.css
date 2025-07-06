@@ -54,7 +54,7 @@
   --font-size-4xl: calc(2.25rem * var(--font-scale));
 
   /* Panel width system */
-  --panel-max-width: 1280px; /* Default spacious width */
+  --panel-max-width: 1600px; /* Default wider width */
 }
 
 /* Reset and base styles */
@@ -742,13 +742,45 @@ code::-webkit-scrollbar-thumb:hover,
 .text-3xl { font-size: var(--font-size-3xl) !important; }
 .text-4xl { font-size: var(--font-size-4xl) !important; }
 
-/* Panel width overrides */
-.max-w-5xl {
+/* Panel width overrides - Apply to ALL GUI panels */
+.max-w-5xl,
+.max-w-4xl,
+.max-w-3xl,
+.max-w-2xl,
+.max-w-xl,
+.max-w-lg,
+.max-w-md,
+.max-w-sm {
+  max-width: var(--panel-max-width) !important;
+}
+
+/* Apply panel width to common container classes */
+.container,
+.main-content,
+.settings-container,
+.dialog-content,
+.modal-content,
+.panel,
+[class*="max-w-"] {
   max-width: var(--panel-max-width) !important;
 }
 
 /* Full width mode with padding */
-[data-panel-width="full"] .max-w-5xl {
+[data-panel-width="full"] .max-w-5xl,
+[data-panel-width="full"] .max-w-4xl,
+[data-panel-width="full"] .max-w-3xl,
+[data-panel-width="full"] .max-w-2xl,
+[data-panel-width="full"] .max-w-xl,
+[data-panel-width="full"] .max-w-lg,
+[data-panel-width="full"] .max-w-md,
+[data-panel-width="full"] .max-w-sm,
+[data-panel-width="full"] .container,
+[data-panel-width="full"] .main-content,
+[data-panel-width="full"] .settings-container,
+[data-panel-width="full"] .dialog-content,
+[data-panel-width="full"] .modal-content,
+[data-panel-width="full"] .panel,
+[data-panel-width="full"] [class*="max-w-"] {
   max-width: calc(100% - 4rem) !important;
   padding-left: 2rem;
   padding-right: 2rem;
