@@ -54,7 +54,7 @@
   --font-size-4xl: calc(2.25rem * var(--font-scale));
 
   /* Panel width system */
-  --panel-max-width: 1600px; /* Default wider width */
+  --panel-max-width: 1920px; /* Default ultra-wide width */
 }
 
 /* Reset and base styles */
@@ -761,6 +761,7 @@ code::-webkit-scrollbar-thumb:hover,
 .dialog-content,
 .modal-content,
 .panel,
+.max-w-6xl,
 [class*="max-w-"] {
   max-width: var(--panel-max-width) !important;
 }
@@ -774,6 +775,7 @@ code::-webkit-scrollbar-thumb:hover,
 [data-panel-width="full"] .max-w-lg,
 [data-panel-width="full"] .max-w-md,
 [data-panel-width="full"] .max-w-sm,
+[data-panel-width="full"] .max-w-6xl,
 [data-panel-width="full"] .container,
 [data-panel-width="full"] .main-content,
 [data-panel-width="full"] .settings-container,

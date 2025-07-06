@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 export type FontSize = 'small' | 'default' | 'medium' | 'large' | 'extra-large' | 'huge' | 'massive' | 'giant';
 
 /** Panel width options for main content area */
-export type PanelWidth = 'compact' | 'comfortable' | 'spacious' | 'wide' | 'wider' | 'widest' | 'ultra-wide' | 'full';
+export type PanelWidth = 'compact' | 'comfortable' | 'spacious' | 'wide' | 'wider' | 'widest' | 'ultra-wide' | 'ultra-wide-plus' | 'full';
 
 /** Supported keyboard layouts for input translation */
 export type KeyboardLayout = 'qwerty' | 'colemak' | 'dvorak' | 'workman';
@@ -33,7 +33,7 @@ interface PreferencesContextType {
 
 const defaultPreferences: Preferences = {
   fontSize: 'default',
-  panelWidth: 'wider', // Changed to 1600px default
+  panelWidth: 'ultra-wide', // Changed to 1920px default
   keyboardLayout: 'qwerty'
 };
 
@@ -64,9 +64,10 @@ export const PreferencesProvider: React.FC<{ children: ReactNode }> = ({ childre
     'comfortable': '1024px', // lg
     'spacious': '1280px',    // xl
     'wide': '1440px',        // custom
-    'wider': '1600px',       // custom (default)
+    'wider': '1600px',       // custom
     'widest': '1760px',      // custom
-    'ultra-wide': '1920px',  // custom
+    'ultra-wide': '1920px',  // custom (default)
+    'ultra-wide-plus': '2560px', // custom
     'full': '100%'           // full width
   };
 

@@ -504,6 +504,7 @@ export const Settings: React.FC<SettingsProps> = ({
                           <SelectItem value="wider">Wider (1600px)</SelectItem>
                           <SelectItem value="widest">Widest (1760px)</SelectItem>
                           <SelectItem value="ultra-wide">Ultra Wide (1920px)</SelectItem>
+                          <SelectItem value="ultra-wide-plus">Ultra Wide+ (2560px)</SelectItem>
                           <SelectItem value="full">Full Width</SelectItem>
                         </SelectContent>
                       </Select>
