@@ -1,19 +1,33 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
+/** Font size options for global UI scaling */
 export type FontSize = 'small' | 'default' | 'medium' | 'large' | 'extra-large' | 'huge' | 'massive' | 'giant';
+
+/** Panel width options for main content area */
 export type PanelWidth = 'compact' | 'comfortable' | 'spacious' | 'wide' | 'wider' | 'widest' | 'ultra-wide' | 'full';
+
+/** Supported keyboard layouts for input translation */
 export type KeyboardLayout = 'qwerty' | 'colemak' | 'dvorak' | 'workman';
 
+/** User preferences for appearance customization */
 export interface Preferences {
+  /** Global font size setting */
   fontSize: FontSize;
+  /** Main panel width setting */
   panelWidth: PanelWidth;
+  /** Keyboard layout for input translation */
   keyboardLayout: KeyboardLayout;
 }
 
+/** Context interface for preferences management */
 interface PreferencesContextType {
+  /** Current user preferences */
   preferences: Preferences;
+  /** Update font size preference */
   updateFontSize: (fontSize: FontSize) => void;
+  /** Update panel width preference */
   updatePanelWidth: (panelWidth: PanelWidth) => void;
+  /** Update keyboard layout preference */
   updateKeyboardLayout: (layout: KeyboardLayout) => void;
 }
 
@@ -25,6 +39,10 @@ const defaultPreferences: Preferences = {
 
 const PreferencesContext = createContext<PreferencesContextType | undefined>(undefined);
 
+/**
+ * Preferences provider component that manages user appearance settings
+ * Handles font size, panel width, and keyboard layout preferences with localStorage persistence
+ */
 export const PreferencesProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [preferences, setPreferences] = useState<Preferences>(defaultPreferences);
 
@@ -128,6 +146,11 @@ export const PreferencesProvider: React.FC<{ children: ReactNode }> = ({ childre
   );
 };
 
+/**
+ * Hook to access preferences context
+ * @returns Preferences context with current settings and update functions
+ * @throws Error if used outside PreferencesProvider
+ */
 export const usePreferences = (): PreferencesContextType => {
   const context = useContext(PreferencesContext);
   if (!context) {

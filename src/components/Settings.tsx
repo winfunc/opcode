@@ -6,12 +6,7 @@ import {
   Trash2, 
   Save, 
   AlertCircle,
-  Shield,
-  Code,
-  Settings2,
-  Terminal,
   Loader2,
-  Palette
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

@@ -3,8 +3,19 @@ import { usePreferences } from '@/contexts/PreferencesContext';
 import { translateKey, shouldTranslateKey, type KeyboardLayoutType } from '@/lib/keyboardLayouts';
 
 /**
- * Hook to handle keyboard layout input translation
- * This intercepts the actual input events and translates characters
+ * Hook to handle keyboard layout input translation for non-QWERTY layouts
+ * Intercepts input events and translates characters from QWERTY to target layout in real-time
+ * 
+ * @returns Object with keyboard layout utilities and event handlers
+ * @example
+ * ```tsx
+ * const { currentLayout, handleInput, handleBeforeInput } = useKeyboardLayoutInput();
+ * 
+ * <textarea
+ *   onInput={handleInput}
+ *   onBeforeInput={handleBeforeInput}
+ * />
+ * ```
  */
 export function useKeyboardLayoutInput() {
   const { preferences } = usePreferences();

@@ -1,8 +1,12 @@
 /**
- * Keyboard layout mappings for different keyboard layouts
- * Maps physical key positions (QWERTY) to actual characters for each layout
+ * Keyboard layout mappings for alternative keyboard layouts
+ * Provides comprehensive character translation from QWERTY to COLEMAK, DVORAK, and WORKMAN
+ * 
+ * This module enables users with alternative keyboard layouts to type naturally
+ * while the application receives the correct characters for their chosen layout.
  */
 
+/** Mapping from QWERTY characters to target layout characters */
 export type LayoutMapping = {
   [key: string]: string;
 };
@@ -216,6 +220,8 @@ export type KeyboardLayoutType = 'qwerty' | 'colemak' | 'dvorak' | 'workman';
 
 /**
  * Get the keyboard layout mapping for a given layout type
+ * @param layout - The target keyboard layout
+ * @returns Layout mapping object or null for QWERTY
  */
 export function getLayoutMapping(layout: KeyboardLayoutType): LayoutMapping | null {
   switch (layout) {
@@ -233,6 +239,9 @@ export function getLayoutMapping(layout: KeyboardLayoutType): LayoutMapping | nu
 
 /**
  * Translate a key from QWERTY to the target layout
+ * @param key - The character to translate
+ * @param targetLayout - The target keyboard layout
+ * @returns Translated character or original if no mapping exists
  */
 export function translateKey(key: string, targetLayout: KeyboardLayoutType): string {
   if (targetLayout === 'qwerty') {
@@ -317,7 +326,8 @@ export function translateToQwerty(key: string, sourceLayout: KeyboardLayoutType)
 
 /**
  * Check if a keyboard event should be translated
- * Returns false for special keys, modifiers, etc.
+ * @param event - The keyboard event to check
+ * @returns True if the key should be translated, false for special keys/modifiers
  */
 export function shouldTranslateKey(event: KeyboardEvent): boolean {
   // Don't translate if any modifier keys are pressed

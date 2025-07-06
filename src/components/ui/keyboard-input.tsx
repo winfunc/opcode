@@ -2,13 +2,16 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 import { useKeyboardLayoutInput } from "@/hooks/useKeyboardLayoutInput"
 
+/** Props for KeyboardInput component */
 export interface KeyboardInputProps
   extends React.InputHTMLAttributes<HTMLInputElement> {
+  /** Optional callback for value changes */
   onValueChange?: (value: string) => void;
 }
 
 /**
- * Input component with keyboard layout support
+ * Input component with automatic keyboard layout translation
+ * Supports COLEMAK, DVORAK, and WORKMAN layouts with real-time character conversion
  */
 const KeyboardInput = React.forwardRef<HTMLInputElement, KeyboardInputProps>(
   ({ className, type, onChange, onValueChange, onKeyDown, ...props }, ref) => {

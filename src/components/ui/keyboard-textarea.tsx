@@ -2,13 +2,16 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 import { useKeyboardLayoutInput } from "@/hooks/useKeyboardLayoutInput"
 
+/** Props for KeyboardTextarea component */
 export interface KeyboardTextareaProps
   extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
+  /** Optional callback for value changes */
   onValueChange?: (value: string) => void;
 }
 
 /**
- * Textarea component with keyboard layout support
+ * Textarea component with automatic keyboard layout translation
+ * Supports COLEMAK, DVORAK, and WORKMAN layouts with real-time character conversion
  */
 const KeyboardTextarea = React.forwardRef<HTMLTextAreaElement, KeyboardTextareaProps>(
   ({ className, onChange, onValueChange, onKeyDown, ...props }, ref) => {
