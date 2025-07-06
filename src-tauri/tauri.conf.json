@@ -46,6 +46,14 @@
     },
     "shell": {
       "open": true
+    },
+    "updater": {
+      "active": true,
+      "dialog": true,
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEUyMEY0NkRGMzU5NkI4OUQKUldTdlJOOGlBaTJDSWxSUkprT2lPbW5Gc2J1enJTZFpTRG0wNnhQc1RGWVdGQmhjbmJYaE5sZ3YK",
+      "endpoints": [
+        "https://releases.asterisk.so/claudia/{{target}}/{{arch}}/{{current_version}}"
+      ]
     }
   },
   "bundle": {
@@ -60,6 +68,23 @@
     ],
     "externalBin": [
       "binaries/claude-code"
-    ]
+    ],
+    "resources": [
+      "resources/claudia.desktop"
+    ],
+    "linux": {
+      "deb": {
+        "files": {
+          "/usr/share/applications/claudia.desktop": "resources/claudia.desktop"
+        }
+      },
+      "rpm": {
+        "epoch": 0,
+        "files": {
+          "/usr/share/applications/claudia.desktop": "resources/claudia.desktop"
+        },
+        "release": "1"
+      }
+    }
   }
 }
