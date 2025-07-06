@@ -5,7 +5,7 @@
 This pull request introduces a comprehensive appearance customization system to Claudia, addressing accessibility needs for users with high-resolution monitors and alternative keyboard layouts. The feature adds:
 
 - **Global font scaling** with 8 size options (12px to 32px) affecting ALL UI text
-- **Universal panel width customization** with 8 width options (768px to full width) applying to ALL GUI panels
+- **Universal panel width customization** with 9 width options (768px to 2560px + full width) applying to ALL GUI panels
 - **Responsive tab layout** that prevents overflow at large font sizes
 - **Keyboard layout support** for COLEMAK, DVORAK, and WORKMAN with real-time translation
 
@@ -22,14 +22,16 @@ This pull request introduces a comprehensive appearance customization system to 
 - Implemented CSS custom properties (`--font-scale`) that cascade through the entire UI
 - Created font size variables that scale proportionally: `--font-size-xs` through `--font-size-4xl`
 - Override Tailwind utilities to use scaled sizes globally
+- **Scale MDEditor toolbar**: Buttons, icons, padding, and height scale with font size
 - Font sizes range from "small" (12px) to "giant" (32px)
 
 ### 2. Universal Panel Width Management
 - Added CSS variable `--panel-max-width` for dynamic panel sizing
-- Implemented 8 width options from "compact" (768px) to "full" width
-- **Applied to ALL GUI panels**: Settings dialogs, main content, modals, and containers
+- Implemented 9 width options from "compact" (768px) to "ultra-wide+" (2560px) plus full width
+- **Applied to ALL GUI panels**: Settings dialogs, Usage Dashboard, CLAUDE.md editor, main content, modals, and all containers
 - Full width mode includes responsive padding for better readability
 - Uses data attributes and comprehensive CSS selectors for global application
+- **Default changed to Ultra Wide (1920px)** for better modern display support
 
 ### 3. Responsive Tab Layout
 - Fixed tab overflow issue at large font sizes (24px+)
@@ -80,10 +82,11 @@ This pull request introduces a comprehensive appearance customization system to 
 2. Comfortable (1024px) - Standard laptop
 3. Spacious (1280px) - Standard desktop
 4. Wide (1440px) - Wide monitors
-5. Wider (1600px) - Ultra-wide (**NEW DEFAULT**)
+5. Wider (1600px) - Ultra-wide
 6. Widest (1760px) - Maximum fixed
-7. Ultra Wide (1920px) - Full HD width
-8. Full Width - Responsive with padding
+7. Ultra Wide (1920px) - Full HD width (**NEW DEFAULT**)
+8. Ultra Wide+ (2560px) - **NEW**: Extreme wide displays
+9. Full Width - Responsive with padding
 
 ### Keyboard Layouts
 - **COLEMAK**: Popular ergonomic layout
@@ -95,7 +98,8 @@ This pull request introduces a comprehensive appearance customization system to 
 - ✅ TypeScript compilation passes without errors
 - ✅ Build process completes successfully
 - ✅ Font scaling affects all UI elements (menus, headers, content)
-- ✅ Panel width adjustments work correctly
+- ✅ Panel width adjustments work correctly across ALL panels (Settings, Usage Dashboard, CLAUDE.md editor, main content)
+- ✅ MDEditor toolbar scales with font size settings (buttons, icons, height)
 - ✅ Keyboard layouts translate accurately
 - ✅ Preferences persist in localStorage
 - ✅ No console errors or warnings
@@ -126,8 +130,9 @@ This pull request introduces a comprehensive appearance customization system to 
 ## Benefits
 
 1. **Improved Accessibility**: Users with visual impairments or high-res monitors can now comfortably use Claudia
-2. **Better Screen Utilization**: Wide monitor users can take advantage of their full screen real estate
-3. **Inclusive Design**: Support for alternative keyboard layouts makes Claudia accessible to a wider audience
-4. **Future-Proof**: The preference system can be easily extended for additional customization options
+2. **Better Screen Utilization**: Wide monitor users can take advantage of their full screen real estate (including ultra-wide 2560px+ displays)
+3. **Consistent Panel Sizing**: All application panels now respect the width setting, providing a uniform experience
+4. **Inclusive Design**: Support for alternative keyboard layouts makes Claudia accessible to a wider audience
+5. **Future-Proof**: The preference system can be easily extended for additional customization options
 
 This feature significantly improves the user experience and accessibility of Claudia while maintaining backward compatibility and following the project's coding standards.
