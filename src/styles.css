@@ -197,6 +197,7 @@ button:focus-visible,
 .w-md-editor-toolbar {
   background-color: var(--color-card) !important;
   border-bottom: 1px solid var(--color-border) !important;
+  min-height: calc(2.5rem * var(--font-scale)) !important;
 }
 
 .w-md-editor-toolbar-divider {
@@ -205,11 +206,18 @@ button:focus-visible,
 
 .w-md-editor-toolbar button {
   color: var(--color-foreground) !important;
+  font-size: var(--font-size-sm) !important;
+  padding: calc(0.25rem * var(--font-scale)) calc(0.375rem * var(--font-scale)) !important;
 }
 
 .w-md-editor-toolbar button:hover {
   background-color: var(--color-accent) !important;
   color: var(--color-accent-foreground) !important;
+}
+
+.w-md-editor-toolbar button svg {
+  width: calc(1rem * var(--font-scale)) !important;
+  height: calc(1rem * var(--font-scale)) !important;
 }
 
 .w-md-editor-content {
@@ -766,6 +774,13 @@ code::-webkit-scrollbar-thumb:hover,
   max-width: var(--panel-max-width) !important;
 }
 
+/* Specific overrides for Settings and other components that may not be captured */
+div.max-w-4xl,
+div.max-w-5xl,
+div.max-w-6xl {
+  max-width: var(--panel-max-width) !important;
+}
+
 /* Full width mode with padding */
 [data-panel-width="full"] .max-w-5xl,
 [data-panel-width="full"] .max-w-4xl,
@@ -782,7 +797,10 @@ code::-webkit-scrollbar-thumb:hover,
 [data-panel-width="full"] .dialog-content,
 [data-panel-width="full"] .modal-content,
 [data-panel-width="full"] .panel,
-[data-panel-width="full"] [class*="max-w-"] {
+[data-panel-width="full"] [class*="max-w-"],
+[data-panel-width="full"] div.max-w-4xl,
+[data-panel-width="full"] div.max-w-5xl,
+[data-panel-width="full"] div.max-w-6xl {
   max-width: calc(100% - 4rem) !important;
   padding-left: 2rem;
   padding-right: 2rem;
