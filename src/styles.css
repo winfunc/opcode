@@ -41,6 +41,20 @@
   /* Transitions */
   --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+  /* Font scaling system */
+  --font-scale: 0.875; /* Default scale (14px base) */
+  --font-size-xs: calc(0.75rem * var(--font-scale));
+  --font-size-sm: calc(0.875rem * var(--font-scale));
+  --font-size-base: calc(1rem * var(--font-scale));
+  --font-size-lg: calc(1.125rem * var(--font-scale));
+  --font-size-xl: calc(1.25rem * var(--font-scale));
+  --font-size-2xl: calc(1.5rem * var(--font-scale));
+  --font-size-3xl: calc(1.875rem * var(--font-scale));
+  --font-size-4xl: calc(2.25rem * var(--font-scale));
+
+  /* Panel width system */
+  --panel-max-width: 1920px; /* Default ultra-wide width */
 }
 
 /* Reset and base styles */
@@ -183,6 +197,7 @@ button:focus-visible,
 .w-md-editor-toolbar {
   background-color: var(--color-card) !important;
   border-bottom: 1px solid var(--color-border) !important;
+  min-height: calc(2.5rem * var(--font-scale)) !important;
 }
 
 .w-md-editor-toolbar-divider {
@@ -191,11 +206,18 @@ button:focus-visible,
 
 .w-md-editor-toolbar button {
   color: var(--color-foreground) !important;
+  font-size: var(--font-size-sm) !important;
+  padding: calc(0.25rem * var(--font-scale)) calc(0.375rem * var(--font-scale)) !important;
 }
 
 .w-md-editor-toolbar button:hover {
   background-color: var(--color-accent) !important;
   color: var(--color-accent-foreground) !important;
+}
+
+.w-md-editor-toolbar button svg {
+  width: calc(1rem * var(--font-scale)) !important;
+  height: calc(1rem * var(--font-scale)) !important;
 }
 
 .w-md-editor-content {
@@ -716,4 +738,70 @@ code::-webkit-scrollbar-thumb:hover,
 
 .image-move-to-input {
   animation: moveToInput 0.8s ease-in-out forwards;
+}
+
+/* Global font scaling - override Tailwind utilities to use scaled sizes */
+.text-xs { font-size: var(--font-size-xs) !important; }
+.text-sm { font-size: var(--font-size-sm) !important; }
+.text-base { font-size: var(--font-size-base) !important; }
+.text-lg { font-size: var(--font-size-lg) !important; }
+.text-xl { font-size: var(--font-size-xl) !important; }
+.text-2xl { font-size: var(--font-size-2xl) !important; }
+.text-3xl { font-size: var(--font-size-3xl) !important; }
+.text-4xl { font-size: var(--font-size-4xl) !important; }
+
+/* Panel width overrides - Apply to ALL GUI panels */
+.max-w-5xl,
+.max-w-4xl,
+.max-w-3xl,
+.max-w-2xl,
+.max-w-xl,
+.max-w-lg,
+.max-w-md,
+.max-w-sm {
+  max-width: var(--panel-max-width) !important;
+}
+
+/* Apply panel width to common container classes */
+.container,
+.main-content,
+.settings-container,
+.dialog-content,
+.modal-content,
+.panel,
+.max-w-6xl,
+[class*="max-w-"] {
+  max-width: var(--panel-max-width) !important;
+}
+
+/* Specific overrides for Settings and other components that may not be captured */
+div.max-w-4xl,
+div.max-w-5xl,
+div.max-w-6xl {
+  max-width: var(--panel-max-width) !important;
+}
+
+/* Full width mode with padding */
+[data-panel-width="full"] .max-w-5xl,
+[data-panel-width="full"] .max-w-4xl,
+[data-panel-width="full"] .max-w-3xl,
+[data-panel-width="full"] .max-w-2xl,
+[data-panel-width="full"] .max-w-xl,
+[data-panel-width="full"] .max-w-lg,
+[data-panel-width="full"] .max-w-md,
+[data-panel-width="full"] .max-w-sm,
+[data-panel-width="full"] .max-w-6xl,
+[data-panel-width="full"] .container,
+[data-panel-width="full"] .main-content,
+[data-panel-width="full"] .settings-container,
+[data-panel-width="full"] .dialog-content,
+[data-panel-width="full"] .modal-content,
+[data-panel-width="full"] .panel,
+[data-panel-width="full"] [class*="max-w-"],
+[data-panel-width="full"] div.max-w-4xl,
+[data-panel-width="full"] div.max-w-5xl,
+[data-panel-width="full"] div.max-w-6xl {
+  max-width: calc(100% - 4rem) !important;
+  padding-left: 2rem;
+  padding-right: 2rem;
 } 

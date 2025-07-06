@@ -13,7 +13,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Popover } from "@/components/ui/popover";
-import { Textarea } from "@/components/ui/textarea";
+import { KeyboardTextarea } from "@/components/ui/keyboard-textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { FilePicker } from "./FilePicker";
 import { ImagePreview } from "./ImagePreview";
@@ -639,7 +639,7 @@ const FloatingPromptInputInner = (
                 />
               )}
 
-              <Textarea
+              <KeyboardTextarea
                 ref={expandedTextareaRef}
                 value={prompt}
                 onChange={handleTextChange}
@@ -881,7 +881,7 @@ const FloatingPromptInputInner = (
 
               {/* Prompt Input */}
               <div className="flex-1 relative">
-                <Textarea
+                <KeyboardTextarea
                   ref={textareaRef}
                   value={prompt}
                   onChange={handleTextChange}

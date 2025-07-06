@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Loader2, Bot, FolderCode } from "lucide-react";
 import { api, type Project, type Session, type ClaudeMdFile } from "@/lib/api";
 import { OutputCacheProvider } from "@/lib/outputCache";
+import { PreferencesProvider } from "@/contexts/PreferencesContext";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ProjectList } from "@/components/ProjectList";
@@ -449,8 +450,9 @@ function App() {
   };
 
   return (
-    <OutputCacheProvider>
-      <div className="h-screen bg-background flex flex-col">
+    <PreferencesProvider>
+      <OutputCacheProvider>
+        <div className="h-screen bg-background flex flex-col">
         {/* Topbar */}
         <Topbar
           onClaudeClick={() => handleViewChange("editor")}
@@ -490,8 +492,9 @@ function App() {
             />
           )}
         </ToastContainer>
-      </div>
-    </OutputCacheProvider>
+        </div>
+      </OutputCacheProvider>
+    </PreferencesProvider>
   );
 }
 
