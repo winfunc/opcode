@@ -19,7 +19,7 @@
  */
 
 import { spawn } from 'child_process';
-import { mkdir, rm, readdir, copyFile, access } from 'fs/promises';
+import { mkdir, rm, readdir, copyFile, access, stat } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join, resolve } from 'path';
 
@@ -65,6 +65,33 @@ async function pathExists(path) {
     return true;
   } catch {
     return false;
+  }
+}
+
+/**
+ * Recursively copy a directory
+ * @param {string} src - Source directory
+ * @param {string} dest - Destination directory
+ */
+async function copyDirectoryRecursive(src, dest) {
+  // Create destination directory if it doesn't exist
+  await mkdir(dest, { recursive: true });
+  
+  // Read all items in source directory
+  const entries = await readdir(src, { withFileTypes: true });
+  
+  // Copy each item
+  for (const entry of entries) {
+    const srcPath = join(src, entry.name);
+    const destPath = join(dest, entry.name);
+    
+    if (entry.isDirectory()) {
+      // Recursively copy subdirectory
+      await copyDirectoryRecursive(srcPath, destPath);
+    } else {
+      // Copy file
+      await copyFile(srcPath, destPath);
+    }
   }
 }
 
@@ -207,8 +234,8 @@ async function copyRequiredFiles(packageDir) {
         await rm(destPath, { recursive: true, force: true });
       }
       
-      // Copy directory recursively using cp command
-      await runCommand('cp', ['-r', srcPath, destPath]);
+      // Copy directory recursively using Node.js
+      await copyDirectoryRecursive(srcPath, destPath);
     } else {
       console.warn(`Warning: ${dir}/ directory not found in package`);
     }
