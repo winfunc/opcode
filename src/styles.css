@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
-/* Dark theme configuration */
+/* Theme system with CSS variables */
 @theme {
-  /* Colors */
+  /* Default/Dark theme colors */
   --color-background: oklch(0.12 0.01 240);
   --color-foreground: oklch(0.98 0.01 240);
   --color-card: oklch(0.14 0.01 240);
@@ -41,6 +41,62 @@
   /* Transitions */
   --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* Light theme override */
+:root.light {
+  /* Light theme colors */
+  --color-background: oklch(0.98 0.01 240);
+  --color-foreground: oklch(0.18 0.01 240);
+  --color-card: oklch(0.96 0.01 240);
+  --color-card-foreground: oklch(0.18 0.01 240);
+  --color-popover: oklch(0.98 0.01 240);
+  --color-popover-foreground: oklch(0.18 0.01 240);
+  --color-primary: oklch(0.18 0.01 240);
+  --color-primary-foreground: oklch(0.98 0.01 240);
+  --color-secondary: oklch(0.94 0.01 240);
+  --color-secondary-foreground: oklch(0.18 0.01 240);
+  --color-muted: oklch(0.94 0.01 240);
+  --color-muted-foreground: oklch(0.50 0.01 240);
+  --color-accent: oklch(0.94 0.01 240);
+  --color-accent-foreground: oklch(0.18 0.01 240);
+  --color-destructive: oklch(0.65 0.15 25);
+  --color-destructive-foreground: oklch(0.98 0.01 240);
+  --color-border: oklch(0.90 0.01 240);
+  --color-input: oklch(0.90 0.01 240);
+  --color-ring: oklch(0.52 0.015 240);
+  
+  /* Additional light theme colors */
+  --color-green-500: oklch(0.60 0.18 142);
+  --color-green-600: oklch(0.52 0.20 142);
+}
+
+/* Ensure dark theme is explicit */
+:root.dark {
+  /* Dark theme colors (same as default) */
+  --color-background: oklch(0.12 0.01 240);
+  --color-foreground: oklch(0.98 0.01 240);
+  --color-card: oklch(0.14 0.01 240);
+  --color-card-foreground: oklch(0.98 0.01 240);
+  --color-popover: oklch(0.12 0.01 240);
+  --color-popover-foreground: oklch(0.98 0.01 240);
+  --color-primary: oklch(0.98 0.01 240);
+  --color-primary-foreground: oklch(0.17 0.01 240);
+  --color-secondary: oklch(0.16 0.01 240);
+  --color-secondary-foreground: oklch(0.98 0.01 240);
+  --color-muted: oklch(0.16 0.01 240);
+  --color-muted-foreground: oklch(0.68 0.01 240);
+  --color-accent: oklch(0.16 0.01 240);
+  --color-accent-foreground: oklch(0.98 0.01 240);
+  --color-destructive: oklch(0.6 0.2 25);
+  --color-destructive-foreground: oklch(0.98 0.01 240);
+  --color-border: oklch(0.16 0.01 240);
+  --color-input: oklch(0.16 0.01 240);
+  --color-ring: oklch(0.52 0.015 240);
+  
+  /* Additional dark theme colors */
+  --color-green-500: oklch(0.72 0.20 142);
+  --color-green-600: oklch(0.64 0.22 142);
 }
 
 /* Reset and base styles */
@@ -157,7 +213,7 @@ button:focus-visible,
   }
 }
 
-/* Markdown Editor Dark Mode Styles */
+/* Markdown Editor Theme Styles */
 [data-color-mode="dark"] {
   --color-border-default: rgb(48, 54, 61);
   --color-canvas-default: rgb(13, 17, 23);
@@ -167,6 +223,17 @@ button:focus-visible,
   --color-fg-subtle: rgb(110, 118, 129);
   --color-accent-fg: rgb(88, 166, 255);
   --color-danger-fg: rgb(248, 81, 73);
+}
+
+[data-color-mode="light"] {
+  --color-border-default: rgb(208, 215, 222);
+  --color-canvas-default: rgb(255, 255, 255);
+  --color-canvas-subtle: rgb(246, 248, 250);
+  --color-fg-default: rgb(36, 41, 47);
+  --color-fg-muted: rgb(101, 109, 118);
+  --color-fg-subtle: rgb(128, 134, 141);
+  --color-accent-fg: rgb(9, 105, 218);
+  --color-danger-fg: rgb(207, 34, 46);
 }
 
 .w-md-editor {

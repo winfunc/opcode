@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { claudeSyntaxTheme } from "@/lib/claudeSyntaxTheme";
+import { useSyntaxTheme } from "@/hooks/useSyntaxTheme";
 import type { ClaudeStreamMessage } from "./AgentExecution";
 import {
   TodoWidget,
@@ -51,6 +51,7 @@ interface StreamMessageProps {
  * Component to render a single Claude Code stream message
  */
 const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, className, streamMessages, onLinkDetected }) => {
+  const syntaxTheme = useSyntaxTheme();
   // State to track tool results mapped by tool call ID
   const [toolResults, setToolResults] = useState<Map<string, any>>(new Map());
   
@@ -131,7 +132,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                               const match = /language-(\w+)/.exec(className || '');
                               return !inline && match ? (
                                 <SyntaxHighlighter
-                                  style={claudeSyntaxTheme}
+                                  style={syntaxTheme}
                                   language={match[1]}
                                   PreTag="div"
                                   {...props}
@@ -660,7 +661,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                           const match = /language-(\w+)/.exec(className || '');
                           return !inline && match ? (
                             <SyntaxHighlighter
-                              style={claudeSyntaxTheme}
+                              style={syntaxTheme}
                               language={match[1]}
                               PreTag="div"
                               {...props}
