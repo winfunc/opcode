@@ -25,6 +25,7 @@ import { ClaudeVersionSelector } from "./ClaudeVersionSelector";
 import { StorageTab } from "./StorageTab";
 import { HooksEditor } from "./HooksEditor";
 import { SlashCommandsManager } from "./SlashCommandsManager";
+import { useTheme } from "@/contexts/ThemeContext";
 
 interface SettingsProps {
   /**
@@ -56,6 +57,7 @@ export const Settings: React.FC<SettingsProps> = ({
   onBack,
   className,
 }) => {
+  const { theme, setTheme } = useTheme();
   const [settings, setSettings] = useState<ClaudeSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -375,6 +377,21 @@ export const Settings: React.FC<SettingsProps> = ({
                   <h3 className="text-base font-semibold mb-4">General Settings</h3>
                   
                   <div className="space-y-4">
+                    {/* Theme Selection */}
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5 flex-1">
+                        <Label htmlFor="theme">Light Theme</Label>
+                        <p className="text-xs text-muted-foreground">
+                          Enable light mode appearance
+                        </p>
+                      </div>
+                      <Switch
+                        id="theme"
+                        checked={theme === 'light'}
+                        onCheckedChange={(checked) => setTheme(checked ? 'light' : 'dark')}
+                      />
+                    </div>
+                    
                     {/* Include Co-authored By */}
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5 flex-1">

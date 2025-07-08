@@ -51,7 +51,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { claudeSyntaxTheme } from "@/lib/claudeSyntaxTheme";
+import { useSyntaxTheme } from "@/hooks/useSyntaxTheme";
 import { Button } from "@/components/ui/button";
 import { createPortal } from "react-dom";
 import * as Diff from 'diff';
@@ -399,6 +399,7 @@ export const ReadWidget: React.FC<{ filePath: string; result?: any }> = ({ fileP
  * Widget for Read tool result - shows file content with line numbers
  */
 export const ReadResultWidget: React.FC<{ content: string; filePath?: string }> = ({ content, filePath }) => {
+  const syntaxTheme = useSyntaxTheme();
   const [isExpanded, setIsExpanded] = useState(false);
   
   // Extract file extension for syntax highlighting
@@ -530,7 +531,7 @@ export const ReadResultWidget: React.FC<{ content: string; filePath?: string }> 
         <div className="relative overflow-x-auto">
           <SyntaxHighlighter
             language={language}
-            style={claudeSyntaxTheme}
+            style={syntaxTheme}
             showLineNumbers
             startingLineNumber={startLineNumber}
             wrapLongLines={false}
@@ -694,6 +695,7 @@ export const BashWidget: React.FC<{
  * Widget for Write tool
  */
 export const WriteWidget: React.FC<{ filePath: string; content: string; result?: any }> = ({ filePath, content, result: _result }) => {
+  const syntaxTheme = useSyntaxTheme();
   const [isMaximized, setIsMaximized] = useState(false);
   
   // Extract file extension for syntax highlighting
@@ -776,7 +778,7 @@ export const WriteWidget: React.FC<{ filePath: string; content: string; result?:
           <div className="flex-1 overflow-auto">
             <SyntaxHighlighter
               language={language}
-              style={claudeSyntaxTheme}
+              style={syntaxTheme}
               customStyle={{
                 margin: 0,
                 padding: '1.5rem',
@@ -827,7 +829,7 @@ export const WriteWidget: React.FC<{ filePath: string; content: string; result?:
       <div className="overflow-auto flex-1">
         <SyntaxHighlighter
           language={language}
-          style={claudeSyntaxTheme}
+          style={syntaxTheme}
           customStyle={{
             margin: 0,
             padding: '1rem',
@@ -1121,6 +1123,7 @@ export const EditWidget: React.FC<{
   new_string: string;
   result?: any;
 }> = ({ file_path, old_string, new_string, result: _result }) => {
+  const syntaxTheme = useSyntaxTheme();
 
   const diffResult = Diff.diffLines(old_string || '', new_string || '', { 
     newlineIsToken: true,
@@ -1165,7 +1168,7 @@ export const EditWidget: React.FC<{
                 <div className="flex-1">
                   <SyntaxHighlighter
                     language={language}
-                    style={claudeSyntaxTheme}
+                    style={syntaxTheme}
                     PreTag="div"
                     wrapLongLines={false}
                     customStyle={{
@@ -1196,6 +1199,7 @@ export const EditWidget: React.FC<{
  * Widget for Edit tool result - shows a diff view
  */
 export const EditResultWidget: React.FC<{ content: string }> = ({ content }) => {
+  const syntaxTheme = useSyntaxTheme();
   // Parse the content to extract file path and code snippet
   const lines = content.split('\n');
   let filePath = '';
@@ -1245,7 +1249,7 @@ export const EditResultWidget: React.FC<{ content: string }> = ({ content }) => 
       <div className="overflow-x-auto max-h-[440px]">
         <SyntaxHighlighter
           language={language}
-          style={claudeSyntaxTheme}
+          style={syntaxTheme}
           showLineNumbers
           startingLineNumber={startLineNumber}
           wrapLongLines={false}
@@ -1281,6 +1285,7 @@ export const MCPWidget: React.FC<{
   input?: any;
   result?: any;
 }> = ({ toolName, input, result: _result }) => {
+  const syntaxTheme = useSyntaxTheme();
   const [isExpanded, setIsExpanded] = useState(false);
   
   // Parse the tool name to extract components
@@ -1396,7 +1401,7 @@ export const MCPWidget: React.FC<{
                 )}>
                   <SyntaxHighlighter
                     language="json"
-                    style={claudeSyntaxTheme}
+                    style={syntaxTheme}
                     customStyle={{
                       margin: 0,
                       padding: '0.75rem',
@@ -1583,6 +1588,7 @@ export const MultiEditWidget: React.FC<{
   edits: Array<{ old_string: string; new_string: string }>;
   result?: any;
 }> = ({ file_path, edits, result: _result }) => {
+  const syntaxTheme = useSyntaxTheme();
   const [isExpanded, setIsExpanded] = useState(false);
   const language = getLanguage(file_path);
   
@@ -1645,7 +1651,7 @@ export const MultiEditWidget: React.FC<{
                               <div className="flex-1">
                                 <SyntaxHighlighter
                                   language={language}
-                                  style={claudeSyntaxTheme}
+                                  style={syntaxTheme}
                                   PreTag="div"
                                   wrapLongLines={false}
                                   customStyle={{
