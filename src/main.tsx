@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import "./i18n/i18n";
 import "./assets/shimmer.css";
 import "./styles.css";
 

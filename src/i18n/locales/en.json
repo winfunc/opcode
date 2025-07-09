@@ -1,0 +1,21 @@
+{
+  "translation": {
+    "topbar": {
+      "status": {
+        "checking": "Checking...",
+        "claudeCode": "Claude Code",
+        "claudeCodeVersion": "Claude Code v{{version}}",
+        "notFound": "Claude Code not found",
+        "selectInstallation": "Select Claude Installation",
+        "installClaudeCode": "Install Claude Code"
+      },
+      "buttons": {
+        "usageDashboard": "Usage Dashboard",
+        "claudeMd": "CLAUDE.md",
+        "mcp": "MCP",
+        "settings": "Settings",
+        "about": "About"
+      }
+    }
+  }
+}
