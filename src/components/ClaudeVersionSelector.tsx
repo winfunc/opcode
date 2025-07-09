@@ -1,20 +1,20 @@
-import React, { useEffect, useState } from "react";
-import { api, type ClaudeInstallation } from "@/lib/api";
-import { Label } from "@/components/ui/label";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Loader2, Terminal, Package, Check } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { api, type ClaudeInstallation } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { CheckCircle, Package, HardDrive, Settings } from "lucide-react";
 
 interface ClaudeVersionSelectorProps {
   /**
-   * Currently selected Claude installation path
+   * Currently selected installation path
    */
   selectedPath?: string | null;
   /**
-   * Callback when a Claude installation is selected
+   * Callback when an installation is selected
    */
   onSelect: (installation: ClaudeInstallation) => void;
   /**
@@ -22,21 +22,22 @@ interface ClaudeVersionSelectorProps {
    */
   className?: string;
   /**
-   * Whether to show a save button (for settings page)
+   * Whether to show the save button
    */
   showSaveButton?: boolean;
   /**
-   * Callback when save button is clicked
+   * Callback when save is clicked
    */
   onSave?: () => void;
   /**
-   * Whether the save operation is in progress
+   * Whether save is in progress
    */
   isSaving?: boolean;
 }
 
 /**
  * ClaudeVersionSelector component for selecting Claude Code installations
+ * Supports bundled sidecar, system installations, and user preferences
  * 
  * @example
  * <ClaudeVersionSelector
@@ -97,135 +98,206 @@ export const ClaudeVersionSelector: React.FC<ClaudeVersionSelectorProps> = ({
     }
   };
 
-  const handleSelect = (installation: ClaudeInstallation) => {
-    setSelectedInstallation(installation);
-    onSelect(installation);
+  const handleInstallationChange = (installationPath: string) => {
+    const installation = installations.find(i => i.path === installationPath);
+    if (installation) {
+      setSelectedInstallation(installation);
+      onSelect(installation);
+    }
   };
 
-  const getSourceIcon = (source: string) => {
-    if (source.includes("nvm")) return <Package className="w-4 h-4" />;
-    return <Terminal className="w-4 h-4" />;
+  const getInstallationIcon = (installation: ClaudeInstallation) => {
+    switch (installation.installation_type) {
+      case "Bundled":
+        return <Package className="h-4 w-4" />;
+      case "System":
+        return <HardDrive className="h-4 w-4" />;
+      case "Custom":
+        return <Settings className="h-4 w-4" />;
+      default:
+        return <HardDrive className="h-4 w-4" />;
+    }
   };
 
-  const getSourceLabel = (source: string) => {
-    if (source === "which") return "System PATH";
-    if (source === "homebrew") return "Homebrew";
-    if (source === "system") return "System";
-    if (source.startsWith("nvm")) return source.replace("nvm ", "NVM ");
-    if (source === "local-bin") return "Local bin";
-    if (source === "claude-local") return "Claude local";
-    if (source === "npm-global") return "NPM global";
-    if (source === "yarn" || source === "yarn-global") return "Yarn";
-    if (source === "bun") return "Bun";
-    return source;
+  const getInstallationTypeColor = (installation: ClaudeInstallation) => {
+    switch (installation.installation_type) {
+      case "Bundled":
+        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
+      case "System":
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
+      case "Custom":
+        return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300";
+      default:
+        return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300";
+    }
   };
 
   if (loading) {
     return (
-      <div className={cn("flex items-center justify-center py-8", className)}>
-        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-      </div>
+      <Card className={className}>
+        <CardHeader>
+          <CardTitle>Claude Code Installation</CardTitle>
+          <CardDescription>Loading available installations...</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center py-4">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   if (error) {
     return (
-      <Card className={cn("p-4", className)}>
-        <div className="text-sm text-destructive">{error}</div>
+      <Card className={className}>
+        <CardHeader>
+          <CardTitle>Claude Code Installation</CardTitle>
+          <CardDescription>Error loading installations</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-sm text-destructive mb-4">{error}</div>
+          <Button onClick={loadInstallations} variant="outline" size="sm">
+            Retry
+          </Button>
+        </CardContent>
       </Card>
     );
   }
 
-  if (installations.length === 0) {
-    return (
-      <Card className={cn("p-4", className)}>
-        <div className="text-sm text-muted-foreground">
-          No Claude Code installations found on your system.
-        </div>
-      </Card>
-    );
-  }
+  const bundledInstallations = installations.filter(i => i.installation_type === "Bundled");
+  const systemInstallations = installations.filter(i => i.installation_type === "System");
+  const customInstallations = installations.filter(i => i.installation_type === "Custom");
 
   return (
-    <div className={cn("space-y-4", className)}>
-      <div>
-        <Label className="text-sm font-medium mb-3 block">
-          Select Claude Code Installation
-        </Label>
-        <RadioGroup
-          value={selectedInstallation?.path}
-          onValueChange={(value: string) => {
-            const installation = installations.find(i => i.path === value);
-            if (installation) {
-              handleSelect(installation);
-            }
-          }}
-        >
-          <div className="space-y-2">
-            {installations.map((installation) => (
-              <Card
-                key={installation.path}
-                className={cn(
-                  "relative cursor-pointer transition-colors",
-                  selectedInstallation?.path === installation.path
-                    ? "border-primary"
-                    : "hover:border-muted-foreground/50"
-                )}
-                onClick={() => handleSelect(installation)}
-              >
-                <div className="flex items-start p-4">
-                  <RadioGroupItem
-                    value={installation.path}
-                    id={installation.path}
-                    className="mt-1"
-                  />
-                  <div className="ml-3 flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      {getSourceIcon(installation.source)}
-                      <span className="font-medium text-sm">
-                        {getSourceLabel(installation.source)}
-                      </span>
-                      {installation.version && (
-                        <Badge variant="secondary" className="text-xs">
-                          v{installation.version}
-                        </Badge>
-                      )}
-                      {selectedPath === installation.path && (
-                        <Badge variant="default" className="text-xs">
-                          <Check className="w-3 h-3 mr-1" />
-                          Current
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground font-mono break-all">
-                      {installation.path}
-                    </p>
+    <Card className={className}>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <CheckCircle className="h-5 w-5" />
+          Claude Code Installation
+        </CardTitle>
+        <CardDescription>
+          Choose your preferred Claude Code installation. Bundled version is recommended for best compatibility.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Available Installations */}
+        <div className="space-y-3">
+          <Label className="text-sm font-medium">Available Installations</Label>
+          <Select value={selectedInstallation?.path || ""} onValueChange={handleInstallationChange}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select Claude installation">
+                {selectedInstallation && (
+                  <div className="flex items-center gap-2">
+                    {getInstallationIcon(selectedInstallation)}
+                    <span className="truncate">{selectedInstallation.path}</span>
+                    <Badge variant="secondary" className={cn("text-xs", getInstallationTypeColor(selectedInstallation))}>
+                      {selectedInstallation.installation_type}
+                    </Badge>
                   </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </RadioGroup>
-      </div>
+                )}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {bundledInstallations.length > 0 && (
+                <>
+                  <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Bundled</div>
+                  {bundledInstallations.map((installation) => (
+                    <SelectItem key={installation.path} value={installation.path}>
+                      <div className="flex items-center gap-2 w-full">
+                        {getInstallationIcon(installation)}
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium">Claude Code (Bundled)</div>
+                          <div className="text-xs text-muted-foreground">
+                            {installation.version || "Version unknown"} • {installation.source}
+                          </div>
+                        </div>
+                        <Badge variant="secondary" className={cn("text-xs", getInstallationTypeColor(installation))}>
+                          Recommended
+                        </Badge>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </>
+              )}
+              
+              {systemInstallations.length > 0 && (
+                <>
+                  <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">System Installations</div>
+                  {systemInstallations.map((installation) => (
+                    <SelectItem key={installation.path} value={installation.path}>
+                      <div className="flex items-center gap-2 w-full">
+                        {getInstallationIcon(installation)}
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium truncate">{installation.path}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {installation.version || "Version unknown"} • {installation.source}
+                          </div>
+                        </div>
+                        <Badge variant="outline" className="text-xs">
+                          System
+                        </Badge>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </>
+              )}
 
-      {showSaveButton && onSave && (
-        <div className="flex justify-end">
-          <Button
-            onClick={onSave}
-            disabled={!selectedInstallation || isSaving}
-            size="sm"
-          >
-            {isSaving ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              "Save Selection"
-            )}
-          </Button>
+              {customInstallations.length > 0 && (
+                <>
+                  <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Custom Installations</div>
+                  {customInstallations.map((installation) => (
+                    <SelectItem key={installation.path} value={installation.path}>
+                      <div className="flex items-center gap-2 w-full">
+                        {getInstallationIcon(installation)}
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium truncate">{installation.path}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {installation.version || "Version unknown"} • {installation.source}
+                          </div>
+                        </div>
+                        <Badge variant="outline" className="text-xs">
+                          Custom
+                        </Badge>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </>
+              )}
+            </SelectContent>
+          </Select>
         </div>
-      )}
-    </div>
+
+        {/* Installation Details */}
+        {selectedInstallation && (
+          <div className="p-3 bg-muted rounded-lg space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Selected Installation</span>
+              <Badge className={cn("text-xs", getInstallationTypeColor(selectedInstallation))}>
+                {selectedInstallation.installation_type}
+              </Badge>
+            </div>
+            <div className="text-sm text-muted-foreground">
+              <div><strong>Path:</strong> {selectedInstallation.path}</div>
+              <div><strong>Source:</strong> {selectedInstallation.source}</div>
+              {selectedInstallation.version && (
+                <div><strong>Version:</strong> {selectedInstallation.version}</div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Save Button */}
+        {showSaveButton && (
+          <Button 
+            onClick={onSave} 
+            disabled={isSaving || !selectedInstallation}
+            className="w-full"
+          >
+            {isSaving ? "Saving..." : "Save Selection"}
+          </Button>
+        )}
+      </CardContent>
+    </Card>
   );
 }; 

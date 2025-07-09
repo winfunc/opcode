@@ -102,12 +102,13 @@
 .rotating-symbol {
   display: inline-block;
   color: #d97757;
-  font-size: inherit;
+  font-size: 1.5rem; /* Make it bigger! */
   margin-right: 0.5rem;
   font-weight: bold;
-  vertical-align: text-bottom;
+  vertical-align: middle;
   position: relative;
   line-height: 1;
+  top: -2px;
 }
 
 .rotating-symbol::before {

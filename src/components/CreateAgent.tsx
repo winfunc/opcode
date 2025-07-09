@@ -11,6 +11,7 @@ import MDEditor from "@uiw/react-md-editor";
 import { type AgentIconName } from "./CCAgents";
 import { IconPicker, ICON_MAP } from "./IconPicker";
 
+
 interface CreateAgentProps {
   /**
    * Optional agent to edit (if provided, component is in edit mode)
@@ -195,11 +196,11 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
             transition={{ duration: 0.3, delay: 0.1 }}
             className="space-y-6"
           >
-            {/* Basic Information */}
-            <div className="space-y-4">
-              <div>
-                <h3 className="text-sm font-medium mb-4">Basic Information</h3>
-              </div>
+                {/* Basic Information */}
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-sm font-medium mb-4">Basic Information</h3>
+                  </div>
               
               {/* Name and Icon */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -358,8 +359,6 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
                 </p>
               </div>
 
-
-
               {/* System Prompt Editor */}
               <div className="space-y-2">
                 <Label>System Prompt</Label>
@@ -380,28 +379,28 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
           </motion.div>
         </div>
       </div>
-      
-      {/* Toast Notification */}
-      <ToastContainer>
-        {toast && (
-          <Toast
-            message={toast.message}
-            type={toast.type}
-            onDismiss={() => setToast(null)}
-          />
-        )}
-      </ToastContainer>
-
-      {/* Icon Picker Dialog */}
-      <IconPicker
-        value={selectedIcon}
-        onSelect={(iconName) => {
-          setSelectedIcon(iconName as AgentIconName);
-          setShowIconPicker(false);
-        }}
-        isOpen={showIconPicker}
-        onClose={() => setShowIconPicker(false)}
+  
+  {/* Toast Notification */}
+  <ToastContainer>
+    {toast && (
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        onDismiss={() => setToast(null)}
       />
-    </div>
+    )}
+  </ToastContainer>
+
+  {/* Icon Picker Dialog */}
+  <IconPicker
+    value={selectedIcon}
+    onSelect={(iconName) => {
+      setSelectedIcon(iconName as AgentIconName);
+      setShowIconPicker(false);
+    }}
+    isOpen={showIconPicker}
+    onClose={() => setShowIconPicker(false)}
+  />
+</div>
   );
 }; 

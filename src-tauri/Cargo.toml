@@ -1,8 +1,9 @@
 [package]
 name = "claudia"
 version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
+description = "GUI app and Toolkit for Claude Code"
+authors = ["mufeedvh", "123vviekr"]
+license = "AGPL-3.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -47,6 +48,7 @@ sha2 = "0.10"
 zstd = "0.13"
 uuid = { version = "1.6", features = ["v4", "serde"] }
 walkdir = "2"
+serde_yaml = "0.9"
 
 
 [target.'cfg(target_os = "macos")'.dependencies]

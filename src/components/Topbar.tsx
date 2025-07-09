@@ -112,7 +112,7 @@ export const Topbar: React.FC<TopbarProps> = ({
           />
           <span>
             {versionStatus.is_installed && versionStatus.version
-              ? `Claude Code ${versionStatus.version}`
+              ? `Claude Code v${versionStatus.version}`
               : "Claude Code"}
           </span>
         </div>

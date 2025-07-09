@@ -1,7 +1,7 @@
 <div align="center">
   <img src="https://github.com/user-attachments/assets/92fd93ed-e71b-4b94-b270-50684323dd00" alt="Claudia Logo" width="120" height="120">
 
-  <h1>Claudia</h1>
+  <a href="https://claudiacode.com"><h1>Claudia</h1></a>
   
   <p>
     <strong>A powerful GUI app and Toolkit for Claude Code</strong>
