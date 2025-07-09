@@ -64,4 +64,36 @@ When submitting a pull request, please follow these guidelines:
 - Run `cargo test` for Rust code
 - Test the application manually before submitting
 
+## Build Issues and Solutions
+
+### macOS Universal Binary Build
+
+When contributing changes that affect the build process, especially for macOS universal binaries, be aware of this common issue:
+
+**Problem**: `bun run tauri build --target universal-apple-darwin` fails with:
+```
+failed to bundle project: Failed to copy external binaries: resource path 'binaries/claude-code-universal-apple-darwin' doesn't exist
+```
+
+**Solution**: 
+1. Build macOS binaries first: `bun run build:executables:macos`
+2. Create universal binary manually: `lipo -create -output src-tauri/binaries/claude-code-universal-apple-darwin src-tauri/binaries/claude-code-x86_64-apple-darwin src-tauri/binaries/claude-code-aarch64-apple-darwin`
+3. Run Tauri build: `bun run tauri build --target universal-apple-darwin`
+
+### Testing Your Build
+
+Before submitting a PR that affects the build process:
+
+1. **Test on your target platform**: Build and run the application
+2. **Verify binary architecture** (macOS): `lipo -info src-tauri/binaries/claude-code-universal-apple-darwin`
+3. **Check final artifacts**: Ensure `.app` and `.dmg` files are created correctly
+4. **Test the built application**: Launch the built app and verify core functionality
+
+### Known Build Dependencies
+
+Contributors should ensure these are available:
+- **macOS**: Xcode Command Line Tools, `lipo` utility
+- **All platforms**: Claude Code CLI in PATH
+- **Development**: All prerequisites listed in README.md
+
 Please adhere to the coding conventions, maintain clear documentation, and provide thorough testing for your contributions. 

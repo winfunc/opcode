@@ -275,6 +275,8 @@ brew install pkg-config
    bun run tauri build --target universal-apple-darwin
    ```
 
+   **Note for macOS Universal Binary**: If you encounter an error like `resource path 'binaries/claude-code-universal-apple-darwin' doesn't exist`, you need to create the universal binary manually. This is a known issue with the current build process. See the [Universal Binary Creation](#universal-binary-creation-macos) section below for the solution.
+
 ### Troubleshooting
 
 #### Common Issues
@@ -298,6 +300,16 @@ brew install pkg-config
 5. **Build fails with "out of memory"**
    - Try building with fewer parallel jobs: `cargo build -j 2`
    - Close other applications to free up RAM
+
+6. **macOS Universal Binary Error**
+   ```
+   failed to bundle project: Failed to copy external binaries: resource path 'binaries/claude-code-universal-apple-darwin' doesn't exist
+   ```
+   - This occurs when building universal binaries on macOS
+   - **Solution**: Follow the [Universal Binary Creation](#universal-binary-creation-macos) guide above
+   - First run `bun run build:executables:macos` to create both architecture binaries
+   - Then use `lipo` to combine them into a universal binary
+   - Finally run the Tauri build command
 
 #### Verify Your Build
 
@@ -325,6 +337,76 @@ The build process creates several artifacts:
   - `.exe` installer (Windows)
 
 All artifacts are located in `src-tauri/target/release/bundle/`.
+
+### Universal Binary Creation (macOS)
+
+For macOS universal binaries that work on both Intel and Apple Silicon Macs, you may need to create the universal binary manually due to a current limitation in the build process.
+
+#### The Issue
+
+When running `bun run tauri build --target universal-apple-darwin`, you might encounter:
+
+```
+failed to bundle project: Failed to copy external binaries: resource path `binaries/claude-code-universal-apple-darwin` doesn't exist
+```
+
+This happens because the build process creates separate binaries for x86_64 and ARM64 architectures, but doesn't automatically combine them into a universal binary.
+
+#### Solution
+
+1. **Build both architecture binaries first**:
+   ```bash
+   # Build macOS binaries (this creates both x86_64 and ARM64 versions)
+   bun run build:executables:macos
+   ```
+
+2. **Create the universal binary manually**:
+   ```bash
+   # Combine x86_64 and ARM64 binaries into a universal binary
+   lipo -create -output src-tauri/binaries/claude-code-universal-apple-darwin \
+     src-tauri/binaries/claude-code-x86_64-apple-darwin \
+     src-tauri/binaries/claude-code-aarch64-apple-darwin
+   ```
+
+3. **Run the Tauri build**:
+   ```bash
+   bun run tauri build --target universal-apple-darwin
+   ```
+
+#### Verification
+
+After successful build, verify your universal binary:
+
+```bash
+# Check the binary architecture
+lipo -info src-tauri/binaries/claude-code-universal-apple-darwin
+
+# Expected output:
+# Architectures in the fat file: src-tauri/binaries/claude-code-universal-apple-darwin are: x86_64 arm64
+
+# Check the final app bundle
+ls -la src-tauri/target/universal-apple-darwin/release/bundle/macos/
+```
+
+You should see:
+- `Claudia.app` - The application bundle
+- `Claudia_0.1.0_universal.dmg` - The installer DMG
+
+#### Alternative: Build for Single Architecture
+
+If you only need a binary for your current architecture:
+
+```bash
+# Build for current architecture only
+bun run tauri build
+
+# Or specify architecture explicitly:
+# For Apple Silicon Macs:
+bun run tauri build --target aarch64-apple-darwin
+
+# For Intel Macs:
+bun run tauri build --target x86_64-apple-darwin
+```
 
 ## 🛠️ Development
 
