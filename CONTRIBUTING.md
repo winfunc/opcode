@@ -68,24 +68,18 @@ When submitting a pull request, please follow these guidelines:
 
 ### macOS Universal Binary Build
 
-When contributing changes that affect the build process, especially for macOS universal binaries, be aware of this common issue:
+When contributing changes that affect the build process, especially for macOS universal binaries, be aware of a common build issue where the universal binary creation may fail.
 
-**Problem**: `bun run tauri build --target universal-apple-darwin` fails with:
-```
-failed to bundle project: Failed to copy external binaries: resource path 'binaries/claude-code-universal-apple-darwin' doesn't exist
-```
+**Issue**: `bun run tauri build --target universal-apple-darwin` may fail due to missing universal binary.
 
-**Solution**: 
-1. Build macOS binaries first: `bun run build:executables:macos`
-2. Create universal binary manually: `lipo -create -output src-tauri/binaries/claude-code-universal-apple-darwin src-tauri/binaries/claude-code-x86_64-apple-darwin src-tauri/binaries/claude-code-aarch64-apple-darwin`
-3. Run Tauri build: `bun run tauri build --target universal-apple-darwin`
+**Solution**: Follow the detailed [Universal Binary Creation (macOS)](README.md#universal-binary-creation-macos) guide in the README.md for the complete step-by-step solution.
 
 ### Testing Your Build
 
 Before submitting a PR that affects the build process:
 
 1. **Test on your target platform**: Build and run the application
-2. **Verify binary architecture** (macOS): `lipo -info src-tauri/binaries/claude-code-universal-apple-darwin`
+2. **Verify binary architecture** (macOS): Use `lipo -info` to check universal binary (see README.md for details)
 3. **Check final artifacts**: Ensure `.app` and `.dmg` files are created correctly
 4. **Test the built application**: Launch the built app and verify core functionality
 
