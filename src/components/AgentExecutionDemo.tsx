@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { StreamMessage } from "./StreamMessage";
 import type { ClaudeStreamMessage } from "./AgentExecution";
 
@@ -6,6 +7,8 @@ import type { ClaudeStreamMessage } from "./AgentExecution";
  * Demo component showing all the different message types and tools
  */
 export const AgentExecutionDemo: React.FC = () => {
+  const { t } = useTranslation();
+  
   // Sample messages based on the provided JSONL session
   const messages: ClaudeStreamMessage[] = [
     // Skip meta message (should not render)
@@ -19,7 +22,7 @@ export const AgentExecutionDemo: React.FC = () => {
     // Summary message
     {
       leafUuid: "3c5ecb4f-c1f0-40c2-a357-ab7642ad28b8",
-      summary: "JSONL Viewer Model Configuration and Setup",
+      summary: t('execution.jsonlViewerConfig'),
       type: "summary" as any
     },
     
@@ -171,7 +174,7 @@ body {
 
   return (
     <div className="max-w-4xl mx-auto p-8 space-y-4">
-      <h1 className="text-2xl font-bold mb-6">Agent Execution Demo</h1>
+      <h1 className="text-2xl font-bold mb-6">{t('execution.executionDemo')}</h1>
       
       {messages.map((message, idx) => (
         <StreamMessage key={idx} message={message} streamMessages={messages} />

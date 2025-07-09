@@ -15,6 +15,7 @@ import {
   ExternalLink,
   StopCircle
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -63,6 +64,7 @@ export function AgentRunOutputViewer({
   onOpenFullView,
   className 
 }: AgentRunOutputViewerProps) {
+  const { t } = useTranslation();
   const [messages, setMessages] = useState<ClaudeStreamMessage[]>([]);
   const [rawJsonlOutput, setRawJsonlOutput] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -236,7 +238,7 @@ export function AgentRunOutputViewer({
       }
     } catch (error) {
       console.error('Failed to load agent output:', error);
-      setToast({ message: 'Failed to load agent output', type: 'error' });
+      setToast({ message: t('execution.messages.loadOutputError'), type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -286,12 +288,12 @@ export function AgentRunOutputViewer({
       });
 
       const completeUnlisten = await listen<boolean>(`agent-complete:${run.id}`, () => {
-        setToast({ message: 'Agent execution completed', type: 'success' });
+        setToast({ message: t('execution.messages.executionComplete'), type: 'success' });
         // Don't set status here as the parent component should handle it
       });
 
       const cancelUnlisten = await listen<boolean>(`agent-cancelled:${run.id}`, () => {
-        setToast({ message: 'Agent execution was cancelled', type: 'error' });
+        setToast({ message: t('execution.messages.executionCancelled'), type: 'error' });
       });
 
       unlistenRefs.current = [outputUnlisten, errorUnlisten, completeUnlisten, cancelUnlisten];
@@ -305,13 +307,13 @@ export function AgentRunOutputViewer({
     const jsonl = rawJsonlOutput.join('\n');
     await navigator.clipboard.writeText(jsonl);
     setCopyPopoverOpen(false);
-    setToast({ message: 'Output copied as JSONL', type: 'success' });
+    setToast({ message: t('execution.messages.jsonlCopied'), type: 'success' });
   };
 
   const handleCopyAsMarkdown = async () => {
     let markdown = `# Agent Execution: ${run.agent_name}\n\n`;
     markdown += `**Task:** ${run.task}\n`;
-    markdown += `**Model:** ${run.model === 'opus' ? 'Claude 4 Opus' : 'Claude 4 Sonnet'}\n`;
+    markdown += `**Model:** ${run.model === 'opus' ? t('agents.models.opus') : t('agents.models.sonnet')}\n`;
     markdown += `**Date:** ${formatISOTimestamp(run.created_at)}\n`;
     if (run.metrics?.duration_ms) markdown += `**Duration:** ${(run.metrics.duration_ms / 1000).toFixed(2)}s\n`;
     if (run.metrics?.total_tokens) markdown += `**Total Tokens:** ${run.metrics.total_tokens}\n`;
@@ -362,7 +364,7 @@ export function AgentRunOutputViewer({
 
     await navigator.clipboard.writeText(markdown);
     setCopyPopoverOpen(false);
-    setToast({ message: 'Output copied as Markdown', type: 'success' });
+    setToast({ message: t('execution.messages.markdownCopied'), type: 'success' });
   };
 
   const handleRefresh = async () => {
@@ -383,7 +385,7 @@ export function AgentRunOutputViewer({
       
       if (success) {
         console.log(`[AgentRunOutputViewer] Successfully stopped agent session ${run.id}`);
-        setToast({ message: 'Agent execution stopped', type: 'success' });
+        setToast({ message: t('execution.messages.executionStopped'), type: 'success' });
         
         // Clean up listeners
         unlistenRefs.current.forEach(unlisten => unlisten());
@@ -395,7 +397,7 @@ export function AgentRunOutputViewer({
           type: "result",
           subtype: "error",
           is_error: true,
-          result: "Execution stopped by user",
+          result: t('execution.stoppedByUser'),
           duration_ms: 0,
           usage: {
             input_tokens: 0,
@@ -411,12 +413,12 @@ export function AgentRunOutputViewer({
         }, 1000);
       } else {
         console.warn(`[AgentRunOutputViewer] Failed to stop agent session ${run.id} - it may have already finished`);
-        setToast({ message: 'Failed to stop agent - it may have already finished', type: 'error' });
+        setToast({ message: t('execution.messages.alreadyStopped'), type: 'error' });
       }
     } catch (err) {
       console.error('[AgentRunOutputViewer] Failed to stop agent:', err);
       setToast({ 
-        message: `Failed to stop execution: ${err instanceof Error ? err.message : 'Unknown error'}`, 
+        message: t('execution.messages.stopError', { error: err instanceof Error ? err.message : 'Unknown error' }), 
         type: 'error' 
       });
     }
@@ -540,7 +542,7 @@ export function AgentRunOutputViewer({
                     {run.status === 'running' && (
                       <div className="flex items-center gap-1">
                         <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                        <span className="text-xs text-green-600 font-medium">Running</span>
+                        <span className="text-xs text-green-600 font-medium">{t('execution.running')}</span>
                       </div>
                     )}
                   </CardTitle>
@@ -549,7 +551,7 @@ export function AgentRunOutputViewer({
                   </p>
                   <div className="flex items-center gap-3 text-xs text-muted-foreground mt-2">
                     <Badge variant="outline" className="text-xs">
-                      {run.model === 'opus' ? 'Claude 4 Opus' : 'Claude 4 Sonnet'}
+                      {run.model === 'opus' ? t('agents.models.opus') : t('agents.models.sonnet')}
                     </Badge>
                     <div className="flex items-center gap-1">
                       <Clock className="h-3 w-3" />
@@ -582,7 +584,7 @@ export function AgentRunOutputViewer({
                       className="h-8 px-2"
                     >
                       <Copy className="h-4 w-4 mr-1" />
-                      Copy
+                      {t('execution.copy')}
                       <ChevronDown className="h-3 w-3 ml-1" />
                     </Button>
                   }
@@ -594,7 +596,7 @@ export function AgentRunOutputViewer({
                         className="w-full justify-start"
                         onClick={handleCopyAsJsonl}
                       >
-                        Copy as JSONL
+                        {t('execution.copyAsJsonl')}
                       </Button>
                       <Button
                         variant="ghost"
@@ -602,7 +604,7 @@ export function AgentRunOutputViewer({
                         className="w-full justify-start"
                         onClick={handleCopyAsMarkdown}
                       >
-                        Copy as Markdown
+                        {t('execution.copyAsMarkdown')}
                       </Button>
                     </div>
                   }
@@ -615,7 +617,7 @@ export function AgentRunOutputViewer({
                     variant="ghost"
                     size="sm"
                     onClick={onOpenFullView}
-                    title="Open in full view"
+                    title={t('execution.openFullViewTooltip')}
                     className="h-8 px-2"
                   >
                     <ExternalLink className="h-4 w-4" />
@@ -625,7 +627,7 @@ export function AgentRunOutputViewer({
                   variant="ghost"
                   size="sm"
                   onClick={() => setIsFullscreen(!isFullscreen)}
-                  title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+                  title={isFullscreen ? t('execution.exitFullscreenTooltip') : t('execution.enterFullscreenTooltip')}
                   className="h-8 px-2"
                 >
                   {isFullscreen ? (
@@ -639,7 +641,7 @@ export function AgentRunOutputViewer({
                   size="sm"
                   onClick={handleRefresh}
                   disabled={refreshing}
-                  title="Refresh output"
+                  title={t('execution.refreshTooltip')}
                   className="h-8 px-2"
                 >
                   <RotateCcw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
@@ -650,7 +652,7 @@ export function AgentRunOutputViewer({
                     size="sm"
                     onClick={handleStop}
                     disabled={refreshing}
-                    title="Stop execution"
+                    title={t('execution.stopTooltip')}
                     className="h-8 px-2 text-destructive hover:text-destructive"
                   >
                     <StopCircle className="h-4 w-4" />
@@ -672,12 +674,12 @@ export function AgentRunOutputViewer({
               <div className="flex items-center justify-center h-full">
                 <div className="flex items-center space-x-2">
                   <RefreshCw className="h-4 w-4 animate-spin" />
-                  <span>Loading output...</span>
+                  <span>{t('execution.loadingOutput')}</span>
                 </div>
               </div>
             ) : messages.length === 0 ? (
               <div className="flex items-center justify-center h-full text-muted-foreground">
-                <p>No output available yet</p>
+                <p>{t('execution.noOutput')}</p>
               </div>
             ) : (
               <div 
@@ -725,7 +727,7 @@ export function AgentRunOutputViewer({
                     size="sm"
                   >
                     <Copy className="h-4 w-4 mr-2" />
-                    Copy Output
+                    {t('execution.copyOutput')}
                     <ChevronDown className="h-3 w-3 ml-2" />
                   </Button>
                 }
@@ -767,7 +769,7 @@ export function AgentRunOutputViewer({
                   disabled={refreshing}
                 >
                   <StopCircle className="h-4 w-4 mr-2" />
-                  Stop
+                  {t('execution.stop')}
                 </Button>
               )}
               <Button
@@ -776,7 +778,7 @@ export function AgentRunOutputViewer({
                 onClick={() => setIsFullscreen(false)}
               >
                 <Minimize2 className="h-4 w-4 mr-2" />
-                Exit Fullscreen
+                {t('execution.exitFullscreen')}
               </Button>
             </div>
           </div>
