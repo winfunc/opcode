@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claudia Web API Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1 { color: #333; }
+        h2 { color: #666; margin-top: 30px; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        button:hover { background: #0056b3; }
+        .response {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        .status.connected { background: #28a745; color: white; }
+        .status.disconnected { background: #dc3545; color: white; }
+        .ws-messages {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 10px;
+            height: 200px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+        .ws-message {
+            margin-bottom: 5px;
+            padding: 5px;
+            background: white;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🚀 Claudia Web API Test</h1>
+    
+    <div class="container">
+        <h2>API Configuration</h2>
+        <p>Base URL: <code id="baseUrl">http://localhost:3000/api</code></p>
+        <p>WebSocket URL: <code id="wsUrl">ws://localhost:3000/ws</code></p>
+    </div>
+
+    <div class="container">
+        <h2>REST API Tests</h2>
+        
+        <button onclick="testHealth()">Test Health Check</button>
+        <button onclick="testProjects()">List Projects</button>
+        <button onclick="testAgents()">List Agents</button>
+        <button onclick="testAllEndpoints()">Test All Endpoints</button>
+        
+        <div id="apiResponse" class="response" style="display:none;"></div>
+    </div>
+
+    <div class="container">
+        <h2>WebSocket Connection</h2>
+        
+        <div id="wsStatus" class="status disconnected">Disconnected</div>
+        
+        <button onclick="connectWebSocket()">Connect WebSocket</button>
+        <button onclick="disconnectWebSocket()">Disconnect</button>
+        <button onclick="sendTestMessage()">Send Test Message</button>
+        
+        <div class="ws-messages" id="wsMessages">
+            <div style="color: #666;">WebSocket messages will appear here...</div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000/api';
+        const WS_URL = 'ws://localhost:3000/ws';
+        let ws = null;
+
+        // API Test Functions
+        async function testEndpoint(endpoint, method = 'GET', body = null) {
+            const responseDiv = document.getElementById('apiResponse');
+            responseDiv.style.display = 'block';
+            responseDiv.textContent = `Testing ${endpoint}...\n`;
+            
+            try {
+                const options = {
+                    method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                };
+                
+                if (body) {
+                    options.body = JSON.stringify(body);
+                }
+                
+                const response = await fetch(`${API_BASE}${endpoint}`, options);
+                const data = await response.json();
+                
+                responseDiv.textContent = `${method} ${endpoint}\n\n` +
+                    `Status: ${response.status} ${response.statusText}\n\n` +
+                    JSON.stringify(data, null, 2);
+            } catch (error) {
+                responseDiv.textContent = `Error testing ${endpoint}:\n${error.message}`;
+            }
+        }
+
+        function testHealth() {
+            testEndpoint('/health');
+        }
+
+        function testProjects() {
+            testEndpoint('/projects');
+        }
+
+        function testAgents() {
+            testEndpoint('/agents');
+        }
+
+        async function testAllEndpoints() {
+            const endpoints = [
+                '/health',
+                '/projects',
+                '/agents',
+                '/usage/stats',
+                '/mcp/servers'
+            ];
+            
+            const responseDiv = document.getElementById('apiResponse');
+            responseDiv.style.display = 'block';
+            responseDiv.textContent = 'Testing all endpoints...\n\n';
+            
+            for (const endpoint of endpoints) {
+                try {
+                    const response = await fetch(`${API_BASE}${endpoint}`);
+                    const data = await response.json();
+                    responseDiv.textContent += `✓ ${endpoint} - Status: ${response.status}\n`;
+                } catch (error) {
+                    responseDiv.textContent += `✗ ${endpoint} - Error: ${error.message}\n`;
+                }
+            }
+        }
+
+        // WebSocket Functions
+        function connectWebSocket() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                addWsMessage('Already connected');
+                return;
+            }
+            
+            ws = new WebSocket(WS_URL);
+            
+            ws.onopen = () => {
+                updateWsStatus(true);
+                addWsMessage('Connected to WebSocket');
+            };
+            
+            ws.onmessage = (event) => {
+                addWsMessage(`Received: ${event.data}`);
+            };
+            
+            ws.onerror = (error) => {
+                addWsMessage(`Error: ${error.type}`);
+            };
+            
+            ws.onclose = () => {
+                updateWsStatus(false);
+                addWsMessage('Disconnected from WebSocket');
+            };
+        }
+
+        function disconnectWebSocket() {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+        }
+
+        function sendTestMessage() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                addWsMessage('Not connected to WebSocket');
+                return;
+            }
+            
+            const message = {
+                type: 'test',
+                timestamp: new Date().toISOString(),
+                data: 'Hello from web client!'
+            };
+            
+            ws.send(JSON.stringify(message));
+            addWsMessage(`Sent: ${JSON.stringify(message)}`);
+        }
+
+        function updateWsStatus(connected) {
+            const statusDiv = document.getElementById('wsStatus');
+            statusDiv.className = `status ${connected ? 'connected' : 'disconnected'}`;
+            statusDiv.textContent = connected ? 'Connected' : 'Disconnected';
+        }
+
+        function addWsMessage(message) {
+            const messagesDiv = document.getElementById('wsMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'ws-message';
+            messageDiv.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            
+            // Remove initial placeholder message
+            const placeholder = messagesDiv.querySelector('div[style*="color: #666"]');
+            if (placeholder) {
+                placeholder.remove();
+            }
+        }
+
+        // Auto-connect to WebSocket on load
+        window.addEventListener('load', () => {
+            // Update URLs based on current location
+            if (window.location.hostname !== 'localhost') {
+                const host = window.location.hostname;
+                const port = window.location.port || '3000';
+                document.getElementById('baseUrl').textContent = `http://${host}:${port}/api`;
+                document.getElementById('wsUrl').textContent = `ws://${host}:${port}/ws`;
+            }
+        });
+    </script>
+</body>
+</html>
