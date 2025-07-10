@@ -5,6 +5,7 @@ mod checkpoint;
 mod claude_binary;
 mod commands;
 mod process;
+mod web_server;
 
 use checkpoint::state::CheckpointState;
 use commands::agents::{
@@ -43,7 +44,7 @@ use commands::storage::{
     storage_insert_row, storage_execute_sql, storage_reset_database,
 };
 use process::ProcessRegistryState;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use tauri::Manager;
 
 fn main() {
@@ -57,7 +58,8 @@ fn main() {
         .setup(|app| {
             // Initialize agents database
             let conn = init_database(&app.handle()).expect("Failed to initialize agents database");
-            app.manage(AgentDb(Mutex::new(conn)));
+            let agent_db = Arc::new(Mutex::new(conn));
+            app.manage(AgentDb(agent_db.clone()));
 
             // Initialize checkpoint state
             let checkpoint_state = CheckpointState::new();
@@ -78,13 +80,36 @@ fn main() {
                 });
             }
 
-            app.manage(checkpoint_state);
+            app.manage(checkpoint_state.clone());
 
             // Initialize process registry
-            app.manage(ProcessRegistryState::default());
+            let process_registry = ProcessRegistryState::default();
+            app.manage(process_registry.clone());
 
             // Initialize Claude process state
-            app.manage(ClaudeProcessState::default());
+            let claude_process_state = ClaudeProcessState::default();
+            app.manage(claude_process_state.clone());
+
+            // Start web server if enabled
+            let web_config = web_server::WebServerConfig::from_env();
+            if web_config.enabled {
+                let web_agent_db = agent_db.clone();
+                let web_checkpoint_state = checkpoint_state.clone();
+                let web_process_registry = process_registry.clone();
+                let web_claude_process_state = claude_process_state.clone();
+                
+                tauri::async_runtime::spawn(async move {
+                    if let Err(e) = web_server::start_web_server(
+                        web_config,
+                        web_agent_db,
+                        web_checkpoint_state,
+                        web_process_registry,
+                        web_claude_process_state,
+                    ).await {
+                        log::error!("Failed to start web server: {}", e);
+                    }
+                });
+            }
 
             Ok(())
         })

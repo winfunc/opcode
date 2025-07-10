@@ -94,7 +94,7 @@ pub struct AgentData {
 }
 
 /// Database connection state
-pub struct AgentDb(pub Mutex<Connection>);
+pub struct AgentDb(pub Arc<Mutex<Connection>>);
 
 /// Real-time JSONL reading and processing functions
 impl AgentRunMetrics {

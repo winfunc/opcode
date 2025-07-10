@@ -48,6 +48,20 @@ sha2 = "0.10"
 zstd = "0.13"
 uuid = { version = "1.6", features = ["v4", "serde"] }
 walkdir = "2"
+
+# Web server dependencies
+axum = { version = "0.7", features = ["ws"] }
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors", "fs", "trace"] }
+tokio-tungstenite = "0.21"
+
+# Authentication
+jsonwebtoken = "9"
+bcrypt = "0.15"
+
+# API documentation (optional for now)
+# utoipa = { version = "4", features = ["axum_extras"] }
+# utoipa-swagger-ui = { version = "6", features = ["axum"] }
 serde_yaml = "0.9"
 
 
