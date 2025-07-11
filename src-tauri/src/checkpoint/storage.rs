@@ -133,9 +133,8 @@ impl CheckpointStorage {
         let safe_filename = snapshot
             .file_path
             .to_string_lossy()
-            .replace('/', "_")
-            .replace('\\', "_");
-        let ref_path = checkpoint_refs_dir.join(format!("{}.json", safe_filename));
+            .replace(['/', '\\'], "_");
+        let ref_path = checkpoint_refs_dir.join(format!("{safe_filename}.json"));
 
         fs::write(&ref_path, serde_json::to_string_pretty(&ref_metadata)?)
             .context("Failed to write file reference")?;
@@ -219,7 +218,7 @@ impl CheckpointStorage {
                 .context("Invalid UTF-8 in file content")?
             } else {
                 // Handle missing content gracefully
-                log::warn!("Content file missing for hash: {}", hash);
+                log::warn!("Content file missing for hash: {hash}");
                 String::new()
             };
 
@@ -366,10 +365,10 @@ impl CheckpointStorage {
         if removed_count > 0 {
             match self.garbage_collect_content(project_id, session_id) {
                 Ok(gc_count) => {
-                    log::info!("Garbage collected {} orphaned content files", gc_count);
+                    log::info!("Garbage collected {gc_count} orphaned content files");
                 }
                 Err(e) => {
-                    log::warn!("Failed to garbage collect content: {}", e);
+                    log::warn!("Failed to garbage collect content: {e}");
                 }
             }
         }
@@ -446,11 +445,10 @@ impl CheckpointStorage {
             let content_file = entry?.path();
             if content_file.is_file() {
                 if let Some(hash) = content_file.file_name().and_then(|n| n.to_str()) {
-                    if !referenced_hashes.contains(hash) {
-                        if fs::remove_file(&content_file).is_ok() {
+                    if !referenced_hashes.contains(hash)
+                        && fs::remove_file(&content_file).is_ok() {
                             removed_count += 1;
                         }
-                    }
                 }
             }
         }

@@ -129,12 +129,12 @@ fn calculate_cost(model: &str, usage: &UsageData) -> f64 {
         };
 
     // Calculate cost (prices are per million tokens)
-    let cost = (input_tokens * input_price / 1_000_000.0)
+    
+
+    (input_tokens * input_price / 1_000_000.0)
         + (output_tokens * output_price / 1_000_000.0)
         + (cache_creation_tokens * cache_write_price / 1_000_000.0)
-        + (cache_read_tokens * cache_read_price / 1_000_000.0);
-
-    cost
+        + (cache_read_tokens * cache_read_price / 1_000_000.0)
 }
 
 fn parse_jsonl_file(
@@ -172,7 +172,7 @@ fn parse_jsonl_file(
                     if let Some(message) = &entry.message {
                         // Deduplication based on message ID and request ID
                         if let (Some(msg_id), Some(req_id)) = (&message.id, &entry.request_id) {
-                            let unique_hash = format!("{}:{}", msg_id, req_id);
+                            let unique_hash = format!("{msg_id}:{req_id}");
                             if processed_hashes.contains(&unique_hash) {
                                 continue; // Skip duplicate entry
                             }
@@ -399,7 +399,7 @@ pub fn get_usage_stats(days: Option<u32>) -> Result<UsageStats, String> {
                     project_name: entry
                         .project_path
                         .split('/')
-                        .last()
+                        .next_back()
                         .unwrap_or(&entry.project_path)
                         .to_string(),
                     total_cost: 0.0,
@@ -461,13 +461,13 @@ pub fn get_usage_by_date_range(start_date: String, end_date: String) -> Result<U
         // Try parsing ISO datetime format
         DateTime::parse_from_rfc3339(&start_date)
             .map(|dt| dt.naive_local().date())
-            .map_err(|e| format!("Invalid start date: {}", e))
+            .map_err(|e| format!("Invalid start date: {e}"))
     })?;
     let end = NaiveDate::parse_from_str(&end_date, "%Y-%m-%d").or_else(|_| {
         // Try parsing ISO datetime format
         DateTime::parse_from_rfc3339(&end_date)
             .map(|dt| dt.naive_local().date())
-            .map_err(|e| format!("Invalid end date: {}", e))
+            .map_err(|e| format!("Invalid end date: {e}"))
     })?;
 
     // Filter entries by date range
@@ -569,7 +569,7 @@ pub fn get_usage_by_date_range(start_date: String, end_date: String) -> Result<U
                     project_name: entry
                         .project_path
                         .split('/')
-                        .last()
+                        .next_back()
                         .unwrap_or(&entry.project_path)
                         .to_string(),
                     total_cost: 0.0,
@@ -662,8 +662,8 @@ pub fn get_session_stats(
         .filter(|e| {
             if let Ok(dt) = DateTime::parse_from_rfc3339(&e.timestamp) {
                 let date = dt.date_naive();
-                let is_after_since = since_date.map_or(true, |s| date >= s);
-                let is_before_until = until_date.map_or(true, |u| date <= u);
+                let is_after_since = since_date.is_none_or(|s| date >= s);
+                let is_before_until = until_date.is_none_or(|u| date <= u);
                 is_after_since && is_before_until
             } else {
                 false

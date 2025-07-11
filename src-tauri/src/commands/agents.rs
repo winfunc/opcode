@@ -177,7 +177,7 @@ pub async fn read_session_jsonl(session_id: &str, project_path: &str) -> Result<
     // Encode project path to match Claude Code's directory naming
     let encoded_project = project_path.replace('/', "-");
     let project_dir = claude_dir.join(&encoded_project);
-    let session_file = project_dir.join(format!("{}.jsonl", session_id));
+    let session_file = project_dir.join(format!("{session_id}.jsonl"));
 
     if !session_file.exists() {
         return Err(format!(
@@ -188,7 +188,7 @@ pub async fn read_session_jsonl(session_id: &str, project_path: &str) -> Result<
 
     match tokio::fs::read_to_string(&session_file).await {
         Ok(content) => Ok(content),
-        Err(e) => Err(format!("Failed to read session file: {}", e)),
+        Err(e) => Err(format!("Failed to read session file: {e}")),
     }
 }
 
@@ -470,22 +470,22 @@ pub async fn update_agent(
 
     if let Some(efr) = enable_file_read {
         param_count += 1;
-        query.push_str(&format!(", enable_file_read = ?{}", param_count));
+        query.push_str(&format!(", enable_file_read = ?{param_count}"));
         params_vec.push(Box::new(efr));
     }
     if let Some(efw) = enable_file_write {
         param_count += 1;
-        query.push_str(&format!(", enable_file_write = ?{}", param_count));
+        query.push_str(&format!(", enable_file_write = ?{param_count}"));
         params_vec.push(Box::new(efw));
     }
     if let Some(en) = enable_network {
         param_count += 1;
-        query.push_str(&format!(", enable_network = ?{}", param_count));
+        query.push_str(&format!(", enable_network = ?{param_count}"));
         params_vec.push(Box::new(en));
     }
 
     param_count += 1;
-    query.push_str(&format!(" WHERE id = ?{}", param_count));
+    query.push_str(&format!(" WHERE id = ?{param_count}"));
     params_vec.push(Box::new(id));
 
     conn.execute(
@@ -688,7 +688,7 @@ pub async fn execute_agent(
     db: State<'_, AgentDb>,
     registry: State<'_, crate::process::ProcessRegistryState>,
 ) -> Result<i64, String> {
-    info!("Executing agent {} with task: {}", agent_id, task);
+    info!("Executing agent {agent_id} with task: {task}");
 
     // Get the agent from database
     let agent = get_agent(db.clone(), agent_id).await?;
@@ -702,15 +702,15 @@ pub async fn execute_agent(
         // Create .claude directory if it doesn't exist
         if !claude_dir.exists() {
             std::fs::create_dir_all(&claude_dir)
-                .map_err(|e| format!("Failed to create .claude directory: {}", e))?;
-            info!("Created .claude directory at: {:?}", claude_dir);
+                .map_err(|e| format!("Failed to create .claude directory: {e}"))?;
+            info!("Created .claude directory at: {claude_dir:?}");
         }
 
         // Check if settings.json already exists
         if !settings_path.exists() {
             // Parse the hooks JSON
             let hooks: serde_json::Value = serde_json::from_str(hooks_json)
-                .map_err(|e| format!("Failed to parse agent hooks: {}", e))?;
+                .map_err(|e| format!("Failed to parse agent hooks: {e}"))?;
 
             // Create a settings object with just the hooks
             let settings = serde_json::json!({
@@ -719,17 +719,16 @@ pub async fn execute_agent(
 
             // Write the settings file
             let settings_content = serde_json::to_string_pretty(&settings)
-                .map_err(|e| format!("Failed to serialize settings: {}", e))?;
+                .map_err(|e| format!("Failed to serialize settings: {e}"))?;
 
             std::fs::write(&settings_path, settings_content)
-                .map_err(|e| format!("Failed to write settings.json: {}", e))?;
+                .map_err(|e| format!("Failed to write settings.json: {e}"))?;
 
             info!(
-                "Created settings.json with agent hooks at: {:?}",
-                settings_path
+                "Created settings.json with agent hooks at: {settings_path:?}"
             );
         } else {
-            info!("settings.json already exists at: {:?}", settings_path);
+            info!("settings.json already exists at: {settings_path:?}");
         }
     }
 
@@ -749,7 +748,7 @@ pub async fn execute_agent(
     let claude_path = match find_claude_binary(&app) {
         Ok(path) => path,
         Err(e) => {
-            error!("Failed to find claude binary: {}", e);
+            error!("Failed to find claude binary: {e}");
             return Err(e);
         }
     };
@@ -815,7 +814,7 @@ fn create_agent_sidecar_command(
     let mut sidecar_cmd = app
         .shell()
         .sidecar("claude-code")
-        .map_err(|e| format!("Failed to create sidecar command: {}", e))?;
+        .map_err(|e| format!("Failed to create sidecar command: {e}"))?;
 
     // Add all arguments
     sidecar_cmd = sidecar_cmd.args(args);
@@ -868,11 +867,11 @@ async fn spawn_agent_sidecar(
     // Spawn the sidecar process
     let (mut rx, child) = sidecar_cmd
         .spawn()
-        .map_err(|e| format!("Failed to spawn Claude sidecar: {}", e))?;
+        .map_err(|e| format!("Failed to spawn Claude sidecar: {e}"))?;
 
     // Get the child PID for logging
     let pid = child.pid();
-    info!("✅ Spawned Claude sidecar process with PID: {:?}", pid);
+    info!("✅ Spawned Claude sidecar process with PID: {pid:?}");
 
     // Update the database with PID and status
     let now = chrono::Utc::now().to_rfc3339();
@@ -919,16 +918,15 @@ async fn spawn_agent_sidecar(
                         // Log first output
                         if !first_output_clone.load(std::sync::atomic::Ordering::Relaxed) {
                             info!(
-                                "🎉 First output received from Claude sidecar! Line: {}",
-                                line
+                                "🎉 First output received from Claude sidecar! Line: {line}"
                             );
                             first_output_clone.store(true, std::sync::atomic::Ordering::Relaxed);
                         }
 
                         if line_count <= 5 {
-                            info!("sidecar stdout[{}]: {}", line_count, line);
+                            info!("sidecar stdout[{line_count}]: {line}");
                         } else {
-                            debug!("sidecar stdout[{}]: {}", line_count, line);
+                            debug!("sidecar stdout[{line_count}]: {line}");
                         }
 
                         // Store live output
@@ -952,7 +950,7 @@ async fn spawn_agent_sidecar(
                                     {
                                         if current_session_id.is_none() {
                                             *current_session_id = Some(sid.to_string());
-                                            info!("🔑 Extracted session ID: {}", sid);
+                                            info!("🔑 Extracted session ID: {sid}");
 
                                             // Update database immediately with session ID
                                             if let Ok(conn) = Connection::open(&db_path_for_stream)
@@ -963,11 +961,11 @@ async fn spawn_agent_sidecar(
                                                 ) {
                                                     Ok(rows) => {
                                                         if rows > 0 {
-                                                            info!("✅ Updated agent run {} with session ID immediately", run_id);
+                                                            info!("✅ Updated agent run {run_id} with session ID immediately");
                                                         }
                                                     }
                                                     Err(e) => {
-                                                        error!("❌ Failed to update session ID immediately: {}", e);
+                                                        error!("❌ Failed to update session ID immediately: {e}");
                                                     }
                                                 }
                                             }
@@ -978,7 +976,7 @@ async fn spawn_agent_sidecar(
                         }
 
                         // Emit the line to the frontend with run_id for isolation
-                        let _ = app_handle.emit(&format!("agent-output:{}", run_id), &line);
+                        let _ = app_handle.emit(&format!("agent-output:{run_id}"), &line);
                         // Also emit to the generic event for backward compatibility
                         let _ = app_handle.emit("agent-output", &line);
                     }
@@ -986,9 +984,9 @@ async fn spawn_agent_sidecar(
                 tauri_plugin_shell::process::CommandEvent::Stderr(data) => {
                     let line = String::from_utf8_lossy(&data).trim().to_string();
                     if !line.is_empty() {
-                        error!("sidecar stderr: {}", line);
+                        error!("sidecar stderr: {line}");
                         // Emit error lines to the frontend with run_id for isolation
-                        let _ = app_handle.emit(&format!("agent-error:{}", run_id), &line);
+                        let _ = app_handle.emit(&format!("agent-error:{run_id}"), &line);
                         // Also emit to the generic event for backward compatibility
                         let _ = app_handle.emit("agent-error", &line);
                     }
@@ -998,7 +996,7 @@ async fn spawn_agent_sidecar(
                     break;
                 }
                 tauri_plugin_shell::process::CommandEvent::Error(e) => {
-                    error!("🔥 Claude sidecar error: {}", e);
+                    error!("🔥 Claude sidecar error: {e}");
                     break;
                 }
                 _ => {
@@ -1009,8 +1007,7 @@ async fn spawn_agent_sidecar(
         }
 
         info!(
-            "📖 Finished reading Claude sidecar events. Total lines: {}",
-            line_count
+            "📖 Finished reading Claude sidecar events. Total lines: {line_count}"
         );
     });
 
@@ -1046,7 +1043,7 @@ async fn spawn_agent_sidecar(
                 }
 
                 let _ = app.emit("agent-complete", false);
-                let _ = app.emit(&format!("agent-complete:{}", run_id), false);
+                let _ = app.emit(&format!("agent-complete:{run_id}"), false);
                 return;
             }
 
@@ -1068,8 +1065,7 @@ async fn spawn_agent_sidecar(
         // Update the run record with session ID and mark as completed
         if let Ok(conn) = Connection::open(&db_path) {
             info!(
-                "🔄 Updating database with extracted session ID: {}",
-                extracted_session_id
+                "🔄 Updating database with extracted session ID: {extracted_session_id}"
             );
             match conn.execute(
                 "UPDATE agent_runs SET session_id = ?1, status = 'completed', completed_at = CURRENT_TIMESTAMP WHERE id = ?2",
@@ -1077,26 +1073,25 @@ async fn spawn_agent_sidecar(
             ) {
                 Ok(rows_affected) => {
                     if rows_affected > 0 {
-                        info!("✅ Successfully updated agent run {} with session ID: {}", run_id, extracted_session_id);
+                        info!("✅ Successfully updated agent run {run_id} with session ID: {extracted_session_id}");
                     } else {
-                        warn!("⚠️ No rows affected when updating agent run {} with session ID", run_id);
+                        warn!("⚠️ No rows affected when updating agent run {run_id} with session ID");
                     }
                 }
                 Err(e) => {
-                    error!("❌ Failed to update agent run {} with session ID: {}", run_id, e);
+                    error!("❌ Failed to update agent run {run_id} with session ID: {e}");
                 }
             }
         } else {
             error!(
-                "❌ Failed to open database to update session ID for run {}",
-                run_id
+                "❌ Failed to open database to update session ID for run {run_id}"
             );
         }
 
         info!("✅ Claude sidecar execution monitoring complete");
 
         let _ = app.emit("agent-complete", true);
-        let _ = app.emit(&format!("agent-complete:{}", run_id), true);
+        let _ = app.emit(&format!("agent-complete:{run_id}"), true);
     });
 
     Ok(run_id)
@@ -1122,8 +1117,8 @@ async fn spawn_agent_system(
     // Spawn the process
     info!("🚀 Spawning Claude system process...");
     let mut child = cmd.spawn().map_err(|e| {
-        error!("❌ Failed to spawn Claude process: {}", e);
-        format!("Failed to spawn Claude: {}", e)
+        error!("❌ Failed to spawn Claude process: {e}");
+        format!("Failed to spawn Claude: {e}")
     })?;
 
     info!("🔌 Using Stdio::null() for stdin - no input expected");
@@ -1131,7 +1126,7 @@ async fn spawn_agent_system(
     // Get the PID and register the process
     let pid = child.id().unwrap_or(0);
     let now = chrono::Utc::now().to_rfc3339();
-    info!("✅ Claude process spawned successfully with PID: {}", pid);
+    info!("✅ Claude process spawned successfully with PID: {pid}");
 
     // Update the database with PID and status
     {
@@ -1184,16 +1179,15 @@ async fn spawn_agent_system(
             // Log first output
             if !first_output_clone.load(std::sync::atomic::Ordering::Relaxed) {
                 info!(
-                    "🎉 First output received from Claude process! Line: {}",
-                    line
+                    "🎉 First output received from Claude process! Line: {line}"
                 );
                 first_output_clone.store(true, std::sync::atomic::Ordering::Relaxed);
             }
 
             if line_count <= 5 {
-                info!("stdout[{}]: {}", line_count, line);
+                info!("stdout[{line_count}]: {line}");
             } else {
-                debug!("stdout[{}]: {}", line_count, line);
+                debug!("stdout[{line_count}]: {line}");
             }
 
             // Store live output in both local buffer and registry
@@ -1215,7 +1209,7 @@ async fn spawn_agent_system(
                         if let Ok(mut current_session_id) = session_id_clone.lock() {
                             if current_session_id.is_empty() {
                                 *current_session_id = sid.to_string();
-                                info!("🔑 Extracted session ID: {}", sid);
+                                info!("🔑 Extracted session ID: {sid}");
 
                                 // Update database immediately with session ID
                                 if let Ok(conn) = Connection::open(&db_path_for_stdout) {
@@ -1225,13 +1219,12 @@ async fn spawn_agent_system(
                                     ) {
                                         Ok(rows) => {
                                             if rows > 0 {
-                                                info!("✅ Updated agent run {} with session ID immediately", run_id);
+                                                info!("✅ Updated agent run {run_id} with session ID immediately");
                                             }
                                         }
                                         Err(e) => {
                                             error!(
-                                                "❌ Failed to update session ID immediately: {}",
-                                                e
+                                                "❌ Failed to update session ID immediately: {e}"
                                             );
                                         }
                                     }
@@ -1243,14 +1236,13 @@ async fn spawn_agent_system(
             }
 
             // Emit the line to the frontend with run_id for isolation
-            let _ = app_handle.emit(&format!("agent-output:{}", run_id), &line);
+            let _ = app_handle.emit(&format!("agent-output:{run_id}"), &line);
             // Also emit to the generic event for backward compatibility
             let _ = app_handle.emit("agent-output", &line);
         }
 
         info!(
-            "📖 Finished reading Claude stdout. Total lines: {}",
-            line_count
+            "📖 Finished reading Claude stdout. Total lines: {line_count}"
         );
     });
 
@@ -1268,21 +1260,20 @@ async fn spawn_agent_system(
 
             // Log first error
             if !first_error_clone.load(std::sync::atomic::Ordering::Relaxed) {
-                warn!("⚠️ First error output from Claude process! Line: {}", line);
+                warn!("⚠️ First error output from Claude process! Line: {line}");
                 first_error_clone.store(true, std::sync::atomic::Ordering::Relaxed);
             }
 
-            error!("stderr[{}]: {}", error_count, line);
+            error!("stderr[{error_count}]: {line}");
             // Emit error lines to the frontend with run_id for isolation
-            let _ = app_handle_stderr.emit(&format!("agent-error:{}", run_id), &line);
+            let _ = app_handle_stderr.emit(&format!("agent-error:{run_id}"), &line);
             // Also emit to the generic event for backward compatibility
             let _ = app_handle_stderr.emit("agent-error", &line);
         }
 
         if error_count > 0 {
             warn!(
-                "📖 Finished reading Claude stderr. Total error lines: {}",
-                error_count
+                "📖 Finished reading Claude stderr. Total error lines: {error_count}"
             );
         } else {
             info!("📖 Finished reading Claude stderr. No errors.");
@@ -1302,7 +1293,7 @@ async fn spawn_agent_system(
             execution_model.clone(),
             child,
         )
-        .map_err(|e| format!("Failed to register process: {}", e))?;
+        .map_err(|e| format!("Failed to register process: {e}"))?;
     info!("📋 Registered process in registry");
 
     let db_path_for_monitor = db_path.clone(); // Clone for the monitor task
@@ -1332,8 +1323,7 @@ async fn spawn_agent_system(
 
                 // Process timed out - kill it via PID
                 warn!(
-                    "🔍 Process likely stuck waiting for input, attempting to kill PID: {}",
-                    pid
+                    "🔍 Process likely stuck waiting for input, attempting to kill PID: {pid}"
                 );
                 let kill_result = std::process::Command::new("kill")
                     .arg("-TERM")
@@ -1352,7 +1342,7 @@ async fn spawn_agent_system(
                             .output();
                     }
                     Err(e) => {
-                        warn!("🔍 Error killing process: {}", e);
+                        warn!("🔍 Error killing process: {e}");
                     }
                 }
 
@@ -1365,7 +1355,7 @@ async fn spawn_agent_system(
                 }
 
                 let _ = app.emit("agent-complete", false);
-                let _ = app.emit(&format!("agent-complete:{}", run_id), false);
+                let _ = app.emit(&format!("agent-complete:{run_id}"), false);
                 return;
             }
 
@@ -1378,7 +1368,7 @@ async fn spawn_agent_system(
         let _ = stderr_task.await;
 
         let duration_ms = start_time.elapsed().as_millis() as i64;
-        info!("⏱️ Process execution took {} ms", duration_ms);
+        info!("⏱️ Process execution took {duration_ms} ms");
 
         // Get the session ID that was extracted
         let extracted_session_id = if let Ok(sid) = session_id.lock() {
@@ -1393,8 +1383,7 @@ async fn spawn_agent_system(
         // Update the run record with session ID and mark as completed - open a new connection
         if let Ok(conn) = Connection::open(&db_path_for_monitor) {
             info!(
-                "🔄 Updating database with extracted session ID: {}",
-                extracted_session_id
+                "🔄 Updating database with extracted session ID: {extracted_session_id}"
             );
             match conn.execute(
                 "UPDATE agent_runs SET session_id = ?1, status = 'completed', completed_at = CURRENT_TIMESTAMP WHERE id = ?2",
@@ -1402,26 +1391,25 @@ async fn spawn_agent_system(
             ) {
                 Ok(rows_affected) => {
                     if rows_affected > 0 {
-                        info!("✅ Successfully updated agent run {} with session ID: {}", run_id, extracted_session_id);
+                        info!("✅ Successfully updated agent run {run_id} with session ID: {extracted_session_id}");
                     } else {
-                        warn!("⚠️ No rows affected when updating agent run {} with session ID", run_id);
+                        warn!("⚠️ No rows affected when updating agent run {run_id} with session ID");
                     }
                 }
                 Err(e) => {
-                    error!("❌ Failed to update agent run {} with session ID: {}", run_id, e);
+                    error!("❌ Failed to update agent run {run_id} with session ID: {e}");
                 }
             }
         } else {
             error!(
-                "❌ Failed to open database to update session ID for run {}",
-                run_id
+                "❌ Failed to open database to update session ID for run {run_id}"
             );
         }
 
         // Cleanup will be handled by the cleanup_finished_processes function
 
         let _ = app.emit("agent-complete", true);
-        let _ = app.emit(&format!("agent-complete:{}", run_id), true);
+        let _ = app.emit(&format!("agent-complete:{run_id}"), true);
     });
 
     Ok(run_id)
@@ -1499,21 +1487,21 @@ pub async fn kill_agent_session(
     registry: State<'_, crate::process::ProcessRegistryState>,
     run_id: i64,
 ) -> Result<bool, String> {
-    info!("Attempting to kill agent session {}", run_id);
+    info!("Attempting to kill agent session {run_id}");
 
     // First try to kill using the process registry
     let killed_via_registry = match registry.0.kill_process(run_id).await {
         Ok(success) => {
             if success {
-                info!("Successfully killed process {} via registry", run_id);
+                info!("Successfully killed process {run_id} via registry");
                 true
             } else {
-                warn!("Process {} not found in registry", run_id);
+                warn!("Process {run_id} not found in registry");
                 false
             }
         }
         Err(e) => {
-            warn!("Failed to kill process {} via registry: {}", run_id, e);
+            warn!("Failed to kill process {run_id} via registry: {e}");
             false
         }
     };
@@ -1531,7 +1519,7 @@ pub async fn kill_agent_session(
         };
 
         if let Some(pid) = pid_result {
-            info!("Attempting fallback kill for PID {} from database", pid);
+            info!("Attempting fallback kill for PID {pid} from database");
             let _ = registry.0.kill_process_by_pid(run_id, pid as u32)?;
         }
     }
@@ -1544,7 +1532,7 @@ pub async fn kill_agent_session(
     ).map_err(|e| e.to_string())?;
 
     // Emit cancellation event with run_id for proper isolation
-    let _ = app.emit(&format!("agent-cancelled:{}", run_id), true);
+    let _ = app.emit(&format!("agent-cancelled:{run_id}"), true);
 
     Ok(updated > 0 || killed_via_registry)
 }
@@ -1593,7 +1581,7 @@ pub async fn cleanup_finished_processes(db: State<'_, AgentDb>) -> Result<Vec<i6
         let is_running = if cfg!(target_os = "windows") {
             // On Windows, use tasklist to check if process exists
             match std::process::Command::new("tasklist")
-                .args(["/FI", &format!("PID eq {}", pid)])
+                .args(["/FI", &format!("PID eq {pid}")])
                 .args(["/FO", "CSV"])
                 .output()
             {
@@ -1624,8 +1612,7 @@ pub async fn cleanup_finished_processes(db: State<'_, AgentDb>) -> Result<Vec<i6
             if updated > 0 {
                 cleaned_up.push(run_id);
                 info!(
-                    "Marked agent run {} as completed (PID {} no longer running)",
-                    run_id, pid
+                    "Marked agent run {run_id} as completed (PID {pid} no longer running)"
                 );
             }
         }
@@ -1672,7 +1659,7 @@ pub async fn get_session_output(
 
     // Check if projects directory exists
     if !projects_dir.exists() {
-        log::error!("Projects directory not found at: {:?}", projects_dir);
+        log::error!("Projects directory not found at: {projects_dir:?}");
         return Err("Projects directory not found".to_string());
     }
 
@@ -1688,15 +1675,15 @@ pub async fn get_session_output(
             let path = entry.path();
             if path.is_dir() {
                 let dir_name = path.file_name().unwrap_or_default().to_string_lossy();
-                log::debug!("Checking project directory: {}", dir_name);
+                log::debug!("Checking project directory: {dir_name}");
 
                 let potential_session_file = path.join(format!("{}.jsonl", run.session_id));
                 if potential_session_file.exists() {
-                    log::info!("Found session file at: {:?}", potential_session_file);
+                    log::info!("Found session file at: {potential_session_file:?}");
                     session_file_path = Some(potential_session_file);
                     break;
                 } else {
-                    log::debug!("Session file not found in: {}", dir_name);
+                    log::debug!("Session file not found in: {dir_name}");
                 }
             }
         }
@@ -1763,7 +1750,7 @@ pub async fn stream_session_output(
 
         let encoded_project = project_path.replace('/', "-");
         let project_dir = claude_dir.join(&encoded_project);
-        let session_file = project_dir.join(format!("{}.jsonl", session_id));
+        let session_file = project_dir.join(format!("{session_id}.jsonl"));
 
         let mut last_size = 0u64;
 
@@ -1777,7 +1764,7 @@ pub async fn stream_session_output(
                         // File has grown, read new content
                         if let Ok(content) = tokio::fs::read_to_string(&session_file).await {
                             let _ = app
-                                .emit("session-output-update", &format!("{}:{}", run_id, content));
+                                .emit("session-output-update", &format!("{run_id}:{content}"));
                         }
                         last_size = current_size;
                     }
@@ -1802,14 +1789,13 @@ pub async fn stream_session_output(
                     |row| row.get::<_, String>(0),
                 ) {
                     if status != "running" {
-                        debug!("Session {} is no longer running, stopping stream", run_id);
+                        debug!("Session {run_id} is no longer running, stopping stream");
                         break;
                     }
                 } else {
                     // If we can't query the status, assume it's still running
                     debug!(
-                        "Could not query session status for {}, continuing stream",
-                        run_id
+                        "Could not query session status for {run_id}, continuing stream"
                     );
                 }
             }
@@ -1817,7 +1803,7 @@ pub async fn stream_session_output(
             tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
         }
 
-        debug!("Stopped streaming for session {}", run_id);
+        debug!("Stopped streaming for session {run_id}");
     });
 
     Ok(())
@@ -1844,7 +1830,7 @@ pub async fn export_agent(db: State<'_, AgentDb>, id: i64) -> Result<String, Str
                 }))
             },
         )
-        .map_err(|e| format!("Failed to fetch agent: {}", e))?;
+        .map_err(|e| format!("Failed to fetch agent: {e}"))?;
 
     // Create the export wrapper
     let export_data = serde_json::json!({
@@ -1855,7 +1841,7 @@ pub async fn export_agent(db: State<'_, AgentDb>, id: i64) -> Result<String, Str
 
     // Convert to pretty JSON string
     serde_json::to_string_pretty(&export_data)
-        .map_err(|e| format!("Failed to serialize agent: {}", e))
+        .map_err(|e| format!("Failed to serialize agent: {e}"))
 }
 
 /// Export agent to file with native dialog
@@ -1869,7 +1855,7 @@ pub async fn export_agent_to_file(
     let json_data = export_agent(db, id).await?;
 
     // Write to file
-    std::fs::write(&file_path, json_data).map_err(|e| format!("Failed to write file: {}", e))?;
+    std::fs::write(&file_path, json_data).map_err(|e| format!("Failed to write file: {e}"))?;
 
     Ok(())
 }
@@ -1886,7 +1872,7 @@ pub async fn get_claude_binary_path(db: State<'_, AgentDb>) -> Result<Option<Str
     ) {
         Ok(path) => Ok(Some(path)),
         Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
-        Err(e) => Err(format!("Failed to get Claude binary path: {}", e)),
+        Err(e) => Err(format!("Failed to get Claude binary path: {e}")),
     }
 }
 
@@ -1904,14 +1890,14 @@ pub async fn set_claude_binary_path(db: State<'_, AgentDb>, path: String) -> Res
              ON CONFLICT(key) DO UPDATE SET value = ?1",
             params![path],
         )
-        .map_err(|e| format!("Failed to save Claude binary path: {}", e))?;
+        .map_err(|e| format!("Failed to save Claude binary path: {e}"))?;
         return Ok(());
     }
 
     // Validate that the path exists and is executable for system installations
     let path_buf = std::path::PathBuf::from(&path);
     if !path_buf.exists() {
-        return Err(format!("File does not exist: {}", path));
+        return Err(format!("File does not exist: {path}"));
     }
 
     // Check if it's executable (on Unix systems)
@@ -1919,10 +1905,10 @@ pub async fn set_claude_binary_path(db: State<'_, AgentDb>, path: String) -> Res
     {
         use std::os::unix::fs::PermissionsExt;
         let metadata = std::fs::metadata(&path_buf)
-            .map_err(|e| format!("Failed to read file metadata: {}", e))?;
+            .map_err(|e| format!("Failed to read file metadata: {e}"))?;
         let permissions = metadata.permissions();
         if permissions.mode() & 0o111 == 0 {
-            return Err(format!("File is not executable: {}", path));
+            return Err(format!("File is not executable: {path}"));
         }
     }
 
@@ -1932,7 +1918,7 @@ pub async fn set_claude_binary_path(db: State<'_, AgentDb>, path: String) -> Res
          ON CONFLICT(key) DO UPDATE SET value = ?1",
         params![path],
     )
-    .map_err(|e| format!("Failed to save Claude binary path: {}", e))?;
+    .map_err(|e| format!("Failed to save Claude binary path: {e}"))?;
 
     Ok(())
 }
@@ -1961,7 +1947,7 @@ pub async fn list_claude_installations(
             let sidecar_cmd = match app.shell().sidecar("claude-code") {
                 Ok(cmd) => cmd.args(["--version"]).current_dir(&temp_dir),
                 Err(e) => {
-                    log::warn!("Failed to create sidecar command for version check: {}", e);
+                    log::warn!("Failed to create sidecar command for version check: {e}");
                     continue;
                 }
             };
@@ -1990,7 +1976,7 @@ pub async fn list_claude_installations(
                                 break;
                             }
                             CommandEvent::Error(e) => {
-                                log::warn!("Error during sidecar version check: {}", e);
+                                log::warn!("Error during sidecar version check: {e}");
                                 break;
                             }
                             _ => {}
@@ -2013,7 +1999,7 @@ pub async fn list_claude_installations(
                     }
                 }
                 Err(e) => {
-                    log::warn!("Failed to spawn sidecar for version check: {}", e);
+                    log::warn!("Failed to spawn sidecar for version check: {e}");
                 }
             }
         }
@@ -2056,8 +2042,8 @@ fn create_command_with_env(program: &str) -> Command {
         if let Some(node_bin_dir) = std::path::Path::new(program).parent() {
             let current_path = std::env::var("PATH").unwrap_or_default();
             let node_bin_str = node_bin_dir.to_string_lossy();
-            if !current_path.contains(&node_bin_str.as_ref()) {
-                let new_path = format!("{}:{}", node_bin_str, current_path);
+            if !current_path.contains(node_bin_str.as_ref()) {
+                let new_path = format!("{node_bin_str}:{current_path}");
                 tokio_cmd.env("PATH", new_path);
             }
         }
@@ -2093,7 +2079,7 @@ fn create_command_with_env(program: &str) -> Command {
                     ":"
                 };
                 if !current_path.split(separator).any(|p| p == sidecar_dir_str) {
-                    let new_path = format!("{}{}{}", sidecar_dir_str, separator, current_path);
+                    let new_path = format!("{sidecar_dir_str}{separator}{current_path}");
                     tokio_cmd.env("PATH", new_path);
                 }
             }
@@ -2109,7 +2095,7 @@ fn create_command_with_env(program: &str) -> Command {
 pub async fn import_agent(db: State<'_, AgentDb>, json_data: String) -> Result<Agent, String> {
     // Parse the JSON data
     let export_data: AgentExport =
-        serde_json::from_str(&json_data).map_err(|e| format!("Invalid JSON format: {}", e))?;
+        serde_json::from_str(&json_data).map_err(|e| format!("Invalid JSON format: {e}"))?;
 
     // Validate version
     if export_data.version != 1 {
@@ -2150,7 +2136,7 @@ pub async fn import_agent(db: State<'_, AgentDb>, json_data: String) -> Result<A
             agent_data.hooks
         ],
     )
-    .map_err(|e| format!("Failed to create agent: {}", e))?;
+    .map_err(|e| format!("Failed to create agent: {e}"))?;
 
     let id = conn.last_insert_rowid();
 
@@ -2176,7 +2162,7 @@ pub async fn import_agent(db: State<'_, AgentDb>, json_data: String) -> Result<A
                 })
             },
         )
-        .map_err(|e| format!("Failed to fetch created agent: {}", e))?;
+        .map_err(|e| format!("Failed to fetch created agent: {e}"))?;
 
     Ok(agent)
 }
@@ -2189,7 +2175,7 @@ pub async fn import_agent_from_file(
 ) -> Result<Agent, String> {
     // Read the file
     let json_data =
-        std::fs::read_to_string(&file_path).map_err(|e| format!("Failed to read file: {}", e))?;
+        std::fs::read_to_string(&file_path).map_err(|e| format!("Failed to read file: {e}"))?;
 
     // Import the agent
     import_agent(db, json_data).await
@@ -2233,18 +2219,18 @@ pub async fn fetch_github_agents() -> Result<Vec<GitHubAgentFile>, String> {
         .header("User-Agent", "Claudia-App")
         .send()
         .await
-        .map_err(|e| format!("Failed to fetch from GitHub: {}", e))?;
+        .map_err(|e| format!("Failed to fetch from GitHub: {e}"))?;
 
     if !response.status().is_success() {
         let status = response.status();
         let error_text = response.text().await.unwrap_or_default();
-        return Err(format!("GitHub API error ({}): {}", status, error_text));
+        return Err(format!("GitHub API error ({status}): {error_text}"));
     }
 
     let api_files: Vec<GitHubApiResponse> = response
         .json()
         .await
-        .map_err(|e| format!("Failed to parse GitHub response: {}", e))?;
+        .map_err(|e| format!("Failed to parse GitHub response: {e}"))?;
 
     // Filter only .claudia.json files
     let agent_files: Vec<GitHubAgentFile> = api_files
@@ -2268,7 +2254,7 @@ pub async fn fetch_github_agents() -> Result<Vec<GitHubAgentFile>, String> {
 /// Fetch and preview a specific agent from GitHub
 #[tauri::command]
 pub async fn fetch_github_agent_content(download_url: String) -> Result<AgentExport, String> {
-    info!("Fetching agent content from: {}", download_url);
+    info!("Fetching agent content from: {download_url}");
 
     let client = reqwest::Client::new();
     let response = client
@@ -2277,7 +2263,7 @@ pub async fn fetch_github_agent_content(download_url: String) -> Result<AgentExp
         .header("User-Agent", "Claudia-App")
         .send()
         .await
-        .map_err(|e| format!("Failed to download agent: {}", e))?;
+        .map_err(|e| format!("Failed to download agent: {e}"))?;
 
     if !response.status().is_success() {
         return Err(format!(
@@ -2289,11 +2275,11 @@ pub async fn fetch_github_agent_content(download_url: String) -> Result<AgentExp
     let json_text = response
         .text()
         .await
-        .map_err(|e| format!("Failed to read response: {}", e))?;
+        .map_err(|e| format!("Failed to read response: {e}"))?;
 
     // Parse and validate the agent data
     let export_data: AgentExport = serde_json::from_str(&json_text)
-        .map_err(|e| format!("Invalid agent JSON format: {}", e))?;
+        .map_err(|e| format!("Invalid agent JSON format: {e}"))?;
 
     // Validate version
     if export_data.version != 1 {
@@ -2312,14 +2298,14 @@ pub async fn import_agent_from_github(
     db: State<'_, AgentDb>,
     download_url: String,
 ) -> Result<Agent, String> {
-    info!("Importing agent from GitHub: {}", download_url);
+    info!("Importing agent from GitHub: {download_url}");
 
     // First, fetch the agent content
     let export_data = fetch_github_agent_content(download_url).await?;
 
     // Convert to JSON string and use existing import logic
     let json_data = serde_json::to_string(&export_data)
-        .map_err(|e| format!("Failed to serialize agent data: {}", e))?;
+        .map_err(|e| format!("Failed to serialize agent data: {e}"))?;
 
     // Import using existing function
     import_agent(db, json_data).await
@@ -2331,7 +2317,7 @@ pub async fn import_agent_from_github(
 pub async fn load_agent_session_history(
     session_id: String,
 ) -> Result<Vec<serde_json::Value>, String> {
-    log::info!("Loading agent session history for session: {}", session_id);
+    log::info!("Loading agent session history for session: {session_id}");
 
     let claude_dir = dirs::home_dir()
         .ok_or("Failed to get home directory")?
@@ -2340,15 +2326,14 @@ pub async fn load_agent_session_history(
     let projects_dir = claude_dir.join("projects");
 
     if !projects_dir.exists() {
-        log::error!("Projects directory not found at: {:?}", projects_dir);
+        log::error!("Projects directory not found at: {projects_dir:?}");
         return Err("Projects directory not found".to_string());
     }
 
     // Search for the session file in all project directories
     let mut session_file_path = None;
     log::info!(
-        "Searching for session file {} in all project directories",
-        session_id
+        "Searching for session file {session_id} in all project directories"
     );
 
     if let Ok(entries) = std::fs::read_dir(&projects_dir) {
@@ -2356,15 +2341,15 @@ pub async fn load_agent_session_history(
             let path = entry.path();
             if path.is_dir() {
                 let dir_name = path.file_name().unwrap_or_default().to_string_lossy();
-                log::debug!("Checking project directory: {}", dir_name);
+                log::debug!("Checking project directory: {dir_name}");
 
-                let potential_session_file = path.join(format!("{}.jsonl", session_id));
+                let potential_session_file = path.join(format!("{session_id}.jsonl"));
                 if potential_session_file.exists() {
-                    log::info!("Found session file at: {:?}", potential_session_file);
+                    log::info!("Found session file at: {potential_session_file:?}");
                     session_file_path = Some(potential_session_file);
                     break;
                 } else {
-                    log::debug!("Session file not found in: {}", dir_name);
+                    log::debug!("Session file not found in: {dir_name}");
                 }
             }
         }
@@ -2374,7 +2359,7 @@ pub async fn load_agent_session_history(
 
     if let Some(session_path) = session_file_path {
         let file = std::fs::File::open(&session_path)
-            .map_err(|e| format!("Failed to open session file: {}", e))?;
+            .map_err(|e| format!("Failed to open session file: {e}"))?;
 
         let reader = BufReader::new(file);
         let mut messages = Vec::new();
@@ -2389,6 +2374,6 @@ pub async fn load_agent_session_history(
 
         Ok(messages)
     } else {
-        Err(format!("Session file not found: {}", session_id))
+        Err(format!("Session file not found: {session_id}"))
     }
 }

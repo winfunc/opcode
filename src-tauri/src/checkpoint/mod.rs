@@ -98,6 +98,7 @@ pub struct SessionTimeline {
 /// Strategy for automatic checkpoint creation
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[derive(Default)]
 pub enum CheckpointStrategy {
     /// Only create checkpoints manually
     Manual,
@@ -106,6 +107,7 @@ pub enum CheckpointStrategy {
     /// Create checkpoint after each tool use
     PerToolUse,
     /// Create checkpoint after destructive operations
+    #[default]
     Smart,
 }
 
@@ -170,11 +172,6 @@ pub struct FileDiff {
     pub diff_content: Option<String>,
 }
 
-impl Default for CheckpointStrategy {
-    fn default() -> Self {
-        CheckpointStrategy::Smart
-    }
-}
 
 impl SessionTimeline {
     /// Create a new empty timeline
@@ -257,6 +254,6 @@ impl CheckpointPaths {
         self.files_dir
             .join("refs")
             .join(checkpoint_id)
-            .join(format!("{}.json", safe_filename))
+            .join(format!("{safe_filename}.json"))
     }
 }

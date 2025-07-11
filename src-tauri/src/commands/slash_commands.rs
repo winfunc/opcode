@@ -70,7 +70,7 @@ fn parse_markdown_with_frontmatter(content: &str) -> Result<(Option<CommandFront
         match serde_yaml::from_str::<CommandFrontmatter>(&frontmatter_content) {
             Ok(frontmatter) => Ok((Some(frontmatter), body_content)),
             Err(e) => {
-                debug!("Failed to parse frontmatter: {}", e);
+                debug!("Failed to parse frontmatter: {e}");
                 // Return full content if frontmatter parsing fails
                 Ok((None, content.to_string()))
             }
@@ -113,7 +113,7 @@ fn extract_command_info(file_path: &Path, base_path: &Path) -> Result<(String, O
 
 /// Load a single command from a markdown file
 fn load_command_from_file(file_path: &Path, base_path: &Path, scope: &str) -> Result<SlashCommand> {
-    debug!("Loading command from: {:?}", file_path);
+    debug!("Loading command from: {file_path:?}");
 
     // Read file content
     let content = fs::read_to_string(file_path).context("Failed to read command file")?;
@@ -259,11 +259,11 @@ pub async fn slash_commands_list(
     if let Some(proj_path) = project_path {
         let project_commands_dir = PathBuf::from(&proj_path).join(".claude").join("commands");
         if project_commands_dir.exists() {
-            debug!("Scanning project commands at: {:?}", project_commands_dir);
+            debug!("Scanning project commands at: {project_commands_dir:?}");
 
             let mut md_files = Vec::new();
             if let Err(e) = find_markdown_files(&project_commands_dir, &mut md_files) {
-                error!("Failed to find project command files: {}", e);
+                error!("Failed to find project command files: {e}");
             } else {
                 for file_path in md_files {
                     match load_command_from_file(&file_path, &project_commands_dir, "project") {
@@ -272,7 +272,7 @@ pub async fn slash_commands_list(
                             commands.push(cmd);
                         }
                         Err(e) => {
-                            error!("Failed to load command from {:?}: {}", file_path, e);
+                            error!("Failed to load command from {file_path:?}: {e}");
                         }
                     }
                 }
@@ -284,11 +284,11 @@ pub async fn slash_commands_list(
     if let Some(home_dir) = dirs::home_dir() {
         let user_commands_dir = home_dir.join(".claude").join("commands");
         if user_commands_dir.exists() {
-            debug!("Scanning user commands at: {:?}", user_commands_dir);
+            debug!("Scanning user commands at: {user_commands_dir:?}");
 
             let mut md_files = Vec::new();
             if let Err(e) = find_markdown_files(&user_commands_dir, &mut md_files) {
-                error!("Failed to find user command files: {}", e);
+                error!("Failed to find user command files: {e}");
             } else {
                 for file_path in md_files {
                     match load_command_from_file(&file_path, &user_commands_dir, "user") {
@@ -297,7 +297,7 @@ pub async fn slash_commands_list(
                             commands.push(cmd);
                         }
                         Err(e) => {
-                            error!("Failed to load command from {:?}: {}", file_path, e);
+                            error!("Failed to load command from {file_path:?}: {e}");
                         }
                     }
                 }
@@ -312,7 +312,7 @@ pub async fn slash_commands_list(
 /// Get a single slash command by ID
 #[tauri::command]
 pub async fn slash_command_get(command_id: String) -> Result<SlashCommand, String> {
-    debug!("Getting slash command: {}", command_id);
+    debug!("Getting slash command: {command_id}");
 
     // Parse the ID to determine scope and reconstruct file path
     let parts: Vec<&str> = command_id.split('-').collect();
@@ -327,7 +327,7 @@ pub async fn slash_command_get(command_id: String) -> Result<SlashCommand, Strin
     commands
         .into_iter()
         .find(|cmd| cmd.id == command_id)
-        .ok_or_else(|| format!("Command not found: {}", command_id))
+        .ok_or_else(|| format!("Command not found: {command_id}"))
 }
 
 /// Create or update a slash command
@@ -341,7 +341,7 @@ pub async fn slash_command_save(
     allowed_tools: Vec<String>,
     project_path: Option<String>,
 ) -> Result<SlashCommand, String> {
-    info!("Saving slash command: {} in scope: {}", name, scope);
+    info!("Saving slash command: {name} in scope: {scope}");
 
     // Validate inputs
     if name.is_empty() {
@@ -375,10 +375,10 @@ pub async fn slash_command_save(
     }
 
     // Create directories if needed
-    fs::create_dir_all(&file_path).map_err(|e| format!("Failed to create directories: {}", e))?;
+    fs::create_dir_all(&file_path).map_err(|e| format!("Failed to create directories: {e}"))?;
 
     // Add filename
-    file_path = file_path.join(format!("{}.md", name));
+    file_path = file_path.join(format!("{name}.md"));
 
     // Build content with frontmatter
     let mut full_content = String::new();
@@ -388,13 +388,13 @@ pub async fn slash_command_save(
         full_content.push_str("---\n");
 
         if let Some(desc) = &description {
-            full_content.push_str(&format!("description: {}\n", desc));
+            full_content.push_str(&format!("description: {desc}\n"));
         }
 
         if !allowed_tools.is_empty() {
             full_content.push_str("allowed-tools:\n");
             for tool in &allowed_tools {
-                full_content.push_str(&format!("  - {}\n", tool));
+                full_content.push_str(&format!("  - {tool}\n"));
             }
         }
 
@@ -405,11 +405,11 @@ pub async fn slash_command_save(
 
     // Write file
     fs::write(&file_path, &full_content)
-        .map_err(|e| format!("Failed to write command file: {}", e))?;
+        .map_err(|e| format!("Failed to write command file: {e}"))?;
 
     // Load and return the saved command
     load_command_from_file(&file_path, &base_dir, &scope)
-        .map_err(|e| format!("Failed to load saved command: {}", e))
+        .map_err(|e| format!("Failed to load saved command: {e}"))
 }
 
 /// Delete a slash command
@@ -418,7 +418,7 @@ pub async fn slash_command_delete(
     command_id: String,
     project_path: Option<String>,
 ) -> Result<String, String> {
-    info!("Deleting slash command: {}", command_id);
+    info!("Deleting slash command: {command_id}");
 
     // First, we need to determine if this is a project command by parsing the ID
     let is_project_command = command_id.starts_with("project-");
@@ -435,11 +435,11 @@ pub async fn slash_command_delete(
     let command = commands
         .into_iter()
         .find(|cmd| cmd.id == command_id)
-        .ok_or_else(|| format!("Command not found: {}", command_id))?;
+        .ok_or_else(|| format!("Command not found: {command_id}"))?;
 
     // Delete the file
     fs::remove_file(&command.file_path)
-        .map_err(|e| format!("Failed to delete command file: {}", e))?;
+        .map_err(|e| format!("Failed to delete command file: {e}"))?;
 
     // Clean up empty directories
     if let Some(parent) = Path::new(&command.file_path).parent() {

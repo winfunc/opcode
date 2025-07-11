@@ -148,7 +148,7 @@ fn get_claude_dir() -> Result<PathBuf> {
 fn get_project_path_from_sessions(project_dir: &PathBuf) -> Result<String, String> {
     // Try to read any JSONL file in the directory
     let entries = fs::read_dir(project_dir)
-        .map_err(|e| format!("Failed to read project directory: {}", e))?;
+        .map_err(|e| format!("Failed to read project directory: {e}"))?;
 
     for entry in entries {
         if let Ok(entry) = entry {
@@ -246,7 +246,7 @@ fn create_command_with_env(program: &str) -> Command {
             || key == "HOMEBREW_PREFIX"
             || key == "HOMEBREW_CELLAR"
         {
-            log::debug!("Inheriting env var: {}={}", key, value);
+            log::debug!("Inheriting env var: {key}={value}");
             tokio_cmd.env(&key, &value);
         }
     }
@@ -256,8 +256,8 @@ fn create_command_with_env(program: &str) -> Command {
         if let Some(node_bin_dir) = std::path::Path::new(program).parent() {
             let current_path = std::env::var("PATH").unwrap_or_default();
             let node_bin_str = node_bin_dir.to_string_lossy();
-            if !current_path.contains(&node_bin_str.as_ref()) {
-                let new_path = format!("{}:{}", node_bin_str, current_path);
+            if !current_path.contains(node_bin_str.as_ref()) {
+                let new_path = format!("{node_bin_str}:{current_path}");
                 tokio_cmd.env("PATH", new_path);
             }
         }
@@ -280,7 +280,7 @@ fn create_sidecar_command(
     let mut sidecar_cmd = app
         .shell()
         .sidecar("claude-code")
-        .map_err(|e| format!("Failed to create sidecar command: {}", e))?;
+        .map_err(|e| format!("Failed to create sidecar command: {e}"))?;
 
     // Add all arguments
     sidecar_cmd = sidecar_cmd.args(args);
@@ -316,7 +316,7 @@ pub async fn list_projects() -> Result<Vec<Project>, String> {
     let projects_dir = claude_dir.join("projects");
 
     if !projects_dir.exists() {
-        log::warn!("Projects directory does not exist: {:?}", projects_dir);
+        log::warn!("Projects directory does not exist: {projects_dir:?}");
         return Ok(Vec::new());
     }
 
@@ -324,10 +324,10 @@ pub async fn list_projects() -> Result<Vec<Project>, String> {
 
     // Read all directories in the projects folder
     let entries = fs::read_dir(&projects_dir)
-        .map_err(|e| format!("Failed to read projects directory: {}", e))?;
+        .map_err(|e| format!("Failed to read projects directory: {e}"))?;
 
     for entry in entries {
-        let entry = entry.map_err(|e| format!("Failed to read directory entry: {}", e))?;
+        let entry = entry.map_err(|e| format!("Failed to read directory entry: {e}"))?;
         let path = entry.path();
 
         if path.is_dir() {
@@ -338,7 +338,7 @@ pub async fn list_projects() -> Result<Vec<Project>, String> {
 
             // Get directory creation time
             let metadata = fs::metadata(&path)
-                .map_err(|e| format!("Failed to read directory metadata: {}", e))?;
+                .map_err(|e| format!("Failed to read directory metadata: {e}"))?;
 
             let created_at = metadata
                 .created()
@@ -352,7 +352,7 @@ pub async fn list_projects() -> Result<Vec<Project>, String> {
             let project_path = match get_project_path_from_sessions(&path) {
                 Ok(path) => path,
                 Err(e) => {
-                    log::warn!("Failed to get project path from sessions for {}: {}, falling back to decode", dir_name, e);
+                    log::warn!("Failed to get project path from sessions for {dir_name}: {e}, falling back to decode");
                     decode_project_path(dir_name)
                 }
             };
@@ -392,14 +392,14 @@ pub async fn list_projects() -> Result<Vec<Project>, String> {
 /// Gets sessions for a specific project
 #[tauri::command]
 pub async fn get_project_sessions(project_id: String) -> Result<Vec<Session>, String> {
-    log::info!("Getting sessions for project: {}", project_id);
+    log::info!("Getting sessions for project: {project_id}");
 
     let claude_dir = get_claude_dir().map_err(|e| e.to_string())?;
     let project_dir = claude_dir.join("projects").join(&project_id);
     let todos_dir = claude_dir.join("todos");
 
     if !project_dir.exists() {
-        return Err(format!("Project directory not found: {}", project_id));
+        return Err(format!("Project directory not found: {project_id}"));
     }
 
     // Get the actual project path from JSONL files
@@ -407,9 +407,7 @@ pub async fn get_project_sessions(project_id: String) -> Result<Vec<Session>, St
         Ok(path) => path,
         Err(e) => {
             log::warn!(
-                "Failed to get project path from sessions for {}: {}, falling back to decode",
-                project_id,
-                e
+                "Failed to get project path from sessions for {project_id}: {e}, falling back to decode"
             );
             decode_project_path(&project_id)
         }
@@ -419,17 +417,17 @@ pub async fn get_project_sessions(project_id: String) -> Result<Vec<Session>, St
 
     // Read all JSONL files in the project directory
     let entries = fs::read_dir(&project_dir)
-        .map_err(|e| format!("Failed to read project directory: {}", e))?;
+        .map_err(|e| format!("Failed to read project directory: {e}"))?;
 
     for entry in entries {
-        let entry = entry.map_err(|e| format!("Failed to read directory entry: {}", e))?;
+        let entry = entry.map_err(|e| format!("Failed to read directory entry: {e}"))?;
         let path = entry.path();
 
         if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("jsonl") {
             if let Some(session_id) = path.file_stem().and_then(|s| s.to_str()) {
                 // Get file creation time
                 let metadata = fs::metadata(&path)
-                    .map_err(|e| format!("Failed to read file metadata: {}", e))?;
+                    .map_err(|e| format!("Failed to read file metadata: {e}"))?;
 
                 let created_at = metadata
                     .created()
@@ -443,7 +441,7 @@ pub async fn get_project_sessions(project_id: String) -> Result<Vec<Session>, St
                 let (first_message, message_timestamp) = extract_first_user_message(&path);
 
                 // Try to load associated todo data
-                let todo_path = todos_dir.join(format!("{}.json", session_id));
+                let todo_path = todos_dir.join(format!("{session_id}.json"));
                 let todo_data = if todo_path.exists() {
                     fs::read_to_string(&todo_path)
                         .ok()
@@ -492,10 +490,10 @@ pub async fn get_claude_settings() -> Result<ClaudeSettings, String> {
     }
 
     let content = fs::read_to_string(&settings_path)
-        .map_err(|e| format!("Failed to read settings file: {}", e))?;
+        .map_err(|e| format!("Failed to read settings file: {e}"))?;
 
     let data: serde_json::Value = serde_json::from_str(&content)
-        .map_err(|e| format!("Failed to parse settings JSON: {}", e))?;
+        .map_err(|e| format!("Failed to parse settings JSON: {e}"))?;
 
     Ok(ClaudeSettings { data })
 }
@@ -503,7 +501,7 @@ pub async fn get_claude_settings() -> Result<ClaudeSettings, String> {
 /// Opens a new Claude Code session by executing the claude command
 #[tauri::command]
 pub async fn open_new_session(app: AppHandle, path: Option<String>) -> Result<String, String> {
-    log::info!("Opening new Claude Code session at path: {:?}", path);
+    log::info!("Opening new Claude Code session at path: {path:?}");
 
     #[cfg(not(debug_assertions))]
     let _claude_path = find_claude_binary(&app)?;
@@ -535,8 +533,8 @@ pub async fn open_new_session(app: AppHandle, path: Option<String>) -> Result<St
                 Ok("Claude Code session started".to_string())
             }
             Err(e) => {
-                log::error!("Failed to launch Claude Code: {}", e);
-                Err(format!("Failed to launch Claude Code: {}", e))
+                log::error!("Failed to launch Claude Code: {e}");
+                Err(format!("Failed to launch Claude Code: {e}"))
             }
         }
     }
@@ -555,7 +553,7 @@ pub async fn get_system_prompt() -> Result<String, String> {
         return Ok(String::new());
     }
 
-    fs::read_to_string(&claude_md_path).map_err(|e| format!("Failed to read CLAUDE.md: {}", e))
+    fs::read_to_string(&claude_md_path).map_err(|e| format!("Failed to read CLAUDE.md: {e}"))
 }
 
 /// Checks if Claude Code is installed and gets its version
@@ -585,13 +583,12 @@ pub async fn check_claude_version(app: AppHandle) -> Result<ClaudeVersionStatus,
         let sidecar_cmd = match app.shell().sidecar("claude-code") {
             Ok(cmd) => cmd.args(["--version"]).current_dir(&temp_dir),
             Err(e) => {
-                log::error!("Failed to create sidecar command: {}", e);
+                log::error!("Failed to create sidecar command: {e}");
                 return Ok(ClaudeVersionStatus {
                     is_installed: true, // We know it exists, just couldn't create command
                     version: None,
                     output: format!(
-                        "Using bundled Claude Code sidecar (command creation failed: {})",
-                        e
+                        "Using bundled Claude Code sidecar (command creation failed: {e})"
                     ),
                 });
             }
@@ -640,7 +637,7 @@ pub async fn check_claude_version(app: AppHandle) -> Result<ClaudeVersionStatus,
                 let full_output = if stderr_output.is_empty() {
                     stdout_output.clone()
                 } else {
-                    format!("{}\n{}", stdout_output, stderr_output)
+                    format!("{stdout_output}\n{stderr_output}")
                 };
 
                 // Check if the output matches the expected format
@@ -655,13 +652,12 @@ pub async fn check_claude_version(app: AppHandle) -> Result<ClaudeVersionStatus,
                 });
             }
             Err(e) => {
-                log::error!("Failed to execute sidecar: {}", e);
+                log::error!("Failed to execute sidecar: {e}");
                 return Ok(ClaudeVersionStatus {
                     is_installed: true, // We know it exists, just couldn't get version
                     version: None,
                     output: format!(
-                        "Using bundled Claude Code sidecar (version check failed: {})",
-                        e
+                        "Using bundled Claude Code sidecar (version check failed: {e})"
                     ),
                 });
             }
@@ -669,7 +665,7 @@ pub async fn check_claude_version(app: AppHandle) -> Result<ClaudeVersionStatus,
     }
 
     use log::debug;
-    debug!("Claude path: {}", claude_path);
+    debug!("Claude path: {claude_path}");
 
     // In production builds, we can't check the version directly
     #[cfg(not(debug_assertions))]
@@ -719,7 +715,7 @@ pub async fn check_claude_version(app: AppHandle) -> Result<ClaudeVersionStatus,
                 let full_output = if stderr.is_empty() {
                     stdout.clone()
                 } else {
-                    format!("{}\n{}", stdout, stderr)
+                    format!("{stdout}\n{stderr}")
                 };
 
                 // Check if the output matches the expected format
@@ -733,11 +729,11 @@ pub async fn check_claude_version(app: AppHandle) -> Result<ClaudeVersionStatus,
                 })
             }
             Err(e) => {
-                log::error!("Failed to run claude command: {}", e);
+                log::error!("Failed to run claude command: {e}");
                 Ok(ClaudeVersionStatus {
                     is_installed: false,
                     version: None,
-                    output: format!("Command not found: {}", e),
+                    output: format!("Command not found: {e}"),
                 })
             }
         }
@@ -752,7 +748,7 @@ pub async fn save_system_prompt(content: String) -> Result<String, String> {
     let claude_dir = get_claude_dir().map_err(|e| e.to_string())?;
     let claude_md_path = claude_dir.join("CLAUDE.md");
 
-    fs::write(&claude_md_path, content).map_err(|e| format!("Failed to write CLAUDE.md: {}", e))?;
+    fs::write(&claude_md_path, content).map_err(|e| format!("Failed to write CLAUDE.md: {e}"))?;
 
     Ok("System prompt saved successfully".to_string())
 }
@@ -767,10 +763,10 @@ pub async fn save_claude_settings(settings: serde_json::Value) -> Result<String,
 
     // Pretty print the JSON with 2-space indentation
     let json_string = serde_json::to_string_pretty(&settings)
-        .map_err(|e| format!("Failed to serialize settings: {}", e))?;
+        .map_err(|e| format!("Failed to serialize settings: {e}"))?;
 
     fs::write(&settings_path, json_string)
-        .map_err(|e| format!("Failed to write settings file: {}", e))?;
+        .map_err(|e| format!("Failed to write settings file: {e}"))?;
 
     Ok("Settings saved successfully".to_string())
 }
@@ -778,11 +774,11 @@ pub async fn save_claude_settings(settings: serde_json::Value) -> Result<String,
 /// Recursively finds all CLAUDE.md files in a project directory
 #[tauri::command]
 pub async fn find_claude_md_files(project_path: String) -> Result<Vec<ClaudeMdFile>, String> {
-    log::info!("Finding CLAUDE.md files in project: {}", project_path);
+    log::info!("Finding CLAUDE.md files in project: {project_path}");
 
     let path = PathBuf::from(&project_path);
     if !path.exists() {
-        return Err(format!("Project path does not exist: {}", project_path));
+        return Err(format!("Project path does not exist: {project_path}"));
     }
 
     let mut claude_files = Vec::new();
@@ -802,10 +798,10 @@ fn find_claude_md_recursive(
     claude_files: &mut Vec<ClaudeMdFile>,
 ) -> Result<(), String> {
     let entries = fs::read_dir(current_path)
-        .map_err(|e| format!("Failed to read directory {:?}: {}", current_path, e))?;
+        .map_err(|e| format!("Failed to read directory {current_path:?}: {e}"))?;
 
     for entry in entries {
-        let entry = entry.map_err(|e| format!("Failed to read directory entry: {}", e))?;
+        let entry = entry.map_err(|e| format!("Failed to read directory entry: {e}"))?;
         let path = entry.path();
 
         // Skip hidden files/directories
@@ -832,11 +828,11 @@ fn find_claude_md_recursive(
             if let Some(file_name) = path.file_name().and_then(|n| n.to_str()) {
                 if file_name.eq_ignore_ascii_case("CLAUDE.md") {
                     let metadata = fs::metadata(&path)
-                        .map_err(|e| format!("Failed to read file metadata: {}", e))?;
+                        .map_err(|e| format!("Failed to read file metadata: {e}"))?;
 
                     let relative_path = path
                         .strip_prefix(project_root)
-                        .map_err(|e| format!("Failed to get relative path: {}", e))?
+                        .map_err(|e| format!("Failed to get relative path: {e}"))?
                         .to_string_lossy()
                         .to_string();
 
@@ -864,30 +860,30 @@ fn find_claude_md_recursive(
 /// Reads a specific CLAUDE.md file by its absolute path
 #[tauri::command]
 pub async fn read_claude_md_file(file_path: String) -> Result<String, String> {
-    log::info!("Reading CLAUDE.md file: {}", file_path);
+    log::info!("Reading CLAUDE.md file: {file_path}");
 
     let path = PathBuf::from(&file_path);
     if !path.exists() {
-        return Err(format!("File does not exist: {}", file_path));
+        return Err(format!("File does not exist: {file_path}"));
     }
 
-    fs::read_to_string(&path).map_err(|e| format!("Failed to read file: {}", e))
+    fs::read_to_string(&path).map_err(|e| format!("Failed to read file: {e}"))
 }
 
 /// Saves a specific CLAUDE.md file by its absolute path
 #[tauri::command]
 pub async fn save_claude_md_file(file_path: String, content: String) -> Result<String, String> {
-    log::info!("Saving CLAUDE.md file: {}", file_path);
+    log::info!("Saving CLAUDE.md file: {file_path}");
 
     let path = PathBuf::from(&file_path);
 
     // Ensure the parent directory exists
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)
-            .map_err(|e| format!("Failed to create parent directory: {}", e))?;
+            .map_err(|e| format!("Failed to create parent directory: {e}"))?;
     }
 
-    fs::write(&path, content).map_err(|e| format!("Failed to write file: {}", e))?;
+    fs::write(&path, content).map_err(|e| format!("Failed to write file: {e}"))?;
 
     Ok("File saved successfully".to_string())
 }
@@ -899,23 +895,21 @@ pub async fn load_session_history(
     project_id: String,
 ) -> Result<Vec<serde_json::Value>, String> {
     log::info!(
-        "Loading session history for session: {} in project: {}",
-        session_id,
-        project_id
+        "Loading session history for session: {session_id} in project: {project_id}"
     );
 
     let claude_dir = get_claude_dir().map_err(|e| e.to_string())?;
     let session_path = claude_dir
         .join("projects")
         .join(&project_id)
-        .join(format!("{}.jsonl", session_id));
+        .join(format!("{session_id}.jsonl"));
 
     if !session_path.exists() {
-        return Err(format!("Session file not found: {}", session_id));
+        return Err(format!("Session file not found: {session_id}"));
     }
 
     let file =
-        fs::File::open(&session_path).map_err(|e| format!("Failed to open session file: {}", e))?;
+        fs::File::open(&session_path).map_err(|e| format!("Failed to open session file: {e}"))?;
 
     let reader = BufReader::new(file);
     let mut messages = Vec::new();
@@ -940,9 +934,7 @@ pub async fn execute_claude_code(
     model: String,
 ) -> Result<(), String> {
     log::info!(
-        "Starting new Claude Code session in: {} with model: {}",
-        project_path,
-        model
+        "Starting new Claude Code session in: {project_path} with model: {model}"
     );
 
     let claude_path = find_claude_binary(&app)?;
@@ -975,9 +967,7 @@ pub async fn continue_claude_code(
     model: String,
 ) -> Result<(), String> {
     log::info!(
-        "Continuing Claude Code conversation in: {} with model: {}",
-        project_path,
-        model
+        "Continuing Claude Code conversation in: {project_path} with model: {model}"
     );
 
     let claude_path = find_claude_binary(&app)?;
@@ -1012,10 +1002,7 @@ pub async fn resume_claude_code(
     model: String,
 ) -> Result<(), String> {
     log::info!(
-        "Resuming Claude Code session: {} in: {} with model: {}",
-        session_id,
-        project_path,
-        model
+        "Resuming Claude Code session: {session_id} in: {project_path} with model: {model}"
     );
 
     let claude_path = find_claude_binary(&app)?;
@@ -1048,8 +1035,7 @@ pub async fn cancel_claude_execution(
     session_id: Option<String>,
 ) -> Result<(), String> {
     log::info!(
-        "Cancelling Claude Code execution for session: {:?}",
-        session_id
+        "Cancelling Claude Code execution for session: {session_id:?}"
     );
 
     let mut killed = false;
@@ -1076,16 +1062,16 @@ pub async fn cancel_claude_execution(
                         }
                     }
                     Err(e) => {
-                        log::warn!("Failed to kill via registry: {}", e);
+                        log::warn!("Failed to kill via registry: {e}");
                     }
                 }
                 attempted_methods.push("registry");
             }
             Ok(None) => {
-                log::warn!("Session {} not found in ProcessRegistry", sid);
+                log::warn!("Session {sid} not found in ProcessRegistry");
             }
             Err(e) => {
-                log::error!("Error querying ProcessRegistry: {}", e);
+                log::error!("Error querying ProcessRegistry: {e}");
             }
         }
     }
@@ -1099,8 +1085,7 @@ pub async fn cancel_claude_execution(
             // Try to get the PID before killing
             let pid = child.id();
             log::info!(
-                "Attempting to kill Claude process via ClaudeProcessState with PID: {:?}",
-                pid
+                "Attempting to kill Claude process via ClaudeProcessState with PID: {pid:?}"
             );
 
             // Kill the process
@@ -1111,13 +1096,12 @@ pub async fn cancel_claude_execution(
                 }
                 Err(e) => {
                     log::error!(
-                        "Failed to kill Claude process via ClaudeProcessState: {}",
-                        e
+                        "Failed to kill Claude process via ClaudeProcessState: {e}"
                     );
 
                     // Method 3: If we have a PID, try system kill as last resort
                     if let Some(pid) = pid {
-                        log::info!("Attempting system kill as last resort for PID: {}", pid);
+                        log::info!("Attempting system kill as last resort for PID: {pid}");
                         let kill_result = if cfg!(target_os = "windows") {
                             std::process::Command::new("taskkill")
                                 .args(["/F", "/PID", &pid.to_string()])
@@ -1135,10 +1119,10 @@ pub async fn cancel_claude_execution(
                             }
                             Ok(output) => {
                                 let stderr = String::from_utf8_lossy(&output.stderr);
-                                log::error!("System kill failed: {}", stderr);
+                                log::error!("System kill failed: {stderr}");
                             }
                             Err(e) => {
-                                log::error!("Failed to execute system kill command: {}", e);
+                                log::error!("Failed to execute system kill command: {e}");
                             }
                         }
                     }
@@ -1156,9 +1140,9 @@ pub async fn cancel_claude_execution(
 
     // Always emit cancellation events for UI consistency
     if let Some(sid) = session_id {
-        let _ = app.emit(&format!("claude-cancelled:{}", sid), true);
+        let _ = app.emit(&format!("claude-cancelled:{sid}"), true);
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-        let _ = app.emit(&format!("claude-complete:{}", sid), false);
+        let _ = app.emit(&format!("claude-complete:{sid}"), false);
     }
 
     // Also emit generic events for backward compatibility
@@ -1169,7 +1153,7 @@ pub async fn cancel_claude_execution(
     if killed {
         log::info!("Claude process cancellation completed successfully");
     } else if !attempted_methods.is_empty() {
-        log::warn!("Claude process cancellation attempted but process may have already exited. Attempted methods: {:?}", attempted_methods);
+        log::warn!("Claude process cancellation attempted but process may have already exited. Attempted methods: {attempted_methods:?}");
     }
 
     Ok(())
@@ -1211,7 +1195,7 @@ async fn spawn_claude_process(
     // Spawn the process
     let mut child = cmd
         .spawn()
-        .map_err(|e| format!("Failed to spawn Claude: {}", e))?;
+        .map_err(|e| format!("Failed to spawn Claude: {e}"))?;
 
     // Get stdout and stderr
     let stdout = child.stdout.take().ok_or("Failed to get stdout")?;
@@ -1219,7 +1203,7 @@ async fn spawn_claude_process(
 
     // Get the child PID for logging
     let pid = child.id().unwrap_or(0);
-    log::info!("Spawned Claude process with PID: {:?}", pid);
+    log::info!("Spawned Claude process with PID: {pid:?}");
 
     // Create readers first (before moving child)
     let stdout_reader = BufReader::new(stdout);
@@ -1253,7 +1237,7 @@ async fn spawn_claude_process(
     let stdout_task = tokio::spawn(async move {
         let mut lines = stdout_reader.lines();
         while let Ok(Some(line)) = lines.next_line().await {
-            log::debug!("Claude stdout: {}", line);
+            log::debug!("Claude stdout: {line}");
 
             // Parse the line to check for init message with session ID
             if let Ok(msg) = serde_json::from_str::<serde_json::Value>(&line) {
@@ -1262,7 +1246,7 @@ async fn spawn_claude_process(
                         let mut session_id_guard = session_id_holder_clone.lock().unwrap();
                         if session_id_guard.is_none() {
                             *session_id_guard = Some(claude_session_id.to_string());
-                            log::info!("Extracted Claude session ID: {}", claude_session_id);
+                            log::info!("Extracted Claude session ID: {claude_session_id}");
 
                             // Now register with ProcessRegistry using Claude's session ID
                             match registry_clone.register_claude_session(
@@ -1273,12 +1257,12 @@ async fn spawn_claude_process(
                                 model_clone.clone(),
                             ) {
                                 Ok(run_id) => {
-                                    log::info!("Registered Claude session with run_id: {}", run_id);
+                                    log::info!("Registered Claude session with run_id: {run_id}");
                                     let mut run_id_guard = run_id_holder_clone.lock().unwrap();
                                     *run_id_guard = Some(run_id);
                                 }
                                 Err(e) => {
-                                    log::error!("Failed to register Claude session: {}", e);
+                                    log::error!("Failed to register Claude session: {e}");
                                 }
                             }
                         }
@@ -1293,7 +1277,7 @@ async fn spawn_claude_process(
 
             // Emit the line to the frontend with session isolation if we have session ID
             if let Some(ref session_id) = *session_id_holder_clone.lock().unwrap() {
-                let _ = app_handle.emit(&format!("claude-output:{}", session_id), &line);
+                let _ = app_handle.emit(&format!("claude-output:{session_id}"), &line);
             }
             // Also emit to the generic event for backward compatibility
             let _ = app_handle.emit("claude-output", &line);
@@ -1305,10 +1289,10 @@ async fn spawn_claude_process(
     let stderr_task = tokio::spawn(async move {
         let mut lines = stderr_reader.lines();
         while let Ok(Some(line)) = lines.next_line().await {
-            log::error!("Claude stderr: {}", line);
+            log::error!("Claude stderr: {line}");
             // Emit error lines to the frontend with session isolation if we have session ID
             if let Some(ref session_id) = *session_id_holder_clone2.lock().unwrap() {
-                let _ = app_handle_stderr.emit(&format!("claude-error:{}", session_id), &line);
+                let _ = app_handle_stderr.emit(&format!("claude-error:{session_id}"), &line);
             }
             // Also emit to the generic event for backward compatibility
             let _ = app_handle_stderr.emit("claude-error", &line);
@@ -1330,23 +1314,23 @@ async fn spawn_claude_process(
         if let Some(mut child) = current_process.take() {
             match child.wait().await {
                 Ok(status) => {
-                    log::info!("Claude process exited with status: {}", status);
+                    log::info!("Claude process exited with status: {status}");
                     // Add a small delay to ensure all messages are processed
                     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
                     if let Some(ref session_id) = *session_id_holder_clone3.lock().unwrap() {
                         let _ = app_handle_wait
-                            .emit(&format!("claude-complete:{}", session_id), status.success());
+                            .emit(&format!("claude-complete:{session_id}"), status.success());
                     }
                     // Also emit to the generic event for backward compatibility
                     let _ = app_handle_wait.emit("claude-complete", status.success());
                 }
                 Err(e) => {
-                    log::error!("Failed to wait for Claude process: {}", e);
+                    log::error!("Failed to wait for Claude process: {e}");
                     // Add a small delay to ensure all messages are processed
                     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
                     if let Some(ref session_id) = *session_id_holder_clone3.lock().unwrap() {
                         let _ =
-                            app_handle_wait.emit(&format!("claude-complete:{}", session_id), false);
+                            app_handle_wait.emit(&format!("claude-complete:{session_id}"), false);
                     }
                     // Also emit to the generic event for backward compatibility
                     let _ = app_handle_wait.emit("claude-complete", false);
@@ -1382,11 +1366,11 @@ async fn spawn_claude_sidecar(
     // Spawn the sidecar process
     let (mut rx, child) = sidecar_cmd
         .spawn()
-        .map_err(|e| format!("Failed to spawn Claude sidecar: {}", e))?;
+        .map_err(|e| format!("Failed to spawn Claude sidecar: {e}"))?;
 
     // Get the child PID for logging
     let pid = child.pid();
-    log::info!("Spawned Claude sidecar process with PID: {:?}", pid);
+    log::info!("Spawned Claude sidecar process with PID: {pid:?}");
 
     // We'll extract the session ID from Claude's init message
     let session_id_holder: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
@@ -1412,7 +1396,7 @@ async fn spawn_claude_sidecar(
                     let line_str = line.trim_end_matches('\n').trim_end_matches('\r');
 
                     if !line_str.is_empty() {
-                        log::debug!("Claude sidecar stdout: {}", line_str);
+                        log::debug!("Claude sidecar stdout: {line_str}");
 
                         // Parse the line to check for init message with session ID
                         if let Ok(msg) = serde_json::from_str::<serde_json::Value>(line_str) {
@@ -1423,8 +1407,7 @@ async fn spawn_claude_sidecar(
                                     if session_id_guard.is_none() {
                                         *session_id_guard = Some(claude_session_id.to_string());
                                         log::info!(
-                                            "Extracted Claude session ID: {}",
-                                            claude_session_id
+                                            "Extracted Claude session ID: {claude_session_id}"
                                         );
 
                                         // Register with ProcessRegistry using Claude's session ID
@@ -1436,15 +1419,14 @@ async fn spawn_claude_sidecar(
                                             model_clone.clone(),
                                         ) {
                                             Ok(run_id) => {
-                                                log::info!("Registered Claude sidecar session with run_id: {}", run_id);
+                                                log::info!("Registered Claude sidecar session with run_id: {run_id}");
                                                 let mut run_id_guard =
                                                     run_id_holder_clone.lock().unwrap();
                                                 *run_id_guard = Some(run_id);
                                             }
                                             Err(e) => {
                                                 log::error!(
-                                                    "Failed to register Claude sidecar session: {}",
-                                                    e
+                                                    "Failed to register Claude sidecar session: {e}"
                                                 );
                                             }
                                         }
@@ -1461,7 +1443,7 @@ async fn spawn_claude_sidecar(
                         // Emit the line to the frontend with session isolation if we have session ID
                         if let Some(ref session_id) = *session_id_holder_clone.lock().unwrap() {
                             let _ =
-                                app_handle.emit(&format!("claude-output:{}", session_id), line_str);
+                                app_handle.emit(&format!("claude-output:{session_id}"), line_str);
                         }
                         // Also emit to the generic event for backward compatibility
                         let _ = app_handle.emit("claude-output", line_str);
@@ -1472,12 +1454,12 @@ async fn spawn_claude_sidecar(
                     let line_str = line.trim_end_matches('\n').trim_end_matches('\r');
 
                     if !line_str.is_empty() {
-                        log::error!("Claude sidecar stderr: {}", line_str);
+                        log::error!("Claude sidecar stderr: {line_str}");
 
                         // Emit error lines to the frontend with session isolation if we have session ID
                         if let Some(ref session_id) = *session_id_holder_clone.lock().unwrap() {
                             let _ =
-                                app_handle.emit(&format!("claude-error:{}", session_id), line_str);
+                                app_handle.emit(&format!("claude-error:{session_id}"), line_str);
                         }
                         // Also emit to the generic event for backward compatibility
                         let _ = app_handle.emit("claude-error", line_str);
@@ -1485,8 +1467,7 @@ async fn spawn_claude_sidecar(
                 }
                 CommandEvent::Terminated(payload) => {
                     log::info!(
-                        "Claude sidecar process terminated with payload: {:?}",
-                        payload
+                        "Claude sidecar process terminated with payload: {payload:?}"
                     );
 
                     // Add a small delay to ensure all messages are processed
@@ -1496,7 +1477,7 @@ async fn spawn_claude_sidecar(
 
                     if let Some(ref session_id) = *session_id_holder_clone.lock().unwrap() {
                         let _ =
-                            app_handle.emit(&format!("claude-complete:{}", session_id), success);
+                            app_handle.emit(&format!("claude-complete:{session_id}"), success);
                     }
                     // Also emit to the generic event for backward compatibility
                     let _ = app_handle.emit("claude-complete", success);
@@ -1510,7 +1491,7 @@ async fn spawn_claude_sidecar(
                 }
                 _ => {
                     // Handle other event types if needed
-                    log::debug!("Claude sidecar event: {:?}", event);
+                    log::debug!("Claude sidecar event: {event:?}");
                 }
             }
         }
@@ -1522,7 +1503,7 @@ async fn spawn_claude_sidecar(
 /// Lists files and directories in a given path
 #[tauri::command]
 pub async fn list_directory_contents(directory_path: String) -> Result<Vec<FileEntry>, String> {
-    log::info!("Listing directory contents: '{}'", directory_path);
+    log::info!("Listing directory contents: '{directory_path}'");
 
     // Check if path is empty
     if directory_path.trim().is_empty() {
@@ -1531,29 +1512,29 @@ pub async fn list_directory_contents(directory_path: String) -> Result<Vec<FileE
     }
 
     let path = PathBuf::from(&directory_path);
-    log::debug!("Resolved path: {:?}", path);
+    log::debug!("Resolved path: {path:?}");
 
     if !path.exists() {
-        log::error!("Path does not exist: {:?}", path);
-        return Err(format!("Path does not exist: {}", directory_path));
+        log::error!("Path does not exist: {path:?}");
+        return Err(format!("Path does not exist: {directory_path}"));
     }
 
     if !path.is_dir() {
-        log::error!("Path is not a directory: {:?}", path);
-        return Err(format!("Path is not a directory: {}", directory_path));
+        log::error!("Path is not a directory: {path:?}");
+        return Err(format!("Path is not a directory: {directory_path}"));
     }
 
     let mut entries = Vec::new();
 
     let dir_entries =
-        fs::read_dir(&path).map_err(|e| format!("Failed to read directory: {}", e))?;
+        fs::read_dir(&path).map_err(|e| format!("Failed to read directory: {e}"))?;
 
     for entry in dir_entries {
-        let entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
+        let entry = entry.map_err(|e| format!("Failed to read entry: {e}"))?;
         let entry_path = entry.path();
         let metadata = entry
             .metadata()
-            .map_err(|e| format!("Failed to read metadata: {}", e))?;
+            .map_err(|e| format!("Failed to read metadata: {e}"))?;
 
         // Skip hidden files/directories unless they are .claude directories
         if let Some(name) = entry_path.file_name().and_then(|n| n.to_str()) {
@@ -1599,7 +1580,7 @@ pub async fn list_directory_contents(directory_path: String) -> Result<Vec<FileE
 /// Search for files and directories matching a pattern
 #[tauri::command]
 pub async fn search_files(base_path: String, query: String) -> Result<Vec<FileEntry>, String> {
-    log::info!("Searching files in '{}' for: '{}'", base_path, query);
+    log::info!("Searching files in '{base_path}' for: '{query}'");
 
     // Check if path is empty
     if base_path.trim().is_empty() {
@@ -1614,11 +1595,11 @@ pub async fn search_files(base_path: String, query: String) -> Result<Vec<FileEn
     }
 
     let path = PathBuf::from(&base_path);
-    log::debug!("Resolved search base path: {:?}", path);
+    log::debug!("Resolved search base path: {path:?}");
 
     if !path.exists() {
-        log::error!("Base path does not exist: {:?}", path);
-        return Err(format!("Path does not exist: {}", base_path));
+        log::error!("Base path does not exist: {path:?}");
+        return Err(format!("Path does not exist: {base_path}"));
     }
 
     let query_lower = query.to_lowercase();
@@ -1657,10 +1638,10 @@ fn search_files_recursive(
     }
 
     let entries = fs::read_dir(current_path)
-        .map_err(|e| format!("Failed to read directory {:?}: {}", current_path, e))?;
+        .map_err(|e| format!("Failed to read directory {current_path:?}: {e}"))?;
 
     for entry in entries {
-        let entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
+        let entry = entry.map_err(|e| format!("Failed to read entry: {e}"))?;
         let entry_path = entry.path();
 
         // Skip hidden files/directories
@@ -1673,7 +1654,7 @@ fn search_files_recursive(
             if name.to_lowercase().contains(query) {
                 let metadata = entry
                     .metadata()
-                    .map_err(|e| format!("Failed to read metadata: {}", e))?;
+                    .map_err(|e| format!("Failed to read metadata: {e}"))?;
 
                 let extension = if metadata.is_file() {
                     entry_path
@@ -1724,9 +1705,7 @@ pub async fn create_checkpoint(
     description: Option<String>,
 ) -> Result<crate::checkpoint::CheckpointResult, String> {
     log::info!(
-        "Creating checkpoint for session: {} in project: {}",
-        session_id,
-        project_id
+        "Creating checkpoint for session: {session_id} in project: {project_id}"
     );
 
     let manager = app
@@ -1736,18 +1715,18 @@ pub async fn create_checkpoint(
             PathBuf::from(&project_path),
         )
         .await
-        .map_err(|e| format!("Failed to get checkpoint manager: {}", e))?;
+        .map_err(|e| format!("Failed to get checkpoint manager: {e}"))?;
 
     // Always load current session messages from the JSONL file
     let session_path = get_claude_dir()
         .map_err(|e| e.to_string())?
         .join("projects")
         .join(&project_id)
-        .join(format!("{}.jsonl", session_id));
+        .join(format!("{session_id}.jsonl"));
 
     if session_path.exists() {
         let file = fs::File::open(&session_path)
-            .map_err(|e| format!("Failed to open session file: {}", e))?;
+            .map_err(|e| format!("Failed to open session file: {e}"))?;
         let reader = BufReader::new(file);
 
         let mut line_count = 0;
@@ -1761,7 +1740,7 @@ pub async fn create_checkpoint(
                 manager
                     .track_message(line)
                     .await
-                    .map_err(|e| format!("Failed to track message: {}", e))?;
+                    .map_err(|e| format!("Failed to track message: {e}"))?;
             }
             line_count += 1;
         }
@@ -1770,7 +1749,7 @@ pub async fn create_checkpoint(
     manager
         .create_checkpoint(description, None)
         .await
-        .map_err(|e| format!("Failed to create checkpoint: {}", e))
+        .map_err(|e| format!("Failed to create checkpoint: {e}"))
 }
 
 /// Restores a session to a specific checkpoint
@@ -1783,9 +1762,7 @@ pub async fn restore_checkpoint(
     project_path: String,
 ) -> Result<crate::checkpoint::CheckpointResult, String> {
     log::info!(
-        "Restoring checkpoint: {} for session: {}",
-        checkpoint_id,
-        session_id
+        "Restoring checkpoint: {checkpoint_id} for session: {session_id}"
     );
 
     let manager = app
@@ -1795,29 +1772,29 @@ pub async fn restore_checkpoint(
             PathBuf::from(&project_path),
         )
         .await
-        .map_err(|e| format!("Failed to get checkpoint manager: {}", e))?;
+        .map_err(|e| format!("Failed to get checkpoint manager: {e}"))?;
 
     let result = manager
         .restore_checkpoint(&checkpoint_id)
         .await
-        .map_err(|e| format!("Failed to restore checkpoint: {}", e))?;
+        .map_err(|e| format!("Failed to restore checkpoint: {e}"))?;
 
     // Update the session JSONL file with restored messages
     let claude_dir = get_claude_dir().map_err(|e| e.to_string())?;
     let session_path = claude_dir
         .join("projects")
         .join(&result.checkpoint.project_id)
-        .join(format!("{}.jsonl", session_id));
+        .join(format!("{session_id}.jsonl"));
 
     // The manager has already restored the messages internally,
     // but we need to update the actual session file
     let (_, _, messages) = manager
         .storage
         .load_checkpoint(&result.checkpoint.project_id, &session_id, &checkpoint_id)
-        .map_err(|e| format!("Failed to load checkpoint data: {}", e))?;
+        .map_err(|e| format!("Failed to load checkpoint data: {e}"))?;
 
     fs::write(&session_path, messages)
-        .map_err(|e| format!("Failed to update session file: {}", e))?;
+        .map_err(|e| format!("Failed to update session file: {e}"))?;
 
     Ok(result)
 }
@@ -1831,15 +1808,13 @@ pub async fn list_checkpoints(
     project_path: String,
 ) -> Result<Vec<crate::checkpoint::Checkpoint>, String> {
     log::info!(
-        "Listing checkpoints for session: {} in project: {}",
-        session_id,
-        project_id
+        "Listing checkpoints for session: {session_id} in project: {project_id}"
     );
 
     let manager = app
         .get_or_create_manager(session_id, project_id, PathBuf::from(&project_path))
         .await
-        .map_err(|e| format!("Failed to get checkpoint manager: {}", e))?;
+        .map_err(|e| format!("Failed to get checkpoint manager: {e}"))?;
 
     Ok(manager.list_checkpoints().await)
 }
@@ -1856,9 +1831,7 @@ pub async fn fork_from_checkpoint(
     description: Option<String>,
 ) -> Result<crate::checkpoint::CheckpointResult, String> {
     log::info!(
-        "Forking from checkpoint: {} to new session: {}",
-        checkpoint_id,
-        new_session_id
+        "Forking from checkpoint: {checkpoint_id} to new session: {new_session_id}"
     );
 
     let claude_dir = get_claude_dir().map_err(|e| e.to_string())?;
@@ -1867,15 +1840,15 @@ pub async fn fork_from_checkpoint(
     let source_session_path = claude_dir
         .join("projects")
         .join(&project_id)
-        .join(format!("{}.jsonl", session_id));
+        .join(format!("{session_id}.jsonl"));
     let new_session_path = claude_dir
         .join("projects")
         .join(&project_id)
-        .join(format!("{}.jsonl", new_session_id));
+        .join(format!("{new_session_id}.jsonl"));
 
     if source_session_path.exists() {
         fs::copy(&source_session_path, &new_session_path)
-            .map_err(|e| format!("Failed to copy session file: {}", e))?;
+            .map_err(|e| format!("Failed to copy session file: {e}"))?;
     }
 
     // Create manager for the new session
@@ -1886,12 +1859,12 @@ pub async fn fork_from_checkpoint(
             PathBuf::from(&project_path),
         )
         .await
-        .map_err(|e| format!("Failed to get checkpoint manager: {}", e))?;
+        .map_err(|e| format!("Failed to get checkpoint manager: {e}"))?;
 
     manager
         .fork_from_checkpoint(&checkpoint_id, description)
         .await
-        .map_err(|e| format!("Failed to fork checkpoint: {}", e))
+        .map_err(|e| format!("Failed to fork checkpoint: {e}"))
 }
 
 /// Gets the timeline for a session
@@ -1903,15 +1876,13 @@ pub async fn get_session_timeline(
     project_path: String,
 ) -> Result<crate::checkpoint::SessionTimeline, String> {
     log::info!(
-        "Getting timeline for session: {} in project: {}",
-        session_id,
-        project_id
+        "Getting timeline for session: {session_id} in project: {project_id}"
     );
 
     let manager = app
         .get_or_create_manager(session_id, project_id, PathBuf::from(&project_path))
         .await
-        .map_err(|e| format!("Failed to get checkpoint manager: {}", e))?;
+        .map_err(|e| format!("Failed to get checkpoint manager: {e}"))?;
 
     Ok(manager.get_timeline().await)
 }
@@ -1928,7 +1899,7 @@ pub async fn update_checkpoint_settings(
 ) -> Result<(), String> {
     use crate::checkpoint::CheckpointStrategy;
 
-    log::info!("Updating checkpoint settings for session: {}", session_id);
+    log::info!("Updating checkpoint settings for session: {session_id}");
 
     let strategy = match checkpoint_strategy.as_str() {
         "manual" => CheckpointStrategy::Manual,
@@ -1937,8 +1908,7 @@ pub async fn update_checkpoint_settings(
         "smart" => CheckpointStrategy::Smart,
         _ => {
             return Err(format!(
-                "Invalid checkpoint strategy: {}",
-                checkpoint_strategy
+                "Invalid checkpoint strategy: {checkpoint_strategy}"
             ))
         }
     };
@@ -1946,12 +1916,12 @@ pub async fn update_checkpoint_settings(
     let manager = app
         .get_or_create_manager(session_id, project_id, PathBuf::from(&project_path))
         .await
-        .map_err(|e| format!("Failed to get checkpoint manager: {}", e))?;
+        .map_err(|e| format!("Failed to get checkpoint manager: {e}"))?;
 
     manager
         .update_settings(auto_checkpoint_enabled, strategy)
         .await
-        .map_err(|e| format!("Failed to update settings: {}", e))
+        .map_err(|e| format!("Failed to update settings: {e}"))
 }
 
 /// Gets diff between two checkpoints
@@ -1965,9 +1935,7 @@ pub async fn get_checkpoint_diff(
     use crate::checkpoint::storage::CheckpointStorage;
 
     log::info!(
-        "Getting diff between checkpoints: {} -> {}",
-        from_checkpoint_id,
-        to_checkpoint_id
+        "Getting diff between checkpoints: {from_checkpoint_id} -> {to_checkpoint_id}"
     );
 
     let claude_dir = get_claude_dir().map_err(|e| e.to_string())?;
@@ -1976,10 +1944,10 @@ pub async fn get_checkpoint_diff(
     // Load both checkpoints
     let (from_checkpoint, from_files, _) = storage
         .load_checkpoint(&project_id, &session_id, &from_checkpoint_id)
-        .map_err(|e| format!("Failed to load source checkpoint: {}", e))?;
+        .map_err(|e| format!("Failed to load source checkpoint: {e}"))?;
     let (to_checkpoint, to_files, _) = storage
         .load_checkpoint(&project_id, &session_id, &to_checkpoint_id)
-        .map_err(|e| format!("Failed to load target checkpoint: {}", e))?;
+        .map_err(|e| format!("Failed to load target checkpoint: {e}"))?;
 
     // Build file maps
     let mut from_map: std::collections::HashMap<PathBuf, &crate::checkpoint::FileSnapshot> =
@@ -2021,7 +1989,7 @@ pub async fn get_checkpoint_diff(
     }
 
     // Check for added files
-    for (path, _) in &to_map {
+    for path in to_map.keys() {
         if !from_map.contains_key(path) {
             added_files.push(path.clone());
         }
@@ -2050,17 +2018,17 @@ pub async fn track_checkpoint_message(
     project_path: String,
     message: String,
 ) -> Result<(), String> {
-    log::info!("Tracking message for session: {}", session_id);
+    log::info!("Tracking message for session: {session_id}");
 
     let manager = app
         .get_or_create_manager(session_id, project_id, PathBuf::from(project_path))
         .await
-        .map_err(|e| format!("Failed to get checkpoint manager: {}", e))?;
+        .map_err(|e| format!("Failed to get checkpoint manager: {e}"))?;
 
     manager
         .track_message(message)
         .await
-        .map_err(|e| format!("Failed to track message: {}", e))
+        .map_err(|e| format!("Failed to track message: {e}"))
 }
 
 /// Checks if auto-checkpoint should be triggered
@@ -2072,12 +2040,12 @@ pub async fn check_auto_checkpoint(
     project_path: String,
     message: String,
 ) -> Result<bool, String> {
-    log::info!("Checking auto-checkpoint for session: {}", session_id);
+    log::info!("Checking auto-checkpoint for session: {session_id}");
 
     let manager = app
         .get_or_create_manager(session_id.clone(), project_id, PathBuf::from(project_path))
         .await
-        .map_err(|e| format!("Failed to get checkpoint manager: {}", e))?;
+        .map_err(|e| format!("Failed to get checkpoint manager: {e}"))?;
 
     Ok(manager.should_auto_checkpoint(&message).await)
 }
@@ -2092,9 +2060,7 @@ pub async fn cleanup_old_checkpoints(
     keep_count: usize,
 ) -> Result<usize, String> {
     log::info!(
-        "Cleaning up old checkpoints for session: {}, keeping {}",
-        session_id,
-        keep_count
+        "Cleaning up old checkpoints for session: {session_id}, keeping {keep_count}"
     );
 
     let manager = app
@@ -2104,12 +2070,12 @@ pub async fn cleanup_old_checkpoints(
             PathBuf::from(project_path),
         )
         .await
-        .map_err(|e| format!("Failed to get checkpoint manager: {}", e))?;
+        .map_err(|e| format!("Failed to get checkpoint manager: {e}"))?;
 
     manager
         .storage
         .cleanup_old_checkpoints(&project_id, &session_id, keep_count)
-        .map_err(|e| format!("Failed to cleanup checkpoints: {}", e))
+        .map_err(|e| format!("Failed to cleanup checkpoints: {e}"))
 }
 
 /// Gets checkpoint settings for a session
@@ -2120,12 +2086,12 @@ pub async fn get_checkpoint_settings(
     project_id: String,
     project_path: String,
 ) -> Result<serde_json::Value, String> {
-    log::info!("Getting checkpoint settings for session: {}", session_id);
+    log::info!("Getting checkpoint settings for session: {session_id}");
 
     let manager = app
         .get_or_create_manager(session_id, project_id, PathBuf::from(project_path))
         .await
-        .map_err(|e| format!("Failed to get checkpoint manager: {}", e))?;
+        .map_err(|e| format!("Failed to get checkpoint manager: {e}"))?;
 
     let timeline = manager.get_timeline().await;
 
@@ -2143,7 +2109,7 @@ pub async fn clear_checkpoint_manager(
     app: tauri::State<'_, crate::checkpoint::state::CheckpointState>,
     session_id: String,
 ) -> Result<(), String> {
-    log::info!("Clearing checkpoint manager for session: {}", session_id);
+    log::info!("Clearing checkpoint manager for session: {session_id}");
 
     app.remove_manager(&session_id).await;
     Ok(())
@@ -2175,22 +2141,20 @@ pub async fn get_recently_modified_files(
     use chrono::{Duration, Utc};
 
     log::info!(
-        "Getting files modified in the last {} minutes for session: {}",
-        minutes,
-        session_id
+        "Getting files modified in the last {minutes} minutes for session: {session_id}"
     );
 
     let manager = app
         .get_or_create_manager(session_id, project_id, PathBuf::from(project_path))
         .await
-        .map_err(|e| format!("Failed to get checkpoint manager: {}", e))?;
+        .map_err(|e| format!("Failed to get checkpoint manager: {e}"))?;
 
     let since = Utc::now() - Duration::minutes(minutes);
     let modified_files = manager.get_files_modified_since(since).await;
 
     // Also log the last modification time
     if let Some(last_mod) = manager.get_last_modification_time().await {
-        log::info!("Last file modification was at: {}", last_mod);
+        log::info!("Last file modification was at: {last_mod}");
     }
 
     Ok(modified_files
@@ -2221,13 +2185,13 @@ pub async fn track_session_messages(
             PathBuf::from(&project_path),
         )
         .await
-        .map_err(|e| format!("Failed to get checkpoint manager: {}", e))?;
+        .map_err(|e| format!("Failed to get checkpoint manager: {e}"))?;
 
     for message in messages {
         manager
             .track_message(message)
             .await
-            .map_err(|e| format!("Failed to track message: {}", e))?;
+            .map_err(|e| format!("Failed to track message: {e}"))?;
     }
 
     Ok(())
@@ -2240,9 +2204,7 @@ pub async fn get_hooks_config(
     project_path: Option<String>,
 ) -> Result<serde_json::Value, String> {
     log::info!(
-        "Getting hooks config for scope: {}, project: {:?}",
-        scope,
-        project_path
+        "Getting hooks config for scope: {scope}, project: {project_path:?}"
     );
 
     let settings_path = match scope.as_str() {
@@ -2264,17 +2226,16 @@ pub async fn get_hooks_config(
 
     if !settings_path.exists() {
         log::info!(
-            "Settings file does not exist at {:?}, returning empty hooks",
-            settings_path
+            "Settings file does not exist at {settings_path:?}, returning empty hooks"
         );
         return Ok(serde_json::json!({}));
     }
 
     let content = fs::read_to_string(&settings_path)
-        .map_err(|e| format!("Failed to read settings: {}", e))?;
+        .map_err(|e| format!("Failed to read settings: {e}"))?;
 
     let settings: serde_json::Value =
-        serde_json::from_str(&content).map_err(|e| format!("Failed to parse settings: {}", e))?;
+        serde_json::from_str(&content).map_err(|e| format!("Failed to parse settings: {e}"))?;
 
     Ok(settings
         .get("hooks")
@@ -2290,9 +2251,7 @@ pub async fn update_hooks_config(
     project_path: Option<String>,
 ) -> Result<String, String> {
     log::info!(
-        "Updating hooks config for scope: {}, project: {:?}",
-        scope,
-        project_path
+        "Updating hooks config for scope: {scope}, project: {project_path:?}"
     );
 
     let settings_path = match scope.as_str() {
@@ -2303,14 +2262,14 @@ pub async fn update_hooks_config(
             let path = project_path.ok_or("Project path required for project scope")?;
             let claude_dir = PathBuf::from(path).join(".claude");
             fs::create_dir_all(&claude_dir)
-                .map_err(|e| format!("Failed to create .claude directory: {}", e))?;
+                .map_err(|e| format!("Failed to create .claude directory: {e}"))?;
             claude_dir.join("settings.json")
         }
         "local" => {
             let path = project_path.ok_or("Project path required for local scope")?;
             let claude_dir = PathBuf::from(path).join(".claude");
             fs::create_dir_all(&claude_dir)
-                .map_err(|e| format!("Failed to create .claude directory: {}", e))?;
+                .map_err(|e| format!("Failed to create .claude directory: {e}"))?;
             claude_dir.join("settings.local.json")
         }
         _ => return Err("Invalid scope".to_string()),
@@ -2319,8 +2278,8 @@ pub async fn update_hooks_config(
     // Read existing settings or create new
     let mut settings = if settings_path.exists() {
         let content = fs::read_to_string(&settings_path)
-            .map_err(|e| format!("Failed to read settings: {}", e))?;
-        serde_json::from_str(&content).map_err(|e| format!("Failed to parse settings: {}", e))?
+            .map_err(|e| format!("Failed to read settings: {e}"))?;
+        serde_json::from_str(&content).map_err(|e| format!("Failed to parse settings: {e}"))?
     } else {
         serde_json::json!({})
     };
@@ -2330,10 +2289,10 @@ pub async fn update_hooks_config(
 
     // Write back with pretty formatting
     let json_string = serde_json::to_string_pretty(&settings)
-        .map_err(|e| format!("Failed to serialize settings: {}", e))?;
+        .map_err(|e| format!("Failed to serialize settings: {e}"))?;
 
     fs::write(&settings_path, json_string)
-        .map_err(|e| format!("Failed to write settings: {}", e))?;
+        .map_err(|e| format!("Failed to write settings: {e}"))?;
 
     Ok("Hooks configuration updated successfully".to_string())
 }
@@ -2364,6 +2323,6 @@ pub async fn validate_hook_command(command: String) -> Result<serde_json::Value,
                 }))
             }
         }
-        Err(e) => Err(format!("Failed to validate command: {}", e)),
+        Err(e) => Err(format!("Failed to validate command: {e}")),
     }
 }

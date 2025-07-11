@@ -505,7 +505,7 @@ impl CheckpointManager {
                 match fs::remove_file(&full_path) {
                     Ok(_) => {
                         files_processed += 1;
-                        log::info!("Deleted file not in checkpoint: {:?}", current_file);
+                        log::info!("Deleted file not in checkpoint: {current_file:?}");
                     }
                     Err(e) => {
                         warnings.push(format!(

@@ -48,7 +48,7 @@ pub fn find_claude_binary(app_handle: &tauri::AppHandle) -> Result<String, Strin
                     [],
                     |row| row.get::<_, String>(0),
                 ) {
-                    info!("Found stored claude path in database: {}", stored_path);
+                    info!("Found stored claude path in database: {stored_path}");
 
                     // If it's a sidecar reference, return it directly
                     if stored_path == "claude-code" {
@@ -60,7 +60,7 @@ pub fn find_claude_binary(app_handle: &tauri::AppHandle) -> Result<String, Strin
                     if path_buf.exists() && path_buf.is_file() {
                         return Ok(stored_path);
                     } else {
-                        warn!("Stored claude path no longer exists: {}", stored_path);
+                        warn!("Stored claude path no longer exists: {stored_path}");
                     }
                 }
 
@@ -71,7 +71,7 @@ pub fn find_claude_binary(app_handle: &tauri::AppHandle) -> Result<String, Strin
                     |row| row.get::<_, String>(0),
                 ).unwrap_or_else(|_| "bundled".to_string());
 
-                info!("User preference for Claude installation: {}", preference);
+                info!("User preference for Claude installation: {preference}");
 
                 // If user prefers bundled and it's available, use it
                 if preference == "bundled" && is_sidecar_available(app_handle) {
@@ -98,7 +98,7 @@ pub fn find_claude_binary(app_handle: &tauri::AppHandle) -> Result<String, Strin
 
     // Log all found installations
     for installation in &installations {
-        info!("Found Claude installation: {:?}", installation);
+        info!("Found Claude installation: {installation:?}");
     }
 
     // Select the best installation (highest version)
@@ -124,7 +124,7 @@ fn is_sidecar_available(app_handle: &tauri::AppHandle) -> bool {
             true
         }
         Err(e) => {
-            debug!("Bundled Claude Code sidecar not available: {}", e);
+            debug!("Bundled Claude Code sidecar not available: {e}");
             false
         }
     }
@@ -244,11 +244,11 @@ fn try_which_command() -> Option<ClaudeInstallation> {
                 Some(output_str)
             }?;
 
-            debug!("'which' found claude at: {}", path);
+            debug!("'which' found claude at: {path}");
 
             // Verify the path exists
             if !PathBuf::from(&path).exists() {
-                warn!("Path from 'which' does not exist: {}", path);
+                warn!("Path from 'which' does not exist: {path}");
                 return None;
             }
 
@@ -276,7 +276,7 @@ fn find_nvm_installations() -> Vec<ClaudeInstallation> {
             .join("versions")
             .join("node");
 
-        debug!("Checking NVM directory: {:?}", nvm_dir);
+        debug!("Checking NVM directory: {nvm_dir:?}");
 
         if let Ok(entries) = std::fs::read_dir(&nvm_dir) {
             for entry in entries.flatten() {
@@ -287,7 +287,7 @@ fn find_nvm_installations() -> Vec<ClaudeInstallation> {
                         let path_str = claude_path.to_string_lossy().to_string();
                         let node_version = entry.file_name().to_string_lossy().to_string();
 
-                        debug!("Found Claude in NVM node {}: {}", node_version, path_str);
+                        debug!("Found Claude in NVM node {node_version}: {path_str}");
 
                         // Get Claude version
                         let version = get_claude_version(&path_str).ok().flatten();
@@ -295,7 +295,7 @@ fn find_nvm_installations() -> Vec<ClaudeInstallation> {
                         installations.push(ClaudeInstallation {
                             path: path_str,
                             version,
-                            source: format!("nvm ({})", node_version),
+                            source: format!("nvm ({node_version})"),
                             installation_type: InstallationType::System,
                         });
                     }
@@ -326,27 +326,27 @@ fn find_standard_installations() -> Vec<ClaudeInstallation> {
     if let Ok(home) = std::env::var("HOME") {
         paths_to_check.extend(vec![
             (
-                format!("{}/.claude/local/claude", home),
+                format!("{home}/.claude/local/claude"),
                 "claude-local".to_string(),
             ),
             (
-                format!("{}/.local/bin/claude", home),
+                format!("{home}/.local/bin/claude"),
                 "local-bin".to_string(),
             ),
             (
-                format!("{}/.npm-global/bin/claude", home),
+                format!("{home}/.npm-global/bin/claude"),
                 "npm-global".to_string(),
             ),
-            (format!("{}/.yarn/bin/claude", home), "yarn".to_string()),
-            (format!("{}/.bun/bin/claude", home), "bun".to_string()),
-            (format!("{}/bin/claude", home), "home-bin".to_string()),
+            (format!("{home}/.yarn/bin/claude"), "yarn".to_string()),
+            (format!("{home}/.bun/bin/claude"), "bun".to_string()),
+            (format!("{home}/bin/claude"), "home-bin".to_string()),
             // Check common node_modules locations
             (
-                format!("{}/node_modules/.bin/claude", home),
+                format!("{home}/node_modules/.bin/claude"),
                 "node-modules".to_string(),
             ),
             (
-                format!("{}/.config/yarn/global/node_modules/.bin/claude", home),
+                format!("{home}/.config/yarn/global/node_modules/.bin/claude"),
                 "yarn-global".to_string(),
             ),
         ]);
@@ -356,7 +356,7 @@ fn find_standard_installations() -> Vec<ClaudeInstallation> {
     for (path, source) in paths_to_check {
         let path_buf = PathBuf::from(&path);
         if path_buf.exists() && path_buf.is_file() {
-            debug!("Found claude at standard path: {} ({})", path, source);
+            debug!("Found claude at standard path: {path} ({source})");
 
             // Get version
             let version = get_claude_version(&path).ok().flatten();
@@ -399,7 +399,7 @@ fn get_claude_version(path: &str) -> Result<Option<String>, String> {
             }
         }
         Err(e) => {
-            warn!("Failed to get version for {}: {}", path, e);
+            warn!("Failed to get version for {path}: {e}");
             Ok(None)
         }
     }
@@ -410,7 +410,7 @@ fn extract_version_from_output(stdout: &[u8]) -> Option<String> {
     let output_str = String::from_utf8_lossy(stdout);
 
     // Debug log the raw output
-    debug!("Raw version output: {:?}", output_str);
+    debug!("Raw version output: {output_str:?}");
 
     // Use regex to directly extract version pattern (e.g., "1.0.41")
     // This pattern matches:
@@ -426,7 +426,7 @@ fn extract_version_from_output(stdout: &[u8]) -> Option<String> {
     if let Some(captures) = version_regex.captures(&output_str) {
         if let Some(version_match) = captures.get(1) {
             let version = version_match.as_str().to_string();
-            debug!("Extracted version: {:?}", version);
+            debug!("Extracted version: {version:?}");
             return Some(version);
         }
     }
@@ -527,7 +527,7 @@ pub fn create_command_with_env(program: &str) -> Command {
             || key == "HOMEBREW_PREFIX"
             || key == "HOMEBREW_CELLAR"
         {
-            debug!("Inheriting env var: {}={}", key, value);
+            debug!("Inheriting env var: {key}={value}");
             cmd.env(&key, &value);
         }
     }
@@ -538,9 +538,9 @@ pub fn create_command_with_env(program: &str) -> Command {
             // Ensure the Node.js bin directory is in PATH
             let current_path = std::env::var("PATH").unwrap_or_default();
             let node_bin_str = node_bin_dir.to_string_lossy();
-            if !current_path.contains(&node_bin_str.as_ref()) {
-                let new_path = format!("{}:{}", node_bin_str, current_path);
-                debug!("Adding NVM bin directory to PATH: {}", node_bin_str);
+            if !current_path.contains(node_bin_str.as_ref()) {
+                let new_path = format!("{node_bin_str}:{current_path}");
+                debug!("Adding NVM bin directory to PATH: {node_bin_str}");
                 cmd.env("PATH", new_path);
             }
         }

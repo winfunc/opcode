@@ -69,14 +69,14 @@ pub async fn storage_list_tables(db: State<'_, AgentDb>) -> Result<Vec<TableInfo
     for table_name in table_names {
         // Get row count
         let row_count: i64 = conn
-            .query_row(&format!("SELECT COUNT(*) FROM {}", table_name), [], |row| {
+            .query_row(&format!("SELECT COUNT(*) FROM {table_name}"), [], |row| {
                 row.get(0)
             })
             .unwrap_or(0);
 
         // Get column information
         let mut pragma_stmt = conn
-            .prepare(&format!("PRAGMA table_info({})", table_name))
+            .prepare(&format!("PRAGMA table_info({table_name})"))
             .map_err(|e| e.to_string())?;
 
         let columns: Vec<ColumnInfo> = pragma_stmt
@@ -123,7 +123,7 @@ pub async fn storage_read_table(
 
     // Get column information
     let mut pragma_stmt = conn
-        .prepare(&format!("PRAGMA table_info({})", tableName))
+        .prepare(&format!("PRAGMA table_info({tableName})"))
         .map_err(|e| e.to_string())?;
 
     let columns: Vec<ColumnInfo> = pragma_stmt
@@ -154,23 +154,22 @@ pub async fn storage_read_table(
 
         if search_conditions.is_empty() {
             (
-                format!("SELECT * FROM {} LIMIT ? OFFSET ?", tableName),
-                format!("SELECT COUNT(*) FROM {}", tableName),
+                format!("SELECT * FROM {tableName} LIMIT ? OFFSET ?"),
+                format!("SELECT COUNT(*) FROM {tableName}"),
             )
         } else {
             let where_clause = search_conditions.join(" OR ");
             (
                 format!(
-                    "SELECT * FROM {} WHERE {} LIMIT ? OFFSET ?",
-                    tableName, where_clause
+                    "SELECT * FROM {tableName} WHERE {where_clause} LIMIT ? OFFSET ?"
                 ),
-                format!("SELECT COUNT(*) FROM {} WHERE {}", tableName, where_clause),
+                format!("SELECT COUNT(*) FROM {tableName} WHERE {where_clause}"),
             )
         }
     } else {
         (
-            format!("SELECT * FROM {} LIMIT ? OFFSET ?", tableName),
-            format!("SELECT COUNT(*) FROM {}", tableName),
+            format!("SELECT * FROM {tableName} LIMIT ? OFFSET ?"),
+            format!("SELECT COUNT(*) FROM {tableName}"),
         )
     };
 
@@ -281,7 +280,7 @@ pub async fn storage_update_row(
         &query,
         rusqlite::params_from_iter(params.iter().map(|p| p.as_ref())),
     )
-    .map_err(|e| format!("Failed to update row: {}", e))?;
+    .map_err(|e| format!("Failed to update row: {e}"))?;
 
     Ok(())
 }
@@ -325,7 +324,7 @@ pub async fn storage_delete_row(
         &query,
         rusqlite::params_from_iter(params.iter().map(|p| p.as_ref())),
     )
-    .map_err(|e| format!("Failed to delete row: {}", e))?;
+    .map_err(|e| format!("Failed to delete row: {e}"))?;
 
     Ok(())
 }
@@ -347,7 +346,7 @@ pub async fn storage_insert_row(
 
     // Build INSERT query
     let columns: Vec<&String> = values.keys().collect();
-    let placeholders: Vec<String> = (1..=columns.len()).map(|i| format!("?{}", i)).collect();
+    let placeholders: Vec<String> = (1..=columns.len()).map(|i| format!("?{i}")).collect();
 
     let query = format!(
         "INSERT INTO {} ({}) VALUES ({})",
@@ -371,7 +370,7 @@ pub async fn storage_insert_row(
         &query,
         rusqlite::params_from_iter(params.iter().map(|p| p.as_ref())),
     )
-    .map_err(|e| format!("Failed to insert row: {}", e))?;
+    .map_err(|e| format!("Failed to insert row: {e}"))?;
 
     Ok(conn.last_insert_rowid())
 }
@@ -457,25 +456,25 @@ pub async fn storage_reset_database(app: AppHandle) -> Result<(), String> {
 
         // Disable foreign key constraints temporarily to allow dropping tables
         conn.execute("PRAGMA foreign_keys = OFF", [])
-            .map_err(|e| format!("Failed to disable foreign keys: {}", e))?;
+            .map_err(|e| format!("Failed to disable foreign keys: {e}"))?;
 
         // Drop tables - order doesn't matter with foreign keys disabled
         conn.execute("DROP TABLE IF EXISTS agent_runs", [])
-            .map_err(|e| format!("Failed to drop agent_runs table: {}", e))?;
+            .map_err(|e| format!("Failed to drop agent_runs table: {e}"))?;
         conn.execute("DROP TABLE IF EXISTS agents", [])
-            .map_err(|e| format!("Failed to drop agents table: {}", e))?;
+            .map_err(|e| format!("Failed to drop agents table: {e}"))?;
         conn.execute("DROP TABLE IF EXISTS app_settings", [])
-            .map_err(|e| format!("Failed to drop app_settings table: {}", e))?;
+            .map_err(|e| format!("Failed to drop app_settings table: {e}"))?;
 
         // Re-enable foreign key constraints
         conn.execute("PRAGMA foreign_keys = ON", [])
-            .map_err(|e| format!("Failed to re-enable foreign keys: {}", e))?;
+            .map_err(|e| format!("Failed to re-enable foreign keys: {e}"))?;
 
         // Connection is automatically dropped at end of scope
     }
 
     // Re-initialize the database which will recreate all tables empty
-    let new_conn = init_database(&app).map_err(|e| format!("Failed to reset database: {}", e))?;
+    let new_conn = init_database(&app).map_err(|e| format!("Failed to reset database: {e}"))?;
 
     // Update the managed state with the new connection
     {
