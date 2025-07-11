@@ -235,7 +235,44 @@ class WebApiAdapter implements ApiAdapter {
       'mcp_remove': '/mcp/servers/:name',
       'mcp_test_connection': '/mcp/test',
       
-      // Add more mappings as needed
+      // Settings
+      'get_claude_settings': '/settings/claude',
+      'save_claude_settings': '/settings/claude',
+      'get_system_prompt': '/settings/system-prompt',
+      'save_system_prompt': '/settings/system-prompt',
+      
+      // File system
+      'list_directory_contents': '/fs/list',
+      'search_files': '/fs/search',
+      'find_claude_md_files': '/claude-md/find',
+      'read_claude_md_file': '/claude-md/read',
+      'save_claude_md_file': '/claude-md/save',
+      
+      // Session history
+      'load_session_history': '/sessions/:projectId/:sessionId/history',
+      'load_agent_session_history': '/agent-sessions/:sessionId/history',
+      
+      // Agent runs
+      'get_agent_run': '/agent-runs/:id',
+      'kill_agent_session': '/agent-sessions/:runId/kill',
+      'get_session_output': '/agent-sessions/:runId/output',
+      'get_live_session_output': '/agent-sessions/:runId/live-output',
+      
+      // Checkpoints
+      'create_checkpoint': '/checkpoints',
+      'restore_checkpoint': '/checkpoints/restore',
+      'list_checkpoints': '/sessions/:sessionId/checkpoints',
+      'fork_from_checkpoint': '/checkpoints/fork',
+      'get_session_timeline': '/sessions/:sessionId/timeline',
+      'update_checkpoint_settings': '/checkpoint-settings',
+      'get_checkpoint_diff': '/checkpoints/diff',
+      
+      // Slash commands
+      'list_slash_commands': '/slash-commands',
+      'create_slash_command': '/slash-commands',
+      'update_slash_command': '/slash-commands/:id',
+      'delete_slash_command': '/slash-commands/:id',
+      'execute_slash_command': '/slash-commands/execute'
     };
 
     return mappings[command] || `/${command}`;

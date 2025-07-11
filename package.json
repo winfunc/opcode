@@ -43,6 +43,7 @@
     "@types/react-syntax-highlighter": "^15.5.13",
     "@uiw/react-md-editor": "^4.0.7",
     "ansi-to-html": "^0.7.2",
+    "better-sqlite3": "^12.2.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
@@ -59,6 +60,7 @@
     "remark-gfm": "^4.0.0",
     "tailwind-merge": "^2.6.0",
     "tailwindcss": "^4.1.8",
+    "uuid": "^11.1.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {

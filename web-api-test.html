@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claudia Web API Test Suite</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .test-section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section h2 {
+            margin-top: 0;
+            color: #007bff;
+        }
+        .test {
+            margin-bottom: 15px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #f9f9f9;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .ws-status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+        .ws-connected {
+            background: #d4edda;
+            color: #155724;
+        }
+        .ws-disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <h1>Claudia Web API Test Suite 
+        <span id="ws-status" class="ws-status ws-disconnected">WebSocket: Disconnected</span>
+    </h1>
+
+    <!-- Projects Section -->
+    <div class="test-section">
+        <h2>📁 Project Management</h2>
+        <div class="test">
+            <button onclick="testAPI('GET', '/api/projects')">List Projects</button>
+            <button onclick="testAPI('GET', '/api/projects/home-nick-claudia/sessions')">Get Sessions (claudia project)</button>
+            <div class="result" id="projects-result"></div>
+        </div>
+    </div>
+
+    <!-- Agents Section -->
+    <div class="test-section">
+        <h2>🤖 Agent Management</h2>
+        <div class="test">
+            <button onclick="testAPI('GET', '/api/agents')">List Agents</button>
+            <button onclick="createAgent()">Create Test Agent</button>
+            <button onclick="testAPI('GET', '/api/agents/1')">Get Agent #1</button>
+            <button onclick="executeAgent()">Execute Agent</button>
+            <div class="result" id="agents-result"></div>
+        </div>
+    </div>
+
+    <!-- Claude Code Section -->
+    <div class="test-section">
+        <h2>🧠 Claude Code Execution</h2>
+        <div class="test">
+            <input type="text" id="claude-prompt" placeholder="Enter prompt" value="Hello Claude!">
+            <button onclick="executeClaudeCode()">Execute Claude Code</button>
+            <button onclick="testAPI('GET', '/api/running-claude-sessions')">List Running Sessions</button>
+            <div class="result" id="claude-result"></div>
+        </div>
+    </div>
+
+    <!-- Usage Analytics Section -->
+    <div class="test-section">
+        <h2>📊 Usage Analytics</h2>
+        <div class="test">
+            <button onclick="testAPI('GET', '/api/usage/stats')">Get Usage Stats</button>
+            <button onclick="testAPI('GET', '/api/usage/details')">Get Usage Details</button>
+            <div class="result" id="usage-result"></div>
+        </div>
+    </div>
+
+    <!-- MCP Servers Section -->
+    <div class="test-section">
+        <h2>🔌 MCP Servers</h2>
+        <div class="test">
+            <button onclick="testAPI('GET', '/api/mcp/servers')">List MCP Servers</button>
+            <button onclick="addMCPServer()">Add Test MCP Server</button>
+            <div class="result" id="mcp-result"></div>
+        </div>
+    </div>
+
+    <!-- Settings Section -->
+    <div class="test-section">
+        <h2>⚙️ Settings</h2>
+        <div class="test">
+            <button onclick="testAPI('GET', '/api/settings/claude')">Get Claude Settings</button>
+            <button onclick="testAPI('GET', '/api/settings/system-prompt')">Get System Prompt</button>
+            <div class="result" id="settings-result"></div>
+        </div>
+    </div>
+
+    <!-- WebSocket Messages -->
+    <div class="test-section">
+        <h2>🔄 WebSocket Messages</h2>
+        <div class="test">
+            <button onclick="clearWSMessages()">Clear Messages</button>
+            <div class="result info" id="ws-messages" style="max-height: 200px;">Waiting for WebSocket messages...</div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8080';
+        let ws;
+
+        // Initialize WebSocket connection
+        function initWebSocket() {
+            ws = new WebSocket('ws://localhost:8080/ws');
+            const statusEl = document.getElementById('ws-status');
+            const messagesEl = document.getElementById('ws-messages');
+
+            ws.onopen = () => {
+                statusEl.textContent = 'WebSocket: Connected';
+                statusEl.className = 'ws-status ws-connected';
+                addWSMessage('Connected to WebSocket server');
+            };
+
+            ws.onmessage = (event) => {
+                addWSMessage('Received: ' + event.data);
+            };
+
+            ws.onerror = (error) => {
+                statusEl.textContent = 'WebSocket: Error';
+                statusEl.className = 'ws-status ws-disconnected';
+                addWSMessage('WebSocket error: ' + error);
+            };
+
+            ws.onclose = () => {
+                statusEl.textContent = 'WebSocket: Disconnected';
+                statusEl.className = 'ws-status ws-disconnected';
+                addWSMessage('Disconnected from WebSocket server');
+                // Reconnect after 3 seconds
+                setTimeout(initWebSocket, 3000);
+            };
+        }
+
+        function addWSMessage(message) {
+            const messagesEl = document.getElementById('ws-messages');
+            const timestamp = new Date().toLocaleTimeString();
+            messagesEl.textContent += `\n[${timestamp}] ${message}`;
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+
+        function clearWSMessages() {
+            document.getElementById('ws-messages').textContent = 'Waiting for WebSocket messages...';
+        }
+
+        // Generic API test function
+        async function testAPI(method, endpoint, body = null) {
+            const resultId = endpoint.split('/')[2] + '-result';
+            const resultEl = document.getElementById(resultId) || document.getElementById('projects-result');
+            
+            try {
+                const options = {
+                    method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                };
+                
+                if (body) {
+                    options.body = JSON.stringify(body);
+                }
+                
+                const response = await fetch(API_BASE + endpoint, options);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultEl.className = 'result success';
+                    resultEl.textContent = `${method} ${endpoint}\n\nResponse:\n${JSON.stringify(data, null, 2)}`;
+                } else {
+                    resultEl.className = 'result error';
+                    resultEl.textContent = `${method} ${endpoint}\n\nError ${response.status}:\n${JSON.stringify(data, null, 2)}`;
+                }
+            } catch (error) {
+                resultEl.className = 'result error';
+                resultEl.textContent = `${method} ${endpoint}\n\nError: ${error.message}`;
+            }
+        }
+
+        // Create agent test
+        async function createAgent() {
+            const agent = {
+                name: 'Test Agent ' + Date.now(),
+                icon: '🧪',
+                systemPrompt: 'You are a test agent created for API testing',
+                defaultTask: 'Run tests',
+                model: 'claude-3-sonnet-20240229'
+            };
+            await testAPI('POST', '/api/agents', agent);
+        }
+
+        // Execute agent test
+        async function executeAgent() {
+            const execution = {
+                projectPath: '/home/nick/claudia',
+                task: 'Test the API endpoints',
+                model: 'claude-3-sonnet-20240229'
+            };
+            await testAPI('POST', '/api/agents/1/execute', execution);
+        }
+
+        // Execute Claude Code test
+        async function executeClaudeCode() {
+            const prompt = document.getElementById('claude-prompt').value;
+            const request = {
+                projectPath: '/home/nick/claudia',
+                prompt: prompt,
+                model: 'claude-3-sonnet-20240229'
+            };
+            await testAPI('POST', '/api/claude/execute', request);
+        }
+
+        // Add MCP Server test
+        async function addMCPServer() {
+            const server = {
+                name: 'test-server-' + Date.now(),
+                transport: 'stdio',
+                command: 'node',
+                args: ['test-server.js'],
+                env: { TEST: 'true' },
+                scope: 'local'
+            };
+            await testAPI('POST', '/api/mcp/servers', server);
+        }
+
+        // Initialize WebSocket on load
+        initWebSocket();
+    </script>
+</body>
+</html>
