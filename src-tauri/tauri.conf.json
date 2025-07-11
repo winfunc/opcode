@@ -60,6 +60,12 @@
     ],
     "externalBin": [
       "binaries/claude-code"
-    ]
+    ],
+    "linux": {
+      "appimage": {
+        "bundleMediaFramework": true,
+        "files": {}
+      }
+    }
   }
 }

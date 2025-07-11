@@ -15,7 +15,7 @@
     "build:executables:macos": "bun run scripts/fetch-and-build.js macos --version=1.0.41",
     "build:executables:windows": "bun run scripts/fetch-and-build.js windows --version=1.0.41",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "bun run scripts/tauri-build-appimage.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
