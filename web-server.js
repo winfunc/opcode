@@ -71,10 +71,8 @@ app.get('/api/projects', async (req, res) => {
       }
     }
     
-    res.json({
-      success: true,
-      data: projects
-    });
+    // Return array directly to match Tauri format
+    res.json(projects);
   } catch (error) {
     res.status(500).json({
       error: error.message,
@@ -126,10 +124,8 @@ app.get('/api/projects/:id/sessions', async (req, res) => {
       }
     }
     
-    res.json({
-      success: true,
-      data: sessions
-    });
+    // Return array directly to match Tauri format
+    res.json(sessions);
   } catch (error) {
     res.status(500).json({
       error: error.message,
@@ -140,23 +136,33 @@ app.get('/api/projects/:id/sessions', async (req, res) => {
 
 // Mock agents endpoint (since we can't access the SQLite DB without Rust)
 app.get('/api/agents', (req, res) => {
-  res.json({
-    success: true,
-    data: [
-      {
-        id: 1,
-        name: "Code Assistant",
-        icon: "🤖",
-        system_prompt: "You are a helpful coding assistant.",
-        model: "claude-3-sonnet",
-        enable_file_read: true,
-        enable_file_write: true,
-        enable_network: false,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }
-    ]
-  });
+  // Return array directly to match Tauri format
+  res.json([
+    {
+      id: 1,
+      name: "Code Assistant",
+      icon: "🤖",
+      system_prompt: "You are a helpful coding assistant.",
+      model: "claude-3-sonnet",
+      enable_file_read: true,
+      enable_file_write: true,
+      enable_network: false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }
+  ]);
+});
+
+// List running sessions endpoint
+app.get('/api/running-sessions', (req, res) => {
+  // Return empty array since we don't have actual running sessions in web mode
+  res.json([]);
+});
+
+// List running Claude sessions endpoint
+app.get('/api/running-claude-sessions', (req, res) => {
+  // Return empty array since we don't have actual running sessions in web mode
+  res.json([]);
 });
 
 // Serve static files (React app)

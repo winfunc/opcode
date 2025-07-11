@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+// import { invoke } from "@tauri-apps/api/core"; // Now using apiAdapter
 import type { HooksConfiguration } from '@/types/hooks';
 import { apiAdapter } from './api-adapter';
 
@@ -738,7 +738,7 @@ export const api = {
    */
   async deleteAgent(id: number): Promise<void> {
     try {
-      return await invoke('delete_agent', { id });
+      return await apiAdapter.invoke('delete_agent', { id });
     } catch (error) {
       console.error("Failed to delete agent:", error);
       throw error;
@@ -826,7 +826,7 @@ export const api = {
    */
   async listAgentRuns(agentId?: number): Promise<AgentRunWithMetrics[]> {
     try {
-      return await invoke<AgentRunWithMetrics[]>('list_agent_runs', { agentId });
+      return await apiAdapter.invoke<AgentRunWithMetrics[]>('list_agent_runs', { agentId });
     } catch (error) {
       console.error("Failed to list agent runs:", error);
       // Return empty array instead of throwing to prevent UI crashes
@@ -868,7 +868,7 @@ export const api = {
    */
   async listRunningAgentSessions(): Promise<AgentRun[]> {
     try {
-      return await invoke<AgentRun[]>('list_running_sessions');
+      return await apiAdapter.invoke<AgentRun[]>('list_running_sessions');
     } catch (error) {
       console.error("Failed to list running agent sessions:", error);
       throw new Error(`Failed to list running agent sessions: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -962,7 +962,7 @@ export const api = {
    * Loads the JSONL history for a specific session
    */
   async loadSessionHistory(sessionId: string, projectId: string): Promise<any[]> {
-    return invoke("load_session_history", { sessionId, projectId });
+    return apiAdapter.invoke("load_session_history", { sessionId, projectId });
   },
 
   /**
@@ -984,21 +984,21 @@ export const api = {
    * Executes a new interactive Claude Code session with streaming output
    */
   async executeClaudeCode(projectPath: string, prompt: string, model: string): Promise<void> {
-    return invoke("execute_claude_code", { projectPath, prompt, model });
+    return apiAdapter.invoke("execute_claude_code", { projectPath, prompt, model });
   },
 
   /**
    * Continues an existing Claude Code conversation with streaming output
    */
   async continueClaudeCode(projectPath: string, prompt: string, model: string): Promise<void> {
-    return invoke("continue_claude_code", { projectPath, prompt, model });
+    return apiAdapter.invoke("continue_claude_code", { projectPath, prompt, model });
   },
 
   /**
    * Resumes an existing Claude Code session by ID with streaming output
    */
   async resumeClaudeCode(projectPath: string, sessionId: string, prompt: string, model: string): Promise<void> {
-    return invoke("resume_claude_code", { projectPath, sessionId, prompt, model });
+    return apiAdapter.invoke("resume_claude_code", { projectPath, sessionId, prompt, model });
   },
 
   /**
@@ -1006,7 +1006,7 @@ export const api = {
    * @param sessionId - Optional session ID to cancel a specific session
    */
   async cancelClaudeExecution(sessionId?: string): Promise<void> {
-    return invoke("cancel_claude_execution", { sessionId });
+    return apiAdapter.invoke("cancel_claude_execution", { sessionId });
   },
 
   /**
@@ -1014,7 +1014,7 @@ export const api = {
    * @returns Promise resolving to list of running Claude sessions
    */
   async listRunningClaudeSessions(): Promise<any[]> {
-    return invoke("list_running_claude_sessions");
+    return apiAdapter.invoke("list_running_claude_sessions");
   },
 
   /**
@@ -1023,21 +1023,21 @@ export const api = {
    * @returns Promise resolving to the current live output
    */
   async getClaudeSessionOutput(sessionId: string): Promise<string> {
-    return invoke("get_claude_session_output", { sessionId });
+    return apiAdapter.invoke("get_claude_session_output", { sessionId });
   },
 
   /**
    * Lists files and directories in a given path
    */
   async listDirectoryContents(directoryPath: string): Promise<FileEntry[]> {
-    return invoke("list_directory_contents", { directoryPath });
+    return apiAdapter.invoke("list_directory_contents", { directoryPath });
   },
 
   /**
    * Searches for files and directories matching a pattern
    */
   async searchFiles(basePath: string, query: string): Promise<FileEntry[]> {
-    return invoke("search_files", { basePath, query });
+    return apiAdapter.invoke("search_files", { basePath, query });
   },
 
   /**
@@ -1116,7 +1116,7 @@ export const api = {
     messageIndex?: number,
     description?: string
   ): Promise<CheckpointResult> {
-    return invoke("create_checkpoint", {
+    return apiAdapter.invoke("create_checkpoint", {
       sessionId,
       projectId,
       projectPath,
@@ -1134,7 +1134,7 @@ export const api = {
     projectId: string,
     projectPath: string
   ): Promise<CheckpointResult> {
-    return invoke("restore_checkpoint", {
+    return apiAdapter.invoke("restore_checkpoint", {
       checkpointId,
       sessionId,
       projectId,
@@ -1150,7 +1150,7 @@ export const api = {
     projectId: string,
     projectPath: string
   ): Promise<Checkpoint[]> {
-    return invoke("list_checkpoints", {
+    return apiAdapter.invoke("list_checkpoints", {
       sessionId,
       projectId,
       projectPath
@@ -1168,7 +1168,7 @@ export const api = {
     newSessionId: string,
     description?: string
   ): Promise<CheckpointResult> {
-    return invoke("fork_from_checkpoint", {
+    return apiAdapter.invoke("fork_from_checkpoint", {
       checkpointId,
       sessionId,
       projectId,
@@ -1186,7 +1186,7 @@ export const api = {
     projectId: string,
     projectPath: string
   ): Promise<SessionTimeline> {
-    return invoke("get_session_timeline", {
+    return apiAdapter.invoke("get_session_timeline", {
       sessionId,
       projectId,
       projectPath
@@ -1203,7 +1203,7 @@ export const api = {
     autoCheckpointEnabled: boolean,
     checkpointStrategy: CheckpointStrategy
   ): Promise<void> {
-    return invoke("update_checkpoint_settings", {
+    return apiAdapter.invoke("update_checkpoint_settings", {
       sessionId,
       projectId,
       projectPath,
@@ -1244,7 +1244,7 @@ export const api = {
     message: string
   ): Promise<void> {
     try {
-      await invoke("track_checkpoint_message", {
+      await apiAdapter.invoke("track_checkpoint_message", {
         sessionId,
         projectId,
         projectPath,
@@ -1314,7 +1314,7 @@ export const api = {
     current_checkpoint_id?: string;
   }> {
     try {
-      return await invoke("get_checkpoint_settings", {
+      return await apiAdapter.invoke("get_checkpoint_settings", {
         sessionId,
         projectId,
         projectPath
@@ -1330,7 +1330,7 @@ export const api = {
    */
   async clearCheckpointManager(sessionId: string): Promise<void> {
     try {
-      await invoke("clear_checkpoint_manager", { sessionId });
+      await apiAdapter.invoke("clear_checkpoint_manager", { sessionId });
     } catch (error) {
       console.error("Failed to clear checkpoint manager:", error);
       throw error;
@@ -1346,7 +1346,7 @@ export const api = {
     projectPath: string, 
     messages: string[]
   ): Promise<void> =>
-    invoke("track_session_messages", { sessionId, projectId, projectPath, messages }),
+    apiAdapter.invoke("track_session_messages", { sessionId, projectId, projectPath, messages }),
 
   /**
    * Adds a new MCP server

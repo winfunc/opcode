@@ -209,7 +209,7 @@ class WebApiAdapter implements ApiAdapter {
       'continue_claude_code': '/claude/continue',
       'resume_claude_code': '/claude/resume',
       'cancel_claude_execution': '/claude/cancel',
-      'list_running_claude_sessions': '/claude/running',
+      'list_running_claude_sessions': '/running-claude-sessions',
       'get_claude_session_output': '/claude/status/:session_id',
       
       // Agent management
@@ -220,6 +220,7 @@ class WebApiAdapter implements ApiAdapter {
       'delete_agent': '/agents/:id',
       'execute_agent': '/agents/:id/execute',
       'list_agent_runs': '/agents/:id/runs',
+      'list_running_sessions': '/running-sessions',
       
       // Usage analytics
       'get_usage_stats': '/usage/stats',
