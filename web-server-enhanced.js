@@ -578,6 +578,58 @@ app.get('/api/fs/list', async (req, res) => {
   }
 });
 
+// Slash commands endpoints
+app.get('/api/slash-commands', (req, res) => {
+  try {
+    const commands = db.prepare('SELECT * FROM slash_commands ORDER BY name').all();
+    res.json(commands || []);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/slash-commands', (req, res) => {
+  try {
+    const { name, description, content, projectPath } = req.body;
+    
+    const result = db.prepare(`
+      INSERT INTO slash_commands (name, description, content, project_path)
+      VALUES (?, ?, ?, ?)
+    `).run(name, description, content, projectPath || null);
+    
+    const command = db.prepare('SELECT * FROM slash_commands WHERE id = ?').get(result.lastInsertRowid);
+    res.json(command);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.put('/api/slash-commands/:id', (req, res) => {
+  try {
+    const { name, description, content, projectPath } = req.body;
+    
+    db.prepare(`
+      UPDATE slash_commands 
+      SET name = ?, description = ?, content = ?, project_path = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(name, description, content, projectPath || null, req.params.id);
+    
+    const command = db.prepare('SELECT * FROM slash_commands WHERE id = ?').get(req.params.id);
+    res.json(command);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/slash-commands/:id', (req, res) => {
+  try {
+    db.prepare('DELETE FROM slash_commands WHERE id = ?').run(req.params.id);
+    res.status(204).send();
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Session history endpoints
 app.get('/api/sessions/:projectId/:sessionId/history', async (req, res) => {
   try {
