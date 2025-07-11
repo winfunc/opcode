@@ -321,7 +321,6 @@ pub fn init_database(app: &AppHandle) -> SqliteResult<Connection> {
         [],
     )?;
 
-
     // Create settings table for app-wide settings
     conn.execute(
         "CREATE TABLE IF NOT EXISTS app_settings (
@@ -694,38 +693,41 @@ pub async fn execute_agent(
     // Get the agent from database
     let agent = get_agent(db.clone(), agent_id).await?;
     let execution_model = model.unwrap_or(agent.model.clone());
-    
+
     // Create .claude/settings.json with agent hooks if it doesn't exist
     if let Some(hooks_json) = &agent.hooks {
         let claude_dir = std::path::Path::new(&project_path).join(".claude");
         let settings_path = claude_dir.join("settings.json");
-        
+
         // Create .claude directory if it doesn't exist
         if !claude_dir.exists() {
             std::fs::create_dir_all(&claude_dir)
                 .map_err(|e| format!("Failed to create .claude directory: {}", e))?;
             info!("Created .claude directory at: {:?}", claude_dir);
         }
-        
+
         // Check if settings.json already exists
         if !settings_path.exists() {
             // Parse the hooks JSON
             let hooks: serde_json::Value = serde_json::from_str(hooks_json)
                 .map_err(|e| format!("Failed to parse agent hooks: {}", e))?;
-            
+
             // Create a settings object with just the hooks
             let settings = serde_json::json!({
                 "hooks": hooks
             });
-            
+
             // Write the settings file
             let settings_content = serde_json::to_string_pretty(&settings)
                 .map_err(|e| format!("Failed to serialize settings: {}", e))?;
-            
+
             std::fs::write(&settings_path, settings_content)
                 .map_err(|e| format!("Failed to write settings.json: {}", e))?;
-            
-            info!("Created settings.json with agent hooks at: {:?}", settings_path);
+
+            info!(
+                "Created settings.json with agent hooks at: {:?}",
+                settings_path
+            );
         } else {
             info!("settings.json already exists at: {:?}", settings_path);
         }
@@ -768,9 +770,34 @@ pub async fn execute_agent(
 
     // Execute based on whether we should use sidecar or system binary
     if should_use_sidecar(&claude_path) {
-        spawn_agent_sidecar(app, run_id, agent_id, agent.name.clone(), args, project_path, task, execution_model, db, registry).await
+        spawn_agent_sidecar(
+            app,
+            run_id,
+            agent_id,
+            agent.name.clone(),
+            args,
+            project_path,
+            task,
+            execution_model,
+            db,
+            registry,
+        )
+        .await
     } else {
-        spawn_agent_system(app, run_id, agent_id, agent.name.clone(), claude_path, args, project_path, task, execution_model, db, registry).await
+        spawn_agent_system(
+            app,
+            run_id,
+            agent_id,
+            agent.name.clone(),
+            claude_path,
+            args,
+            project_path,
+            task,
+            execution_model,
+            db,
+            registry,
+        )
+        .await
     }
 }
 
@@ -789,13 +816,13 @@ fn create_agent_sidecar_command(
         .shell()
         .sidecar("claude-code")
         .map_err(|e| format!("Failed to create sidecar command: {}", e))?;
-    
+
     // Add all arguments
     sidecar_cmd = sidecar_cmd.args(args);
-    
+
     // Set working directory
     sidecar_cmd = sidecar_cmd.current_dir(project_path);
-    
+
     Ok(sidecar_cmd)
 }
 
@@ -806,17 +833,17 @@ fn create_agent_system_command(
     project_path: &str,
 ) -> Command {
     let mut cmd = create_command_with_env(claude_path);
-    
+
     // Add all arguments
     for arg in args {
         cmd.arg(arg);
     }
-    
+
     cmd.current_dir(project_path)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
-    
+
     cmd
 }
 
@@ -837,7 +864,7 @@ async fn spawn_agent_sidecar(
 
     // Create the sidecar command
     let sidecar_cmd = create_agent_sidecar_command(&app, args, &project_path)?;
-    
+
     // Spawn the sidecar process
     let (mut rx, child) = sidecar_cmd
         .spawn()
@@ -891,7 +918,10 @@ async fn spawn_agent_sidecar(
 
                         // Log first output
                         if !first_output_clone.load(std::sync::atomic::Ordering::Relaxed) {
-                            info!("🎉 First output received from Claude sidecar! Line: {}", line);
+                            info!(
+                                "🎉 First output received from Claude sidecar! Line: {}",
+                                line
+                            );
                             first_output_clone.store(true, std::sync::atomic::Ordering::Relaxed);
                         }
 
@@ -913,16 +943,20 @@ async fn spawn_agent_sidecar(
                         // Extract session ID from JSONL output
                         if let Ok(json) = serde_json::from_str::<JsonValue>(&line) {
                             // Claude Code uses "session_id" (underscore), not "sessionId"
-                            if json.get("type").and_then(|t| t.as_str()) == Some("system") &&
-                               json.get("subtype").and_then(|s| s.as_str()) == Some("init") {
+                            if json.get("type").and_then(|t| t.as_str()) == Some("system")
+                                && json.get("subtype").and_then(|s| s.as_str()) == Some("init")
+                            {
                                 if let Some(sid) = json.get("session_id").and_then(|s| s.as_str()) {
-                                    if let Ok(mut current_session_id) = session_id_holder_clone.lock() {
+                                    if let Ok(mut current_session_id) =
+                                        session_id_holder_clone.lock()
+                                    {
                                         if current_session_id.is_none() {
                                             *current_session_id = Some(sid.to_string());
                                             info!("🔑 Extracted session ID: {}", sid);
-                                            
+
                                             // Update database immediately with session ID
-                                            if let Ok(conn) = Connection::open(&db_path_for_stream) {
+                                            if let Ok(conn) = Connection::open(&db_path_for_stream)
+                                            {
                                                 match conn.execute(
                                                     "UPDATE agent_runs SET session_id = ?1 WHERE id = ?2",
                                                     params![sid, run_id],
@@ -974,7 +1008,10 @@ async fn spawn_agent_sidecar(
             }
         }
 
-        info!("📖 Finished reading Claude sidecar events. Total lines: {}", line_count);
+        info!(
+            "📖 Finished reading Claude sidecar events. Total lines: {}",
+            line_count
+        );
     });
 
     // Monitor process status and wait for completion
@@ -985,7 +1022,10 @@ async fn spawn_agent_sidecar(
         for i in 0..300 {
             // 30 seconds (300 * 100ms)
             if first_output.load(std::sync::atomic::Ordering::Relaxed) {
-                info!("✅ Output detected after {}ms, continuing normal execution", i * 100);
+                info!(
+                    "✅ Output detected after {}ms, continuing normal execution",
+                    i * 100
+                );
                 break;
             }
 
@@ -1018,15 +1058,19 @@ async fn spawn_agent_sidecar(
         let _ = sidecar_task.await;
 
         // Get the session ID that was extracted
-        let extracted_session_id = if let Ok(Some(sid)) = session_id_holder.lock().map(|s| s.clone()) {
-            sid
-        } else {
-            String::new()
-        };
+        let extracted_session_id =
+            if let Ok(Some(sid)) = session_id_holder.lock().map(|s| s.clone()) {
+                sid
+            } else {
+                String::new()
+            };
 
         // Update the run record with session ID and mark as completed
         if let Ok(conn) = Connection::open(&db_path) {
-            info!("🔄 Updating database with extracted session ID: {}", extracted_session_id);
+            info!(
+                "🔄 Updating database with extracted session ID: {}",
+                extracted_session_id
+            );
             match conn.execute(
                 "UPDATE agent_runs SET session_id = ?1, status = 'completed', completed_at = CURRENT_TIMESTAMP WHERE id = ?2",
                 params![extracted_session_id, run_id],
@@ -1043,7 +1087,10 @@ async fn spawn_agent_sidecar(
                 }
             }
         } else {
-            error!("❌ Failed to open database to update session ID for run {}", run_id);
+            error!(
+                "❌ Failed to open database to update session ID for run {}",
+                run_id
+            );
         }
 
         info!("✅ Claude sidecar execution monitoring complete");
@@ -1161,14 +1208,15 @@ async fn spawn_agent_system(
             // Extract session ID from JSONL output
             if let Ok(json) = serde_json::from_str::<JsonValue>(&line) {
                 // Claude Code uses "session_id" (underscore), not "sessionId"
-                if json.get("type").and_then(|t| t.as_str()) == Some("system") &&
-                   json.get("subtype").and_then(|s| s.as_str()) == Some("init") {
+                if json.get("type").and_then(|t| t.as_str()) == Some("system")
+                    && json.get("subtype").and_then(|s| s.as_str()) == Some("init")
+                {
                     if let Some(sid) = json.get("session_id").and_then(|s| s.as_str()) {
                         if let Ok(mut current_session_id) = session_id_clone.lock() {
                             if current_session_id.is_empty() {
                                 *current_session_id = sid.to_string();
                                 info!("🔑 Extracted session ID: {}", sid);
-                                
+
                                 // Update database immediately with session ID
                                 if let Ok(conn) = Connection::open(&db_path_for_stdout) {
                                     match conn.execute(
@@ -1181,7 +1229,10 @@ async fn spawn_agent_system(
                                             }
                                         }
                                         Err(e) => {
-                                            error!("❌ Failed to update session ID immediately: {}", e);
+                                            error!(
+                                                "❌ Failed to update session ID immediately: {}",
+                                                e
+                                            );
                                         }
                                     }
                                 }
@@ -1341,7 +1392,10 @@ async fn spawn_agent_system(
 
         // Update the run record with session ID and mark as completed - open a new connection
         if let Ok(conn) = Connection::open(&db_path_for_monitor) {
-            info!("🔄 Updating database with extracted session ID: {}", extracted_session_id);
+            info!(
+                "🔄 Updating database with extracted session ID: {}",
+                extracted_session_id
+            );
             match conn.execute(
                 "UPDATE agent_runs SET session_id = ?1, status = 'completed', completed_at = CURRENT_TIMESTAMP WHERE id = ?2",
                 params![extracted_session_id, run_id],
@@ -1358,7 +1412,10 @@ async fn spawn_agent_system(
                 }
             }
         } else {
-            error!("❌ Failed to open database to update session ID for run {}", run_id);
+            error!(
+                "❌ Failed to open database to update session ID for run {}",
+                run_id
+            );
         }
 
         // Cleanup will be handled by the cleanup_finished_processes function
@@ -1418,10 +1475,8 @@ pub async fn list_running_sessions(
     // Cross-check with the process registry to ensure accuracy
     // Get actually running processes from the registry
     let registry_processes = registry.0.get_running_agent_processes()?;
-    let registry_run_ids: std::collections::HashSet<i64> = registry_processes
-        .iter()
-        .map(|p| p.run_id)
-        .collect();
+    let registry_run_ids: std::collections::HashSet<i64> =
+        registry_processes.iter().map(|p| p.run_id).collect();
 
     // Filter out any database entries that aren't actually running in the registry
     // This handles cases where processes crashed without updating the database
@@ -1614,7 +1669,7 @@ pub async fn get_session_output(
 
     // Find the correct project directory by searching for the session file
     let projects_dir = claude_dir.join("projects");
-    
+
     // Check if projects directory exists
     if !projects_dir.exists() {
         log::error!("Projects directory not found at: {:?}", projects_dir);
@@ -1623,15 +1678,18 @@ pub async fn get_session_output(
 
     // Search for the session file in all project directories
     let mut session_file_path = None;
-    log::info!("Searching for session file {} in all project directories", run.session_id);
-    
+    log::info!(
+        "Searching for session file {} in all project directories",
+        run.session_id
+    );
+
     if let Ok(entries) = std::fs::read_dir(&projects_dir) {
         for entry in entries.filter_map(Result::ok) {
             let path = entry.path();
             if path.is_dir() {
                 let dir_name = path.file_name().unwrap_or_default().to_string_lossy();
                 log::debug!("Checking project directory: {}", dir_name);
-                
+
                 let potential_session_file = path.join(format!("{}.jsonl", run.session_id));
                 if potential_session_file.exists() {
                     log::info!("Found session file at: {:?}", potential_session_file);
@@ -1651,7 +1709,11 @@ pub async fn get_session_output(
         match tokio::fs::read_to_string(&session_path).await {
             Ok(content) => Ok(content),
             Err(e) => {
-                log::error!("Failed to read session file {}: {}", session_path.display(), e);
+                log::error!(
+                    "Failed to read session file {}: {}",
+                    session_path.display(),
+                    e
+                );
                 // Fallback to live output if file read fails
                 let live_output = registry.0.get_live_output(run_id)?;
                 Ok(live_output)
@@ -1659,7 +1721,10 @@ pub async fn get_session_output(
         }
     } else {
         // If session file not found, try the old method as fallback
-        log::warn!("Session file not found for {}, trying legacy method", run.session_id);
+        log::warn!(
+            "Session file not found for {}, trying legacy method",
+            run.session_id
+        );
         match read_session_jsonl(&run.session_id, &run.project_path).await {
             Ok(content) => Ok(content),
             Err(_) => {
@@ -1888,35 +1953,32 @@ pub async fn list_claude_installations(
         if installation.installation_type == crate::claude_binary::InstallationType::Bundled {
             // Try to get the version by executing the sidecar
             use tauri_plugin_shell::process::CommandEvent;
-            
+
             // Create a temporary directory for the sidecar to run in
             let temp_dir = std::env::temp_dir();
-            
+
             // Create sidecar command with --version flag
-            let sidecar_cmd = match app
-                .shell()
-                .sidecar("claude-code") {
+            let sidecar_cmd = match app.shell().sidecar("claude-code") {
                 Ok(cmd) => cmd.args(["--version"]).current_dir(&temp_dir),
                 Err(e) => {
                     log::warn!("Failed to create sidecar command for version check: {}", e);
                     continue;
                 }
             };
-            
+
             // Spawn the sidecar and collect output
             match sidecar_cmd.spawn() {
                 Ok((mut rx, _child)) => {
                     let mut stdout_output = String::new();
                     let mut stderr_output = String::new();
-                    
+
                     // Set a timeout for version check
                     let timeout = tokio::time::Duration::from_secs(5);
                     let start_time = tokio::time::Instant::now();
-                    
-                    while let Ok(Some(event)) = tokio::time::timeout_at(
-                        start_time + timeout,
-                        rx.recv()
-                    ).await {
+
+                    while let Ok(Some(event)) =
+                        tokio::time::timeout_at(start_time + timeout, rx.recv()).await
+                    {
                         match event {
                             CommandEvent::Stdout(data) => {
                                 stdout_output.push_str(&String::from_utf8_lossy(&data));
@@ -1934,10 +1996,13 @@ pub async fn list_claude_installations(
                             _ => {}
                         }
                     }
-                    
+
                     // Use regex to directly extract version pattern
-                    let version_regex = regex::Regex::new(r"(\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?(?:\+[a-zA-Z0-9.-]+)?)").ok();
-                    
+                    let version_regex = regex::Regex::new(
+                        r"(\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?(?:\+[a-zA-Z0-9.-]+)?)",
+                    )
+                    .ok();
+
                     if let Some(regex) = version_regex {
                         if let Some(captures) = regex.captures(&stdout_output) {
                             if let Some(version_match) = captures.get(1) {
@@ -2022,7 +2087,11 @@ fn create_command_with_env(program: &str) -> Command {
         if sidecar_dir.exists() {
             if let Some(sidecar_dir_str) = sidecar_dir.to_str() {
                 let current_path = std::env::var("PATH").unwrap_or_default();
-                let separator = if cfg!(target_os = "windows") { ";" } else { ":" };
+                let separator = if cfg!(target_os = "windows") {
+                    ";"
+                } else {
+                    ":"
+                };
                 if !current_path.split(separator).any(|p| p == sidecar_dir_str) {
                     let new_path = format!("{}{}{}", sidecar_dir_str, separator, current_path);
                     tokio_cmd.env("PATH", new_path);
@@ -2269,7 +2338,7 @@ pub async fn load_agent_session_history(
         .join(".claude");
 
     let projects_dir = claude_dir.join("projects");
-    
+
     if !projects_dir.exists() {
         log::error!("Projects directory not found at: {:?}", projects_dir);
         return Err("Projects directory not found".to_string());
@@ -2277,15 +2346,18 @@ pub async fn load_agent_session_history(
 
     // Search for the session file in all project directories
     let mut session_file_path = None;
-    log::info!("Searching for session file {} in all project directories", session_id);
-    
+    log::info!(
+        "Searching for session file {} in all project directories",
+        session_id
+    );
+
     if let Ok(entries) = std::fs::read_dir(&projects_dir) {
         for entry in entries.filter_map(Result::ok) {
             let path = entry.path();
             if path.is_dir() {
                 let dir_name = path.file_name().unwrap_or_default().to_string_lossy();
                 log::debug!("Checking project directory: {}", dir_name);
-                
+
                 let potential_session_file = path.join(format!("{}.jsonl", session_id));
                 if potential_session_file.exists() {
                     log::info!("Found session file at: {:?}", potential_session_file);

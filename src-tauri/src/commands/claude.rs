@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use regex;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io::{BufRead, BufReader};
@@ -7,11 +8,10 @@ use std::process::Stdio;
 use std::sync::Arc;
 use std::time::SystemTime;
 use tauri::{AppHandle, Emitter, Manager};
+use tauri_plugin_shell::process::CommandEvent;
+use tauri_plugin_shell::ShellExt;
 use tokio::process::{Child, Command};
 use tokio::sync::Mutex;
-use tauri_plugin_shell::ShellExt;
-use tauri_plugin_shell::process::CommandEvent;
-use regex;
 
 /// Global state to track current Claude process
 pub struct ClaudeProcessState {
@@ -281,33 +281,29 @@ fn create_sidecar_command(
         .shell()
         .sidecar("claude-code")
         .map_err(|e| format!("Failed to create sidecar command: {}", e))?;
-    
+
     // Add all arguments
     sidecar_cmd = sidecar_cmd.args(args);
-    
+
     // Set working directory
     sidecar_cmd = sidecar_cmd.current_dir(project_path);
-    
+
     Ok(sidecar_cmd)
 }
 
 /// Creates a system binary command with the given arguments
-fn create_system_command(
-    claude_path: &str,
-    args: Vec<String>,
-    project_path: &str,
-) -> Command {
+fn create_system_command(claude_path: &str, args: Vec<String>, project_path: &str) -> Command {
     let mut cmd = create_command_with_env(claude_path);
-    
+
     // Add all arguments
     for arg in args {
         cmd.arg(arg);
     }
-    
+
     cmd.current_dir(project_path)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
-    
+
     cmd
 }
 
@@ -581,32 +577,33 @@ pub async fn check_claude_version(app: AppHandle) -> Result<ClaudeVersionStatus,
     // If the selected path is the special sidecar identifier, execute it to get version
     if claude_path == "claude-code" {
         use tauri_plugin_shell::process::CommandEvent;
-        
+
         // Create a temporary directory for the sidecar to run in
         let temp_dir = std::env::temp_dir();
-        
+
         // Create sidecar command with --version flag
-        let sidecar_cmd = match app
-            .shell()
-            .sidecar("claude-code") {
+        let sidecar_cmd = match app.shell().sidecar("claude-code") {
             Ok(cmd) => cmd.args(["--version"]).current_dir(&temp_dir),
             Err(e) => {
                 log::error!("Failed to create sidecar command: {}", e);
                 return Ok(ClaudeVersionStatus {
                     is_installed: true, // We know it exists, just couldn't create command
                     version: None,
-                    output: format!("Using bundled Claude Code sidecar (command creation failed: {})", e),
+                    output: format!(
+                        "Using bundled Claude Code sidecar (command creation failed: {})",
+                        e
+                    ),
                 });
             }
         };
-        
+
         // Spawn the sidecar and collect output
         match sidecar_cmd.spawn() {
             Ok((mut rx, _child)) => {
                 let mut stdout_output = String::new();
                 let mut stderr_output = String::new();
                 let mut exit_success = false;
-                
+
                 // Collect output from the sidecar
                 while let Some(event) = rx.recv().await {
                     match event {
@@ -625,18 +622,21 @@ pub async fn check_claude_version(app: AppHandle) -> Result<ClaudeVersionStatus,
                         _ => {}
                     }
                 }
-                
+
                 // Use regex to directly extract version pattern (e.g., "1.0.41")
-                let version_regex = regex::Regex::new(r"(\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?(?:\+[a-zA-Z0-9.-]+)?)").ok();
-                
+                let version_regex =
+                    regex::Regex::new(r"(\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?(?:\+[a-zA-Z0-9.-]+)?)")
+                        .ok();
+
                 let version = if let Some(regex) = version_regex {
-                    regex.captures(&stdout_output)
+                    regex
+                        .captures(&stdout_output)
                         .and_then(|captures| captures.get(1))
                         .map(|m| m.as_str().to_string())
                 } else {
                     None
                 };
-                
+
                 let full_output = if stderr_output.is_empty() {
                     stdout_output.clone()
                 } else {
@@ -644,7 +644,9 @@ pub async fn check_claude_version(app: AppHandle) -> Result<ClaudeVersionStatus,
                 };
 
                 // Check if the output matches the expected format
-                let is_valid = stdout_output.contains("(Claude Code)") || stdout_output.contains("Claude Code") || version.is_some();
+                let is_valid = stdout_output.contains("(Claude Code)")
+                    || stdout_output.contains("Claude Code")
+                    || version.is_some();
 
                 return Ok(ClaudeVersionStatus {
                     is_installed: is_valid && exit_success,
@@ -657,13 +659,17 @@ pub async fn check_claude_version(app: AppHandle) -> Result<ClaudeVersionStatus,
                 return Ok(ClaudeVersionStatus {
                     is_installed: true, // We know it exists, just couldn't get version
                     version: None,
-                    output: format!("Using bundled Claude Code sidecar (version check failed: {})", e),
+                    output: format!(
+                        "Using bundled Claude Code sidecar (version check failed: {})",
+                        e
+                    ),
                 });
             }
         }
     }
 
-    use log::debug;debug!("Claude path: {}", claude_path);
+    use log::debug;
+    debug!("Claude path: {}", claude_path);
 
     // In production builds, we can't check the version directly
     #[cfg(not(debug_assertions))]
@@ -695,18 +701,21 @@ pub async fn check_claude_version(app: AppHandle) -> Result<ClaudeVersionStatus,
             Ok(output) => {
                 let stdout = String::from_utf8_lossy(&output.stdout).to_string();
                 let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-                
+
                 // Use regex to directly extract version pattern (e.g., "1.0.41")
-                let version_regex = regex::Regex::new(r"(\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?(?:\+[a-zA-Z0-9.-]+)?)").ok();
-                
+                let version_regex =
+                    regex::Regex::new(r"(\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?(?:\+[a-zA-Z0-9.-]+)?)")
+                        .ok();
+
                 let version = if let Some(regex) = version_regex {
-                    regex.captures(&stdout)
+                    regex
+                        .captures(&stdout)
                         .and_then(|captures| captures.get(1))
                         .map(|m| m.as_str().to_string())
                 } else {
                     None
                 };
-                
+
                 let full_output = if stderr.is_empty() {
                     stdout.clone()
                 } else {
@@ -922,8 +931,6 @@ pub async fn load_session_history(
     Ok(messages)
 }
 
-
-
 /// Execute a new interactive Claude Code session with streaming output
 #[tauri::command]
 pub async fn execute_claude_code(
@@ -939,7 +946,7 @@ pub async fn execute_claude_code(
     );
 
     let claude_path = find_claude_binary(&app)?;
-    
+
     let args = vec![
         "-p".to_string(),
         prompt.clone(),
@@ -974,7 +981,7 @@ pub async fn continue_claude_code(
     );
 
     let claude_path = find_claude_binary(&app)?;
-    
+
     let args = vec![
         "-c".to_string(), // Continue flag
         "-p".to_string(),
@@ -1012,7 +1019,7 @@ pub async fn resume_claude_code(
     );
 
     let claude_path = find_claude_binary(&app)?;
-    
+
     let args = vec![
         "--resume".to_string(),
         session_id.clone(),
@@ -1053,8 +1060,12 @@ pub async fn cancel_claude_execution(
         let registry = app.state::<crate::process::ProcessRegistryState>();
         match registry.0.get_claude_session_by_id(sid) {
             Ok(Some(process_info)) => {
-                log::info!("Found process in registry for session {}: run_id={}, PID={}", 
-                    sid, process_info.run_id, process_info.pid);
+                log::info!(
+                    "Found process in registry for session {}: run_id={}, PID={}",
+                    sid,
+                    process_info.run_id,
+                    process_info.pid
+                );
                 match registry.0.kill_process(process_info.run_id).await {
                     Ok(success) => {
                         if success {
@@ -1087,7 +1098,10 @@ pub async fn cancel_claude_execution(
         if let Some(mut child) = current_process.take() {
             // Try to get the PID before killing
             let pid = child.id();
-            log::info!("Attempting to kill Claude process via ClaudeProcessState with PID: {:?}", pid);
+            log::info!(
+                "Attempting to kill Claude process via ClaudeProcessState with PID: {:?}",
+                pid
+            );
 
             // Kill the process
             match child.kill().await {
@@ -1096,8 +1110,11 @@ pub async fn cancel_claude_execution(
                     killed = true;
                 }
                 Err(e) => {
-                    log::error!("Failed to kill Claude process via ClaudeProcessState: {}", e);
-                    
+                    log::error!(
+                        "Failed to kill Claude process via ClaudeProcessState: {}",
+                        e
+                    );
+
                     // Method 3: If we have a PID, try system kill as last resort
                     if let Some(pid) = pid {
                         log::info!("Attempting system kill as last resort for PID: {}", pid);
@@ -1110,7 +1127,7 @@ pub async fn cancel_claude_execution(
                                 .args(["-KILL", &pid.to_string()])
                                 .output()
                         };
-                        
+
                         match kill_result {
                             Ok(output) if output.status.success() => {
                                 log::info!("Successfully killed process via system command");
@@ -1143,18 +1160,18 @@ pub async fn cancel_claude_execution(
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
         let _ = app.emit(&format!("claude-complete:{}", sid), false);
     }
-    
+
     // Also emit generic events for backward compatibility
     let _ = app.emit("claude-cancelled", true);
     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
     let _ = app.emit("claude-complete", false);
-    
+
     if killed {
         log::info!("Claude process cancellation completed successfully");
     } else if !attempted_methods.is_empty() {
         log::warn!("Claude process cancellation attempted but process may have already exited. Attempted methods: {:?}", attempted_methods);
     }
-    
+
     Ok(())
 }
 
@@ -1181,9 +1198,15 @@ pub async fn get_claude_session_output(
 }
 
 /// Helper function to spawn Claude process and handle streaming
-async fn spawn_claude_process(app: AppHandle, mut cmd: Command, prompt: String, model: String, project_path: String) -> Result<(), String> {
-    use tokio::io::{AsyncBufReadExt, BufReader};
+async fn spawn_claude_process(
+    app: AppHandle,
+    mut cmd: Command,
+    prompt: String,
+    model: String,
+    project_path: String,
+) -> Result<(), String> {
     use std::sync::Mutex;
+    use tokio::io::{AsyncBufReadExt, BufReader};
 
     // Spawn the process
     let mut child = cmd
@@ -1196,10 +1219,7 @@ async fn spawn_claude_process(app: AppHandle, mut cmd: Command, prompt: String, 
 
     // Get the child PID for logging
     let pid = child.id().unwrap_or(0);
-    log::info!(
-        "Spawned Claude process with PID: {:?}",
-        pid
-    );
+    log::info!("Spawned Claude process with PID: {:?}", pid);
 
     // Create readers first (before moving child)
     let stdout_reader = BufReader::new(stdout);
@@ -1234,7 +1254,7 @@ async fn spawn_claude_process(app: AppHandle, mut cmd: Command, prompt: String, 
         let mut lines = stdout_reader.lines();
         while let Ok(Some(line)) = lines.next_line().await {
             log::debug!("Claude stdout: {}", line);
-            
+
             // Parse the line to check for init message with session ID
             if let Ok(msg) = serde_json::from_str::<serde_json::Value>(&line) {
                 if msg["type"] == "system" && msg["subtype"] == "init" {
@@ -1243,7 +1263,7 @@ async fn spawn_claude_process(app: AppHandle, mut cmd: Command, prompt: String, 
                         if session_id_guard.is_none() {
                             *session_id_guard = Some(claude_session_id.to_string());
                             log::info!("Extracted Claude session ID: {}", claude_session_id);
-                            
+
                             // Now register with ProcessRegistry using Claude's session ID
                             match registry_clone.register_claude_session(
                                 claude_session_id.to_string(),
@@ -1265,12 +1285,12 @@ async fn spawn_claude_process(app: AppHandle, mut cmd: Command, prompt: String, 
                     }
                 }
             }
-            
+
             // Store live output in registry if we have a run_id
             if let Some(run_id) = *run_id_holder_clone.lock().unwrap() {
                 let _ = registry_clone.append_live_output(run_id, &line);
             }
-            
+
             // Emit the line to the frontend with session isolation if we have session ID
             if let Some(ref session_id) = *session_id_holder_clone.lock().unwrap() {
                 let _ = app_handle.emit(&format!("claude-output:{}", session_id), &line);
@@ -1314,10 +1334,8 @@ async fn spawn_claude_process(app: AppHandle, mut cmd: Command, prompt: String, 
                     // Add a small delay to ensure all messages are processed
                     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
                     if let Some(ref session_id) = *session_id_holder_clone3.lock().unwrap() {
-                        let _ = app_handle_wait.emit(
-                            &format!("claude-complete:{}", session_id),
-                            status.success(),
-                        );
+                        let _ = app_handle_wait
+                            .emit(&format!("claude-complete:{}", session_id), status.success());
                     }
                     // Also emit to the generic event for backward compatibility
                     let _ = app_handle_wait.emit("claude-complete", status.success());
@@ -1327,8 +1345,8 @@ async fn spawn_claude_process(app: AppHandle, mut cmd: Command, prompt: String, 
                     // Add a small delay to ensure all messages are processed
                     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
                     if let Some(ref session_id) = *session_id_holder_clone3.lock().unwrap() {
-                        let _ = app_handle_wait
-                            .emit(&format!("claude-complete:{}", session_id), false);
+                        let _ =
+                            app_handle_wait.emit(&format!("claude-complete:{}", session_id), false);
                     }
                     // Also emit to the generic event for backward compatibility
                     let _ = app_handle_wait.emit("claude-complete", false);
@@ -1360,7 +1378,7 @@ async fn spawn_claude_sidecar(
 
     // Create the sidecar command
     let sidecar_cmd = create_sidecar_command(&app, args, &project_path)?;
-    
+
     // Spawn the sidecar process
     let (mut rx, child) = sidecar_cmd
         .spawn()
@@ -1385,26 +1403,30 @@ async fn spawn_claude_sidecar(
     let app_handle = app.clone();
     let session_id_holder_clone = session_id_holder.clone();
     let run_id_holder_clone = run_id_holder.clone();
-    
+
     tauri::async_runtime::spawn(async move {
         while let Some(event) = rx.recv().await {
             match event {
                 CommandEvent::Stdout(line_bytes) => {
                     let line = String::from_utf8_lossy(&line_bytes);
                     let line_str = line.trim_end_matches('\n').trim_end_matches('\r');
-                    
+
                     if !line_str.is_empty() {
                         log::debug!("Claude sidecar stdout: {}", line_str);
-                        
+
                         // Parse the line to check for init message with session ID
                         if let Ok(msg) = serde_json::from_str::<serde_json::Value>(line_str) {
                             if msg["type"] == "system" && msg["subtype"] == "init" {
                                 if let Some(claude_session_id) = msg["session_id"].as_str() {
-                                    let mut session_id_guard = session_id_holder_clone.lock().unwrap();
+                                    let mut session_id_guard =
+                                        session_id_holder_clone.lock().unwrap();
                                     if session_id_guard.is_none() {
                                         *session_id_guard = Some(claude_session_id.to_string());
-                                        log::info!("Extracted Claude session ID: {}", claude_session_id);
-                                        
+                                        log::info!(
+                                            "Extracted Claude session ID: {}",
+                                            claude_session_id
+                                        );
+
                                         // Register with ProcessRegistry using Claude's session ID
                                         match registry_clone.register_claude_session(
                                             claude_session_id.to_string(),
@@ -1415,26 +1437,31 @@ async fn spawn_claude_sidecar(
                                         ) {
                                             Ok(run_id) => {
                                                 log::info!("Registered Claude sidecar session with run_id: {}", run_id);
-                                                let mut run_id_guard = run_id_holder_clone.lock().unwrap();
+                                                let mut run_id_guard =
+                                                    run_id_holder_clone.lock().unwrap();
                                                 *run_id_guard = Some(run_id);
                                             }
                                             Err(e) => {
-                                                log::error!("Failed to register Claude sidecar session: {}", e);
+                                                log::error!(
+                                                    "Failed to register Claude sidecar session: {}",
+                                                    e
+                                                );
                                             }
                                         }
                                     }
                                 }
                             }
                         }
-                        
+
                         // Store live output in registry if we have a run_id
                         if let Some(run_id) = *run_id_holder_clone.lock().unwrap() {
                             let _ = registry_clone.append_live_output(run_id, line_str);
                         }
-                        
+
                         // Emit the line to the frontend with session isolation if we have session ID
                         if let Some(ref session_id) = *session_id_holder_clone.lock().unwrap() {
-                            let _ = app_handle.emit(&format!("claude-output:{}", session_id), line_str);
+                            let _ =
+                                app_handle.emit(&format!("claude-output:{}", session_id), line_str);
                         }
                         // Also emit to the generic event for backward compatibility
                         let _ = app_handle.emit("claude-output", line_str);
@@ -1443,37 +1470,42 @@ async fn spawn_claude_sidecar(
                 CommandEvent::Stderr(line_bytes) => {
                     let line = String::from_utf8_lossy(&line_bytes);
                     let line_str = line.trim_end_matches('\n').trim_end_matches('\r');
-                    
+
                     if !line_str.is_empty() {
                         log::error!("Claude sidecar stderr: {}", line_str);
-                        
+
                         // Emit error lines to the frontend with session isolation if we have session ID
                         if let Some(ref session_id) = *session_id_holder_clone.lock().unwrap() {
-                            let _ = app_handle.emit(&format!("claude-error:{}", session_id), line_str);
+                            let _ =
+                                app_handle.emit(&format!("claude-error:{}", session_id), line_str);
                         }
                         // Also emit to the generic event for backward compatibility
                         let _ = app_handle.emit("claude-error", line_str);
                     }
                 }
                 CommandEvent::Terminated(payload) => {
-                    log::info!("Claude sidecar process terminated with payload: {:?}", payload);
-                    
+                    log::info!(
+                        "Claude sidecar process terminated with payload: {:?}",
+                        payload
+                    );
+
                     // Add a small delay to ensure all messages are processed
                     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-                    
+
                     let success = payload.code.unwrap_or(-1) == 0;
-                    
+
                     if let Some(ref session_id) = *session_id_holder_clone.lock().unwrap() {
-                        let _ = app_handle.emit(&format!("claude-complete:{}", session_id), success);
+                        let _ =
+                            app_handle.emit(&format!("claude-complete:{}", session_id), success);
                     }
                     // Also emit to the generic event for backward compatibility
                     let _ = app_handle.emit("claude-complete", success);
-                    
+
                     // Unregister from ProcessRegistry if we have a run_id
                     if let Some(run_id) = *run_id_holder_clone.lock().unwrap() {
                         let _ = registry_clone.unregister_process(run_id);
                     }
-                    
+
                     break;
                 }
                 _ => {
@@ -2203,78 +2235,92 @@ pub async fn track_session_messages(
 
 /// Gets hooks configuration from settings at specified scope
 #[tauri::command]
-pub async fn get_hooks_config(scope: String, project_path: Option<String>) -> Result<serde_json::Value, String> {
-    log::info!("Getting hooks config for scope: {}, project: {:?}", scope, project_path);
+pub async fn get_hooks_config(
+    scope: String,
+    project_path: Option<String>,
+) -> Result<serde_json::Value, String> {
+    log::info!(
+        "Getting hooks config for scope: {}, project: {:?}",
+        scope,
+        project_path
+    );
 
     let settings_path = match scope.as_str() {
-        "user" => {
-            get_claude_dir()
-                .map_err(|e| e.to_string())?
-                .join("settings.json")
-        },
+        "user" => get_claude_dir()
+            .map_err(|e| e.to_string())?
+            .join("settings.json"),
         "project" => {
             let path = project_path.ok_or("Project path required for project scope")?;
             PathBuf::from(path).join(".claude").join("settings.json")
-        },
+        }
         "local" => {
             let path = project_path.ok_or("Project path required for local scope")?;
-            PathBuf::from(path).join(".claude").join("settings.local.json")
-        },
-        _ => return Err("Invalid scope".to_string())
+            PathBuf::from(path)
+                .join(".claude")
+                .join("settings.local.json")
+        }
+        _ => return Err("Invalid scope".to_string()),
     };
 
     if !settings_path.exists() {
-        log::info!("Settings file does not exist at {:?}, returning empty hooks", settings_path);
+        log::info!(
+            "Settings file does not exist at {:?}, returning empty hooks",
+            settings_path
+        );
         return Ok(serde_json::json!({}));
     }
 
     let content = fs::read_to_string(&settings_path)
         .map_err(|e| format!("Failed to read settings: {}", e))?;
-    
-    let settings: serde_json::Value = serde_json::from_str(&content)
-        .map_err(|e| format!("Failed to parse settings: {}", e))?;
-    
-    Ok(settings.get("hooks").cloned().unwrap_or(serde_json::json!({})))
+
+    let settings: serde_json::Value =
+        serde_json::from_str(&content).map_err(|e| format!("Failed to parse settings: {}", e))?;
+
+    Ok(settings
+        .get("hooks")
+        .cloned()
+        .unwrap_or(serde_json::json!({})))
 }
 
 /// Updates hooks configuration in settings at specified scope
 #[tauri::command]
 pub async fn update_hooks_config(
-    scope: String, 
+    scope: String,
     hooks: serde_json::Value,
-    project_path: Option<String>
+    project_path: Option<String>,
 ) -> Result<String, String> {
-    log::info!("Updating hooks config for scope: {}, project: {:?}", scope, project_path);
+    log::info!(
+        "Updating hooks config for scope: {}, project: {:?}",
+        scope,
+        project_path
+    );
 
     let settings_path = match scope.as_str() {
-        "user" => {
-            get_claude_dir()
-                .map_err(|e| e.to_string())?
-                .join("settings.json")
-        },
+        "user" => get_claude_dir()
+            .map_err(|e| e.to_string())?
+            .join("settings.json"),
         "project" => {
             let path = project_path.ok_or("Project path required for project scope")?;
             let claude_dir = PathBuf::from(path).join(".claude");
             fs::create_dir_all(&claude_dir)
                 .map_err(|e| format!("Failed to create .claude directory: {}", e))?;
             claude_dir.join("settings.json")
-        },
+        }
         "local" => {
             let path = project_path.ok_or("Project path required for local scope")?;
             let claude_dir = PathBuf::from(path).join(".claude");
             fs::create_dir_all(&claude_dir)
                 .map_err(|e| format!("Failed to create .claude directory: {}", e))?;
             claude_dir.join("settings.local.json")
-        },
-        _ => return Err("Invalid scope".to_string())
+        }
+        _ => return Err("Invalid scope".to_string()),
     };
 
     // Read existing settings or create new
     let mut settings = if settings_path.exists() {
         let content = fs::read_to_string(&settings_path)
             .map_err(|e| format!("Failed to read settings: {}", e))?;
-        serde_json::from_str(&content)
-            .map_err(|e| format!("Failed to parse settings: {}", e))?
+        serde_json::from_str(&content).map_err(|e| format!("Failed to parse settings: {}", e))?
     } else {
         serde_json::json!({})
     };
@@ -2285,7 +2331,7 @@ pub async fn update_hooks_config(
     // Write back with pretty formatting
     let json_string = serde_json::to_string_pretty(&settings)
         .map_err(|e| format!("Failed to serialize settings: {}", e))?;
-    
+
     fs::write(&settings_path, json_string)
         .map_err(|e| format!("Failed to write settings: {}", e))?;
 
@@ -2300,9 +2346,9 @@ pub async fn validate_hook_command(command: String) -> Result<serde_json::Value,
     // Validate syntax without executing
     let mut cmd = std::process::Command::new("bash");
     cmd.arg("-n") // Syntax check only
-       .arg("-c")
-       .arg(&command);
-    
+        .arg("-c")
+        .arg(&command);
+
     match cmd.output() {
         Ok(output) => {
             if output.status.success() {
@@ -2318,6 +2364,6 @@ pub async fn validate_hook_command(command: String) -> Result<serde_json::Value,
                 }))
             }
         }
-        Err(e) => Err(format!("Failed to validate command: {}", e))
+        Err(e) => Err(format!("Failed to validate command: {}", e)),
     }
 }
