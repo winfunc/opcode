@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { HooksConfiguration } from '@/types/hooks';
+import { apiAdapter } from './api-adapter';
 
 /** Process type for tracking in ProcessRegistry */
 export type ProcessType = 
@@ -450,7 +451,7 @@ export const api = {
    */
   async listProjects(): Promise<Project[]> {
     try {
-      return await invoke<Project[]>("list_projects");
+      return await apiAdapter.invoke<Project[]>("list_projects");
     } catch (error) {
       console.error("Failed to list projects:", error);
       throw error;
@@ -464,7 +465,7 @@ export const api = {
    */
   async getProjectSessions(projectId: string): Promise<Session[]> {
     try {
-      return await invoke<Session[]>('get_project_sessions', { projectId });
+      return await apiAdapter.invoke<Session[]>('get_project_sessions', { projectId });
     } catch (error) {
       console.error("Failed to get project sessions:", error);
       throw error;
@@ -654,7 +655,7 @@ export const api = {
    */
   async listAgents(): Promise<Agent[]> {
     try {
-      return await invoke<Agent[]>('list_agents');
+      return await apiAdapter.invoke<Agent[]>('list_agents');
     } catch (error) {
       console.error("Failed to list agents:", error);
       throw error;

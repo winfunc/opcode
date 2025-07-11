@@ -15,7 +15,9 @@
     "build:executables:macos": "bun run scripts/fetch-and-build.js macos --version=1.0.41",
     "build:executables:windows": "bun run scripts/fetch-and-build.js windows --version=1.0.41",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "web:server": "node web-server.js",
+    "web:dev": "bun run dev & bun run web:server"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
@@ -66,9 +68,12 @@
     "@types/react-dom": "^18.3.1",
     "@types/sharp": "^0.32.0",
     "@vitejs/plugin-react": "^4.3.4",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
     "sharp": "^0.34.2",
     "typescript": "~5.6.2",
-    "vite": "^6.0.3"
+    "vite": "^6.0.3",
+    "ws": "^8.16.0"
   },
   "trustedDependencies": [
     "@parcel/watcher",
