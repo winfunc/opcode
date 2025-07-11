@@ -43,6 +43,7 @@ Think of Claudia as your command center for Claude Code - bridging the gap betwe
   - [⏰ Timeline & Checkpoints](#-timeline--checkpoints)
   - [📝 CLAUDE.md Management](#-claudemd-management)
   - [🌐 Web GUI](#-web-gui-new)
+  - [📱 iOS App](#-ios-app-new)
 - [📖 Usage](#-usage)
   - [Getting Started](#getting-started)
   - [Managing Projects](#managing-projects)
@@ -50,6 +51,7 @@ Think of Claudia as your command center for Claude Code - bridging the gap betwe
   - [Tracking Usage](#tracking-usage)
   - [Working with MCP Servers](#working-with-mcp-servers)
   - [Using the Web GUI](#using-the-web-gui)
+  - [Using the iOS App](#using-the-ios-app)
 - [🚀 Installation](#-installation)
 - [🔨 Build from Source](#-build-from-source)
 - [🛠️ Development](#️-development)
@@ -105,6 +107,14 @@ Think of Claudia as your command center for Claude Code - bridging the gap betwe
 - **Remote Access**: Access your Claude sessions from any device on your network
 - **Real-time Updates**: WebSocket support for live session updates
 - **No Installation Required**: Use Claudia without installing the desktop app
+
+### 📱 **iOS App (New!)**
+- **Native iOS Experience**: Full-featured React Native app for iPhone and iPad
+- **Remote Connection**: Connect to your Claudia API server from anywhere
+- **Real-time Sessions**: Manage Claude sessions with WebSocket support
+- **Agent Management**: Create and run custom agents from your iOS device
+- **Usage Analytics**: Track token usage and costs on the go
+- **Secure Storage**: API keys and settings stored securely on device
 
 ## 📖 Usage
 
@@ -183,6 +193,30 @@ Browser: http://localhost:1420
    - Full navigation between all sections
 
 **Note**: Some features like running Claude sessions require the desktop app. The web GUI provides read-only access to your Claude projects and sessions.
+
+### Using the iOS App
+
+1. **Build and Install**: Follow the [iOS build instructions](ios-app/REACT_NATIVE_README.md)
+
+2. **Start API Server**: On your host machine:
+   ```bash
+   cd web
+   node web-server-complete.js
+   ```
+
+3. **Connect from iOS**:
+   - Launch the app on your iOS device
+   - Enter your server's IP address and port
+   - Start managing your Claude sessions remotely
+
+4. **Features**:
+   - Full session management with real-time output
+   - Create and run custom agents
+   - View usage analytics
+   - Manage MCP servers
+   - Configure settings and API keys
+
+**Note**: SSH connections are experimental. Use HTTP for best results.
 
 ## 🚀 Installation
 
