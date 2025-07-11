@@ -266,6 +266,42 @@ fn create_command_with_env(program: &str) -> Command {
     tokio_cmd
 }
 
+/// Determines whether to use sidecar or system binary execution
+fn should_use_sidecar(claude_path: &str) -> bool {
+    claude_path == "claude-code"
+}
+
+/// Creates a sidecar command with the given arguments
+fn create_sidecar_command(
+    app: &AppHandle,
+    args: Vec<String>,
+    project_path: &str,
+) -> Result<tauri_plugin_shell::process::Command, String> {
+    let mut sidecar_cmd = app
+        .shell()
+        .sidecar("claude-code")
+        .map_err(|e| format!("Failed to create sidecar command: {}", e))?;
+    
+    // Add all arguments
+    sidecar_cmd = sidecar_cmd.args(args);
+    
+    // Set working directory
+    sidecar_cmd = sidecar_cmd.current_dir(project_path);
+    
+    // Pass through proxy environment variables if they exist (only uppercase)
+    for (key, value) in std::env::vars() {
+        if key == "HTTP_PROXY"
+            || key == "HTTPS_PROXY"
+            || key == "NO_PROXY"
+            || key == "ALL_PROXY"
+        {
+            log::debug!("Setting proxy env var for sidecar: {}={}", key, value);
+            sidecar_cmd = sidecar_cmd.env(&key, &value);
+        }
+    }
+    
+    Ok(sidecar_cmd)
+}
 
 /// Creates a system binary command with the given arguments
 fn create_system_command(

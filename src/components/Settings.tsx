@@ -26,6 +26,7 @@ import { ClaudeVersionSelector } from "./ClaudeVersionSelector";
 import { StorageTab } from "./StorageTab";
 import { HooksEditor } from "./HooksEditor";
 import { SlashCommandsManager } from "./SlashCommandsManager";
+import { ProxySettings } from "./ProxySettings";
 import { useTheme } from "@/hooks";
 
 interface SettingsProps {
@@ -81,6 +82,10 @@ export const Settings: React.FC<SettingsProps> = ({
   
   // Theme hook
   const { theme, setTheme, customColors, setCustomColors } = useTheme();
+  
+  // Proxy state
+  const [proxySettingsChanged, setProxySettingsChanged] = useState(false);
+  const saveProxySettings = React.useRef<(() => Promise<void>) | null>(null);
   
   // Load settings on mount
   useEffect(() => {
@@ -196,6 +201,12 @@ export const Settings: React.FC<SettingsProps> = ({
         const hooks = getUserHooks.current();
         await api.updateHooksConfig('user', hooks);
         setUserHooksChanged(false);
+      }
+
+      // Save proxy settings if changed
+      if (proxySettingsChanged && saveProxySettings.current) {
+        await saveProxySettings.current();
+        setProxySettingsChanged(false);
       }
 
       setToast({ message: "Settings saved successfully!", type: "success" });
@@ -363,7 +374,7 @@ export const Settings: React.FC<SettingsProps> = ({
       ) : (
         <div className="flex-1 overflow-y-auto p-4">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-7 w-full">
+            <TabsList className="grid grid-cols-8 w-full">
               <TabsTrigger value="general">General</TabsTrigger>
               <TabsTrigger value="permissions">Permissions</TabsTrigger>
               <TabsTrigger value="environment">Environment</TabsTrigger>
@@ -371,6 +382,7 @@ export const Settings: React.FC<SettingsProps> = ({
               <TabsTrigger value="hooks">Hooks</TabsTrigger>
               <TabsTrigger value="commands">Commands</TabsTrigger>
               <TabsTrigger value="storage">Storage</TabsTrigger>
+              <TabsTrigger value="proxy">Proxy</TabsTrigger>
             </TabsList>
             
             {/* General Settings */}
@@ -871,6 +883,19 @@ export const Settings: React.FC<SettingsProps> = ({
             {/* Storage Tab */}
             <TabsContent value="storage">
               <StorageTab />
+            </TabsContent>
+            
+            {/* Proxy Settings */}
+            <TabsContent value="proxy">
+              <Card className="p-6">
+                <ProxySettings 
+                  setToast={setToast}
+                  onChange={(hasChanges, _getSettings, save) => {
+                    setProxySettingsChanged(hasChanges);
+                    saveProxySettings.current = save;
+                  }}
+                />
+              </Card>
             </TabsContent>
           </Tabs>
         </div>
