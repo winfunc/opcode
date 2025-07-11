@@ -42,12 +42,14 @@ Think of Claudia as your command center for Claude Code - bridging the gap betwe
   - [🔌 MCP Server Management](#-mcp-server-management)
   - [⏰ Timeline & Checkpoints](#-timeline--checkpoints)
   - [📝 CLAUDE.md Management](#-claudemd-management)
+  - [🌐 Web GUI](#-web-gui-new)
 - [📖 Usage](#-usage)
   - [Getting Started](#getting-started)
   - [Managing Projects](#managing-projects)
   - [Creating Agents](#creating-agents)
   - [Tracking Usage](#tracking-usage)
   - [Working with MCP Servers](#working-with-mcp-servers)
+  - [Using the Web GUI](#using-the-web-gui)
 - [🚀 Installation](#-installation)
 - [🔨 Build from Source](#-build-from-source)
 - [🛠️ Development](#️-development)
@@ -97,6 +99,13 @@ Think of Claudia as your command center for Claude Code - bridging the gap betwe
 - **Project Scanner**: Find all CLAUDE.md files in your projects
 - **Syntax Highlighting**: Full markdown support with syntax highlighting
 
+### 🌐 **Web GUI (New!)**
+- **Browser-Based Interface**: Access Claudia through your web browser
+- **Same UI Experience**: Identical interface to the desktop application
+- **Remote Access**: Access your Claude sessions from any device on your network
+- **Real-time Updates**: WebSocket support for live session updates
+- **No Installation Required**: Use Claudia without installing the desktop app
+
 ## 📖 Usage
 
 ### Getting Started
@@ -145,6 +154,35 @@ Menu → MCP Manager → Add Server → Configure
 - Add servers manually or via JSON
 - Import from Claude Desktop configuration
 - Test connections before using
+
+### Using the Web GUI
+
+```
+Terminal 1: node web-server.js
+Terminal 2: bun run dev
+Browser: http://localhost:1420
+```
+
+1. **Start the Web Server**: Run `node web-server.js` (defaults to port 8080)
+   ```bash
+   # Or specify a custom port
+   PORT=3000 node web-server.js
+   ```
+
+2. **Start the Frontend**: In another terminal, run `bun run dev`
+   ```bash
+   bun run dev
+   ```
+
+3. **Access the Web UI**: Open your browser to `http://localhost:1420`
+
+4. **Features Available**:
+   - Browse and view all Claude Code projects
+   - View session history and details
+   - Manage CC Agents (mock data in web mode)
+   - Full navigation between all sections
+
+**Note**: Some features like running Claude sessions require the desktop app. The web GUI provides read-only access to your Claude projects and sessions.
 
 ## 🚀 Installation
 
