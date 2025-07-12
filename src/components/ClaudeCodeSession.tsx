@@ -8,10 +8,10 @@ import {
   ChevronDown,
   GitBranch,
   Settings,
-  Globe,
   ChevronUp,
   X,
-  Hash
+  Hash,
+  Command
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +26,7 @@ import { FloatingPromptInput, type FloatingPromptInputRef } from "./FloatingProm
 import { ErrorBoundary } from "./ErrorBoundary";
 import { TimelineNavigator } from "./TimelineNavigator";
 import { CheckpointSettings } from "./CheckpointSettings";
+import { SlashCommandsManager } from "./SlashCommandsManager";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { SplitPane } from "@/components/ui/split-pane";
@@ -47,6 +48,10 @@ interface ClaudeCodeSessionProps {
    */
   onBack: () => void;
   /**
+   * Callback to open hooks configuration
+   */
+  onProjectSettings?: (projectPath: string) => void;
+  /**
    * Optional className for styling
    */
   className?: string;
@@ -66,6 +71,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   session,
   initialProjectPath = "",
   onBack,
+  onProjectSettings,
   className,
   onStreamingChange,
 }) => {
@@ -83,6 +89,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   const [timelineVersion, setTimelineVersion] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
   const [showForkDialog, setShowForkDialog] = useState(false);
+  const [showSlashCommandsSettings, setShowSlashCommandsSettings] = useState(false);
   const [forkCheckpointId, setForkCheckpointId] = useState<string | null>(null);
   const [forkSessionName, setForkSessionName] = useState("");
   
@@ -794,8 +801,6 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     // Keep the previewUrl so it can be restored when reopening
   };
 
-
-
   const handlePreviewUrlChange = (url: string) => {
     console.log('[ClaudeCodeSession] Preview URL changed to:', url);
     setPreviewUrl(url);
@@ -829,7 +834,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         });
       }
     };
-  }, [effectiveSession]);
+  }, [effectiveSession, projectPath]);
 
   const messagesList = (
     <div
@@ -973,107 +978,121 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div className="flex items-center gap-2">
-              <Terminal className="h-5 w-5" />
-              <div>
-                <h2 className="text-lg font-semibold">Claude Code Session</h2>
-                <p className="text-xs text-muted-foreground">
-                  {session ? `Resuming session ${session.id.slice(0, 8)}...` : 'Interactive session'}
+              <Terminal className="h-5 w-5 text-muted-foreground" />
+              <div className="flex-1">
+                <h1 className="text-xl font-bold">Claude Code Session</h1>
+                <p className="text-sm text-muted-foreground">
+                  {projectPath ? `${projectPath}` : "No project selected"}
                 </p>
               </div>
             </div>
           </div>
           
           <div className="flex items-center gap-2">
-            {effectiveSession && (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowSettings(!showSettings)}
-                  className="flex items-center gap-2"
-                >
-                  <Settings className="h-4 w-4" />
-                  Settings
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowTimeline(!showTimeline)}
-                  className="flex items-center gap-2"
-                >
-                  <GitBranch className="h-4 w-4" />
-                  Timeline
-                </Button>
-              </>
+            {projectPath && onProjectSettings && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onProjectSettings(projectPath)}
+                disabled={isLoading}
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Hooks
+              </Button>
             )}
-            
-            {/* Preview Button */}
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      if (!showPreview) {
-                        // Open with current URL or empty URL to show the instruction state
-                        setShowPreview(true);
-                      } else {
-                        handleClosePreview();
-                      }
-                    }}
-                    className="flex items-center gap-2"
-                  >
-                    <Globe className="h-4 w-4" />
-                    {showPreview ? "Close Preview" : "Preview"}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {showPreview 
-                    ? "Close the preview pane" 
-                    : "Open a browser preview to test your web applications"
+            {projectPath && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowSlashCommandsSettings(true)}
+                disabled={isLoading}
+              >
+                <Command className="h-4 w-4 mr-2" />
+                Commands
+              </Button>
+            )}
+            <div className="flex items-center gap-2">
+              {showSettings && (
+                <CheckpointSettings
+                  sessionId={effectiveSession?.id || ''}
+                  projectId={effectiveSession?.project_id || ''}
+                  projectPath={projectPath}
+                />
+              )}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setShowSettings(!showSettings)}
+                      className="h-8 w-8"
+                    >
+                      <Settings className={cn("h-4 w-4", showSettings && "text-primary")} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Checkpoint Settings</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              {effectiveSession && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setShowTimeline(!showTimeline)}
+                        className="h-8 w-8"
+                      >
+                        <GitBranch className={cn("h-4 w-4", showTimeline && "text-primary")} />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Timeline Navigator</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+              {messages.length > 0 && (
+                <Popover
+                  trigger={
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="flex items-center gap-2"
+                    >
+                      <Copy className="h-4 w-4" />
+                      Copy Output
+                      <ChevronDown className="h-3 w-3" />
+                    </Button>
                   }
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            
-            {messages.length > 0 && (
-              <Popover
-                trigger={
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="flex items-center gap-2"
-                  >
-                    <Copy className="h-4 w-4" />
-                    Copy Output
-                    <ChevronDown className="h-3 w-3" />
-                  </Button>
-                }
-                content={
-                  <div className="w-44 p-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleCopyAsMarkdown}
-                      className="w-full justify-start"
-                    >
-                      Copy as Markdown
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleCopyAsJsonl}
-                      className="w-full justify-start"
-                    >
-                      Copy as JSONL
-                    </Button>
-                  </div>
-                }
-                open={copyPopoverOpen}
-                onOpenChange={setCopyPopoverOpen}
-              />
-            )}
+                  content={
+                    <div className="w-44 p-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleCopyAsMarkdown}
+                        className="w-full justify-start"
+                      >
+                        Copy as Markdown
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleCopyAsJsonl}
+                        className="w-full justify-start"
+                      >
+                        Copy as JSONL
+                      </Button>
+                    </div>
+                  }
+                  open={copyPopoverOpen}
+                  onOpenChange={setCopyPopoverOpen}
+                />
+              )}
+            </div>
           </div>
         </motion.div>
 
@@ -1380,6 +1399,23 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
               projectPath={projectPath}
               onClose={() => setShowSettings(false)}
             />
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Slash Commands Settings Dialog */}
+      {showSlashCommandsSettings && (
+        <Dialog open={showSlashCommandsSettings} onOpenChange={setShowSlashCommandsSettings}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
+            <DialogHeader>
+              <DialogTitle>Slash Commands</DialogTitle>
+              <DialogDescription>
+                Manage project-specific slash commands for {projectPath}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex-1 overflow-y-auto">
+              <SlashCommandsManager projectPath={projectPath} />
+            </div>
           </DialogContent>
         </Dialog>
       )}

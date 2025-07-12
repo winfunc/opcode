@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import type { HooksConfiguration } from '@/types/hooks';
 
 /** Process type for tracking in ProcessRegistry */
 export type ProcessType = 
@@ -116,6 +117,7 @@ export interface Agent {
   system_prompt: string;
   default_task?: string;
   model: string;
+  hooks?: string; // JSON string of HooksConfiguration
   created_at: string;
   updated_at: string;
 }
@@ -129,6 +131,7 @@ export interface AgentExport {
     system_prompt: string;
     default_task?: string;
     model: string;
+    hooks?: string;
   };
 }
 
@@ -378,6 +381,36 @@ export interface MCPServerConfig {
   command: string;
   args: string[];
   env: Record<string, string>;
+}
+
+/**
+ * Represents a custom slash command
+ */
+export interface SlashCommand {
+  /** Unique identifier for the command */
+  id: string;
+  /** Command name (without prefix) */
+  name: string;
+  /** Full command with prefix (e.g., "/project:optimize") */
+  full_command: string;
+  /** Command scope: "project" or "user" */
+  scope: string;
+  /** Optional namespace (e.g., "frontend" in "/project:frontend:component") */
+  namespace?: string;
+  /** Path to the markdown file */
+  file_path: string;
+  /** Command content (markdown body) */
+  content: string;
+  /** Optional description from frontmatter */
+  description?: string;
+  /** Allowed tools from frontmatter */
+  allowed_tools: string[];
+  /** Whether the command has bash commands (!) */
+  has_bash_commands: boolean;
+  /** Whether the command has file references (@) */
+  has_file_references: boolean;
+  /** Whether the command uses $ARGUMENTS placeholder */
+  accepts_arguments: boolean;
 }
 
 /**
@@ -635,6 +668,7 @@ export const api = {
    * @param system_prompt - The system prompt for the agent
    * @param default_task - Optional default task
    * @param model - Optional model (defaults to 'sonnet')
+   * @param hooks - Optional hooks configuration as JSON string
    * @returns Promise resolving to the created agent
    */
   async createAgent(
@@ -642,7 +676,8 @@ export const api = {
     icon: string, 
     system_prompt: string, 
     default_task?: string, 
-    model?: string
+    model?: string,
+    hooks?: string
   ): Promise<Agent> {
     try {
       return await invoke<Agent>('create_agent', { 
@@ -650,7 +685,8 @@ export const api = {
         icon, 
         systemPrompt: system_prompt,
         defaultTask: default_task,
-        model
+        model,
+        hooks
       });
     } catch (error) {
       console.error("Failed to create agent:", error);
@@ -666,6 +702,7 @@ export const api = {
    * @param system_prompt - The updated system prompt
    * @param default_task - Optional default task
    * @param model - Optional model
+   * @param hooks - Optional hooks configuration as JSON string
    * @returns Promise resolving to the updated agent
    */
   async updateAgent(
@@ -674,7 +711,8 @@ export const api = {
     icon: string, 
     system_prompt: string, 
     default_task?: string, 
-    model?: string
+    model?: string,
+    hooks?: string
   ): Promise<Agent> {
     try {
       return await invoke<Agent>('update_agent', { 
@@ -683,7 +721,8 @@ export const api = {
         icon, 
         systemPrompt: system_prompt,
         defaultTask: default_task,
-        model
+        model,
+        hooks
       });
     } catch (error) {
       console.error("Failed to update agent:", error);
@@ -1646,4 +1685,155 @@ export const api = {
     }
   },
 
+  /**
+   * Get hooks configuration for a specific scope
+   * @param scope - The configuration scope: 'user', 'project', or 'local'
+   * @param projectPath - Project path (required for project and local scopes)
+   * @returns Promise resolving to the hooks configuration
+   */
+  async getHooksConfig(scope: 'user' | 'project' | 'local', projectPath?: string): Promise<HooksConfiguration> {
+    try {
+      return await invoke<HooksConfiguration>("get_hooks_config", { scope, projectPath });
+    } catch (error) {
+      console.error("Failed to get hooks config:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Update hooks configuration for a specific scope
+   * @param scope - The configuration scope: 'user', 'project', or 'local'
+   * @param hooks - The hooks configuration to save
+   * @param projectPath - Project path (required for project and local scopes)
+   * @returns Promise resolving to success message
+   */
+  async updateHooksConfig(
+    scope: 'user' | 'project' | 'local',
+    hooks: HooksConfiguration,
+    projectPath?: string
+  ): Promise<string> {
+    try {
+      return await invoke<string>("update_hooks_config", { scope, projectPath, hooks });
+    } catch (error) {
+      console.error("Failed to update hooks config:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Validate a hook command syntax
+   * @param command - The shell command to validate
+   * @returns Promise resolving to validation result
+   */
+  async validateHookCommand(command: string): Promise<{ valid: boolean; message: string }> {
+    try {
+      return await invoke<{ valid: boolean; message: string }>("validate_hook_command", { command });
+    } catch (error) {
+      console.error("Failed to validate hook command:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get merged hooks configuration (respecting priority)
+   * @param projectPath - The project path
+   * @returns Promise resolving to merged hooks configuration
+   */
+  async getMergedHooksConfig(projectPath: string): Promise<HooksConfiguration> {
+    try {
+      const [userHooks, projectHooks, localHooks] = await Promise.all([
+        this.getHooksConfig('user'),
+        this.getHooksConfig('project', projectPath),
+        this.getHooksConfig('local', projectPath)
+      ]);
+
+      // Import HooksManager for merging
+      const { HooksManager } = await import('@/lib/hooksManager');
+      return HooksManager.mergeConfigs(userHooks, projectHooks, localHooks);
+    } catch (error) {
+      console.error("Failed to get merged hooks config:", error);
+      throw error;
+    }
+  },
+
+  // Slash Commands API methods
+
+  /**
+   * Lists all available slash commands
+   * @param projectPath - Optional project path to include project-specific commands
+   * @returns Promise resolving to array of slash commands
+   */
+  async slashCommandsList(projectPath?: string): Promise<SlashCommand[]> {
+    try {
+      return await invoke<SlashCommand[]>("slash_commands_list", { projectPath });
+    } catch (error) {
+      console.error("Failed to list slash commands:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Gets a single slash command by ID
+   * @param commandId - Unique identifier of the command
+   * @returns Promise resolving to the slash command
+   */
+  async slashCommandGet(commandId: string): Promise<SlashCommand> {
+    try {
+      return await invoke<SlashCommand>("slash_command_get", { commandId });
+    } catch (error) {
+      console.error("Failed to get slash command:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Creates or updates a slash command
+   * @param scope - Command scope: "project" or "user"
+   * @param name - Command name (without prefix)
+   * @param namespace - Optional namespace for organization
+   * @param content - Markdown content of the command
+   * @param description - Optional description
+   * @param allowedTools - List of allowed tools for this command
+   * @param projectPath - Required for project scope commands
+   * @returns Promise resolving to the saved command
+   */
+  async slashCommandSave(
+    scope: string,
+    name: string,
+    namespace: string | undefined,
+    content: string,
+    description: string | undefined,
+    allowedTools: string[],
+    projectPath?: string
+  ): Promise<SlashCommand> {
+    try {
+      return await invoke<SlashCommand>("slash_command_save", {
+        scope,
+        name,
+        namespace,
+        content,
+        description,
+        allowedTools,
+        projectPath
+      });
+    } catch (error) {
+      console.error("Failed to save slash command:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Deletes a slash command
+   * @param commandId - Unique identifier of the command to delete
+   * @param projectPath - Optional project path for deleting project commands
+   * @returns Promise resolving to deletion message
+   */
+  async slashCommandDelete(commandId: string, projectPath?: string): Promise<string> {
+    try {
+      return await invoke<string>("slash_command_delete", { commandId, projectPath });
+    } catch (error) {
+      console.error("Failed to delete slash command:", error);
+      throw error;
+    }
+  }
 };

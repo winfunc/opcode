@@ -11,12 +11,21 @@ import {
   Copy,
   ChevronDown,
   Maximize2,
-  X
+  X,
+  Settings2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover } from "@/components/ui/popover";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { api, type Agent } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { open } from "@tauri-apps/plugin-dialog";
@@ -25,6 +34,8 @@ import { StreamMessage } from "./StreamMessage";
 import { ExecutionControlBar } from "./ExecutionControlBar";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { AGENT_ICONS } from "./CCAgents";
+import { HooksEditor } from "./HooksEditor";
 
 interface AgentExecutionProps {
   /**
@@ -78,6 +89,10 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [copyPopoverOpen, setCopyPopoverOpen] = useState(false);
   
+  // Hooks configuration state
+  const [isHooksDialogOpen, setIsHooksDialogOpen] = useState(false);
+  const [activeHooksTab, setActiveHooksTab] = useState("project");
+
   // Execution stats
   const [executionStartTime, setExecutionStartTime] = useState<number | null>(null);
   const [totalTokens, setTotalTokens] = useState(0);
@@ -264,6 +279,10 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
       const errorMessage = err instanceof Error ? err.message : String(err);
       setError(`Failed to select directory: ${errorMessage}`);
     }
+  };
+
+  const handleOpenHooksDialog = async () => {
+    setIsHooksDialogOpen(true);
   };
 
   const handleExecute = async () => {
@@ -501,86 +520,41 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3 }}
-              className="flex items-center justify-between p-4"
+              className="p-6"
             >
-              <div className="flex items-center space-x-3">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleBackWithConfirmation}
-                  className="h-8 w-8"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                </Button>
-                <div className="flex items-center gap-2">
-                  {renderIcon()}
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-lg font-semibold">{agent.name}</h2>
-                      {isRunning && (
-                        <div className="flex items-center gap-1">
-                          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                          <span className="text-xs text-green-600 font-medium">Running</span>
-                        </div>
-                      )}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleBackWithConfirmation}
+                    className="h-8 w-8"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                  </Button>
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-full bg-primary/10 text-primary">
+                      {renderIcon()}
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      {isRunning ? "Click back to return to main menu - view in CC Agents > Running Sessions" : "Execute CC Agent"}
-                    </p>
+                    <div>
+                      <h1 className="text-xl font-bold">Execute: {agent.name}</h1>
+                      <p className="text-sm text-muted-foreground">
+                        {model === 'opus' ? 'Claude 4 Opus' : 'Claude 4 Sonnet'}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                {messages.length > 0 && (
-                  <>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setIsFullscreenModalOpen(true)}
-                      className="flex items-center gap-2"
-                    >
-                      <Maximize2 className="h-4 w-4" />
-                      Fullscreen
-                    </Button>
-                    <Popover
-                      trigger={
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="flex items-center gap-2"
-                        >
-                          <Copy className="h-4 w-4" />
-                          Copy Output
-                          <ChevronDown className="h-3 w-3" />
-                        </Button>
-                      }
-                      content={
-                        <div className="w-44 p-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="w-full justify-start"
-                            onClick={handleCopyAsJsonl}
-                          >
-                            Copy as JSONL
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="w-full justify-start"
-                            onClick={handleCopyAsMarkdown}
-                          >
-                            Copy as Markdown
-                          </Button>
-                        </div>
-                      }
-                      open={copyPopoverOpen}
-                      onOpenChange={setCopyPopoverOpen}
-                      align="end"
-                    />
-                  </>
-                )}
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsFullscreenModalOpen(true)}
+                    disabled={messages.length === 0}
+                  >
+                    <Maximize2 className="h-4 w-4 mr-2" />
+                    Fullscreen
+                  </Button>
+                </div>
               </div>
             </motion.div>
           </div>
@@ -619,6 +593,15 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
                   disabled={isRunning}
                 >
                   <FolderOpen className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleOpenHooksDialog}
+                  disabled={isRunning || !projectPath}
+                  title="Configure hooks"
+                >
+                  <Settings2 className="h-4 w-4 mr-2" />
+                  Hooks
                 </Button>
               </div>
             </div>
@@ -931,9 +914,56 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
           </div>
         </div>
       )}
+
+      {/* Hooks Configuration Dialog */}
+      <Dialog 
+        open={isHooksDialogOpen} 
+        onOpenChange={setIsHooksDialogOpen}
+      >
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Configure Hooks</DialogTitle>
+            <DialogDescription>
+              Configure hooks that run before, during, and after tool executions. Changes are saved immediately.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Tabs value={activeHooksTab} onValueChange={setActiveHooksTab} className="flex-1 flex flex-col overflow-hidden">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="project">Project Settings</TabsTrigger>
+              <TabsTrigger value="local">Local Settings</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="project" className="flex-1 overflow-auto">
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Project hooks are stored in <code className="bg-muted px-1 py-0.5 rounded">.claude/settings.json</code> and 
+                  are committed to version control.
+                </p>
+                <HooksEditor
+                  projectPath={projectPath}
+                  scope="project"
+                  className="border-0"
+                />
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="local" className="flex-1 overflow-auto">
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Local hooks are stored in <code className="bg-muted px-1 py-0.5 rounded">.claude/settings.local.json</code> and 
+                  are not committed to version control.
+                </p>
+                <HooksEditor
+                  projectPath={projectPath}
+                  scope="local"
+                  className="border-0"
+                />
+              </div>
+            </TabsContent>
+          </Tabs>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
-
-// Import AGENT_ICONS for icon rendering
-import { AGENT_ICONS } from "./CCAgents";

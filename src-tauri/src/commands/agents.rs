@@ -33,6 +33,7 @@ pub struct Agent {
     pub enable_file_read: bool,
     pub enable_file_write: bool,
     pub enable_network: bool,
+    pub hooks: Option<String>, // JSON string of hooks configuration
     pub created_at: String,
     pub updated_at: String,
 }
@@ -89,6 +90,7 @@ pub struct AgentData {
     pub system_prompt: String,
     pub default_task: Option<String>,
     pub model: String,
+    pub hooks: Option<String>,
 }
 
 /// Database connection state
@@ -235,6 +237,7 @@ pub fn init_database(app: &AppHandle) -> SqliteResult<Connection> {
             enable_file_read BOOLEAN NOT NULL DEFAULT 1,
             enable_file_write BOOLEAN NOT NULL DEFAULT 1,
             enable_network BOOLEAN NOT NULL DEFAULT 0,
+            hooks TEXT,
             created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         )",
@@ -247,6 +250,7 @@ pub fn init_database(app: &AppHandle) -> SqliteResult<Connection> {
         "ALTER TABLE agents ADD COLUMN model TEXT DEFAULT 'sonnet'",
         [],
     );
+    let _ = conn.execute("ALTER TABLE agents ADD COLUMN hooks TEXT", []);
     let _ = conn.execute(
         "ALTER TABLE agents ADD COLUMN enable_file_read BOOLEAN DEFAULT 1",
         [],
@@ -349,7 +353,7 @@ pub async fn list_agents(db: State<'_, AgentDb>) -> Result<Vec<Agent>, String> {
     let conn = db.0.lock().map_err(|e| e.to_string())?;
 
     let mut stmt = conn
-        .prepare("SELECT id, name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, created_at, updated_at FROM agents ORDER BY created_at DESC")
+        .prepare("SELECT id, name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, hooks, created_at, updated_at FROM agents ORDER BY created_at DESC")
         .map_err(|e| e.to_string())?;
 
     let agents = stmt
@@ -366,8 +370,9 @@ pub async fn list_agents(db: State<'_, AgentDb>) -> Result<Vec<Agent>, String> {
                 enable_file_read: row.get::<_, bool>(6).unwrap_or(true),
                 enable_file_write: row.get::<_, bool>(7).unwrap_or(true),
                 enable_network: row.get::<_, bool>(8).unwrap_or(false),
-                created_at: row.get(9)?,
-                updated_at: row.get(10)?,
+                hooks: row.get(9)?,
+                created_at: row.get(10)?,
+                updated_at: row.get(11)?,
             })
         })
         .map_err(|e| e.to_string())?
@@ -389,6 +394,7 @@ pub async fn create_agent(
     enable_file_read: Option<bool>,
     enable_file_write: Option<bool>,
     enable_network: Option<bool>,
+    hooks: Option<String>,
 ) -> Result<Agent, String> {
     let conn = db.0.lock().map_err(|e| e.to_string())?;
     let model = model.unwrap_or_else(|| "sonnet".to_string());
@@ -397,8 +403,8 @@ pub async fn create_agent(
     let enable_network = enable_network.unwrap_or(false);
 
     conn.execute(
-        "INSERT INTO agents (name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
-        params![name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network],
+        "INSERT INTO agents (name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, hooks) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+        params![name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, hooks],
     )
     .map_err(|e| e.to_string())?;
 
@@ -407,7 +413,7 @@ pub async fn create_agent(
     // Fetch the created agent
     let agent = conn
         .query_row(
-            "SELECT id, name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, created_at, updated_at FROM agents WHERE id = ?1",
+            "SELECT id, name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, hooks, created_at, updated_at FROM agents WHERE id = ?1",
             params![id],
             |row| {
                 Ok(Agent {
@@ -420,8 +426,9 @@ pub async fn create_agent(
                     enable_file_read: row.get(6)?,
                     enable_file_write: row.get(7)?,
                     enable_network: row.get(8)?,
-                    created_at: row.get(9)?,
-                    updated_at: row.get(10)?,
+                    hooks: row.get(9)?,
+                    created_at: row.get(10)?,
+                    updated_at: row.get(11)?,
                 })
             },
         )
@@ -443,13 +450,14 @@ pub async fn update_agent(
     enable_file_read: Option<bool>,
     enable_file_write: Option<bool>,
     enable_network: Option<bool>,
+    hooks: Option<String>,
 ) -> Result<Agent, String> {
     let conn = db.0.lock().map_err(|e| e.to_string())?;
     let model = model.unwrap_or_else(|| "sonnet".to_string());
 
     // Build dynamic query based on provided parameters
     let mut query =
-        "UPDATE agents SET name = ?1, icon = ?2, system_prompt = ?3, default_task = ?4, model = ?5"
+        "UPDATE agents SET name = ?1, icon = ?2, system_prompt = ?3, default_task = ?4, model = ?5, hooks = ?6"
             .to_string();
     let mut params_vec: Vec<Box<dyn rusqlite::ToSql>> = vec![
         Box::new(name),
@@ -457,8 +465,9 @@ pub async fn update_agent(
         Box::new(system_prompt),
         Box::new(default_task),
         Box::new(model),
+        Box::new(hooks),
     ];
-    let mut param_count = 5;
+    let mut param_count = 6;
 
     if let Some(efr) = enable_file_read {
         param_count += 1;
@@ -489,7 +498,7 @@ pub async fn update_agent(
     // Fetch the updated agent
     let agent = conn
         .query_row(
-            "SELECT id, name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, created_at, updated_at FROM agents WHERE id = ?1",
+            "SELECT id, name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, hooks, created_at, updated_at FROM agents WHERE id = ?1",
             params![id],
             |row| {
                 Ok(Agent {
@@ -502,8 +511,9 @@ pub async fn update_agent(
                     enable_file_read: row.get(6)?,
                     enable_file_write: row.get(7)?,
                     enable_network: row.get(8)?,
-                    created_at: row.get(9)?,
-                    updated_at: row.get(10)?,
+                    hooks: row.get(9)?,
+                    created_at: row.get(10)?,
+                    updated_at: row.get(11)?,
                 })
             },
         )
@@ -530,7 +540,7 @@ pub async fn get_agent(db: State<'_, AgentDb>, id: i64) -> Result<Agent, String>
 
     let agent = conn
         .query_row(
-            "SELECT id, name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, created_at, updated_at FROM agents WHERE id = ?1",
+            "SELECT id, name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, hooks, created_at, updated_at FROM agents WHERE id = ?1",
             params![id],
             |row| {
                 Ok(Agent {
@@ -543,8 +553,9 @@ pub async fn get_agent(db: State<'_, AgentDb>, id: i64) -> Result<Agent, String>
                     enable_file_read: row.get::<_, bool>(6).unwrap_or(true),
                     enable_file_write: row.get::<_, bool>(7).unwrap_or(true),
                     enable_network: row.get::<_, bool>(8).unwrap_or(false),
-                    created_at: row.get(9)?,
-                    updated_at: row.get(10)?,
+                    hooks: row.get(9)?,
+                    created_at: row.get(10)?,
+                    updated_at: row.get(11)?,
                 })
             },
         )
@@ -683,6 +694,42 @@ pub async fn execute_agent(
     // Get the agent from database
     let agent = get_agent(db.clone(), agent_id).await?;
     let execution_model = model.unwrap_or(agent.model.clone());
+    
+    // Create .claude/settings.json with agent hooks if it doesn't exist
+    if let Some(hooks_json) = &agent.hooks {
+        let claude_dir = std::path::Path::new(&project_path).join(".claude");
+        let settings_path = claude_dir.join("settings.json");
+        
+        // Create .claude directory if it doesn't exist
+        if !claude_dir.exists() {
+            std::fs::create_dir_all(&claude_dir)
+                .map_err(|e| format!("Failed to create .claude directory: {}", e))?;
+            info!("Created .claude directory at: {:?}", claude_dir);
+        }
+        
+        // Check if settings.json already exists
+        if !settings_path.exists() {
+            // Parse the hooks JSON
+            let hooks: serde_json::Value = serde_json::from_str(hooks_json)
+                .map_err(|e| format!("Failed to parse agent hooks: {}", e))?;
+            
+            // Create a settings object with just the hooks
+            let settings = serde_json::json!({
+                "hooks": hooks
+            });
+            
+            // Write the settings file
+            let settings_content = serde_json::to_string_pretty(&settings)
+                .map_err(|e| format!("Failed to serialize settings: {}", e))?;
+            
+            std::fs::write(&settings_path, settings_content)
+                .map_err(|e| format!("Failed to write settings.json: {}", e))?;
+            
+            info!("Created settings.json with agent hooks at: {:?}", settings_path);
+        } else {
+            info!("settings.json already exists at: {:?}", settings_path);
+        }
+    }
 
     // Create a new run record
     let run_id = {
@@ -1724,7 +1771,7 @@ pub async fn export_agent(db: State<'_, AgentDb>, id: i64) -> Result<String, Str
     // Fetch the agent
     let agent = conn
         .query_row(
-            "SELECT name, icon, system_prompt, default_task, model FROM agents WHERE id = ?1",
+            "SELECT name, icon, system_prompt, default_task, model, hooks FROM agents WHERE id = ?1",
             params![id],
             |row| {
                 Ok(serde_json::json!({
@@ -1732,7 +1779,8 @@ pub async fn export_agent(db: State<'_, AgentDb>, id: i64) -> Result<String, Str
                     "icon": row.get::<_, String>(1)?,
                     "system_prompt": row.get::<_, String>(2)?,
                     "default_task": row.get::<_, Option<String>>(3)?,
-                    "model": row.get::<_, String>(4)?
+                    "model": row.get::<_, String>(4)?,
+                    "hooks": row.get::<_, Option<String>>(5)?
                 }))
             },
         )
@@ -2059,13 +2107,14 @@ pub async fn import_agent(db: State<'_, AgentDb>, json_data: String) -> Result<A
 
     // Create the agent
     conn.execute(
-        "INSERT INTO agents (name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network) VALUES (?1, ?2, ?3, ?4, ?5, 1, 1, 0)",
+        "INSERT INTO agents (name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, hooks) VALUES (?1, ?2, ?3, ?4, ?5, 1, 1, 0, ?6)",
         params![
             final_name,
             agent_data.icon,
             agent_data.system_prompt,
             agent_data.default_task,
-            agent_data.model
+            agent_data.model,
+            agent_data.hooks
         ],
     )
     .map_err(|e| format!("Failed to create agent: {}", e))?;
@@ -2075,7 +2124,7 @@ pub async fn import_agent(db: State<'_, AgentDb>, json_data: String) -> Result<A
     // Fetch the created agent
     let agent = conn
         .query_row(
-            "SELECT id, name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, created_at, updated_at FROM agents WHERE id = ?1",
+            "SELECT id, name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, hooks, created_at, updated_at FROM agents WHERE id = ?1",
             params![id],
             |row| {
                 Ok(Agent {
@@ -2088,8 +2137,9 @@ pub async fn import_agent(db: State<'_, AgentDb>, json_data: String) -> Result<A
                     enable_file_read: row.get(6)?,
                     enable_file_write: row.get(7)?,
                     enable_network: row.get(8)?,
-                    created_at: row.get(9)?,
-                    updated_at: row.get(10)?,
+                    hooks: row.get(9)?,
+                    created_at: row.get(10)?,
+                    updated_at: row.get(11)?,
                 })
             },
         )

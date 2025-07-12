@@ -2,6 +2,7 @@
   "name": "claudia",
   "private": true,
   "version": "0.1.0",
+  "license": "AGPL-3.0",
   "type": "module",
   "scripts": {
     "predev": "bun run build:executables:current",

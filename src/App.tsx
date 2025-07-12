@@ -19,8 +19,23 @@ import { MCPManager } from "@/components/MCPManager";
 import { NFOCredits } from "@/components/NFOCredits";
 import { ClaudeBinaryDialog } from "@/components/ClaudeBinaryDialog";
 import { Toast, ToastContainer } from "@/components/ui/toast";
+import { ProjectSettings } from '@/components/ProjectSettings';
 
-type View = "welcome" | "projects" | "agents" | "editor" | "settings" | "claude-file-editor" | "claude-code-session" | "usage-dashboard" | "mcp";
+type View = 
+  | "welcome" 
+  | "projects" 
+  | "editor" 
+  | "claude-file-editor" 
+  | "claude-code-session" 
+  | "settings"
+  | "cc-agents"
+  | "create-agent"
+  | "github-agents"
+  | "agent-execution"
+  | "agent-run-view"
+  | "mcp"
+  | "usage-dashboard"
+  | "project-settings";
 
 /**
  * Main App component - Manages the Claude directory browser UI
@@ -39,6 +54,8 @@ function App() {
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
   const [activeClaudeSessionId, setActiveClaudeSessionId] = useState<string | null>(null);
   const [isClaudeStreaming, setIsClaudeStreaming] = useState(false);
+  const [projectForSettings, setProjectForSettings] = useState<Project | null>(null);
+  const [previousView, setPreviousView] = useState<View>("welcome");
 
   // Load projects on mount when in projects view
   useEffect(() => {
@@ -157,6 +174,31 @@ function App() {
     setView(newView);
   };
 
+  /**
+   * Handles navigating to hooks configuration
+   */
+  const handleProjectSettings = (project: Project) => {
+    setProjectForSettings(project);
+    handleViewChange("project-settings");
+  };
+
+  /**
+   * Handles navigating to hooks configuration from a project path
+   */
+  const handleProjectSettingsFromPath = (projectPath: string) => {
+    // Create a temporary project object from the path
+    const projectId = projectPath.replace(/[^a-zA-Z0-9]/g, '-');
+    const tempProject: Project = {
+      id: projectId,
+      path: projectPath,
+      sessions: [],
+      created_at: Date.now() / 1000
+    };
+    setProjectForSettings(tempProject);
+    setPreviousView(view);
+    handleViewChange("project-settings");
+  };
+
   const renderContent = () => {
     switch (view) {
       case "welcome":
@@ -186,7 +228,7 @@ function App() {
                 >
                   <Card 
                     className="h-64 cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-lg border border-border/50 shimmer-hover trailing-border"
-                    onClick={() => handleViewChange("agents")}
+                    onClick={() => handleViewChange("cc-agents")}
                   >
                     <div className="h-full flex flex-col items-center justify-center p-8">
                       <Bot className="h-16 w-16 mb-4 text-primary" />
@@ -217,11 +259,11 @@ function App() {
           </div>
         );
 
-      case "agents":
+      case "cc-agents":
         return (
-          <div className="flex-1 overflow-hidden">
-            <CCAgents onBack={() => handleViewChange("welcome")} />
-          </div>
+          <CCAgents 
+            onBack={() => handleViewChange("welcome")} 
+          />
         );
 
       case "editor":
@@ -240,8 +282,8 @@ function App() {
       
       case "projects":
         return (
-          <div className="flex h-full items-center justify-center p-4 overflow-y-auto">
-            <div className="w-full max-w-2xl">
+          <div className="flex-1 overflow-y-auto">
+            <div className="container mx-auto p-6">
               {/* Header with back button */}
               <motion.div
                 initial={{ opacity: 0, y: -20 }}
@@ -257,7 +299,7 @@ function App() {
                 >
                   ← Back to Home
                 </Button>
-                <div className="text-center">
+                <div className="mb-4">
                   <h1 className="text-3xl font-bold tracking-tight">CC Projects</h1>
                   <p className="mt-1 text-sm text-muted-foreground">
                     Browse your Claude Code sessions
@@ -270,7 +312,7 @@ function App() {
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="mb-4 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-xs text-destructive"
+                  className="mb-4 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-xs text-destructive max-w-2xl"
                 >
                   {error}
                 </motion.div>
@@ -308,18 +350,18 @@ function App() {
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: 20 }}
                       transition={{ duration: 0.3 }}
-                      className="space-y-4"
                     >
                       {/* New session button at the top */}
                       <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5 }}
+                        className="mb-4"
                       >
                         <Button
                           onClick={handleNewSession}
                           size="default"
-                          className="w-full"
+                          className="w-full max-w-md"
                         >
                           <Plus className="mr-2 h-4 w-4" />
                           New Claude Code session
@@ -334,6 +376,9 @@ function App() {
                         <ProjectList
                           projects={projects}
                           onProjectClick={handleProjectClick}
+                          onProjectSettings={handleProjectSettings}
+                          loading={loading}
+                          className="animate-fade-in"
                         />
                       ) : (
                         <div className="py-8 text-center">
@@ -370,6 +415,7 @@ function App() {
               setIsClaudeStreaming(isStreaming);
               setActiveClaudeSessionId(sessionId);
             }}
+            onProjectSettings={handleProjectSettingsFromPath}
           />
         );
       
@@ -382,6 +428,20 @@ function App() {
         return (
           <MCPManager onBack={() => handleViewChange("welcome")} />
         );
+      
+      case "project-settings":
+        if (projectForSettings) {
+          return (
+            <ProjectSettings
+              project={projectForSettings}
+              onBack={() => {
+                setProjectForSettings(null);
+                handleViewChange(previousView || "projects");
+              }}
+            />
+          );
+        }
+        break;
       
       default:
         return null;

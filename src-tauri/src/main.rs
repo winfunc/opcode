@@ -27,6 +27,7 @@ use commands::claude::{
     open_new_session, read_claude_md_file, restore_checkpoint, resume_claude_code,
     save_claude_md_file, save_claude_settings, save_system_prompt, search_files,
     track_checkpoint_message, track_session_messages, update_checkpoint_settings,
+    get_hooks_config, update_hooks_config, validate_hook_command,
     ClaudeProcessState,
 };
 use commands::mcp::{
@@ -111,6 +112,9 @@ fn main() {
             list_directory_contents,
             search_files,
             get_recently_modified_files,
+            get_hooks_config,
+            update_hooks_config,
+            validate_hook_command,
             
             // Checkpoint Management
             create_checkpoint,
@@ -189,6 +193,12 @@ fn main() {
             storage_insert_row,
             storage_execute_sql,
             storage_reset_database,
+            
+            // Slash Commands
+            commands::slash_commands::slash_commands_list,
+            commands::slash_commands::slash_command_get,
+            commands::slash_commands::slash_command_save,
+            commands::slash_commands::slash_command_delete,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -6,12 +6,7 @@ import {
   Trash2, 
   Save, 
   AlertCircle,
-  Shield,
-  Code,
-  Settings2,
-  Terminal,
   Loader2,
-  Database
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +23,8 @@ import { cn } from "@/lib/utils";
 import { Toast, ToastContainer } from "@/components/ui/toast";
 import { ClaudeVersionSelector } from "./ClaudeVersionSelector";
 import { StorageTab } from "./StorageTab";
+import { HooksEditor } from "./HooksEditor";
+import { SlashCommandsManager } from "./SlashCommandsManager";
 
 interface SettingsProps {
   /**
@@ -59,26 +56,27 @@ export const Settings: React.FC<SettingsProps> = ({
   onBack,
   className,
 }) => {
-  const [activeTab, setActiveTab] = useState("general");
-  const [settings, setSettings] = useState<ClaudeSettings>({});
+  const [settings, setSettings] = useState<ClaudeSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
-
-  // Permission rules state
-  const [allowRules, setAllowRules] = useState<PermissionRule[]>([]);
-  const [denyRules, setDenyRules] = useState<PermissionRule[]>([]);
-
-  // Environment variables state
-  const [envVars, setEnvVars] = useState<EnvironmentVariable[]>([]);
-
-  // Claude binary path state
+  const [activeTab, setActiveTab] = useState("general");
   const [currentBinaryPath, setCurrentBinaryPath] = useState<string | null>(null);
   const [selectedInstallation, setSelectedInstallation] = useState<ClaudeInstallation | null>(null);
   const [binaryPathChanged, setBinaryPathChanged] = useState(false);
-
-
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  
+  // Permission rules state
+  const [allowRules, setAllowRules] = useState<PermissionRule[]>([]);
+  const [denyRules, setDenyRules] = useState<PermissionRule[]>([]);
+  
+  // Environment variables state
+  const [envVars, setEnvVars] = useState<EnvironmentVariable[]>([]);
+  
+  // Hooks state
+  const [userHooksChanged, setUserHooksChanged] = useState(false);
+  const getUserHooks = React.useRef<(() => any) | null>(null);
+  
   // Load settings on mount
   useEffect(() => {
     loadSettings();
@@ -154,7 +152,6 @@ export const Settings: React.FC<SettingsProps> = ({
     }
   };
 
-
   /**
    * Saves the current settings
    */
@@ -187,6 +184,13 @@ export const Settings: React.FC<SettingsProps> = ({
         await api.setClaudeBinaryPath(selectedInstallation.path);
         setCurrentBinaryPath(selectedInstallation.path);
         setBinaryPathChanged(false);
+      }
+
+      // Save user hooks if changed
+      if (userHooksChanged && getUserHooks.current) {
+        const hooks = getUserHooks.current();
+        await api.updateHooksConfig('user', hooks);
+        setUserHooksChanged(false);
       }
 
       setToast({ message: "Settings saved successfully!", type: "success" });
@@ -353,28 +357,15 @@ export const Settings: React.FC<SettingsProps> = ({
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto p-4">
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="mb-6">
-              <TabsTrigger value="general" className="gap-2">
-                <Settings2 className="h-4 w-4 text-slate-500" />
-                General
-              </TabsTrigger>
-              <TabsTrigger value="permissions" className="gap-2">
-                <Shield className="h-4 w-4 text-amber-500" />
-                Permissions
-              </TabsTrigger>
-              <TabsTrigger value="environment" className="gap-2">
-                <Terminal className="h-4 w-4 text-blue-500" />
-                Environment
-              </TabsTrigger>
-              <TabsTrigger value="advanced" className="gap-2">
-                <Code className="h-4 w-4 text-purple-500" />
-                Advanced
-              </TabsTrigger>
-              <TabsTrigger value="storage" className="gap-2">
-                <Database className="h-4 w-4 text-green-500" />
-                Storage
-              </TabsTrigger>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid grid-cols-7 w-full">
+              <TabsTrigger value="general">General</TabsTrigger>
+              <TabsTrigger value="permissions">Permissions</TabsTrigger>
+              <TabsTrigger value="environment">Environment</TabsTrigger>
+              <TabsTrigger value="advanced">Advanced</TabsTrigger>
+              <TabsTrigger value="hooks">Hooks</TabsTrigger>
+              <TabsTrigger value="commands">Commands</TabsTrigger>
+              <TabsTrigger value="storage">Storage</TabsTrigger>
             </TabsList>
             
             {/* General Settings */}
@@ -687,6 +678,39 @@ export const Settings: React.FC<SettingsProps> = ({
                     </p>
                   </div>
                 </div>
+              </Card>
+            </TabsContent>
+            
+            {/* Hooks Settings */}
+            <TabsContent value="hooks" className="space-y-6">
+              <Card className="p-6">
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-base font-semibold mb-2">User Hooks</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Configure hooks that apply to all Claude Code sessions for your user account.
+                      These are stored in <code className="mx-1 px-2 py-1 bg-muted rounded text-xs">~/.claude/settings.json</code>
+                    </p>
+                  </div>
+                  
+                  <HooksEditor
+                    key={activeTab}
+                    scope="user"
+                    className="border-0"
+                    hideActions={true}
+                    onChange={(hasChanges, getHooks) => {
+                      setUserHooksChanged(hasChanges);
+                      getUserHooks.current = getHooks;
+                    }}
+                  />
+                </div>
+              </Card>
+            </TabsContent>
+            
+            {/* Commands Tab */}
+            <TabsContent value="commands">
+              <Card className="p-6">
+                <SlashCommandsManager className="p-0" />
               </Card>
             </TabsContent>
             

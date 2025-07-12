@@ -24,6 +24,8 @@ export * from "./ui/tabs";
 export * from "./ui/textarea";
 export * from "./ui/toast";
 export * from "./ui/tooltip";
+export * from "./SlashCommandPicker";
+export * from "./SlashCommandsManager";
 export * from "./ui/popover";
 export * from "./ui/pagination";
 export * from "./ui/split-pane";
