@@ -941,6 +941,471 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // Start HTTP server
+
+// ========================================
+// MISSING ENDPOINTS - Added for API Parity
+// ========================================
+
+// Project scan endpoint
+app.post('/api/projects/scan', async (req, res) => {
+  try {
+    // Scan and update projects directory
+    const projectDirs = await fs.readdir(PROJECTS_DIR);
+    const projects = [];
+    
+    for (const dir of projectDirs) {
+      if (dir.startsWith('.')) continue;
+      
+      const projectPath = path.join(PROJECTS_DIR, dir);
+      const stats = await fs.stat(projectPath);
+      
+      if (stats.isDirectory()) {
+        const decodedPath = dir.replace(/-/g, '/');
+        const files = await fs.readdir(projectPath);
+        const sessions = files
+          .filter(f => f.endsWith('.jsonl'))
+          .map(f => f.replace('.jsonl', ''));
+        
+        projects.push({
+          id: dir,
+          path: decodedPath,
+          sessions: sessions,
+          created_at: Math.floor(stats.birthtimeMs / 1000)
+        });
+      }
+    }
+    
+    res.json({ success: true, scanned: projects.length, projects });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Available MCP servers (for discovery)
+app.get('/api/mcp/available', async (req, res) => {
+  try {
+    // Return list of available MCP servers that can be installed
+    const available = [
+      {
+        name: 'filesystem',
+        description: 'File system access',
+        transport: 'stdio',
+        command: 'npx',
+        args: ['-y', '@modelcontextprotocol/server-filesystem']
+      },
+      {
+        name: 'github',
+        description: 'GitHub API access',
+        transport: 'stdio',
+        command: 'npx',
+        args: ['-y', '@modelcontextprotocol/server-github']
+      },
+      {
+        name: 'memory',
+        description: 'Memory storage',
+        transport: 'stdio',
+        command: 'npx',
+        args: ['-y', '@modelcontextprotocol/server-memory']
+      }
+    ];
+    res.json(available);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Usage summary endpoint
+app.get('/api/usage/summary', (req, res) => {
+  try {
+    const summary = db.prepare(`
+      SELECT 
+        COUNT(*) as total_sessions,
+        SUM(input_tokens) as total_input_tokens,
+        SUM(output_tokens) as total_output_tokens,
+        SUM(input_cost + output_cost) as total_cost,
+        COUNT(DISTINCT model) as models_used,
+        COUNT(DISTINCT DATE(created_at)) as active_days
+      FROM usage_stats
+    `).get();
+    
+    res.json(summary || {
+      total_sessions: 0,
+      total_input_tokens: 0,
+      total_output_tokens: 0,
+      total_cost: 0,
+      models_used: 0,
+      active_days: 0
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Usage history endpoint
+app.get('/api/usage/history', (req, res) => {
+  try {
+    const days = parseInt(req.query.days) || 7;
+    const history = db.prepare(`
+      SELECT 
+        DATE(created_at) as date,
+        COUNT(*) as sessions,
+        SUM(input_tokens) as input_tokens,
+        SUM(output_tokens) as output_tokens,
+        SUM(input_cost + output_cost) as cost
+      FROM usage_stats
+      WHERE created_at >= datetime('now', '-' || ? || ' days')
+      GROUP BY DATE(created_at)
+      ORDER BY date DESC
+    `).all(days);
+    
+    res.json(history);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Usage by models endpoint
+app.get('/api/usage/models', (req, res) => {
+  try {
+    const models = db.prepare(`
+      SELECT 
+        model,
+        COUNT(*) as sessions,
+        SUM(input_tokens) as input_tokens,
+        SUM(output_tokens) as output_tokens,
+        SUM(input_cost + output_cost) as total_cost,
+        AVG(input_cost + output_cost) as avg_cost_per_session
+      FROM usage_stats
+      GROUP BY model
+      ORDER BY total_cost DESC
+    `).all();
+    
+    res.json(models);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// General settings endpoint
+app.get('/api/settings', async (req, res) => {
+  try {
+    // Combine Claude settings and other app settings
+    let settings = {};
+    
+    // Read Claude settings
+    try {
+      const claudeSettings = await fs.readFile(SETTINGS_FILE, 'utf-8');
+      settings.claude = JSON.parse(claudeSettings);
+    } catch (e) {
+      settings.claude = {};
+    }
+    
+    // Add app-specific settings
+    settings.app = {
+      theme: 'dark',
+      autoSave: true,
+      telemetry: false
+    };
+    
+    res.json(settings);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// System prompts list endpoint
+app.get('/api/system-prompts', async (req, res) => {
+  try {
+    const prompts = [];
+    
+    // Check for CLAUDE.md files in common locations
+    const locations = [
+      { path: SYSTEM_PROMPT_FILE, name: 'Global', type: 'global' },
+      { path: path.join(process.cwd(), 'CLAUDE.md'), name: 'Project', type: 'project' }
+    ];
+    
+    for (const loc of locations) {
+      try {
+        const content = await fs.readFile(loc.path, 'utf-8');
+        const stats = await fs.stat(loc.path);
+        prompts.push({
+          id: loc.type,
+          name: loc.name,
+          path: loc.path,
+          content: content,
+          modified: stats.mtime,
+          active: true
+        });
+      } catch (e) {
+        // File doesn't exist
+      }
+    }
+    
+    res.json(prompts);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Active system prompt endpoint
+app.get('/api/system-prompts/active', async (req, res) => {
+  try {
+    // Return the currently active system prompt
+    let activePrompt = null;
+    
+    // Check project-specific prompt first
+    try {
+      const projectPrompt = await fs.readFile(path.join(process.cwd(), 'CLAUDE.md'), 'utf-8');
+      activePrompt = {
+        id: 'project',
+        type: 'project',
+        content: projectPrompt,
+        path: path.join(process.cwd(), 'CLAUDE.md')
+      };
+    } catch (e) {
+      // Try global prompt
+      try {
+        const globalPrompt = await fs.readFile(SYSTEM_PROMPT_FILE, 'utf-8');
+        activePrompt = {
+          id: 'global',
+          type: 'global',
+          content: globalPrompt,
+          path: SYSTEM_PROMPT_FILE
+        };
+      } catch (e2) {
+        // No prompt found
+      }
+    }
+    
+    if (activePrompt) {
+      res.json(activePrompt);
+    } else {
+      res.status(404).json({ error: 'No active system prompt found' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// List all checkpoints (not session-specific)
+app.get('/api/checkpoints', (req, res) => {
+  try {
+    const checkpoints = db.prepare(`
+      SELECT 
+        c.*,
+        COUNT(cf.id) as file_count
+      FROM checkpoints c
+      LEFT JOIN checkpoint_files cf ON c.id = cf.checkpoint_id
+      GROUP BY c.id
+      ORDER BY c.created_at DESC
+    `).all();
+    
+    res.json(checkpoints);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// File system list endpoint (POST variant)
+app.post('/api/fs/list', async (req, res) => {
+  try {
+    const { path: dirPath } = req.body;
+    const resolvedPath = path.resolve(dirPath);
+    
+    const entries = await fs.readdir(resolvedPath, { withFileTypes: true });
+    const items = await Promise.all(entries.map(async (entry) => {
+      const fullPath = path.join(resolvedPath, entry.name);
+      const stats = await fs.stat(fullPath);
+      
+      return {
+        name: entry.name,
+        path: fullPath,
+        is_directory: entry.isDirectory(),
+        size: stats.size,
+        modified: stats.mtime,
+        created: stats.birthtime
+      };
+    }));
+    
+    res.json(items.sort((a, b) => {
+      if (a.is_directory && !b.is_directory) return -1;
+      if (!a.is_directory && b.is_directory) return 1;
+      return a.name.localeCompare(b.name);
+    }));
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// System info endpoint
+app.get('/api/info', (req, res) => {
+  res.json({
+    version: '2.0.0',
+    mode: 'web',
+    features: {
+      claude_execution: true,
+      agents: true,
+      mcp_servers: true,
+      slash_commands: true,
+      checkpoints: true,
+      usage_analytics: true,
+      file_system: true,
+      websocket: true
+    },
+    server: {
+      port: PORT,
+      api_base: `http://localhost:${PORT}/api`,
+      ws_url: `ws://localhost:${PORT}/ws`
+    }
+  });
+});
+
+// Running sessions endpoints
+app.get('/api/running-sessions', (req, res) => {
+  res.json(Array.from(runningProcesses.values()));
+});
+
+app.get('/api/running-claude-sessions', (req, res) => {
+  const claudeSessions = Array.from(runningProcesses.values())
+    .filter(p => p.type === 'claude');
+  res.json(claudeSessions);
+});
+
+// Claude version endpoint
+app.get('/api/claude/version', async (req, res) => {
+  try {
+    const { stdout } = await execAsync('claude --version');
+    const version = stdout.trim().match(/Claude Code CLI v([\d.]+)/)?.[1] || 'unknown';
+    res.json({ 
+      version,
+      installed: true,
+      output: stdout.trim()
+    });
+  } catch (error) {
+    res.json({ 
+      version: null,
+      installed: false,
+      output: error.message
+    });
+  }
+});
+
+// Claude installations endpoint
+app.get('/api/claude/installations', async (req, res) => {
+  try {
+    const installations = [];
+    
+    // Check common installation locations
+    const locations = [
+      { path: '/usr/local/bin/claude', name: 'System' },
+      { path: path.join(homedir(), '.local/bin/claude'), name: 'User Local' },
+      { path: path.join(homedir(), 'bin/claude'), name: 'User Bin' }
+    ];
+    
+    for (const loc of locations) {
+      try {
+        const stats = await fs.stat(loc.path);
+        if (stats.isFile()) {
+          const { stdout } = await execAsync(`${loc.path} --version`);
+          const version = stdout.trim().match(/Claude Code CLI v([\d.]+)/)?.[1] || 'unknown';
+          installations.push({
+            path: loc.path,
+            name: loc.name,
+            version,
+            is_default: false
+          });
+        }
+      } catch (e) {
+        // Location doesn't exist
+      }
+    }
+    
+    res.json(installations);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Hooks configuration endpoints
+app.get('/api/hooks/config', async (req, res) => {
+  try {
+    const hooksPath = path.join(process.cwd(), '.claude', 'hooks.json');
+    const hooks = await fs.readFile(hooksPath, 'utf-8');
+    res.json(JSON.parse(hooks));
+  } catch (error) {
+    // Return default hooks config if file doesn't exist
+    res.json({
+      on_tool_use: { enabled: false, commands: [] },
+      on_message: { enabled: false, commands: [] },
+      on_error: { enabled: false, commands: [] },
+      on_session_start: { enabled: false, commands: [] },
+      on_session_end: { enabled: false, commands: [] }
+    });
+  }
+});
+
+app.put('/api/hooks/config', async (req, res) => {
+  try {
+    const hooksDir = path.join(process.cwd(), '.claude');
+    await fs.mkdir(hooksDir, { recursive: true });
+    
+    const hooksPath = path.join(hooksDir, 'hooks.json');
+    await fs.writeFile(hooksPath, JSON.stringify(req.body, null, 2));
+    
+    res.json({ success: true, config: req.body });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// File search endpoint
+app.get('/api/fs/search', async (req, res) => {
+  try {
+    const { basePath, query } = req.query;
+    if (!basePath || !query) {
+      return res.status(400).json({ error: 'basePath and query are required' });
+    }
+    
+    // Simple file search implementation
+    const results = [];
+    const searchDir = async (dir) => {
+      try {
+        const entries = await fs.readdir(dir, { withFileTypes: true });
+        for (const entry of entries) {
+          const fullPath = path.join(dir, entry.name);
+          
+          // Skip hidden files and common ignore patterns
+          if (entry.name.startsWith('.') || 
+              entry.name === 'node_modules' || 
+              entry.name === 'dist' || 
+              entry.name === 'build') {
+            continue;
+          }
+          
+          if (entry.name.toLowerCase().includes(query.toLowerCase())) {
+            results.push({
+              name: entry.name,
+              path: fullPath,
+              is_directory: entry.isDirectory()
+            });
+          }
+          
+          if (entry.isDirectory() && results.length < 100) {
+            await searchDir(fullPath);
+          }
+        }
+      } catch (e) {
+        // Skip directories we can't read
+      }
+    };
+    
+    await searchDir(basePath);
+    res.json(results.slice(0, 100)); // Limit results
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 const server = app.listen(PORT, () => {
   console.log(`
 🚀 Claudia Complete Web Server Started
