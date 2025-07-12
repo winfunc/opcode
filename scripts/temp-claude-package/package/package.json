@@ -1,0 +1,33 @@
+{
+  "name": "@anthropic-ai/claude-code",
+  "version": "1.0.41",
+  "main": "sdk.mjs",
+  "types": "sdk.d.ts",
+  "bin": {
+    "claude": "cli.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "type": "module",
+  "author": "Boris Cherny <boris@anthropic.com>",
+  "license": "SEE LICENSE IN README.md",
+  "description": "Use Claude, Anthropic's AI assistant, right from your terminal. Claude can understand your codebase, edit files, run terminal commands, and handle entire workflows for you.",
+  "homepage": "https://github.com/anthropics/claude-code",
+  "bugs": {
+    "url": "https://github.com/anthropics/claude-code/issues"
+  },
+  "scripts": {
+    "prepare": "node -e \"if (!process.env.AUTHORIZED) { console.error('ERROR: Direct publishing is not allowed.\\nPlease use the publish-external.sh script to publish this package.'); process.exit(1); }\"",
+    "preinstall": "node scripts/preinstall.js"
+  },
+  "dependencies": {},
+  "optionalDependencies": {
+    "@img/sharp-darwin-arm64": "^0.33.5",
+    "@img/sharp-darwin-x64": "^0.33.5",
+    "@img/sharp-linux-arm": "^0.33.5",
+    "@img/sharp-linux-arm64": "^0.33.5",
+    "@img/sharp-linux-x64": "^0.33.5",
+    "@img/sharp-win32-x64": "^0.33.5"
+  }
+}

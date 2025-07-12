@@ -48,6 +48,8 @@ zstd = "0.13"
 uuid = { version = "1.6", features = ["v4", "serde"] }
 walkdir = "2"
 
+[target.'cfg(target_os = "windows")'.dependencies]
+winreg = "0.52"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 cocoa = "0.26"

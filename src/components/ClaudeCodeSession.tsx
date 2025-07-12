@@ -597,7 +597,9 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       }
     } catch (err) {
       console.error("Failed to send prompt:", err);
-      setError("Failed to send prompt");
+      // Use the actual error message from the backend instead of a generic one
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      setError(errorMessage);
       setIsLoading(false);
       hasActiveSessionRef.current = false;
     }

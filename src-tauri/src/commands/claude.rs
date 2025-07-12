@@ -224,9 +224,9 @@ fn extract_first_user_message(jsonl_path: &PathBuf) -> (Option<String>, Option<S
 
 /// Helper function to create a tokio Command with proper environment variables
 /// This ensures commands like Claude can find Node.js and other dependencies
-fn create_command_with_env(program: &str) -> Command {
+fn create_command_with_env(program: &str) -> Result<Command, String> {
     // Convert std::process::Command to tokio::process::Command
-    let _std_cmd = crate::claude_binary::create_command_with_env(program);
+    let _std_cmd = crate::claude_binary::create_command_with_env(program)?;
 
     // Create a new tokio Command from the program path
     let mut tokio_cmd = Command::new(program);
@@ -251,19 +251,24 @@ fn create_command_with_env(program: &str) -> Command {
         }
     }
 
-    // Add NVM support if the program is in an NVM directory
+    // Set up environment variables for Claude Code
+    let env_vars = crate::shell_environment::setup_claude_environment()?;
+    crate::shell_environment::apply_environment_to_command(&mut tokio_cmd, &env_vars);
+
+    // Add NVM support if the program is in an NVM directory (Unix-style paths)
     if program.contains("/.nvm/versions/node/") {
         if let Some(node_bin_dir) = std::path::Path::new(program).parent() {
             let current_path = std::env::var("PATH").unwrap_or_default();
             let node_bin_str = node_bin_dir.to_string_lossy();
-            if !current_path.contains(&node_bin_str.as_ref()) {
-                let new_path = format!("{}:{}", node_bin_str, current_path);
+            let separator = if cfg!(target_os = "windows") { ";" } else { ":" };
+            if !current_path.split(separator).any(|p| p == node_bin_str.as_ref()) {
+                let new_path = format!("{}{}{}", node_bin_str, separator, current_path);
                 tokio_cmd.env("PATH", new_path);
             }
         }
     }
 
-    tokio_cmd
+    Ok(tokio_cmd)
 }
 
 /// Determines whether to use sidecar or system binary execution
@@ -288,6 +293,16 @@ fn create_sidecar_command(
     // Set working directory
     sidecar_cmd = sidecar_cmd.current_dir(project_path);
     
+    // Set up environment variables for Claude Code
+    let env_vars = match crate::shell_environment::setup_claude_environment() {
+        Ok(env_vars) => env_vars,
+        Err(e) => {
+            log::error!("Shell environment setup failed: {}", e);
+            return Err(e); // Return the error to be displayed in chat
+        }
+    };
+    sidecar_cmd = crate::shell_environment::apply_environment_to_sidecar(sidecar_cmd, &env_vars);
+    
     Ok(sidecar_cmd)
 }
 
@@ -296,8 +311,8 @@ fn create_system_command(
     claude_path: &str,
     args: Vec<String>,
     project_path: &str,
-) -> Command {
-    let mut cmd = create_command_with_env(claude_path);
+) -> Result<Command, String> {
+    let mut cmd = create_command_with_env(claude_path)?;
     
     // Add all arguments
     for arg in args {
@@ -308,7 +323,7 @@ fn create_system_command(
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
     
-    cmd
+    Ok(cmd)
 }
 
 /// Lists all projects in the ~/.claude/projects directory
@@ -952,7 +967,7 @@ pub async fn execute_claude_code(
     if should_use_sidecar(&claude_path) {
         spawn_claude_sidecar(app, args, prompt, model, project_path).await
     } else {
-        let cmd = create_system_command(&claude_path, args, &project_path);
+        let cmd = create_system_command(&claude_path, args, &project_path)?;
         spawn_claude_process(app, cmd, prompt, model, project_path).await
     }
 }
@@ -988,7 +1003,7 @@ pub async fn continue_claude_code(
     if should_use_sidecar(&claude_path) {
         spawn_claude_sidecar(app, args, prompt, model, project_path).await
     } else {
-        let cmd = create_system_command(&claude_path, args, &project_path);
+        let cmd = create_system_command(&claude_path, args, &project_path)?;
         spawn_claude_process(app, cmd, prompt, model, project_path).await
     }
 }
@@ -1027,7 +1042,7 @@ pub async fn resume_claude_code(
     if should_use_sidecar(&claude_path) {
         spawn_claude_sidecar(app, args, prompt, model, project_path).await
     } else {
-        let cmd = create_system_command(&claude_path, args, &project_path);
+        let cmd = create_system_command(&claude_path, args, &project_path)?;
         spawn_claude_process(app, cmd, prompt, model, project_path).await
     }
 }

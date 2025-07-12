@@ -10,7 +10,7 @@ use tauri::AppHandle;
 
 /// Helper function to create a std::process::Command with proper environment variables
 /// This ensures commands like Claude can find Node.js and other dependencies
-fn create_command_with_env(program: &str) -> Command {
+fn create_command_with_env(program: &str) -> Result<Command, String> {
     crate::claude_binary::create_command_with_env(program)
 }
 
@@ -100,7 +100,8 @@ fn execute_claude_mcp_command(app_handle: &AppHandle, args: Vec<&str>) -> Result
     info!("Executing claude mcp command with args: {:?}", args);
 
     let claude_path = find_claude_binary(app_handle)?;
-    let mut cmd = create_command_with_env(&claude_path);
+    let mut cmd = create_command_with_env(&claude_path)
+        .map_err(|e| anyhow::anyhow!("Failed to setup shell environment: {}", e))?;
     cmd.arg("mcp");
     for arg in args {
         cmd.arg(arg);
@@ -482,9 +483,15 @@ pub async fn mcp_add_from_claude_desktop(
             .ok_or_else(|| "Could not find config directory".to_string())?
             .join("Claude")
             .join("claude_desktop_config.json")
+    } else if cfg!(target_os = "windows") {
+        // For Windows, check AppData\Roaming\Claude
+        dirs::config_dir()
+            .ok_or_else(|| "Could not find config directory".to_string())?
+            .join("Claude")
+            .join("claude_desktop_config.json")
     } else {
         return Err(
-            "Import from Claude Desktop is only supported on macOS and Linux/WSL".to_string(),
+            "Import from Claude Desktop is only supported on macOS, Windows, and Linux/WSL".to_string(),
         );
     };
 
@@ -624,7 +631,8 @@ pub async fn mcp_serve(app: AppHandle) -> Result<String, String> {
         }
     };
 
-    let mut cmd = create_command_with_env(&claude_path);
+    let mut cmd = create_command_with_env(&claude_path)
+        .map_err(|e| format!("Failed to setup shell environment: {}", e))?;
     cmd.arg("mcp").arg("serve");
 
     match cmd.spawn() {

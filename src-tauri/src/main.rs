@@ -5,16 +5,17 @@ mod checkpoint;
 mod claude_binary;
 mod commands;
 mod process;
+mod shell_environment;
 
 use checkpoint::state::CheckpointState;
 use commands::agents::{
     cleanup_finished_processes, create_agent, delete_agent, execute_agent, export_agent,
     export_agent_to_file, fetch_github_agent_content, fetch_github_agents, get_agent,
-    get_agent_run, get_agent_run_with_real_time_metrics, get_claude_binary_path,
-    get_live_session_output, get_session_output, get_session_status, import_agent,
+    get_agent_run, get_agent_run_with_real_time_metrics, get_available_shells, get_claude_binary_path,
+    get_live_session_output, get_session_output, get_session_status, get_shell_config, import_agent,
     import_agent_from_file, import_agent_from_github, init_database, kill_agent_session,
     list_agent_runs, list_agent_runs_with_metrics, list_agents, list_claude_installations,
-    list_running_sessions, load_agent_session_history, set_claude_binary_path, stream_session_output, update_agent, AgentDb,
+    list_running_sessions, load_agent_session_history, set_claude_binary_path, set_shell_config, stream_session_output, update_agent, AgentDb,
 };
 use commands::claude::{
     cancel_claude_execution, check_auto_checkpoint, check_claude_version, cleanup_old_checkpoints,
@@ -149,6 +150,9 @@ fn main() {
             get_claude_binary_path,
             set_claude_binary_path,
             list_claude_installations,
+            get_shell_config,
+            set_shell_config,
+            get_available_shells,
             export_agent,
             export_agent_to_file,
             import_agent,

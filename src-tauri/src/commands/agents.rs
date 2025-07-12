@@ -749,6 +749,11 @@ fn create_agent_sidecar_command(
     // Set working directory
     sidecar_cmd = sidecar_cmd.current_dir(project_path);
     
+    // Set up environment variables for Claude Code
+    let env_vars = crate::shell_environment::setup_claude_environment()
+        .map_err(|e| format!("Shell environment setup failed: {}", e))?;
+    sidecar_cmd = crate::shell_environment::apply_environment_to_sidecar(sidecar_cmd, &env_vars);
+    
     Ok(sidecar_cmd)
 }
 
@@ -757,8 +762,8 @@ fn create_agent_system_command(
     claude_path: &str,
     args: Vec<String>,
     project_path: &str,
-) -> Command {
-    let mut cmd = create_command_with_env(claude_path);
+) -> Result<Command, String> {
+    let mut cmd = create_command_with_env(claude_path)?;
     
     // Add all arguments
     for arg in args {
@@ -770,7 +775,7 @@ fn create_agent_system_command(
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
     
-    cmd
+    Ok(cmd)
 }
 
 /// Spawn agent using sidecar command
@@ -1023,7 +1028,7 @@ async fn spawn_agent_system(
     registry: State<'_, crate::process::ProcessRegistryState>,
 ) -> Result<i64, String> {
     // Build the command
-    let mut cmd = create_agent_system_command(&claude_path, args, &project_path);
+    let mut cmd = create_agent_system_command(&claude_path, args, &project_path)?;
 
     // Spawn the process
     info!("🚀 Spawning Claude system process...");
@@ -1911,9 +1916,9 @@ pub async fn list_claude_installations(
 
 /// Helper function to create a tokio Command with proper environment variables
 /// This ensures commands like Claude can find Node.js and other dependencies
-fn create_command_with_env(program: &str) -> Command {
+fn create_command_with_env(program: &str) -> Result<Command, String> {
     // Convert std::process::Command to tokio::process::Command
-    let _std_cmd = crate::claude_binary::create_command_with_env(program);
+    let _std_cmd = crate::claude_binary::create_command_with_env(program)?;
 
     // Create a new tokio Command from the program path
     let mut tokio_cmd = Command::new(program);
@@ -1938,30 +1943,61 @@ fn create_command_with_env(program: &str) -> Command {
         }
     }
 
-    // Add NVM support if the program is in an NVM directory
+    // Set up environment variables for Claude Code
+    let env_vars = crate::shell_environment::setup_claude_environment()
+        .map_err(|e| format!("Shell environment setup failed: {}", e))?;
+    crate::shell_environment::apply_environment_to_command(&mut tokio_cmd, &env_vars);
+
+    // Add NVM support if the program is in an NVM directory (Unix-style paths)
     if program.contains("/.nvm/versions/node/") {
         if let Some(node_bin_dir) = std::path::Path::new(program).parent() {
             let current_path = std::env::var("PATH").unwrap_or_default();
             let node_bin_str = node_bin_dir.to_string_lossy();
-            if !current_path.contains(&node_bin_str.as_ref()) {
-                let new_path = format!("{}:{}", node_bin_str, current_path);
+            let separator = if cfg!(target_os = "windows") { ";" } else { ":" };
+            if !current_path.split(separator).any(|p| p == node_bin_str.as_ref()) {
+                let new_path = format!("{}{}{}", node_bin_str, separator, current_path);
                 tokio_cmd.env("PATH", new_path);
             }
         }
     }
 
-    // Ensure PATH contains common Homebrew locations
+    // Ensure PATH contains common binary locations (platform-specific)
     if let Ok(existing_path) = std::env::var("PATH") {
-        let mut paths: Vec<&str> = existing_path.split(':').collect();
-        for p in ["/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "/bin"].iter() {
+        let separator = if cfg!(target_os = "windows") { ";" } else { ":" };
+        let mut paths: Vec<&str> = existing_path.split(separator).collect();
+        
+        // Platform-specific common paths
+        let common_paths = if cfg!(target_os = "windows") {
+            vec![
+                r"C:\Program Files\nodejs",
+                r"C:\Program Files (x86)\nodejs",
+                r"C:\Windows\System32",
+                r"C:\Windows",
+            ]
+        } else {
+            vec![
+                "/opt/homebrew/bin",
+                "/usr/local/bin", 
+                "/usr/bin",
+                "/bin",
+            ]
+        };
+        
+        for p in common_paths.iter() {
             if !paths.contains(p) {
                 paths.push(p);
             }
         }
-        let joined = paths.join(":");
+        let joined = paths.join(separator);
         tokio_cmd.env("PATH", joined);
     } else {
-        tokio_cmd.env("PATH", "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin");
+        // Default PATH for the platform
+        let default_path = if cfg!(target_os = "windows") {
+            r"C:\Program Files\nodejs;C:\Program Files (x86)\nodejs;C:\Windows\System32;C:\Windows"
+        } else {
+            "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
+        };
+        tokio_cmd.env("PATH", default_path);
     }
 
     // BEGIN PATCH: Ensure bundled sidecar directory is in PATH when using the "claude-code" placeholder
@@ -1984,7 +2020,7 @@ fn create_command_with_env(program: &str) -> Command {
     }
     // END PATCH
 
-    tokio_cmd
+    Ok(tokio_cmd)
 }
 
 /// Import an agent from JSON data
@@ -2265,8 +2301,86 @@ pub async fn load_agent_session_history(
             }
         }
 
-        Ok(messages)
+            Ok(messages)
     } else {
         Err(format!("Session file not found: {}", session_id))
     }
 }
+
+/// Get the user's preferred shell configuration
+#[tauri::command]
+pub async fn get_shell_config(db: State<'_, AgentDb>) -> Result<Option<String>, String> {
+    let conn = db.0.lock().map_err(|e| e.to_string())?;
+
+    match conn.query_row(
+        "SELECT value FROM app_settings WHERE key = 'preferred_shell'",
+        [],
+        |row| row.get::<_, String>(0),
+    ) {
+        Ok(shell_path) => Ok(Some(shell_path)),
+        Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+        Err(e) => Err(format!("Failed to get shell config: {}", e)),
+    }
+}
+
+/// Set the user's preferred shell configuration
+#[tauri::command]
+pub async fn set_shell_config(db: State<'_, AgentDb>, shell_path: String) -> Result<(), String> {
+    let conn = db.0.lock().map_err(|e| e.to_string())?;
+
+    // Validate shell path exists
+    if !std::path::Path::new(&shell_path).exists() {
+        return Err(format!("Shell path does not exist: {}", shell_path));
+    }
+
+    // Insert or update the setting
+    conn.execute(
+        "INSERT INTO app_settings (key, value) VALUES ('preferred_shell', ?1)
+         ON CONFLICT(key) DO UPDATE SET value = ?1",
+        params![shell_path],
+    )
+    .map_err(|e| format!("Failed to save shell config: {}", e))?;
+
+    Ok(())
+}
+
+/// Get available shells on the system
+#[tauri::command]
+pub async fn get_available_shells() -> Result<Vec<crate::shell_environment::ShellConfig>, String> {
+    if cfg!(target_os = "windows") {
+        // For Windows, detect available shells
+        let mut shells = Vec::new();
+        
+        // Try to find bash
+        if let Some(bash_path) = crate::shell_environment::find_bash_shell() {
+            shells.push(crate::shell_environment::ShellConfig {
+                shell_path: bash_path,
+                shell_type: crate::shell_environment::ShellType::Bash,
+            });
+        }
+        
+        // Try to find PowerShell
+        if let Some(pwsh_path) = crate::shell_environment::find_powershell() {
+            shells.push(crate::shell_environment::ShellConfig {
+                shell_path: pwsh_path,
+                shell_type: crate::shell_environment::ShellType::PowerShell,
+            });
+        }
+        
+        // Always include cmd.exe
+        shells.push(crate::shell_environment::ShellConfig {
+            shell_path: "cmd.exe".to_string(),
+            shell_type: crate::shell_environment::ShellType::Cmd,
+        });
+        
+        Ok(shells)
+    } else {
+        // For Unix-like systems, just return basic shell detection
+        match crate::shell_environment::find_best_shell() {
+            Ok(shell) => Ok(vec![shell]),
+            Err(_) => Ok(vec![]), // Return empty if no shell found
+        }
+    }
+}
+
+

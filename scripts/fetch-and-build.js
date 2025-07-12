@@ -19,9 +19,40 @@
  */
 
 import { spawn } from 'child_process';
-import { mkdir, rm, readdir, copyFile, access } from 'fs/promises';
+import { mkdir, rm, readdir, copyFile, access, stat } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join, resolve } from 'path';
+
+/**
+ * Cross-platform recursive directory copy function
+ * @param {string} src - Source directory path
+ * @param {string} dest - Destination directory path
+ */
+async function copyDirectory(src, dest) {
+  try {
+    // Create destination directory
+    await mkdir(dest, { recursive: true });
+    
+    // Read the source directory
+    const entries = await readdir(src, { withFileTypes: true });
+    
+    // Copy each entry
+    for (const entry of entries) {
+      const srcPath = join(src, entry.name);
+      const destPath = join(dest, entry.name);
+      
+      if (entry.isDirectory()) {
+        // Recursively copy subdirectory
+        await copyDirectory(srcPath, destPath);
+      } else {
+        // Copy file
+        await copyFile(srcPath, destPath);
+      }
+    }
+  } catch (error) {
+    throw new Error(`Failed to copy directory from ${src} to ${dest}: ${error.message}`);
+  }
+}
 
 /**
  * Execute a shell command and return a promise
@@ -55,7 +86,7 @@ async function runCommand(command, args = [], options = {}) {
 }
 
 /**
- * Check if a file or directory exists
+ * Check if a path exists
  * @param {string} path - Path to check
  * @returns {Promise<boolean>}
  */
@@ -69,40 +100,59 @@ async function pathExists(path) {
 }
 
 /**
- * Parse command line arguments to extract version and platform
+ * Parse command line arguments
  * @param {string[]} args - Command line arguments
- * @returns {object} - Parsed arguments with platform and version
+ * @returns {object} - Parsed arguments
  */
 function parseArguments(args) {
-  let platform = 'all';
-  let version = null;
+  const platform = args.find(arg => !arg.startsWith('--')) || 'all';
   
-  for (const arg of args) {
-    if (arg.startsWith('--version=')) {
-      version = arg.split('=')[1];
-    } else if (!arg.startsWith('--')) {
-      platform = arg;
-    }
-  }
+  // Extract version from --version=X.X.X format
+  const versionArg = args.find(arg => arg.startsWith('--version='));
+  const version = versionArg ? versionArg.split('=')[1] : null;
   
   return { platform, version };
 }
 
 /**
  * Determine the Claude Code version to use
- * @param {string|null} cliVersion - Version from CLI argument
- * @returns {string} - The version to use
+ * @param {string|null} cliVersion - Version specified via CLI
+ * @returns {string} - Version to use
  */
 function determineClaudeCodeVersion(cliVersion) {
-  const defaultVersion = '1.0.41';
-  
   if (cliVersion) {
-    console.log(`\n🔍 Using Claude Code version from CLI argument: ${cliVersion}`);
+    console.log(`Using CLI-specified version: ${cliVersion}`);
     return cliVersion;
   }
   
-  console.log(`\n🔍 Using default Claude Code version: ${defaultVersion}`);
+  // Default version
+  const defaultVersion = '1.0.41';
+  console.log(`Using default version: ${defaultVersion}`);
   return defaultVersion;
+}
+
+/**
+ * Cross-platform tar extraction using Node.js
+ * @param {string} tarballPath - Path to the tarball
+ * @param {string} extractDir - Directory to extract to
+ */
+async function extractTarball(tarballPath, extractDir) {
+  if (process.platform === 'win32') {
+    // On Windows, try to use tar if available (Windows 10+ has built-in tar)
+    try {
+      await runCommand('tar', ['-xzf', tarballPath], { cwd: extractDir });
+    } catch (error) {
+      // If tar fails, try using PowerShell
+      console.log('Built-in tar failed, trying PowerShell...');
+      await runCommand('powershell', [
+        '-Command',
+        `Expand-Archive -Path "${tarballPath}" -DestinationPath "${extractDir}" -Force`
+      ]);
+    }
+  } else {
+    // On Unix/Linux/macOS, use tar
+    await runCommand('tar', ['-xzf', tarballPath], { cwd: extractDir });
+  }
 }
 
 /**
@@ -142,11 +192,9 @@ async function fetchClaudeCodePackage(version) {
     
     console.log(`Found tarball: ${tarball}`);
     
-    // Extract the tarball
+    // Extract the tarball using cross-platform method
     console.log('Extracting package...');
-    await runCommand('tar', ['-xzf', tarball], { 
-      cwd: tempDir 
-    });
+    await extractTarball(join(tempDir, tarball), tempDir);
     
     // Verify extraction
     if (!(await pathExists(packageDir))) {
@@ -207,8 +255,8 @@ async function copyRequiredFiles(packageDir) {
         await rm(destPath, { recursive: true, force: true });
       }
       
-      // Copy directory recursively using cp command
-      await runCommand('cp', ['-r', srcPath, destPath]);
+      // Copy directory recursively using cross-platform function
+      await copyDirectory(srcPath, destPath);
     } else {
       console.warn(`Warning: ${dir}/ directory not found in package`);
     }
