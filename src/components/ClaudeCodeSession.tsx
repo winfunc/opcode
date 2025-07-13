@@ -106,6 +106,10 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   // Add collapsed state for queued prompts
   const [queuedPromptsCollapsed, setQueuedPromptsCollapsed] = useState(false);
   
+  // Auto-scroll behavior state
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
+  const isUserScrollingRef = useRef(false);
+  
   const parentRef = useRef<HTMLDivElement>(null);
   const unlistenRefs = useRef<UnlistenFn[]>([]);
   const hasActiveSessionRef = useRef(false);
@@ -118,6 +122,13 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   useEffect(() => {
     queuedPromptsRef.current = queuedPrompts;
   }, [queuedPrompts]);
+
+  // Reset auto-scroll when starting a new session
+  useEffect(() => {
+    if (isFirstPrompt) {
+      setShouldAutoScroll(true);
+    }
+  }, [isFirstPrompt]);
 
   // Get effective session info (from prop or extracted) - use useMemo to ensure it updates
   const effectiveSession = useMemo(() => {
@@ -239,12 +250,84 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     onStreamingChange?.(isLoading, claudeSessionId);
   }, [isLoading, claudeSessionId, onStreamingChange]);
 
-  // Auto-scroll to bottom when new messages arrive
-  useEffect(() => {
-    if (displayableMessages.length > 0) {
-      rowVirtualizer.scrollToIndex(displayableMessages.length - 1, { align: 'end', behavior: 'smooth' });
+  // Helper function to check if user is at bottom
+  const isAtBottom = () => {
+    const element = parentRef.current;
+    if (!element) return false;
+    
+    // Consider user at bottom if they're within 50px of the bottom
+    const threshold = 50;
+    const isAtBottom = element.scrollTop + element.clientHeight >= element.scrollHeight - threshold;
+    return isAtBottom;
+  };
+
+  // Helper function to scroll to bottom
+  const scrollToBottom = () => {
+    const element = parentRef.current;
+    if (element) {
+      element.scrollTop = element.scrollHeight;
     }
-  }, [displayableMessages.length, rowVirtualizer]);
+  };
+
+  // Add scroll event listener to detect user scrolling
+  useEffect(() => {
+    const element = parentRef.current;
+    if (!element) return;
+
+    const handleScroll = () => {
+      if (isUserScrollingRef.current) {
+        // User is actively scrolling, check if they're at bottom
+        const atBottom = isAtBottom();
+        setShouldAutoScroll(atBottom);
+      }
+    };
+
+    // Unified scroll handler that includes timeout fallback
+    let scrollTimeout: NodeJS.Timeout;
+    const handleScrollWithTimeout = () => {
+      isUserScrollingRef.current = true;
+      clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(() => {
+        isUserScrollingRef.current = false;
+      }, 150);
+      handleScroll();
+    };
+    
+    element.addEventListener('scroll', handleScrollWithTimeout);
+
+    return () => {
+      element.removeEventListener('scroll', handleScrollWithTimeout);
+      clearTimeout(scrollTimeout);
+    };
+  }, []);
+
+  // Auto-scroll to bottom when new messages arrive (only if should auto-scroll)
+  useEffect(() => {
+    if (shouldAutoScroll && displayableMessages.length > 0) {
+      // Use setTimeout to ensure the DOM has updated
+      setTimeout(() => {
+        scrollToBottom();
+      }, 10);
+    }
+  }, [displayableMessages.length, shouldAutoScroll]);
+
+  // Auto-scroll when loading state changes (to show/hide loader)
+  useEffect(() => {
+    if (shouldAutoScroll && isLoading) {
+      setTimeout(() => {
+        scrollToBottom();
+      }, 10);
+    }
+  }, [isLoading, shouldAutoScroll]);
+
+  // Auto-scroll when messages are updated (for streaming content)
+  useEffect(() => {
+    if (shouldAutoScroll && messages.length > 0) {
+      setTimeout(() => {
+        scrollToBottom();
+      }, 10);
+    }
+  }, [messages, shouldAutoScroll]);
 
   // Calculate total tokens from messages
   useEffect(() => {
@@ -1244,6 +1327,8 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                   onClick={() => {
                     // Use virtualizer to scroll to the last item
                     if (displayableMessages.length > 0) {
+                      // Re-enable auto-scroll
+                      setShouldAutoScroll(true);
                       // Scroll to bottom of the container
                       const scrollElement = parentRef.current;
                       if (scrollElement) {

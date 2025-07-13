@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
-/* Dark theme configuration */
+/* Dynamic theme configuration - defaults to dark */
 @theme {
-  /* Colors */
+  /* Colors - will be overridden by JavaScript theme system */
   --color-background: oklch(0.12 0.01 240);
   --color-foreground: oklch(0.98 0.01 240);
   --color-card: oklch(0.14 0.01 240);
@@ -52,6 +52,128 @@ body {
   background-color: var(--color-background);
   color: var(--color-foreground);
   font-family: var(--font-sans);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Smooth transitions for theme switching */
+.bg-background,
+.bg-card,
+.bg-popover,
+.bg-primary,
+.bg-secondary,
+.bg-muted,
+.bg-accent,
+.border-border,
+.text-foreground,
+.text-muted-foreground {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Enhanced theme transition effect */
+.theme-transitioning * {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease !important;
+}
+
+/* Light theme specific improvements for better contrast */
+[data-theme="light"] {
+  /* Enhanced borders for better definition */
+  --color-border: oklch(0.82 0.01 240);
+  --color-input: oklch(0.88 0.01 240);
+  
+  /* Better contrast for interactive elements */
+  --color-accent: oklch(0.90 0.01 240);
+  --color-muted: oklch(0.92 0.01 240);
+  --color-secondary: oklch(0.90 0.01 240);
+  
+  /* Improved card contrast */
+  --color-card: oklch(0.96 0.005 240);
+}
+
+/* Enhanced hover states for light theme */
+[data-theme="light"] .hover\:bg-accent:hover {
+  background-color: oklch(0.88 0.01 240) !important;
+}
+
+[data-theme="light"] .hover\:bg-muted:hover {
+  background-color: oklch(0.90 0.01 240) !important;
+}
+
+/* Better button contrast in light mode */
+[data-theme="light"] .bg-primary {
+  background-color: oklch(0.35 0.15 240) !important;
+}
+
+[data-theme="light"] .bg-secondary {
+  background-color: oklch(0.88 0.01 240) !important;
+}
+
+/* Enhanced card styling for light theme */
+[data-theme="light"] .border {
+  border-color: oklch(0.82 0.01 240) !important;
+}
+
+[data-theme="light"] .border-border {
+  border-color: oklch(0.82 0.01 240) !important;
+}
+
+/* Better shadows for light theme cards */
+[data-theme="light"] .shadow-sm {
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05), 0 1px 3px 0 rgba(0, 0, 0, 0.1) !important;
+}
+
+[data-theme="light"] .shadow-lg {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Enhanced hover effects for light theme */
+[data-theme="light"] .hover\:shadow-lg:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Better text contrast for light theme */
+[data-theme="light"] .text-muted-foreground {
+  color: oklch(0.45 0.01 240) !important;
+}
+
+/* Improved button ghost variant for light theme */
+[data-theme="light"] .bg-transparent:hover {
+  background-color: oklch(0.92 0.01 240) !important;
+}
+
+/* Better form input styling for light theme */
+[data-theme="light"] input,
+[data-theme="light"] textarea,
+[data-theme="light"] select {
+  background-color: oklch(0.98 0.005 240) !important;
+  border-color: oklch(0.82 0.01 240) !important;
+  color: oklch(0.15 0.01 240) !important;
+}
+
+[data-theme="light"] input:focus,
+[data-theme="light"] textarea:focus,
+[data-theme="light"] select:focus {
+  border-color: oklch(0.45 0.15 240) !important;
+  box-shadow: 0 0 0 2px oklch(0.45 0.15 240 / 0.1) !important;
+}
+
+/* Enhanced topbar styling for light theme */
+[data-theme="light"] .bg-background\/95 {
+  background-color: oklch(0.99 0.005 240 / 0.95) !important;
+}
+
+/* Better dropdown and popover styling */
+[data-theme="light"] .bg-popover {
+  background-color: oklch(0.98 0.005 240) !important;
+  border-color: oklch(0.82 0.01 240) !important;
+}
+
+/* Improved status indicator colors */
+[data-theme="light"] .text-green-500 {
+  color: oklch(0.55 0.18 142) !important;
+}
+
+[data-theme="light"] .fill-green-500 {
+  fill: oklch(0.55 0.18 142) !important;
 }
 
 /* Placeholder text styling */
@@ -157,7 +279,7 @@ button:focus-visible,
   }
 }
 
-/* Markdown Editor Dark Mode Styles */
+/* Markdown Editor Theme Styles */
 [data-color-mode="dark"] {
   --color-border-default: rgb(48, 54, 61);
   --color-canvas-default: rgb(13, 17, 23);
@@ -167,6 +289,17 @@ button:focus-visible,
   --color-fg-subtle: rgb(110, 118, 129);
   --color-accent-fg: rgb(88, 166, 255);
   --color-danger-fg: rgb(248, 81, 73);
+}
+
+[data-color-mode="light"] {
+  --color-border-default: rgb(208, 215, 222);
+  --color-canvas-default: rgb(255, 255, 255);
+  --color-canvas-subtle: rgb(246, 248, 250);
+  --color-fg-default: rgb(36, 41, 47);
+  --color-fg-muted: rgb(101, 109, 118);
+  --color-fg-subtle: rgb(146, 154, 164);
+  --color-accent-fg: rgb(9, 105, 218);
+  --color-danger-fg: rgb(218, 54, 51);
 }
 
 .w-md-editor {
@@ -530,9 +663,9 @@ button:focus-visible,
     from var(--angle),
     transparent 0%,
     transparent 85%,
-    #d97757 90%,
-    #ff9a7a 92.5%,
-    #d97757 95%,
+    var(--color-primary) 90%,
+    var(--color-accent) 92.5%,
+    var(--color-primary) 95%,
     transparent 100%
   );
   -webkit-mask: 
@@ -665,6 +798,66 @@ code::-webkit-scrollbar-thumb:hover,
 .code-preview-scroll {
   scrollbar-width: thin;
   scrollbar-color: rgba(107, 114, 128, 0.4) rgba(0, 0, 0, 0.2);
+}
+
+/* Professional enhancements for better visual hierarchy */
+
+/* Subtle gradient backgrounds for cards */
+.card-gradient-dark {
+  background: linear-gradient(135deg, 
+    var(--color-card) 0%, 
+    oklch(from var(--color-card) calc(l + 0.005) c h) 100%
+  );
+}
+
+.card-gradient-light {
+  background: linear-gradient(135deg, 
+    var(--color-card) 0%, 
+    oklch(from var(--color-card) calc(l - 0.005) c h) 100%
+  );
+}
+
+/* Enhanced focus states */
+.focus-ring {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
+}
+
+/* Improved button hover states */
+.button-hover-primary:hover {
+  background-color: oklch(from var(--color-primary) calc(l + 0.05) c h);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px oklch(from var(--color-primary) l c h / 0.25);
+}
+
+.button-hover-secondary:hover {
+  background-color: oklch(from var(--color-secondary) calc(l + 0.02) c h);
+  transform: translateY(-1px);
+}
+
+/* Professional shadows */
+.shadow-professional {
+  box-shadow: 
+    0 1px 3px oklch(0 0 0 / 0.1),
+    0 1px 2px oklch(0 0 0 / 0.06);
+}
+
+.shadow-professional-lg {
+  box-shadow: 
+    0 4px 6px oklch(0 0 0 / 0.07),
+    0 2px 4px oklch(0 0 0 / 0.06);
+}
+
+/* Enhanced text hierarchy */
+.text-primary-enhanced {
+  color: var(--color-primary);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.text-secondary-enhanced {
+  color: var(--color-muted-foreground);
+  font-weight: 500;
 }
 
 /* NFO Credits Scanlines Animation */
