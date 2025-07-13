@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Circle, FileText, Settings, ExternalLink, BarChart3, Network, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover } from "@/components/ui/popover";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { api, type ClaudeVersionStatus } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -212,6 +213,8 @@ export const Topbar: React.FC<TopbarProps> = ({
           <Settings className="mr-2 h-3 w-3" />
           Settings
         </Button>
+        
+        <ThemeToggle size="sm" />
         
         <Button
           variant="ghost"

@@ -6,7 +6,8 @@ import {
   FileText, 
   ChevronRight, 
   Settings,
-  MoreVertical
+  MoreVertical,
+  Plus
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -35,6 +36,10 @@ interface ProjectListProps {
    * Callback when hooks configuration is clicked
    */
   onProjectSettings?: (project: Project) => void;
+  /**
+   * Callback when new session is clicked for a project
+   */
+  onNewSession?: (project: Project) => void;
   /**
    * Whether the list is currently loading
    */
@@ -68,6 +73,7 @@ export const ProjectList: React.FC<ProjectListProps> = ({
   projects,
   onProjectClick,
   onProjectSettings,
+  onNewSession,
   className,
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
@@ -135,6 +141,20 @@ export const ProjectList: React.FC<ProjectListProps> = ({
                   </div>
                   
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {onNewSession && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onNewSession(project);
+                        }}
+                        title="New Claude Code session"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    )}
                     {onProjectSettings && (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>

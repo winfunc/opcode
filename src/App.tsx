@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Loader2, Bot, FolderCode } from "lucide-react";
 import { api, type Project, type Session, type ClaudeMdFile } from "@/lib/api";
 import { OutputCacheProvider } from "@/lib/outputCache";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ProjectList } from "@/components/ProjectList";
@@ -56,6 +57,7 @@ function App() {
   const [isClaudeStreaming, setIsClaudeStreaming] = useState(false);
   const [projectForSettings, setProjectForSettings] = useState<Project | null>(null);
   const [previousView, setPreviousView] = useState<View>("welcome");
+  const [selectedProjectPath, setSelectedProjectPath] = useState<string | null>(null);
 
   // Load projects on mount when in projects view
   useEffect(() => {
@@ -128,6 +130,16 @@ function App() {
   const handleNewSession = async () => {
     handleViewChange("claude-code-session");
     setSelectedSession(null);
+    setSelectedProjectPath(null);
+  };
+
+  /**
+   * Opens a new Claude Code session for a specific project
+   */
+  const handleNewSessionForProject = async (project: Project) => {
+    handleViewChange("claude-code-session");
+    setSelectedSession(null);
+    setSelectedProjectPath(project.path);
   };
 
   /**
@@ -377,6 +389,7 @@ function App() {
                           projects={projects}
                           onProjectClick={handleProjectClick}
                           onProjectSettings={handleProjectSettings}
+                          onNewSession={handleNewSessionForProject}
                           loading={loading}
                           className="animate-fade-in"
                         />
@@ -407,8 +420,10 @@ function App() {
         return (
           <ClaudeCodeSession
             session={selectedSession || undefined}
+            initialProjectPath={selectedProjectPath || undefined}
             onBack={() => {
               setSelectedSession(null);
+              setSelectedProjectPath(null);
               handleViewChange("projects");
             }}
             onStreamingChange={(isStreaming, sessionId) => {
@@ -449,49 +464,51 @@ function App() {
   };
 
   return (
-    <OutputCacheProvider>
-      <div className="h-screen bg-background flex flex-col">
-        {/* Topbar */}
-        <Topbar
-          onClaudeClick={() => handleViewChange("editor")}
-          onSettingsClick={() => handleViewChange("settings")}
-          onUsageClick={() => handleViewChange("usage-dashboard")}
-          onMCPClick={() => handleViewChange("mcp")}
-          onInfoClick={() => setShowNFO(true)}
-        />
-        
-        {/* Main Content */}
-        <div className="flex-1 overflow-y-auto">
-          {renderContent()}
+    <ThemeProvider>
+      <OutputCacheProvider>
+        <div className="h-screen bg-background flex flex-col">
+          {/* Topbar */}
+          <Topbar
+            onClaudeClick={() => handleViewChange("editor")}
+            onSettingsClick={() => handleViewChange("settings")}
+            onUsageClick={() => handleViewChange("usage-dashboard")}
+            onMCPClick={() => handleViewChange("mcp")}
+            onInfoClick={() => setShowNFO(true)}
+          />
+          
+          {/* Main Content */}
+          <div className="flex-1 overflow-y-auto">
+            {renderContent()}
+          </div>
+          
+          {/* NFO Credits Modal */}
+          {showNFO && <NFOCredits onClose={() => setShowNFO(false)} />}
+          
+          {/* Claude Binary Dialog */}
+          <ClaudeBinaryDialog
+            open={showClaudeBinaryDialog}
+            onOpenChange={setShowClaudeBinaryDialog}
+            onSuccess={() => {
+              setToast({ message: "Claude binary path saved successfully", type: "success" });
+              // Trigger a refresh of the Claude version check
+              window.location.reload();
+            }}
+            onError={(message) => setToast({ message, type: "error" })}
+          />
+          
+          {/* Toast Container */}
+          <ToastContainer>
+            {toast && (
+              <Toast
+                message={toast.message}
+                type={toast.type}
+                onDismiss={() => setToast(null)}
+              />
+            )}
+          </ToastContainer>
         </div>
-        
-        {/* NFO Credits Modal */}
-        {showNFO && <NFOCredits onClose={() => setShowNFO(false)} />}
-        
-        {/* Claude Binary Dialog */}
-        <ClaudeBinaryDialog
-          open={showClaudeBinaryDialog}
-          onOpenChange={setShowClaudeBinaryDialog}
-          onSuccess={() => {
-            setToast({ message: "Claude binary path saved successfully", type: "success" });
-            // Trigger a refresh of the Claude version check
-            window.location.reload();
-          }}
-          onError={(message) => setToast({ message, type: "error" })}
-        />
-        
-        {/* Toast Container */}
-        <ToastContainer>
-          {toast && (
-            <Toast
-              message={toast.message}
-              type={toast.type}
-              onDismiss={() => setToast(null)}
-            />
-          )}
-        </ToastContainer>
-      </div>
-    </OutputCacheProvider>
+      </OutputCacheProvider>
+    </ThemeProvider>
   );
 }
 
