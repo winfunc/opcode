@@ -1,0 +1,172 @@
+name: Build Test
+
+# Trigger on every push and pull request
+on:
+  push:
+    branches: [ main, develop, 'release/**', 'feature/**' ]
+  pull_request:
+    branches: [ main, develop ]
+    types: [opened, synchronize, reopened]
+
+# Cancel in-progress workflows when a new commit is pushed
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  build-test:
+    name: Build Test (${{ matrix.platform.name }})
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - name: Linux
+            os: ubuntu-latest
+            rust-target: x86_64-unknown-linux-gnu
+          - name: Windows
+            os: windows-latest
+            rust-target: x86_64-pc-windows-msvc
+          - name: macOS
+            os: macos-latest
+            rust-target: x86_64-apple-darwin
+    
+    runs-on: ${{ matrix.platform.os }}
+    
+    steps:
+      # Checkout the repository
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Install system dependencies for Linux
+      - name: Install Linux dependencies
+        if: matrix.platform.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libssl-dev \
+            libglib2.0-dev \
+            libjavascriptcoregtk-4.1-dev \
+            libsoup-3.0-dev \
+            libxdo-dev \
+            libxcb-shape0-dev \
+            libxcb-xfixes0-dev
+
+      # Setup Rust with caching
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform.rust-target }}
+
+      # Cache Rust dependencies
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+          key: ${{ matrix.platform.os }}-rust-${{ hashFiles('**/Cargo.lock') }}
+          
+      # Setup Bun
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      # Cache Bun dependencies
+      - name: Cache Bun dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.bun
+            node_modules
+          key: ${{ matrix.platform.os }}-bun-${{ hashFiles('bun.lockb', 'package.json') }}
+          restore-keys: |
+            ${{ matrix.platform.os }}-bun-
+      
+      # Install frontend dependencies
+      - name: Install frontend dependencies
+        run: bun install --frozen-lockfile
+
+      # Build frontend
+      - name: Build frontend
+        run: bun run build
+
+      # Build Tauri application (no bundle for faster CI)
+      - name: Build Tauri application
+        run: bun run tauri build --no-bundle -d
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ""
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
+
+      # Upload build artifacts for debugging (optional)
+      - name: Upload build logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs-${{ matrix.platform.name }}
+          path: |
+            src-tauri/target/release/build/*/output
+            src-tauri/target/debug/build/*/output
+          retention-days: 3
+
+  # Summary job to ensure all builds pass
+  build-test-summary:
+    name: Build Test Summary
+    runs-on: ubuntu-latest
+    needs: [build-test]
+    if: always()
+    
+    steps:
+      - name: Check build results
+        run: |
+          if [[ "${{ needs.build-test.result }}" == "failure" ]]; then
+            echo "❌ One or more build tests failed"
+            exit 1
+          elif [[ "${{ needs.build-test.result }}" == "cancelled" ]]; then
+            echo "⚠️ Build tests were cancelled"
+            exit 1
+          else
+            echo "✅ All build tests passed successfully"
+          fi
+
+      - name: Create status comment (PR only)
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const result = '${{ needs.build-test.result }}';
+            const emoji = result === 'success' ? '✅' : '❌';
+            const status = result === 'success' ? 'All build tests passed!' : 'Build tests failed';
+            
+            // Create a comment summarizing the build status
+            const comment = `## ${emoji} Build Test Results
+            
+            **Status**: ${status}
+            **Commit**: ${{ github.event.pull_request.head.sha || github.sha }}
+            
+            | Platform | Status |
+            |----------|--------|
+            | Linux    | ${{ contains(needs.build-test.result, 'success') && '✅' || '❌' }} |
+            | Windows  | ${{ contains(needs.build-test.result, 'success') && '✅' || '❌' }} |
+            | macOS    | ${{ contains(needs.build-test.result, 'success') && '✅' || '❌' }} |
+            
+            [View full workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})`;
+            
+            // Only post comment if it's a PR
+            if (context.eventName === 'pull_request') {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: comment
+              });
+            } 
