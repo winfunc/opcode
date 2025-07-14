@@ -19,7 +19,7 @@
  */
 
 import { spawn } from 'child_process';
-import { mkdir, rm, readdir, copyFile, access } from 'fs/promises';
+import { mkdir, rm, readdir, copyFile, access, cp } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join, resolve } from 'path';
 
@@ -207,8 +207,8 @@ async function copyRequiredFiles(packageDir) {
         await rm(destPath, { recursive: true, force: true });
       }
       
-      // Copy directory recursively using cp command
-      await runCommand('cp', ['-r', srcPath, destPath]);
+      // Copy directory recursively using Node.js built-in function
+      await cp(srcPath, destPath, { recursive: true });
     } else {
       console.warn(`Warning: ${dir}/ directory not found in package`);
     }
