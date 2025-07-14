@@ -20,10 +20,6 @@ jobs:
         include:
           - target: x86_64-pc-windows-msvc
             arch: x64
-          - target: i686-pc-windows-msvc
-            arch: x86
-          - target: aarch64-pc-windows-msvc
-            arch: arm64
 
     steps:
       - name: Checkout repository
