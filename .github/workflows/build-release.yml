@@ -23,25 +23,41 @@ jobs:
       fail-fast: false
       matrix:
         platform:
-          - name: Linux
+          - name: Linux AppImage
             os: ubuntu-latest
             rust-target: x86_64-unknown-linux-gnu
-            artifact-name: linux-x86_64
+            artifact-name: linux-x86_64-appimage
+            bundle-type: appimage
             bundle-pattern: '*.AppImage'
-          - name: Windows
+          - name: Linux DEB
+            os: ubuntu-latest
+            rust-target: x86_64-unknown-linux-gnu
+            artifact-name: linux-x86_64-deb
+            bundle-type: deb
+            bundle-pattern: '*.deb'
+          - name: Windows MSI
             os: windows-latest
             rust-target: x86_64-pc-windows-msvc
-            artifact-name: windows-x86_64
+            artifact-name: windows-x86_64-msi
+            bundle-type: msi
             bundle-pattern: '*.msi'
+          - name: Windows EXE
+            os: windows-latest
+            rust-target: x86_64-pc-windows-msvc
+            artifact-name: windows-x86_64-exe
+            bundle-type: nsis
+            bundle-pattern: '*.exe'
           - name: macOS Intel
             os: macos-latest
             rust-target: x86_64-apple-darwin
             artifact-name: macos-x86_64
+            bundle-type: dmg
             bundle-pattern: '*.dmg'
           - name: macOS Apple Silicon
             os: macos-latest
             rust-target: aarch64-apple-darwin
             artifact-name: macos-aarch64
+            bundle-type: dmg
             bundle-pattern: '*.dmg'
     
     runs-on: ${{ matrix.platform.os }}
@@ -125,9 +141,9 @@ jobs:
       - name: Build Tauri application
         run: |
           if [ "${{ matrix.platform.rust-target }}" = "aarch64-apple-darwin" ]; then
-            bun run tauri build --target ${{ matrix.platform.rust-target }}
+            bun run tauri build --target ${{ matrix.platform.rust-target }} --bundles ${{ matrix.platform.bundle-type }}
           else
-            bun run tauri build
+            bun run tauri build --bundles ${{ matrix.platform.bundle-type }}
           fi
         shell: bash
         env:
@@ -138,23 +154,24 @@ jobs:
       - name: Find build artifacts
         id: find-artifacts
         run: |
-          if [ "${{ matrix.platform.os }}" = "ubuntu-latest" ]; then
+          if [ "${{ matrix.platform.bundle-type }}" = "appimage" ]; then
             BUNDLE_PATH=$(find src-tauri/target/release/bundle/appimage -name "*.AppImage" | head -1)
-            echo "bundle_path=$BUNDLE_PATH" >> $GITHUB_OUTPUT
-            echo "bundle_name=$(basename "$BUNDLE_PATH")" >> $GITHUB_OUTPUT
-          elif [ "${{ matrix.platform.os }}" = "windows-latest" ]; then
+          elif [ "${{ matrix.platform.bundle-type }}" = "deb" ]; then
+            BUNDLE_PATH=$(find src-tauri/target/release/bundle/deb -name "*.deb" | head -1)
+          elif [ "${{ matrix.platform.bundle-type }}" = "msi" ]; then
             BUNDLE_PATH=$(find src-tauri/target/release/bundle/msi -name "*.msi" | head -1)
-            echo "bundle_path=$BUNDLE_PATH" >> $GITHUB_OUTPUT
-            echo "bundle_name=$(basename "$BUNDLE_PATH")" >> $GITHUB_OUTPUT
-          elif [ "${{ matrix.platform.os }}" = "macos-latest" ]; then
+          elif [ "${{ matrix.platform.bundle-type }}" = "nsis" ]; then
+            BUNDLE_PATH=$(find src-tauri/target/release/bundle/nsis -name "*.exe" | head -1)
+          elif [ "${{ matrix.platform.bundle-type }}" = "dmg" ]; then
             if [ "${{ matrix.platform.rust-target }}" = "aarch64-apple-darwin" ]; then
               BUNDLE_PATH=$(find src-tauri/target/aarch64-apple-darwin/release/bundle/dmg -name "*.dmg" | head -1)
             else
               BUNDLE_PATH=$(find src-tauri/target/release/bundle/dmg -name "*.dmg" | head -1)
             fi
-            echo "bundle_path=$BUNDLE_PATH" >> $GITHUB_OUTPUT
-            echo "bundle_name=$(basename "$BUNDLE_PATH")" >> $GITHUB_OUTPUT
           fi
+          
+          echo "bundle_path=$BUNDLE_PATH" >> $GITHUB_OUTPUT
+          echo "bundle_name=$(basename "$BUNDLE_PATH")" >> $GITHUB_OUTPUT
         shell: bash
 
       # 重命名构建产物
@@ -199,7 +216,7 @@ jobs:
       - name: Prepare release files
         run: |
           mkdir -p ./release-files
-          find ./artifacts -type f \( -name "*.AppImage" -o -name "*.msi" -o -name "*.dmg" \) -exec cp {} ./release-files/ \;
+          find ./artifacts -type f \( -name "*.AppImage" -o -name "*.deb" -o -name "*.msi" -o -name "*.exe" -o -name "*.dmg" \) -exec cp {} ./release-files/ \;
           ls -la ./release-files/
 
       # 获取版本标签
@@ -225,10 +242,14 @@ jobs:
           for file in ./release-files/*; do
             if [ -f "$file" ]; then
               filename=$(basename "$file")
-              if [[ "$filename" == *"linux"* ]]; then
-                echo "- **Linux (x86_64)**: \`$filename\`" >> CHANGELOG.md
-              elif [[ "$filename" == *"windows"* ]]; then
-                echo "- **Windows (x86_64)**: \`$filename\`" >> CHANGELOG.md
+              if [[ "$filename" == *"linux"* && "$filename" == *"appimage"* ]]; then
+                echo "- **Linux AppImage (x86_64)**: \`$filename\`" >> CHANGELOG.md
+              elif [[ "$filename" == *"linux"* && "$filename" == *"deb"* ]]; then
+                echo "- **Linux DEB (x86_64)**: \`$filename\`" >> CHANGELOG.md
+              elif [[ "$filename" == *"windows"* && "$filename" == *"msi"* ]]; then
+                echo "- **Windows MSI (x86_64)**: \`$filename\`" >> CHANGELOG.md
+              elif [[ "$filename" == *"windows"* && "$filename" == *"exe"* ]]; then
+                echo "- **Windows EXE (x86_64)**: \`$filename\`" >> CHANGELOG.md
               elif [[ "$filename" == *"macos-x86_64"* ]]; then
                 echo "- **macOS (Intel)**: \`$filename\`" >> CHANGELOG.md
               elif [[ "$filename" == *"macos-aarch64"* ]]; then
