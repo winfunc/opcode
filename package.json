@@ -7,6 +7,12 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "prebuild": "",
+    "build:executables": "bun run scripts/fetch-and-build.js --version=1.0.41",
+    "build:executables:current": "bun run scripts/fetch-and-build.js current --version=1.0.41",
+    "build:executables:linux": "bun run scripts/fetch-and-build.js linux --version=1.0.41",
+    "build:executables:macos": "bun run scripts/fetch-and-build.js macos --version=1.0.41",
+    "build:executables:windows": "bun run scripts/fetch-and-build.js windows --version=1.0.41",
     "preview": "vite preview",
     "tauri": "tauri",
     "build:dmg": "tauri build --bundles dmg",
@@ -70,5 +76,9 @@
   "trustedDependencies": [
     "@parcel/watcher",
     "@tailwindcss/oxide"
-  ]
+  ],
+  "optionalDependencies": {
+    "@esbuild/linux-x64": "^0.25.6",
+    "@rollup/rollup-linux-x64-gnu": "^4.45.1"
+  }
 }

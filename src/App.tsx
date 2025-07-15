@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Bot, FolderCode } from "lucide-react";
 import { api, type Project, type Session, type ClaudeMdFile } from "@/lib/api";
+import { initializeWebMode } from "@/lib/apiAdapter";
 import { OutputCacheProvider } from "@/lib/outputCache";
 import { TabProvider } from "@/contexts/TabContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
@@ -81,6 +82,11 @@ function AppContent() {
       });
     }
   }, [view, projects.length, hasTrackedFirstChat, trackEvent]);
+
+  // Initialize web mode compatibility on mount
+  useEffect(() => {
+    initializeWebMode();
+  }, []);
 
   // Load projects on mount when in projects view
   useEffect(() => {

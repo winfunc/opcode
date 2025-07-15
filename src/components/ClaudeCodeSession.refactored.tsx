@@ -107,26 +107,45 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
 
   // Handle sending prompts
   const handleSendPrompt = useCallback(async (prompt: string, model: "sonnet" | "opus") => {
-    if (!projectPath || !prompt.trim()) return;
+    console.log('[TRACE] handleSendPrompt called:');
+    console.log('[TRACE]   prompt length:', prompt.length);
+    console.log('[TRACE]   model:', model);
+    console.log('[TRACE]   projectPath:', projectPath);
+    console.log('[TRACE]   isStreaming:', isStreaming);
+    console.log('[TRACE]   isFirstPrompt:', isFirstPrompt);
+    console.log('[TRACE]   claudeSessionId:', claudeSessionId);
+    
+    if (!projectPath || !prompt.trim()) {
+      console.log('[TRACE] Aborting - no project path or empty prompt');
+      return;
+    }
 
     // Add to queue if streaming
     if (isStreaming) {
+      console.log('[TRACE] Currently streaming - adding to queue');
       const id = Date.now().toString();
       setQueuedPrompts(prev => [...prev, { id, prompt, model }]);
       return;
     }
 
     try {
+      console.log('[TRACE] Clearing error and starting prompt execution');
       setError(null);
       
       if (isFirstPrompt) {
+        console.log('[TRACE] First prompt - calling api.executeClaudeCode');
         await api.executeClaudeCode(projectPath, prompt, model);
         setIsFirstPrompt(false);
+        console.log('[TRACE] executeClaudeCode completed');
       } else if (claudeSessionId) {
+        console.log('[TRACE] Continue prompt - calling api.continueClaudeCode');
         await api.continueClaudeCode(projectPath, prompt, model);
+        console.log('[TRACE] continueClaudeCode completed');
+      } else {
+        console.log('[TRACE] No claude session ID for continue');
       }
     } catch (error) {
-      console.error("Failed to send prompt:", error);
+      console.error("[TRACE] Failed to send prompt:", error);
       setError(error instanceof Error ? error.message : "Failed to send prompt");
     }
   }, [projectPath, isStreaming, isFirstPrompt, claudeSessionId]);
