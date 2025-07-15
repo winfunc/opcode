@@ -1,5 +1,191 @@
-import { invoke } from "@tauri-apps/api/core";
+// Web API implementation - no backend dependency
 import type { HooksConfiguration } from '@/types/hooks';
+
+// Mock invoke function for web compatibility
+async function invoke<T = unknown>(command: string, args?: unknown): Promise<T> {
+  console.warn(`[WEB MODE] Backend command "${command}" called with args:`, args);
+  
+  // Return mock data or empty arrays for different commands
+  switch (command) {
+    case 'list_agents':
+      return [] as T;
+    case 'list_projects': 
+      return [] as T;
+    case 'get_project_sessions':
+      return [] as T;
+    case 'get_claude_installations':
+      return [] as T;
+    case 'load_session_history':
+      return [] as T;
+    case 'get_usage_stats':
+      return {
+        total_cost: 15.42,
+        total_tokens: 125000,
+        total_sessions: 45,
+        unique_projects: 8,
+        days_with_usage: 12,
+        by_model: [
+          {
+            model: 'claude-3-5-sonnet-20241022',
+            total_cost: 12.30,
+            total_tokens: 98000,
+            input_tokens: 45000,
+            output_tokens: 35000,
+            cache_creation_tokens: 12000,
+            cache_read_tokens: 6000,
+            session_count: 32
+          },
+          {
+            model: 'claude-3-5-haiku-20241022',
+            total_cost: 3.12,
+            total_tokens: 27000,
+            input_tokens: 15000,
+            output_tokens: 8000,
+            cache_creation_tokens: 3000,
+            cache_read_tokens: 1000,
+            session_count: 13
+          }
+        ],
+        by_day: [
+          { date: '2025-07-13', total_cost: 2.45, total_tokens: 18500, models_used: ['claude-3-5-sonnet-20241022'] },
+          { date: '2025-07-12', total_cost: 3.21, total_tokens: 22000, models_used: ['claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022'] },
+          { date: '2025-07-11', total_cost: 1.89, total_tokens: 15600, models_used: ['claude-3-5-haiku-20241022'] },
+          { date: '2025-07-10', total_cost: 4.15, total_tokens: 31000, models_used: ['claude-3-5-sonnet-20241022'] },
+          { date: '2025-07-09', total_cost: 3.72, total_tokens: 28900, models_used: ['claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022'] }
+        ],
+        by_date: [
+          { date: '2025-07-13', total_cost: 2.45, total_tokens: 18500, models_used: ['claude-3-5-sonnet-20241022'] },
+          { date: '2025-07-12', total_cost: 3.21, total_tokens: 22000, models_used: ['claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022'] },
+          { date: '2025-07-11', total_cost: 1.89, total_tokens: 15600, models_used: ['claude-3-5-haiku-20241022'] },
+          { date: '2025-07-10', total_cost: 4.15, total_tokens: 31000, models_used: ['claude-3-5-sonnet-20241022'] },
+          { date: '2025-07-09', total_cost: 3.72, total_tokens: 28900, models_used: ['claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022'] }
+        ],
+        by_project: [
+          {
+            project_path: '/Applications/XAMPP/xamppfiles/htdocs/mysite/claudia',
+            project_name: 'Claudia',
+            total_cost: 8.95,
+            total_tokens: 68000,
+            session_count: 25,
+            last_used: '2025-07-13T19:30:00Z'
+          },
+          {
+            project_path: '/Users/dev/projects/brnestrm-web',
+            project_name: 'BRNESTRM Web',
+            total_cost: 4.20,
+            total_tokens: 32000,
+            session_count: 12,
+            last_used: '2025-07-12T14:22:00Z'
+          },
+          {
+            project_path: '/Users/dev/projects/ai-automation',
+            project_name: 'AI Automation',
+            total_cost: 2.27,
+            total_tokens: 25000,
+            session_count: 8,
+            last_used: '2025-07-11T09:15:00Z'
+          }
+        ]
+      } as T;
+    case 'get_usage_by_date_range':
+      // UsageStats 타입 데이터 반환 (날짜 필터링된 버전)
+      return {
+        total_cost: 8.25,
+        total_tokens: 45000,
+        total_sessions: 15,
+        unique_projects: 3,
+        days_with_usage: 3,
+        by_model: [
+          {
+            model: 'claude-3-5-sonnet-20241022',
+            total_cost: 6.30,
+            total_tokens: 35000,
+            input_tokens: 18000,
+            output_tokens: 12000,
+            cache_creation_tokens: 3500,
+            cache_read_tokens: 1500,
+            session_count: 10
+          },
+          {
+            model: 'claude-3-5-haiku-20241022',
+            total_cost: 1.95,
+            total_tokens: 10000,
+            input_tokens: 6000,
+            output_tokens: 3000,
+            cache_creation_tokens: 800,
+            cache_read_tokens: 200,
+            session_count: 5
+          }
+        ],
+        by_day: [
+          { date: '2025-07-13', total_cost: 2.45, total_tokens: 18500, models_used: ['claude-3-5-sonnet-20241022'] },
+          { date: '2025-07-12', total_cost: 3.21, total_tokens: 22000, models_used: ['claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022'] },
+          { date: '2025-07-11', total_cost: 2.59, total_tokens: 4500, models_used: ['claude-3-5-haiku-20241022'] }
+        ],
+        by_date: [
+          { date: '2025-07-13', total_cost: 2.45, total_tokens: 18500, models_used: ['claude-3-5-sonnet-20241022'] },
+          { date: '2025-07-12', total_cost: 3.21, total_tokens: 22000, models_used: ['claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022'] },
+          { date: '2025-07-11', total_cost: 2.59, total_tokens: 4500, models_used: ['claude-3-5-haiku-20241022'] }
+        ],
+        by_project: [
+          {
+            project_path: '/Applications/XAMPP/xamppfiles/htdocs/mysite/claudia',
+            project_name: 'Claudia',
+            total_cost: 5.20,
+            total_tokens: 28000,
+            session_count: 8,
+            last_used: '2025-07-13T19:30:00Z'
+          },
+          {
+            project_path: '/Users/dev/projects/brnestrm-web',
+            project_name: 'BRNESTRM Web',
+            total_cost: 2.15,
+            total_tokens: 12000,
+            session_count: 5,
+            last_used: '2025-07-12T14:22:00Z'
+          }
+        ]
+      } as T;
+    case 'get_session_stats':
+      // ProjectUsage[] 타입에 맞는 데이터 반환
+      return [
+        {
+          project_path: '/Applications/XAMPP/xamppfiles/htdocs/mysite/claudia',
+          project_name: 'Claudia',
+          total_cost: 8.95,
+          total_tokens: 68000,
+          session_count: 25,
+          last_used: '2025-07-13T19:30:00Z'
+        },
+        {
+          project_path: '/Users/dev/projects/brnestrm-web',
+          project_name: 'BRNESTRM Web',
+          total_cost: 4.20,
+          total_tokens: 32000,
+          session_count: 12,
+          last_used: '2025-07-12T14:22:00Z'
+        },
+        {
+          project_path: '/Users/dev/projects/ai-automation',
+          project_name: 'AI Automation',
+          total_cost: 2.27,
+          total_tokens: 25000,
+          session_count: 8,
+          last_used: '2025-07-11T09:15:00Z'
+        }
+      ] as T;
+    case 'list_running_sessions':
+      return [] as T;
+    case 'check_claude_version':
+      return {
+        is_installed: true,
+        version: '1.0.0',
+        path: '/usr/local/bin/claude'
+      } as T;
+    default:
+      return null as T;
+  }
+}
 
 /** Process type for tracking in ProcessRegistry */
 export type ProcessType = 
@@ -42,7 +228,7 @@ export interface Session {
   /** The project path */
   project_path: string;
   /** Optional todo data associated with this session */
-  todo_data?: any;
+  todo_data?: unknown;
   /** Unix timestamp when the session file was created */
   created_at: number;
   /** First user message content (if available) */
@@ -55,7 +241,7 @@ export interface Session {
  * Represents the settings from ~/.claude/settings.json
  */
 export interface ClaudeSettings {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 /**
@@ -960,7 +1146,7 @@ export const api = {
   /**
    * Loads the JSONL history for a specific session
    */
-  async loadSessionHistory(sessionId: string, projectId: string): Promise<any[]> {
+  async loadSessionHistory(sessionId: string, projectId: string): Promise<unknown[]> {
     return invoke("load_session_history", { sessionId, projectId });
   },
 
@@ -970,9 +1156,9 @@ export const api = {
    * @param sessionId - The session ID (UUID)
    * @returns Promise resolving to array of session messages
    */
-  async loadAgentSessionHistory(sessionId: string): Promise<any[]> {
+  async loadAgentSessionHistory(sessionId: string): Promise<unknown[]> {
     try {
-      return await invoke<any[]>('load_agent_session_history', { sessionId });
+      return await invoke<unknown[]>('load_agent_session_history', { sessionId });
     } catch (error) {
       console.error("Failed to load agent session history:", error);
       throw error;
@@ -1012,7 +1198,7 @@ export const api = {
    * Lists all currently running Claude sessions
    * @returns Promise resolving to list of running Claude sessions
    */
-  async listRunningClaudeSessions(): Promise<any[]> {
+  async listRunningClaudeSessions(): Promise<unknown[]> {
     return invoke("list_running_claude_sessions");
   },
 
@@ -1556,9 +1742,9 @@ export const api = {
    * Lists all tables in the SQLite database
    * @returns Promise resolving to an array of table information
    */
-  async storageListTables(): Promise<any[]> {
+  async storageListTables(): Promise<unknown[]> {
     try {
-      return await invoke<any[]>("storage_list_tables");
+      return await invoke<unknown[]>("storage_list_tables");
     } catch (error) {
       console.error("Failed to list tables:", error);
       throw error;
@@ -1578,9 +1764,9 @@ export const api = {
     page: number,
     pageSize: number,
     searchQuery?: string
-  ): Promise<any> {
+  ): Promise<unknown> {
     try {
-      return await invoke<any>("storage_read_table", {
+      return await invoke<unknown>("storage_read_table", {
         tableName,
         page,
         pageSize,
@@ -1601,8 +1787,8 @@ export const api = {
    */
   async storageUpdateRow(
     tableName: string,
-    primaryKeyValues: Record<string, any>,
-    updates: Record<string, any>
+    primaryKeyValues: Record<string, unknown>,
+    updates: Record<string, unknown>
   ): Promise<void> {
     try {
       return await invoke<void>("storage_update_row", {
@@ -1624,7 +1810,7 @@ export const api = {
    */
   async storageDeleteRow(
     tableName: string,
-    primaryKeyValues: Record<string, any>
+    primaryKeyValues: Record<string, unknown>
   ): Promise<void> {
     try {
       return await invoke<void>("storage_delete_row", {
@@ -1645,7 +1831,7 @@ export const api = {
    */
   async storageInsertRow(
     tableName: string,
-    values: Record<string, any>
+    values: Record<string, unknown>
   ): Promise<number> {
     try {
       return await invoke<number>("storage_insert_row", {
@@ -1663,9 +1849,9 @@ export const api = {
    * @param query - SQL query string
    * @returns Promise resolving to query result
    */
-  async storageExecuteSql(query: string): Promise<any> {
+  async storageExecuteSql(query: string): Promise<unknown> {
     try {
-      return await invoke<any>("storage_execute_sql", { query });
+      return await invoke<unknown>("storage_execute_sql", { query });
     } catch (error) {
       console.error("Failed to execute SQL:", error);
       throw error;

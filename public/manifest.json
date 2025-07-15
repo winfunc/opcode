@@ -1,0 +1,37 @@
+{
+  "name": "Claudia - AI Assistant Platform",
+  "short_name": "Claudia",
+  "description": "통합 AI 생태계 플랫폼 - 186개 MCP 도구와 Claude Code 통합",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#1a1a1a",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "32x32",
+      "type": "image/x-icon"
+    }
+  ],
+  "categories": ["productivity", "developer"],
+  "lang": "ko",
+  "dir": "ltr",
+  "scope": "/",
+  "shortcuts": [
+    {
+      "name": "새 AI 세션",
+      "short_name": "AI 세션",
+      "description": "새로운 Claude Code 세션 시작",
+      "url": "/?action=new-session",
+      "icons": [{ "src": "/favicon.ico", "sizes": "32x32" }]
+    },
+    {
+      "name": "CC Agents",
+      "short_name": "Agents",
+      "description": "CC 에이전트 관리",
+      "url": "/?tab=cc-agents",
+      "icons": [{ "src": "/favicon.ico", "sizes": "32x32" }]
+    }
+  ]
+}

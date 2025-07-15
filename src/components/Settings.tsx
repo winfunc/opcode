@@ -115,17 +115,18 @@ export const Settings: React.FC<SettingsProps> = ({
 
       // Parse permissions
       if (loadedSettings.permissions && typeof loadedSettings.permissions === 'object') {
-        if (Array.isArray(loadedSettings.permissions.allow)) {
+        const perms = loadedSettings.permissions as { allow?: string[]; deny?: string[] };
+        if (Array.isArray(perms.allow)) {
           setAllowRules(
-            loadedSettings.permissions.allow.map((rule: string, index: number) => ({
+            perms.allow.map((rule: string, index: number) => ({
               id: `allow-${index}`,
               value: rule,
             }))
           );
         }
-        if (Array.isArray(loadedSettings.permissions.deny)) {
+        if (Array.isArray(perms.deny)) {
           setDenyRules(
-            loadedSettings.permissions.deny.map((rule: string, index: number) => ({
+            perms.deny.map((rule: string, index: number) => ({
               id: `deny-${index}`,
               value: rule,
             }))
@@ -413,7 +414,7 @@ export const Settings: React.FC<SettingsProps> = ({
                         type="number"
                         min="1"
                         placeholder="30"
-                        value={settings?.cleanupPeriodDays || ""}
+                        value={String(settings?.cleanupPeriodDays || "")}
                         onChange={(e) => {
                           const value = e.target.value ? parseInt(e.target.value) : undefined;
                           updateSetting("cleanupPeriodDays", value);
@@ -659,7 +660,7 @@ export const Settings: React.FC<SettingsProps> = ({
                     <Input
                       id="apiKeyHelper"
                       placeholder="/path/to/generate_api_key.sh"
-                      value={settings?.apiKeyHelper || ""}
+                      value={String(settings?.apiKeyHelper || "")}
                       onChange={(e) => updateSetting("apiKeyHelper", e.target.value || undefined)}
                     />
                     <p className="text-xs text-muted-foreground">

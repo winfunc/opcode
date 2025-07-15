@@ -22,7 +22,7 @@ import { Toast, ToastContainer } from '@/components/ui/toast';
 import { Popover } from '@/components/ui/popover';
 import { api, type AgentRunWithMetrics } from '@/lib/api';
 import { useOutputCache } from '@/lib/outputCache';
-import { listen, type UnlistenFn } from '@tauri-apps/api/event';
+import { listen, type UnlistenFn } from '@/lib/web-tauri-mocks';
 import { StreamMessage } from './StreamMessage';
 import { ErrorBoundary } from './ErrorBoundary';
 import { formatISOTimestamp } from '@/lib/date-utils';
@@ -158,8 +158,8 @@ export function AgentRunOutputViewer({
           
           // Convert history to messages format
           const loadedMessages: ClaudeStreamMessage[] = history.map(entry => ({
-            ...entry,
-            type: entry.type || "assistant"
+            ...(entry as ClaudeStreamMessage),
+            type: (entry as ClaudeStreamMessage).type || "assistant"
           }));
           
           setMessages(loadedMessages);
@@ -261,7 +261,7 @@ export function AgentRunOutputViewer({
       }, 100);
 
       // Set up live event listeners with run ID isolation
-      const outputUnlisten = await listen<string>(`agent-output:${run.id}`, (event) => {
+      const outputUnlisten = await listen(`agent-output:${run.id}`, (event) => {
         try {
           // Skip messages during initial load phase
           if (isInitialLoadRef.current) {
@@ -280,17 +280,17 @@ export function AgentRunOutputViewer({
         }
       });
 
-      const errorUnlisten = await listen<string>(`agent-error:${run.id}`, (event) => {
+      const errorUnlisten = await listen(`agent-error:${run.id}`, (event) => {
         console.error("[AgentRunOutputViewer] Agent error:", event.payload);
         setToast({ message: event.payload, type: 'error' });
       });
 
-      const completeUnlisten = await listen<boolean>(`agent-complete:${run.id}`, () => {
+      const completeUnlisten = await listen(`agent-complete:${run.id}`, () => {
         setToast({ message: 'Agent execution completed', type: 'success' });
         // Don't set status here as the parent component should handle it
       });
 
-      const cancelUnlisten = await listen<boolean>(`agent-cancelled:${run.id}`, () => {
+      const cancelUnlisten = await listen(`agent-cancelled:${run.id}`, () => {
         setToast({ message: 'Agent execution was cancelled', type: 'error' });
       });
 

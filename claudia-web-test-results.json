@@ -1,0 +1,14 @@
+{
+  "success": true,
+  "title": "Claudia - Claude Code Session Browser",
+  "url": "http://localhost:1420/",
+  "screenshotDir": "/Applications/XAMPP/xamppfiles/htdocs/mysite/claudia/claudia-web-screenshots",
+  "contentAnalysis": {
+    "hasAgents": true,
+    "hasProjects": true,
+    "hasGateway": true,
+    "hasConnection": true,
+    "hasUsage": true
+  },
+  "fullText": "\n    Browser Compatibility Warning⚠️ Google Chrome has limited functionality. Playwright MCP and browser automation features will not work.Please switch to Chromium browser for full functionality.Supported browsers: Chromium (유일한 지원 브라우저)Download ChromiumDismiss WarningClaude CodeUsage DashboardCLAUDE.mdMCPSettingsWelcome to ClaudiaCC AgentsCC ProjectsMCP Gateway ToolsDisconnectedMCP Gateway not connected. Make sure it's running on port 8080.Retry Connection\n    \n  \n\n"
+}

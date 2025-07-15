@@ -125,9 +125,9 @@ export const StorageTab: React.FC = () => {
       setLoading(true);
       setError(null);
       const result = await api.storageListTables();
-      setTables(result);
-      if (result.length > 0 && !selectedTable) {
-        setSelectedTable(result[0].name);
+      setTables(result as TableInfo[]);
+      if (Array.isArray(result) && result.length > 0 && !selectedTable) {
+        setSelectedTable((result[0] as TableInfo).name);
       }
     } catch (err) {
       console.error("Failed to load tables:", err);
@@ -152,7 +152,7 @@ export const StorageTab: React.FC = () => {
         pageSize,
         search || searchQuery || undefined
       );
-      setTableData(result);
+      setTableData(result as TableData);
       setCurrentPage(page);
     } catch (err) {
       console.error("Failed to load table data:", err);
@@ -256,10 +256,10 @@ export const StorageTab: React.FC = () => {
       setLoading(true);
       setSqlError(null);
       const result = await api.storageExecuteSql(sqlQuery);
-      setSqlResult(result);
+      setSqlResult(result as QueryResult);
       
       // Refresh tables and data if it was a non-SELECT query
-      if (result.rows_affected !== undefined) {
+      if (result && typeof result === 'object' && 'rows_affected' in (result as QueryResult)) {
         await loadTables();
         if (selectedTable) {
           await loadTableData(currentPage);

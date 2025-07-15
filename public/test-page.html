@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claudia Backend Connection Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #ffffff;
+        }
+        .test-section {
+            background: #2a2a2a;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 1px solid #444;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-family: monospace;
+        }
+        .pass { background: #1a5a1a; border: 1px solid #2a8a2a; }
+        .fail { background: #5a1a1a; border: 1px solid #8a2a2a; }
+        .pending { background: #5a5a1a; border: 1px solid #8a8a2a; }
+        button {
+            background: #007acc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #005a9a; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .summary {
+            background: #333;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .json-output {
+            background: #111;
+            border: 1px solid #666;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔍 Claudia Backend Connection Test</h1>
+        <p>Testing all backend connections after Tauri startup</p>
+        <p><strong>Backend URL:</strong> http://localhost:1420</p>
+        <button onclick="runAllTests()">🚀 Run All Tests</button>
+        <button onclick="clearResults()">🗑️ Clear Results</button>
+    </div>
+
+    <div class="summary" id="summary" style="display: none;">
+        <h3>📊 Test Summary</h3>
+        <div id="summaryContent"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>📋 Backend API Tests</h2>
+        <div id="testResults"></div>
+    </div>
+
+    <script>
+        let testResults = [];
+
+        async function runAllTests() {
+            clearResults();
+            const resultsDiv = document.getElementById('testResults');
+            resultsDiv.innerHTML = '<div class="test-result pending">🔄 Starting tests...</div>';
+
+            const tests = [
+                {
+                    name: 'Usage Dashboard',
+                    description: 'Test usage statistics loading',
+                    test: async () => {
+                        // Since we can't import directly, we'll check if the invoke function exists
+                        if (typeof window.__TAURI__ !== 'undefined') {
+                            return await window.__TAURI__.core.invoke('get_usage_stats');
+                        } else {
+                            throw new Error('Tauri not available');
+                        }
+                    }
+                },
+                {
+                    name: 'CLAUDE.md Loading',
+                    description: 'Test system prompt loading',
+                    test: async () => {
+                        if (typeof window.__TAURI__ !== 'undefined') {
+                            return await window.__TAURI__.core.invoke('get_system_prompt');
+                        } else {
+                            throw new Error('Tauri not available');
+                        }
+                    }
+                },
+                {
+                    name: 'MCP Servers',
+                    description: 'Test MCP server listing',
+                    test: async () => {
+                        if (typeof window.__TAURI__ !== 'undefined') {
+                            return await window.__TAURI__.core.invoke('mcp_list');
+                        } else {
+                            throw new Error('Tauri not available');
+                        }
+                    }
+                },
+                {
+                    name: 'Claude Settings',
+                    description: 'Test settings loading',
+                    test: async () => {
+                        if (typeof window.__TAURI__ !== 'undefined') {
+                            return await window.__TAURI__.core.invoke('get_claude_settings');
+                        } else {
+                            throw new Error('Tauri not available');
+                        }
+                    }
+                },
+                {
+                    name: 'CC Agents',
+                    description: 'Test agent listing',
+                    test: async () => {
+                        if (typeof window.__TAURI__ !== 'undefined') {
+                            return await window.__TAURI__.core.invoke('list_agents');
+                        } else {
+                            throw new Error('Tauri not available');
+                        }
+                    }
+                },
+                {
+                    name: 'CC Projects',
+                    description: 'Test project listing',
+                    test: async () => {
+                        if (typeof window.__TAURI__ !== 'undefined') {
+                            return await window.__TAURI__.core.invoke('list_projects');
+                        } else {
+                            throw new Error('Tauri not available');
+                        }
+                    }
+                },
+                {
+                    name: 'Claude Version',
+                    description: 'Test Claude version check',
+                    test: async () => {
+                        if (typeof window.__TAURI__ !== 'undefined') {
+                            return await window.__TAURI__.core.invoke('check_claude_version');
+                        } else {
+                            throw new Error('Tauri not available');
+                        }
+                    }
+                }
+            ];
+
+            resultsDiv.innerHTML = '';
+            testResults = [];
+
+            for (const testCase of tests) {
+                const resultDiv = document.createElement('div');
+                resultDiv.className = 'test-result pending';
+                resultDiv.innerHTML = `🔄 Running: ${testCase.name} - ${testCase.description}`;
+                resultsDiv.appendChild(resultDiv);
+
+                try {
+                    const startTime = Date.now();
+                    const result = await testCase.test();
+                    const duration = Date.now() - startTime;
+
+                    resultDiv.className = 'test-result pass';
+                    resultDiv.innerHTML = `
+                        ✅ <strong>${testCase.name}</strong> - PASS (${duration}ms)<br>
+                        <small>${testCase.description}</small>
+                        <div class="json-output">${JSON.stringify(result, null, 2)}</div>
+                    `;
+
+                    testResults.push({
+                        name: testCase.name,
+                        status: 'PASS',
+                        duration,
+                        response: result
+                    });
+
+                } catch (error) {
+                    const duration = Date.now() - startTime;
+                    
+                    resultDiv.className = 'test-result fail';
+                    resultDiv.innerHTML = `
+                        ❌ <strong>${testCase.name}</strong> - FAIL (${duration}ms)<br>
+                        <small>${testCase.description}</small><br>
+                        <strong>Error:</strong> ${error.message}
+                        <div class="json-output">${JSON.stringify(error, null, 2)}</div>
+                    `;
+
+                    testResults.push({
+                        name: testCase.name,
+                        status: 'FAIL',
+                        duration,
+                        error: error.message
+                    });
+                }
+
+                // Small delay between tests
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+
+            updateSummary();
+        }
+
+        function updateSummary() {
+            const summaryDiv = document.getElementById('summary');
+            const summaryContent = document.getElementById('summaryContent');
+            
+            const passed = testResults.filter(r => r.status === 'PASS').length;
+            const failed = testResults.filter(r => r.status === 'FAIL').length;
+            const total = testResults.length;
+            const successRate = total > 0 ? (passed / total * 100).toFixed(1) : 0;
+
+            summaryContent.innerHTML = `
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; text-align: center;">
+                    <div>
+                        <div style="font-size: 24px; color: #2a8a2a;">✅ ${passed}</div>
+                        <div>Passed</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 24px; color: #8a2a2a;">❌ ${failed}</div>
+                        <div>Failed</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 24px; color: #8a8a2a;">📊 ${total}</div>
+                        <div>Total</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 24px; color: #2a8a8a;">📈 ${successRate}%</div>
+                        <div>Success Rate</div>
+                    </div>
+                </div>
+            `;
+
+            summaryDiv.style.display = 'block';
+        }
+
+        function clearResults() {
+            document.getElementById('testResults').innerHTML = '';
+            document.getElementById('summary').style.display = 'none';
+            testResults = [];
+        }
+
+        // Check Tauri availability on load
+        window.addEventListener('load', () => {
+            const statusDiv = document.createElement('div');
+            statusDiv.className = 'test-result';
+            
+            if (typeof window.__TAURI__ !== 'undefined') {
+                statusDiv.className += ' pass';
+                statusDiv.innerHTML = '✅ Tauri runtime is available and ready for testing';
+            } else {
+                statusDiv.className += ' fail';
+                statusDiv.innerHTML = '❌ Tauri runtime not detected - backend connection tests will fail';
+            }
+            
+            document.getElementById('testResults').appendChild(statusDiv);
+        });
+    </script>
+</body>
+</html>

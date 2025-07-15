@@ -40,7 +40,7 @@ export const RunningClaudeSessions: React.FC<RunningClaudeSessionsProps> = ({
   const loadRunningSessions = async () => {
     try {
       const sessions = await api.listRunningClaudeSessions();
-      setRunningSessions(sessions);
+      setRunningSessions(sessions as ProcessInfo[]);
       setError(null);
     } catch (err) {
       console.error("Failed to load running sessions:", err);

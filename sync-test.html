@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Desktop ↔ Browser Sync Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 4px; }
+        button { margin: 5px; padding: 8px 16px; }
+    </style>
+</head>
+<body>
+    <h1>🔄 Desktop ↔ Browser Sync Test</h1>
+    <div id="status"></div>
+    <div id="data"></div>
+    
+    <button onclick="testProjects()">Test Projects</button>
+    <button onclick="testSettings()">Test Settings</button>
+    <button onclick="testAgents()">Test CC Agents</button>
+    <button onclick="clearResults()">Clear</button>
+    
+    <script>
+        const status = document.getElementById('status');
+        const data = document.getElementById('data');
+        
+        function log(message, type = 'info') {
+            const p = document.createElement('p');
+            p.className = type;
+            p.innerHTML = message;
+            status.appendChild(p);
+        }
+        
+        function showData(title, obj) {
+            const div = document.createElement('div');
+            div.innerHTML = `<h3>${title}</h3><pre>${JSON.stringify(obj, null, 2)}</pre>`;
+            data.appendChild(div);
+        }
+        
+        function clearResults() {
+            status.innerHTML = '';
+            data.innerHTML = '';
+        }
+        
+        async function testProjects() {
+            log('🧪 Testing Projects API...');
+            try {
+                if (!window.__TAURI__) {
+                    log('❌ Tauri not available - running in web mode', 'error');
+                    return;
+                }
+                
+                const { invoke } = window.__TAURI__.core;
+                const projects = await invoke('list_projects');
+                log(`✅ Found ${projects.length} projects`, 'success');
+                showData('Projects Data', projects);
+                
+                if (projects.length > 0) {
+                    // Test getting sessions for first project
+                    const sessions = await invoke('get_project_sessions', { projectId: projects[0].id });
+                    log(`✅ Found ${sessions.length} sessions in project "${projects[0].path}"`, 'success');
+                    showData('Sessions Data', sessions);
+                }
+            } catch (e) {
+                log(`❌ Projects test failed: ${e.message}`, 'error');
+            }
+        }
+        
+        async function testSettings() {
+            log('⚙️ Testing Settings API...');
+            try {
+                if (!window.__TAURI__) {
+                    log('❌ Tauri not available', 'error');
+                    return;
+                }
+                
+                const { invoke } = window.__TAURI__.core;
+                const settings = await invoke('get_claude_settings');
+                log('✅ Settings loaded successfully', 'success');
+                showData('Settings Data', settings);
+            } catch (e) {
+                log(`❌ Settings test failed: ${e.message}`, 'error');
+            }
+        }
+        
+        async function testAgents() {
+            log('🤖 Testing CC Agents API...');
+            try {
+                if (!window.__TAURI__) {
+                    log('❌ Tauri not available', 'error');
+                    return;
+                }
+                
+                const { invoke } = window.__TAURI__.core;
+                
+                // Test agents listing
+                try {
+                    const agents = await invoke('list_agents');
+                    log(`✅ Found ${agents.length} CC Agents`, 'success');
+                    showData('CC Agents Data', agents);
+                } catch (e) {
+                    log(`ℹ️ Agents API call: ${e.message}`, 'info');
+                }
+                
+                // Test running sessions
+                try {
+                    const sessions = await invoke('list_running_claude_sessions');
+                    log(`✅ Found ${sessions.length} running Claude sessions`, 'success');
+                    showData('Running Sessions', sessions);
+                } catch (e) {
+                    log(`ℹ️ Running sessions: ${e.message}`, 'info');
+                }
+                
+            } catch (e) {
+                log(`❌ Agents test failed: ${e.message}`, 'error');
+            }
+        }
+        
+        // Browser compatibility check
+        function checkBrowserCompatibility() {
+            const userAgent = navigator.userAgent;
+            let browserName = 'Unknown';
+            let isSupported = false;
+            
+            if (userAgent.includes('Chromium')) {
+                browserName = 'Chromium';
+                isSupported = true;
+            } else if (userAgent.includes('Chrome') && !userAgent.includes('Edg')) {
+                browserName = 'Google Chrome';
+                isSupported = false;
+            } else if (userAgent.includes('Edg')) {
+                browserName = 'Microsoft Edge';
+                isSupported = false;
+            } else if (userAgent.includes('Safari') && !userAgent.includes('Chrome')) {
+                browserName = 'Safari';
+                isSupported = false;
+            } else if (userAgent.includes('Firefox')) {
+                browserName = 'Firefox';
+                isSupported = false;
+            }
+            
+            if (isSupported) {
+                log(`✅ Browser: ${browserName} (유일한 지원 브라우저)`, 'success');
+            } else {
+                log(`⚠️ Browser: ${browserName} (지원되지 않음 - Playwright MCP 작동 안함)`, 'error');
+                log('🔧 Chromium 브라우저만 사용하세요!', 'error');
+            }
+            
+            return isSupported;
+        }
+        
+        // Auto-run basic tests when page loads
+        window.addEventListener('load', () => {
+            log('🚀 Starting sync tests...');
+            
+            // Check browser compatibility first
+            const isCompatible = checkBrowserCompatibility();
+            
+            setTimeout(testProjects, 500);
+            setTimeout(testSettings, 1000);
+            setTimeout(testAgents, 1500);
+            
+            if (!isCompatible) {
+                setTimeout(() => {
+                    log('📋 Test results may be limited due to browser compatibility issues', 'info');
+                }, 2000);
+            }
+        });
+    </script>
+</body>
+</html>

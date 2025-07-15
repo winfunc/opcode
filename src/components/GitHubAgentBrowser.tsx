@@ -18,7 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { api, type GitHubAgentFile, type AgentExport, type Agent } from "@/lib/api";
 import { type AgentIconName } from "./CCAgents";
 import { ICON_MAP } from "./IconPicker";
-import { open } from "@tauri-apps/plugin-shell";
+import { shellOpen as open } from "@/lib/web-tauri-mocks";
 
 interface GitHubAgentBrowserProps {
   isOpen: boolean;

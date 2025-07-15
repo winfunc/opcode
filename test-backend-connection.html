@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Backend Connection</title>
+</head>
+<body>
+    <h1>Testing Tauri Backend Connection</h1>
+    <div id="results"></div>
+    
+    <script>
+        async function testBackendConnection() {
+            const results = document.getElementById('results');
+            
+            try {
+                // Test if Tauri APIs are available
+                if (typeof window.__TAURI__ !== 'undefined') {
+                    results.innerHTML += '<p>✅ Tauri APIs available</p>';
+                    
+                    // Test invoke functionality
+                    const { invoke } = window.__TAURI__.core;
+                    
+                    try {
+                        // Test a simple backend call
+                        const projects = await invoke('list_projects');
+                        results.innerHTML += `<p>✅ Backend connected - Found ${projects.length} projects</p>`;
+                        results.innerHTML += `<pre>${JSON.stringify(projects, null, 2)}</pre>`;
+                    } catch (e) {
+                        results.innerHTML += `<p>❌ Backend call failed: ${e.message}</p>`;
+                    }
+                    
+                    try {
+                        // Test settings loading
+                        const settings = await invoke('get_claude_settings');
+                        results.innerHTML += '<p>✅ Settings loaded successfully</p>';
+                        results.innerHTML += `<pre>${JSON.stringify(settings, null, 2)}</pre>`;
+                    } catch (e) {
+                        results.innerHTML += `<p>❌ Settings loading failed: ${e.message}</p>`;
+                    }
+                    
+                } else {
+                    results.innerHTML += '<p>❌ Tauri APIs not available - running in pure web mode</p>';
+                }
+            } catch (e) {
+                results.innerHTML += `<p>❌ Error: ${e.message}</p>`;
+            }
+        }
+        
+        // Run test when page loads
+        window.addEventListener('load', testBackendConnection);
+    </script>
+</body>
+</html>

@@ -27,9 +27,28 @@ https://github.com/user-attachments/assets/bf0bdf9d-ba91-45af-9ac4-7274f57075cf
 
 ## 🌟 Overview
 
-**Claudia** is a powerful desktop application that transforms how you interact with Claude Code. Built with Tauri 2, it provides a beautiful GUI for managing your Claude Code sessions, creating custom agents, tracking usage, and much more.
+**Claudia** is a powerful web application that transforms how you interact with Claude Code. Built with Vite, it provides a beautiful GUI for managing your Claude Code sessions, creating custom agents, tracking usage, and much more.
 
 Think of Claudia as your command center for Claude Code - bridging the gap between the command-line tool and a visual experience that makes AI-assisted development more intuitive and productive.
+
+## ⚠️ **Browser Requirements**
+
+> **🚨 IMPORTANT**: When using Claudia in a web browser, you **MUST** use **Chromium**.
+
+**✅ Required Browser:**
+- **Chromium** (필수 - Playwright MCP 호환성)
+
+**❌ NOT Supported:**
+- Google Chrome (혼잡 가능성)
+- Safari
+- Firefox
+- Microsoft Edge
+- Brave Browser
+- Other browsers
+
+**Why?** Claudia integrates with Playwright MCP for browser automation and testing, which requires the specific Chromium engine. Other browsers, including Chrome, may cause conflicts.
+
+📖 **[Read detailed browser requirements →](BROWSER_REQUIREMENTS.md)**
 
 ## 📋 Table of Contents
 
@@ -244,35 +263,35 @@ brew install pkg-config
    
    **For Development (with hot reload)**
    ```bash
-   bun run tauri dev
+   bun run dev
    ```
    
    **For Production Build**
    ```bash
    # Build the application
-   bun run tauri build
+   bun run build
    
    # The built executable will be in:
-   # - Linux: src-tauri/target/release/bundle/
-   # - macOS: src-tauri/target/release/bundle/
-   # - Windows: src-tauri/target/release/bundle/
+   # - Linux: dist/target/release/bundle/
+   # - macOS: dist/target/release/bundle/
+   # - Windows: dist/target/release/bundle/
    ```
 
 4. **Platform-Specific Build Options**
    
    **Debug Build (faster compilation, larger binary)**
    ```bash
-   bun run tauri build --debug
+   bun run build --debug
    ```
    
    **Build without bundling (creates just the executable)**
    ```bash
-   bun run tauri build --no-bundle
+   bun run build --no-bundle
    ```
    
    **Universal Binary for macOS (Intel + Apple Silicon)**
    ```bash
-   bun run tauri build --target universal-apple-darwin
+   bun run build --target universal-apple-darwin
    ```
 
 ### Troubleshooting
@@ -306,10 +325,10 @@ After building, you can verify the application works:
 ```bash
 # Run the built executable directly
 # Linux/macOS
-./src-tauri/target/release/claudia
+./dist/target/release/claudia
 
 # Windows
-./src-tauri/target/release/claudia.exe
+./dist/target/release/claudia.exe
 ```
 
 ### Build Artifacts
@@ -324,7 +343,7 @@ The build process creates several artifacts:
   - `.msi` installer (Windows)
   - `.exe` installer (Windows)
 
-All artifacts are located in `src-tauri/target/release/bundle/`.
+All artifacts are located in `dist/target/release/bundle/`.
 
 ## 🛠️ Development
 
@@ -344,7 +363,7 @@ claudia/
 │   ├── components/        # UI components
 │   ├── lib/               # API client & utilities
 │   └── assets/            # Static assets
-├── src-tauri/             # Rust backend
+├── dist/             # Rust backend
 │   ├── src/
 │   │   ├── commands/      # Tauri command handlers
 │   │   ├── checkpoint/    # Timeline management
@@ -357,7 +376,7 @@ claudia/
 
 ```bash
 # Start development server
-bun run tauri dev
+bun run dev
 
 # Run frontend only
 bun run dev
@@ -366,10 +385,10 @@ bun run dev
 bunx tsc --noEmit
 
 # Run Rust tests
-cd src-tauri && cargo test
+cd dist && cargo test
 
 # Format code
-cd src-tauri && cargo fmt
+cd dist && cargo fmt
 ```
 
 ## 🔒 Security
@@ -401,7 +420,7 @@ This project is licensed under the AGPL License - see the [LICENSE](LICENSE) fil
 
 ## 🙏 Acknowledgments
 
-- Built with [Tauri](https://tauri.app/) - The secure framework for building desktop apps
+- Built with [Vite](https://vitejs.dev/) - Fast web development server
 - [Claude](https://claude.ai) by Anthropic
 
 ---

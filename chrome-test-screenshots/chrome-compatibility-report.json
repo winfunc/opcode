@@ -1,0 +1,37 @@
+{
+  "timestamp": "2025-07-13T05:38:59.935Z",
+  "url": "http://localhost:1420",
+  "chrome": {
+    "available": true,
+    "errors": []
+  },
+  "chromium": {
+    "available": true,
+    "errors": []
+  },
+  "tests": {
+    "navigation": {
+      "chrome": true,
+      "chromium": true
+    },
+    "screenshot": {
+      "chrome": true,
+      "chromium": true
+    },
+    "elementDetection": {
+      "chrome": true,
+      "chromium": false
+    },
+    "interaction": {
+      "chrome": true,
+      "chromium": false
+    }
+  },
+  "screenshots": [
+    "chrome-test-screenshots/chrome-main-page.png",
+    "chrome-test-screenshots/chrome-before-click.png",
+    "chrome-test-screenshots/chrome-after-click.png",
+    "chrome-test-screenshots/chromium-comparison.png"
+  ],
+  "recommendation": "CHROME FULLY COMPATIBLE: Google Chrome works perfectly with Playwright MCP. Users can rely on Chrome without needing Chromium."
+}

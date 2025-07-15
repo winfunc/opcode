@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Loader2, Bot, FolderCode } from "lucide-react";
+import { Plus, Loader2, Bot, FolderCode, Users } from "lucide-react";
 import { api, type Project, type Session, type ClaudeMdFile } from "@/lib/api";
 import { OutputCacheProvider } from "@/lib/outputCache";
 import { Button } from "@/components/ui/button";
@@ -16,10 +16,13 @@ import { CCAgents } from "@/components/CCAgents";
 import { ClaudeCodeSession } from "@/components/ClaudeCodeSession";
 import { UsageDashboard } from "@/components/UsageDashboard";
 import { MCPManager } from "@/components/MCPManager";
+import { MCPToolsPanel } from "@/components/MCPToolsPanel";
 import { NFOCredits } from "@/components/NFOCredits";
 import { ClaudeBinaryDialog } from "@/components/ClaudeBinaryDialog";
 import { Toast, ToastContainer } from "@/components/ui/toast";
 import { ProjectSettings } from '@/components/ProjectSettings';
+import { BrowserCompatibilityWarning } from '@/components/BrowserCompatibilityWarning';
+import { CrewAIManager } from '@/components/CrewAIManager';
 
 type View = 
   | "welcome" 
@@ -34,8 +37,10 @@ type View =
   | "agent-execution"
   | "agent-run-view"
   | "mcp"
+  | "mcp-tools"
   | "usage-dashboard"
-  | "project-settings";
+  | "project-settings"
+  | "crewai";
 
 /**
  * Main App component - Manages the Claude directory browser UI
@@ -219,7 +224,7 @@ function App() {
               </motion.div>
 
               {/* Navigation Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
                 {/* CC Agents Card */}
                 <motion.div
                   initial={{ opacity: 0, scale: 0.9 }}
@@ -254,7 +259,37 @@ function App() {
                   </Card>
                 </motion.div>
 
+                {/* CrewAI Card */}
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.5, delay: 0.3 }}
+                >
+                  <Card 
+                    className="h-64 cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-lg border border-border/50 shimmer-hover trailing-border"
+                    onClick={() => handleViewChange("crewai")}
+                  >
+                    <div className="h-full flex flex-col items-center justify-center p-8">
+                      <Users className="h-16 w-16 mb-4 text-primary" />
+                      <h2 className="text-xl font-semibold">CrewAI</h2>
+                      <p className="text-sm text-muted-foreground mt-2 text-center">
+                        BRNESTRM 생태계
+                      </p>
+                    </div>
+                  </Card>
+                </motion.div>
+
               </div>
+
+              {/* MCP Tools Panel */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.3 }}
+                className="mt-8"
+              >
+                <MCPToolsPanel />
+              </motion.div>
             </div>
           </div>
         );
@@ -429,6 +464,11 @@ function App() {
           <MCPManager onBack={() => handleViewChange("welcome")} />
         );
       
+      case "crewai":
+        return (
+          <CrewAIManager />
+        );
+      
       case "project-settings":
         if (projectForSettings) {
           return (
@@ -451,6 +491,9 @@ function App() {
   return (
     <OutputCacheProvider>
       <div className="h-screen bg-background flex flex-col">
+        {/* Browser Compatibility Warning */}
+        <BrowserCompatibilityWarning />
+        
         {/* Topbar */}
         <Topbar
           onClaudeClick={() => handleViewChange("editor")}

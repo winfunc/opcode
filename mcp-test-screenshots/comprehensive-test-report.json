@@ -1,0 +1,45 @@
+{
+  "timestamp": "2025-07-13T05:38:16.775Z",
+  "url": "http://localhost:1420",
+  "browser": "chromium",
+  "tests": {
+    "navigation": false,
+    "ccAgents": {
+      "accessible": false,
+      "functional": false
+    },
+    "ccProjects": {
+      "accessible": false,
+      "functional": false
+    },
+    "crewAI": {
+      "accessible": false,
+      "functional": false
+    },
+    "mcpTools": {
+      "accessible": false,
+      "toolCount": 0,
+      "expectedCount": 186
+    },
+    "settings": {
+      "accessible": false,
+      "functional": false
+    },
+    "browserCompatibility": {
+      "detected": false,
+      "chromiumOnly": false
+    }
+  },
+  "screenshots": [
+    "mcp-test-screenshots/00-navigation-error.png"
+  ],
+  "errors": [
+    "Navigation: page.goto: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - navigating to \"http://localhost:1420/\", waiting until \"networkidle\"\u001b[22m\n"
+  ],
+  "summary": "CRITICAL: Claudia application has major functionality problems and needs comprehensive review.",
+  "recommendations": [
+    "Check if Claudia server is running on localhost:1420",
+    "Browser compatibility warning system may need review",
+    "MCP Tools count is below expected 186 tools - check MCP server configuration"
+  ]
+}

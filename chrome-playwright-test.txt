@@ -1,0 +1,25 @@
+CHROME PLAYWRIGHT MCP TEST REQUEST
+
+Task: Test Chrome Browser Compatibility with Playwright MCP
+
+Description: Comprehensive test of Playwright MCP functionality using Google Chrome browser specifically (not Chromium) to verify compatibility and performance.
+
+Test Requirements:
+1. Use Google Chrome browser specifically for all automation
+2. Navigate to http://localhost:1420 (Claudia UI)
+3. Take screenshot to verify Chrome browser automation works
+4. Locate and test interaction with "CC Agents" button
+5. Verify page transitions and element detection
+6. Test all core Playwright MCP functionality in Chrome
+7. Compare performance/compatibility with any Chromium requirements
+8. Generate detailed report on Chrome vs Chromium compatibility
+
+Expected Outputs:
+- Screenshot evidence of Chrome browser automation
+- Detailed interaction results with UI elements
+- Performance metrics and compatibility assessment
+- Clear recommendation: Chrome sufficient or Chromium required
+
+This test will determine if users can rely on Google Chrome or need to install Chromium specifically for Playwright MCP functionality.
+
+Timestamp: 2025-07-13 00:33 GMT

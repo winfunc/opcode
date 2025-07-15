@@ -125,7 +125,7 @@ export const SessionList: React.FC<SessionListProps> = ({
               <Card
                 className={cn(
                   "transition-all hover:shadow-md hover:scale-[1.01] active:scale-[0.99] cursor-pointer",
-                  session.todo_data && "border-l-4 border-l-primary"
+                  Boolean(session.todo_data) && "border-l-4 border-l-primary"
                 )}
                 onClick={() => {
                   // Emit a special event for Claude Code session navigation
@@ -170,7 +170,7 @@ export const SessionList: React.FC<SessionListProps> = ({
                               </span>
                             </div>
                             
-                            {session.todo_data && (
+                            {Boolean(session.todo_data) && (
                               <div className="flex items-center space-x-1">
                                 <Calendar className="h-3 w-3" />
                                 <span>Has todo</span>

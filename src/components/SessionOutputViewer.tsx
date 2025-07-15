@@ -9,7 +9,7 @@ import { Popover } from '@/components/ui/popover';
 import { api } from '@/lib/api';
 import { useOutputCache } from '@/lib/outputCache';
 import type { AgentRun } from '@/lib/api';
-import { listen, type UnlistenFn } from '@tauri-apps/api/event';
+import { listen, type UnlistenFn } from '@/lib/web-tauri-mocks';
 import { StreamMessage } from './StreamMessage';
 import { ErrorBoundary } from './ErrorBoundary';
 
@@ -117,8 +117,8 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
           
           // Convert history to messages format using AgentExecution style
           const loadedMessages: ClaudeStreamMessage[] = history.map(entry => ({
-            ...entry,
-            type: entry.type || "assistant"
+            ...(entry as ClaudeStreamMessage),
+            type: (entry as ClaudeStreamMessage).type || "assistant"
           }));
           
           setMessages(loadedMessages);
@@ -202,7 +202,7 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
       unlistenRefs.current = [];
 
       // Set up live event listeners with run ID isolation
-      const outputUnlisten = await listen<string>(`agent-output:${session.id}`, (event) => {
+      const outputUnlisten = await listen(`agent-output:${session.id}`, (event) => {
         try {
           // Store raw JSONL
           setRawJsonlOutput(prev => [...prev, event.payload]);
@@ -215,17 +215,17 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
         }
       });
 
-      const errorUnlisten = await listen<string>(`agent-error:${session.id}`, (event) => {
+      const errorUnlisten = await listen(`agent-error:${session.id}`, (event) => {
         console.error("Agent error:", event.payload);
         setToast({ message: event.payload, type: 'error' });
       });
 
-      const completeUnlisten = await listen<boolean>(`agent-complete:${session.id}`, () => {
+      const completeUnlisten = await listen(`agent-complete:${session.id}`, () => {
         setToast({ message: 'Agent execution completed', type: 'success' });
         // Don't set status here as the parent component should handle it
       });
 
-      const cancelUnlisten = await listen<boolean>(`agent-cancelled:${session.id}`, () => {
+      const cancelUnlisten = await listen(`agent-cancelled:${session.id}`, () => {
         setToast({ message: 'Agent execution was cancelled', type: 'error' });
       });
 

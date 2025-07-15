@@ -72,8 +72,8 @@ export const AgentRunView: React.FC<AgentRunViewProps> = ({
           
           // Convert history to messages format
           const loadedMessages: ClaudeStreamMessage[] = history.map(entry => ({
-            ...entry,
-            type: entry.type || "assistant"
+            ...(entry as ClaudeStreamMessage),
+            type: (entry as ClaudeStreamMessage).type || "assistant"
           }));
           
           setMessages(loadedMessages);
@@ -365,7 +365,7 @@ export const AgentRunView: React.FC<AgentRunViewProps> = ({
         {/* Output Display */}
         <div className="flex-1 overflow-hidden">
           <div className="h-full overflow-y-auto p-4 space-y-2">
-            {messages.map((message, index) => (
+            {messages.map((message: ClaudeStreamMessage, index) => (
               <motion.div
                 key={index}
                 initial={{ opacity: 0, y: 10 }}

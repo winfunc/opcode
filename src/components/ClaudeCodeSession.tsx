@@ -19,8 +19,8 @@ import { Label } from "@/components/ui/label";
 import { Popover } from "@/components/ui/popover";
 import { api, type Session } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import { open } from "@tauri-apps/plugin-dialog";
-import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { open } from "@/lib/web-tauri-mocks";
+import { listen, type UnlistenFn } from "@/lib/web-tauri-mocks";
 import { StreamMessage } from "./StreamMessage";
 import { FloatingPromptInput, type FloatingPromptInputRef } from "./FloatingPromptInput";
 import { ErrorBoundary } from "./ErrorBoundary";
@@ -271,8 +271,8 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       
       // Convert history to messages format
       const loadedMessages: ClaudeStreamMessage[] = history.map(entry => ({
-        ...entry,
-        type: entry.type || "assistant"
+        ...(entry as ClaudeStreamMessage),
+        type: (entry as ClaudeStreamMessage).type || "assistant"
       }));
       
       setMessages(loadedMessages);
@@ -338,7 +338,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     isListeningRef.current = true;
     
     // Set up session-specific listeners
-    const outputUnlisten = await listen<string>(`claude-output:${sessionId}`, async (event) => {
+    const outputUnlisten = await listen(`claude-output:${sessionId}`, async (event) => {
       try {
         console.log('[ClaudeCodeSession] Received claude-output on reconnect:', event.payload);
         
@@ -355,14 +355,14 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       }
     });
 
-    const errorUnlisten = await listen<string>(`claude-error:${sessionId}`, (event) => {
+    const errorUnlisten = await listen(`claude-error:${sessionId}`, (event) => {
       console.error("Claude error:", event.payload);
       if (isMountedRef.current) {
         setError(event.payload);
       }
     });
 
-    const completeUnlisten = await listen<boolean>(`claude-complete:${sessionId}`, async (event) => {
+    const completeUnlisten = await listen(`claude-complete:${sessionId}`, async (event) => {
       console.log('[ClaudeCodeSession] Received claude-complete on reconnect:', event.payload);
       if (isMountedRef.current) {
         setIsLoading(false);
@@ -383,8 +383,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     try {
       const selected = await open({
         directory: true,
-        multiple: false,
-        title: "Select Project Directory"
+        multiple: false
       });
       
       if (selected) {
@@ -457,16 +456,16 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         const attachSessionSpecificListeners = async (sid: string) => {
           console.log('[ClaudeCodeSession] Attaching session-specific listeners for', sid);
 
-          const specificOutputUnlisten = await listen<string>(`claude-output:${sid}`, (evt) => {
+          const specificOutputUnlisten = await listen(`claude-output:${sid}`, (evt) => {
             handleStreamMessage(evt.payload);
           });
 
-          const specificErrorUnlisten = await listen<string>(`claude-error:${sid}`, (evt) => {
+          const specificErrorUnlisten = await listen(`claude-error:${sid}`, (evt) => {
             console.error('Claude error (scoped):', evt.payload);
             setError(evt.payload);
           });
 
-          const specificCompleteUnlisten = await listen<boolean>(`claude-complete:${sid}`, (evt) => {
+          const specificCompleteUnlisten = await listen(`claude-complete:${sid}`, (evt) => {
             console.log('[ClaudeCodeSession] Received claude-complete (scoped):', evt.payload);
             processComplete(evt.payload);
           });
@@ -477,7 +476,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         };
 
         // Generic listeners (catch-all)
-        const genericOutputUnlisten = await listen<string>('claude-output', async (event) => {
+        const genericOutputUnlisten = await listen('claude-output', async (event) => {
           handleStreamMessage(event.payload);
 
           // Attempt to extract session_id on the fly (for the very first init)
@@ -561,12 +560,12 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
           }
         };
 
-        const genericErrorUnlisten = await listen<string>('claude-error', (evt) => {
+        const genericErrorUnlisten = await listen('claude-error', (evt) => {
           console.error('Claude error:', evt.payload);
           setError(evt.payload);
         });
 
-        const genericCompleteUnlisten = await listen<boolean>('claude-complete', (evt) => {
+        const genericCompleteUnlisten = await listen('claude-complete', (evt) => {
           console.log('[ClaudeCodeSession] Received claude-complete (generic):', evt.payload);
           processComplete(evt.payload);
         });

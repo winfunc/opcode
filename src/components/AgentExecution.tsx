@@ -28,8 +28,8 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { api, type Agent } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import { open } from "@tauri-apps/plugin-dialog";
-import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { open } from "@/lib/web-tauri-mocks";
+import { listen, type UnlistenFn } from "@/lib/web-tauri-mocks";
 import { StreamMessage } from "./StreamMessage";
 import { ExecutionControlBar } from "./ExecutionControlBar";
 import { ErrorBoundary } from "./ErrorBoundary";
@@ -265,8 +265,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
     try {
       const selected = await open({
         directory: true,
-        multiple: false,
-        title: "Select Project Directory"
+        multiple: false
       });
       
       if (selected) {
@@ -303,7 +302,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
       setRunId(executionRunId);
       
       // Set up event listeners with run ID isolation
-      const outputUnlisten = await listen<string>(`agent-output:${executionRunId}`, (event) => {
+      const outputUnlisten = await listen(`agent-output:${executionRunId}`, (event) => {
         try {
           // Store raw JSONL
           setRawJsonlOutput(prev => [...prev, event.payload]);
@@ -316,12 +315,12 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
         }
       });
 
-      const errorUnlisten = await listen<string>(`agent-error:${executionRunId}`, (event) => {
+      const errorUnlisten = await listen(`agent-error:${executionRunId}`, (event) => {
         console.error("Agent error:", event.payload);
         setError(event.payload);
       });
 
-      const completeUnlisten = await listen<boolean>(`agent-complete:${executionRunId}`, (event) => {
+      const completeUnlisten = await listen(`agent-complete:${executionRunId}`, (event) => {
         setIsRunning(false);
         setExecutionStartTime(null);
         if (!event.payload) {
@@ -329,7 +328,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
         }
       });
 
-      const cancelUnlisten = await listen<boolean>(`agent-cancelled:${executionRunId}`, () => {
+      const cancelUnlisten = await listen(`agent-cancelled:${executionRunId}`, () => {
         setIsRunning(false);
         setExecutionStartTime(null);
         setError("Agent execution was cancelled");
