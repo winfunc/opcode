@@ -18,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { Project } from "@/lib/api";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { formatTimeAgo } from "@/lib/date-utils";
 import { Pagination } from "@/components/ui/pagination";
@@ -70,6 +71,7 @@ export const ProjectList: React.FC<ProjectListProps> = ({
   onProjectSettings,
   className,
 }) => {
+  const { t } = useI18n();
   const [currentPage, setCurrentPage] = useState(1);
   
   // Calculate pagination
@@ -150,7 +152,7 @@ export const ProjectList: React.FC<ProjectListProps> = ({
                             }}
                           >
                             <Settings className="h-4 w-4 mr-2" />
-                            Hooks
+                            {t.projects.hooks}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
