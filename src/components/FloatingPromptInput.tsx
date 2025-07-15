@@ -23,7 +23,19 @@ import { FilePicker } from "./FilePicker";
 import { SlashCommandPicker } from "./SlashCommandPicker";
 import { ImagePreview } from "./ImagePreview";
 import { type FileEntry, type SlashCommand } from "@/lib/api";
-import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+
+// Conditional import for Tauri webview window
+let tauriGetCurrentWebviewWindow: any;
+try {
+  if (typeof window !== 'undefined' && window.__TAURI__) {
+    tauriGetCurrentWebviewWindow = require("@tauri-apps/api/webviewWindow").getCurrentWebviewWindow;
+  }
+} catch (e) {
+  console.log('[FloatingPromptInput] Tauri webview API not available, using web mode');
+}
+
+// Web-compatible replacement
+const getCurrentWebviewWindow = tauriGetCurrentWebviewWindow || (() => ({ listen: () => Promise.resolve(() => {}) }));
 
 interface FloatingPromptInputProps {
   /**
@@ -359,7 +371,7 @@ const FloatingPromptInputInner = (
         }
 
         const webview = getCurrentWebviewWindow();
-        unlistenDragDropRef.current = await webview.onDragDropEvent((event) => {
+        unlistenDragDropRef.current = await webview.onDragDropEvent((event: any) => {
           if (event.payload.type === 'enter' || event.payload.type === 'over') {
             setDragActive(true);
           } else if (event.payload.type === 'leave') {

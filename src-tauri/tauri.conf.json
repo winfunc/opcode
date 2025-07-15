@@ -4,8 +4,7 @@
   "version": "0.2.1",
   "identifier": "opcode.asterisk.so",
   "build": {
-    "beforeDevCommand": "bun run dev",
-    "devUrl": "http://localhost:1420",
+    "beforeDevCommand": "",
     "beforeBuildCommand": "bun run build",
     "frontendDist": "../dist"
   },
