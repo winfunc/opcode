@@ -605,6 +605,7 @@ export const es: Translations = {
     loadingHooks: 'Cargando configuración de hooks...',
     savingHooks: 'Guardando...',
     hooksConfiguration: 'Configuración de Hooks',
+    chooseTemplate: 'Elige una plantilla de hook preconfigurada para comenzar rápidamente',
   },
 
   // Slash Commands Manager translations

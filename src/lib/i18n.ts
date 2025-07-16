@@ -642,6 +642,7 @@ export interface Translations {
     loadingHooks: string;
     savingHooks: string;
     hooksConfiguration: string;
+    chooseTemplate: string;
   };
 
   // 斜杠命令管理器翻译
