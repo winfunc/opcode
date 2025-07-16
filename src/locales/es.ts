@@ -193,6 +193,24 @@ export const es: Translations = {
     
     userHooks: 'Hooks de usuario',
     userHooksDesc: 'Configura hooks que se aplican a todas las sesiones de Claude Code para tu cuenta de usuario. Estos se almacenan en ~/.claude/settings.json',
+    
+    // Ejemplos de permisos
+    allowAllBashCommands: 'Permitir todos los comandos bash',
+    allowExactCommand: 'Permitir comando exacto',
+    allowCommandsWithPrefix: 'Permitir comandos con prefijo',
+    allowReadingSpecificFile: 'Permitir lectura de archivo específico',
+    allowEditingFilesInDocsDirectory: 'Permitir edición de archivos en directorio docs',
+    
+    // Ejemplos de variables de entorno
+    enableDisableTelemetry: 'Habilitar/deshabilitar telemetría (0 o 1)',
+    customModelName: 'Nombre de modelo personalizado',
+    disableCostWarnings: 'Deshabilitar advertencias de costo (1)',
+    
+    // Otras claves faltantes
+    examples: 'Ejemplos:',
+    failedToLoadSettings: 'Error al cargar configuración. Por favor asegúrate de que el directorio ~/.claude existe.',
+    settingsSavedSuccessfully: '¡Configuración guardada exitosamente!',
+    failedToSaveSettings: 'Error al guardar configuración',
   },
 
   claude: {

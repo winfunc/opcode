@@ -193,6 +193,24 @@ export const zh: Translations = {
     
     userHooks: '用户钩子',
     userHooksDesc: '配置适用于您用户账户的所有 Claude Code 会话的钩子。这些存储在 ~/.claude/settings.json 中',
+    
+    // 权限示例
+    allowAllBashCommands: '允许所有 bash 命令',
+    allowExactCommand: '允许精确命令',
+    allowCommandsWithPrefix: '允许带前缀的命令',
+    allowReadingSpecificFile: '允许读取特定文件',
+    allowEditingFilesInDocsDirectory: '允许编辑 docs 目录中的文件',
+    
+    // 环境变量示例
+    enableDisableTelemetry: '启用/禁用遥测（0 或 1）',
+    customModelName: '自定义模型名称',
+    disableCostWarnings: '禁用费用警告（1）',
+    
+    // 其他缺失的键
+    examples: '示例：',
+    failedToLoadSettings: '加载设置失败。请确保 ~/.claude 目录存在。',
+    settingsSavedSuccessfully: '设置保存成功！',
+    failedToSaveSettings: '保存设置失败',
   },
 
   claude: {

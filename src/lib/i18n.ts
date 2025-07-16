@@ -223,6 +223,24 @@ export interface Translations {
     // Hooks设置
     userHooks: string;
     userHooksDesc: string;
+    
+    // 权限示例
+    allowAllBashCommands: string;
+    allowExactCommand: string;
+    allowCommandsWithPrefix: string;
+    allowReadingSpecificFile: string;
+    allowEditingFilesInDocsDirectory: string;
+    
+    // 环境变量示例
+    enableDisableTelemetry: string;
+    customModelName: string;
+    disableCostWarnings: string;
+    
+    // 其他缺失的键
+    examples: string;
+    failedToLoadSettings: string;
+    settingsSavedSuccessfully: string;
+    failedToSaveSettings: string;
   };
 
   // Claude相关

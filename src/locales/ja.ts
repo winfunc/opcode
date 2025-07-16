@@ -193,6 +193,24 @@ export const ja: Translations = {
     
     userHooks: 'ユーザーフック',
     userHooksDesc: 'ユーザーアカウントのすべてのClaude Codeセッションに適用されるフックを設定します。これらは~/.claude/settings.jsonに保存されます',
+    
+    // 権限の例
+    allowAllBashCommands: 'すべてのbashコマンドを許可',
+    allowExactCommand: '正確なコマンドを許可',
+    allowCommandsWithPrefix: 'プレフィックス付きコマンドを許可',
+    allowReadingSpecificFile: '特定ファイルの読み取りを許可',
+    allowEditingFilesInDocsDirectory: 'docsディレクトリ内のファイル編集を許可',
+    
+    // 環境変数の例
+    enableDisableTelemetry: 'テレメトリの有効/無効（0または1）',
+    customModelName: 'カスタムモデル名',
+    disableCostWarnings: 'コスト警告を無効化（1）',
+    
+    // その他の不足しているキー
+    examples: '例：',
+    failedToLoadSettings: '設定の読み込みに失敗しました。~/.claudeディレクトリが存在することを確認してください。',
+    settingsSavedSuccessfully: '設定が正常に保存されました！',
+    failedToSaveSettings: '設定の保存に失敗しました',
   },
 
   claude: {
