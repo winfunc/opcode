@@ -365,6 +365,16 @@ export const es: Translations = {
     output: 'Salida',
     avgCostPerSession: 'Costo promedio por sesión',
     modelsUsed: 'Modelos utilizados',
+    // 新增缺失的翻译键
+    trackUsageAndCosts: 'Rastrea el uso y costos de Claude Code',
+    totalSessions: 'Total de Sesiones',
+    tokenBreakdownTitle: 'Desglose de Tokens',
+    failedToLoadUsageStats: 'Error al cargar estadísticas de uso. Inténtalo de nuevo.',
+    noUsageDataForPeriod: 'No hay datos de uso disponibles para el período seleccionado',
+    cacheWriteShort: 'Cache E',
+    cacheReadShort: 'Cache L',
+    model: 'modelo',
+    models: 'modelos',
   },
 
   agents: {

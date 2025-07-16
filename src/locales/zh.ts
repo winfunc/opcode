@@ -365,6 +365,16 @@ export const zh: Translations = {
     output: '输出',
     avgCostPerSession: '每会话平均费用',
     modelsUsed: '使用的模型',
+    // 新增缺失的翻译键
+    trackUsageAndCosts: '跟踪您的 Claude Code 使用情况和费用',
+    totalSessions: '总会话数',
+    tokenBreakdownTitle: '令牌明细',
+    failedToLoadUsageStats: '加载使用统计失败。请重试。',
+    noUsageDataForPeriod: '所选时间段内无使用数据',
+    cacheWriteShort: '缓存写',
+    cacheReadShort: '缓存读',
+    model: '模型',
+    models: '模型',
   },
 
   agents: {
