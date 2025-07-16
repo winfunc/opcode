@@ -4,6 +4,7 @@ import { X, Volume2, VolumeX, Github } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { useI18n } from "@/lib/i18n";
 import asteriskLogo from "@/assets/nfo/asterisk-logo.png";
 import keygennMusic from "@/assets/nfo/claudia-nfo.ogg";
 
@@ -22,6 +23,7 @@ interface NFOCreditsProps {
  * <NFOCredits onClose={() => setShowNFO(false)} />
  */
 export const NFOCredits: React.FC<NFOCreditsProps> = ({ onClose }) => {
+  const { t } = useI18n();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const [isMuted, setIsMuted] = useState(false);
@@ -85,25 +87,25 @@ export const NFOCredits: React.FC<NFOCreditsProps> = ({ onClose }) => {
   // Credits content
   const creditsContent = [
     { type: "header", text: "CLAUDIA v0.1.0" },
-    { type: "subheader", text: "[ A STRATEGIC PROJECT BY ASTERISK ]" },
+    { type: "subheader", text: `[ ${t.nfo.strategicProject.toUpperCase()} ]` },
     { type: "spacer" },
-    { type: "section", title: "━━━ CREDITS ━━━" },
-    { type: "credit", role: "POWERED BY", name: "Anthropic Claude 4" },
+    { type: "section", title: `━━━ ${t.nfo.credits.toUpperCase()} ━━━` },
+    { type: "credit", role: t.nfo.poweredBy.toUpperCase(), name: "Anthropic Claude 4" },
     { type: "credit", role: "CLAUDE CODE", name: "The Ultimate Coding Assistant" },
     { type: "credit", role: "MCP PROTOCOL", name: "Model Context Protocol" },
     { type: "spacer" },
-    { type: "section", title: "━━━ DEPENDENCIES ━━━" },
-    { type: "credit", role: "RUNTIME", name: "Tauri Framework" },
-    { type: "credit", role: "UI FRAMEWORK", name: "React + TypeScript" },
-    { type: "credit", role: "STYLING", name: "Tailwind CSS + shadcn/ui" },
-    { type: "credit", role: "ANIMATIONS", name: "Framer Motion" },
-    { type: "credit", role: "BUILD TOOL", name: "Vite" },
-    { type: "credit", role: "PACKAGE MANAGER", name: "Bun" },
+    { type: "section", title: `━━━ ${t.nfo.dependencies.toUpperCase()} ━━━` },
+    { type: "credit", role: t.nfo.runtime.toUpperCase(), name: "Tauri Framework" },
+    { type: "credit", role: t.nfo.uiFramework.toUpperCase(), name: "React + TypeScript" },
+    { type: "credit", role: t.nfo.styling.toUpperCase(), name: "Tailwind CSS + shadcn/ui" },
+    { type: "credit", role: t.nfo.animations.toUpperCase(), name: "Framer Motion" },
+    { type: "credit", role: t.nfo.buildTool.toUpperCase(), name: "Vite" },
+    { type: "credit", role: t.nfo.packageManager.toUpperCase(), name: "Bun" },
     { type: "spacer" },
-    { type: "section", title: "━━━ SPECIAL THANKS ━━━" },
-    { type: "text", content: "To the open source community" },
-    { type: "text", content: "To all the beta testers" },
-    { type: "text", content: "To everyone who believed in this project" },
+    { type: "section", title: `━━━ ${t.nfo.specialThanks.toUpperCase()} ━━━` },
+    { type: "text", content: t.nfo.openSourceCommunity },
+    { type: "text", content: t.nfo.betaTesters },
+    { type: "text", content: t.nfo.believers },
     { type: "spacer" },
     { type: "ascii", content: `
      ▄▄▄· .▄▄ · ▄▄▄▄▄▄▄▄ .▄▄▄  ▪  .▄▄ · ▄ •▄ 
@@ -113,8 +115,8 @@ export const NFOCredits: React.FC<NFOCreditsProps> = ({ onClose }) => {
      ▀  ▀  ▀▀▀▀  ▀▀▀  ▀▀▀ .▀  ▀▀▀▀ ▀▀▀▀ ·▀  ▀
     ` },
     { type: "spacer" },
-    { type: "text", content: "Remember: Sharing is caring!" },
-    { type: "text", content: "Support the developers!" },
+    { type: "text", content: t.nfo.sharing },
+    { type: "text", content: t.nfo.support },
     { type: "spacer" },
     { type: "spacer" },
     { type: "spacer" },
@@ -159,10 +161,10 @@ export const NFOCredits: React.FC<NFOCreditsProps> = ({ onClose }) => {
                     await openUrl("https://github.com/getAsterisk/claudia/issues/new");
                   }}
                   className="flex items-center gap-1 h-auto px-2 py-1"
-                  title="File a bug"
+                  title={t.nfo.fileABug}
                 >
                   <Github className="h-3 w-3" />
-                  <span className="text-xs">File a bug</span>
+                  <span className="text-xs">{t.nfo.fileABug}</span>
                 </Button>
                 <Button
                   variant="ghost"
@@ -207,7 +209,7 @@ export const NFOCredits: React.FC<NFOCreditsProps> = ({ onClose }) => {
                   />
                 </button>
                 <div className="text-muted-foreground text-sm font-mono mt-2 tracking-wider">
-                  A strategic project by Asterisk
+                  {t.nfo.strategicProject}
                 </div>
               </div>
               

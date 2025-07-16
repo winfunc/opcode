@@ -374,6 +374,33 @@ export interface Translations {
     tokenBreakdown: string;
     noData: string;
     refreshData: string;
+    // 新增使用情况仪表板翻译键
+    loadingStats: string;
+    tryAgain: string;
+    allTime: string;
+    last7Days: string;
+    last30Days: string;
+    overview: string;
+    byModel: string;
+    byProject: string;
+    bySessions: string;
+    timeline: string;
+    inputTokens: string;
+    outputTokens: string;
+    cacheWrite: string;
+    cacheRead: string;
+    mostUsedModels: string;
+    usageByModel: string;
+    usageByProject: string;
+    usageBySession: string;
+    dailyUsageOverTime: string;
+    noUsageData: string;
+    sessions: string;
+    tokens: string;
+    input: string;
+    output: string;
+    avgCostPerSession: string;
+    modelsUsed: string;
   };
 
   // CC Agents
@@ -426,6 +453,40 @@ export interface Translations {
     failedToCreateAgent: string;
     failedToUpdateAgent: string;
     saving: string;
+    // 新增 CC 智能体界面翻译键
+    noAgentsYet: string;
+    createFirstAgent: string;
+    execute: string;
+    edit: string;
+    export: string;
+    created: string;
+    recentExecutions: string;
+    importFromFile: string;
+    importFromGitHub: string;
+    agentExportedSuccessfully: string;
+    agentImportedSuccessfully: string;
+    agentImportedFromGitHub: string;
+    deleteAgentTitle: string;
+    deleteAgentConfirm: string;
+    deleteAgentDesc: string;
+    deletingAgent: string;
+    deleteAgentButton: string;
+    cancel: string;
+    // 额外的 CC 智能体翻译键
+    manageAgents: string;
+    createCCAgentButton: string;
+    agentDeletedSuccessfully: string;
+    failedToDeleteAgent: string;
+    failedToLoadAgents: string;
+    failedToExportAgent: string;
+    failedToImportAgent: string;
+    agentCreatedSuccessfully: string;
+    agentUpdatedSuccessfully: string;
+    executeAgent: string;
+    exportAgentToFile: string;
+    fromFile: string;
+    fromGitHub: string;
+    createFirstAgentDesc: string;
   };
 
   // 钩子编辑器翻译
@@ -576,6 +637,55 @@ export interface Translations {
     autoCleanupDesc: string;
     enableAutoCleanup: string;
     cleanupInterval: string;
+    
+    // 数据库存储特定翻译
+    databaseStorage: string;
+    sqlQuery: string;
+    resetDB: string;
+    selectTable: string;
+    searchInTable: string;
+    newRow: string;
+    rows: string;
+    actions: string;
+    editRow: string;
+    updateRowDesc: string;
+    primaryKey: string;
+    type: string;
+    notNull: string;
+    default: string;
+    cancel: string;
+    update: string;
+    newRowTitle: string;
+    addNewRowDesc: string;
+    required: string;
+    insert: string;
+    deleteRow: string;
+    deleteRowConfirm: string;
+    delete: string;
+    resetDatabase: string;
+    resetDatabaseDesc: string;
+    resetWarning: string;
+    sqlQueryEditor: string;
+    sqlQueryEditorDesc: string;
+    sqlQueryPlaceholder: string;
+    queryExecutedSuccess: string;
+    lastInsertId: string;
+    showingRows: string;
+    page: string;
+    previous: string;
+    next: string;
+    failedToLoadTables: string;
+    failedToLoadTableData: string;
+    failedToUpdateRow: string;
+    failedToDeleteRow: string;
+    failedToInsertRow: string;
+    failedToExecuteSQL: string;
+    failedToResetDatabase: string;
+    databaseResetComplete: string;
+    resetFailed: string;
+    nullValue: string;
+    trueValue: string;
+    falseValue: string;
   };
 }
 
