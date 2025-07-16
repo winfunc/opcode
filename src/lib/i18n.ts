@@ -118,6 +118,22 @@ export interface Translations {
     claudeMd: string;
   };
 
+  // CLAUDE.md 编辑器
+  claudemd: {
+    title: string;
+    subtitle: string;
+    editSystemPrompt: string;
+    editProjectPrompt: string;
+    failedToLoad: string;
+    failedToSave: string;
+    savedSuccessfully: string;
+    unsavedChanges: string;
+    memories: string;
+    noFilesFound: string;
+    loadingFiles: string;
+    failedToLoadFiles: string;
+  };
+
   // 项目相关
   projects: {
     title: string;
@@ -302,6 +318,42 @@ export interface Translations {
     disconnected: string;
     connecting: string;
     error: string;
+    // 新增MCP相关翻译
+    mcpServers: string;
+    manageServers: string;
+    serverConfiguration: string;
+    addNewServer: string;
+    editServer: string;
+    removeServer: string;
+    serverDetails: string;
+    connectionStatus: string;
+    serverLogs: string;
+    testConnection: string;
+    reconnect: string;
+    disconnect: string;
+    serverPort: string;
+    serverHost: string;
+    authToken: string;
+    timeout: string;
+    retryAttempts: string;
+    enableLogging: string;
+    logLevel: string;
+    serverType: string;
+    protocol: string;
+    version: string;
+    capabilities: string;
+    tools: string;
+    resources: string;
+    prompts: string;
+    sampling: string;
+    roots: string;
+    experimental: string;
+    serverInfo: string;
+    lastSeen: string;
+    uptime: string;
+    requestCount: string;
+    errorCount: string;
+    averageResponseTime: string;
   };
 
   // 使用情况仪表板
@@ -351,6 +403,179 @@ export interface Translations {
     executionCancelled: string;
     executionRunning: string;
     executionPending: string;
+    // 创建智能体界面翻译
+    editCCAgent: string;
+    createCCAgent: string;
+    updateAgent: string;
+    createNewAgent: string;
+    basicInformation: string;
+    model: string;
+    claude4Sonnet: string;
+    claude4Opus: string;
+    fasterEfficient: string;
+    moreCapable: string;
+    defaultTask: string;
+    defaultTaskPlaceholder: string;
+    defaultTaskDesc: string;
+    systemPrompt: string;
+    systemPromptDesc: string;
+    agentNamePlaceholder: string;
+    unsavedChanges: string;
+    agentNameRequired: string;
+    systemPromptRequired: string;
+    failedToCreateAgent: string;
+    failedToUpdateAgent: string;
+    saving: string;
+  };
+
+  // 钩子编辑器翻译
+  hooks: {
+    title: string;
+    subtitle: string;
+    scope: string;
+    projectScope: string;
+    localScope: string;
+    userScope: string;
+    localScopeDesc: string;
+    unsavedChanges: string;
+    validationErrors: string;
+    securityWarnings: string;
+    templates: string;
+    preToolUse: string;
+    postToolUse: string;
+    notification: string;
+    stop: string;
+    subagentStop: string;
+    preToolUseDesc: string;
+    postToolUseDesc: string;
+    notificationDesc: string;
+    stopDesc: string;
+    subagentStopDesc: string;
+    pattern: string;
+    patternPlaceholder: string;
+    patternTooltip: string;
+    commonPatterns: string;
+    custom: string;
+    commands: string;
+    addCommand: string;
+    noCommandsAdded: string;
+    commandPlaceholder: string;
+    seconds: string;
+    noHooksConfigured: string;
+    addHook: string;
+    addMatcher: string;
+    removeMatcher: string;
+    removeCommand: string;
+    loadingHooks: string;
+    savingHooks: string;
+    hooksConfiguration: string;
+  };
+
+  // 斜杠命令管理器翻译
+  commands: {
+    title: string;
+    subtitle: string;
+    projectCommands: string;
+    projectCommandsDesc: string;
+    newCommand: string;
+    searchCommands: string;
+    allCommands: string;
+    project: string;
+    user: string;
+    noCommandsFound: string;
+    noProjectCommands: string;
+    noCommandsCreated: string;
+    createFirstProjectCommand: string;
+    createFirstCommand: string;
+    editCommand: string;
+    createNewCommand: string;
+    commandName: string;
+    commandNamePlaceholder: string;
+    namespace: string;
+    namespacePlaceholder: string;
+    description: string;
+    descriptionPlaceholder: string;
+    commandContent: string;
+    contentPlaceholder: string;
+    contentDesc: string;
+    allowedTools: string;
+    allowedToolsDesc: string;
+    examples: string;
+    preview: string;
+    arguments: string;
+    deleteCommand: string;
+    deleteCommandConfirm: string;
+    deleteCommandDesc: string;
+    deleting: string;
+    scope: string;
+    userGlobal: string;
+    availableAcrossProjects: string;
+    onlyAvailableInProject: string;
+    userCommands: string;
+    tools: string;
+    bash: string;
+    files: string;
+    showContent: string;
+    hideContent: string;
+  };
+
+  // NFO界面翻译
+  nfo: {
+    title: string;
+    credits: string;
+    poweredBy: string;
+    runtime: string;
+    uiFramework: string;
+    styling: string;
+    animations: string;
+    buildTool: string;
+    packageManager: string;
+    specialThanks: string;
+    openSourceCommunity: string;
+    betaTesters: string;
+    believers: string;
+    sharing: string;
+    support: string;
+    fileABug: string;
+    strategicProject: string;
+    dependencies: string;
+  };
+
+  // 存储界面翻译
+  storage: {
+    title: string;
+    subtitle: string;
+    totalSize: string;
+    projects: string;
+    sessions: string;
+    cache: string;
+    logs: string;
+    settings: string;
+    cleanup: string;
+    cleanupDesc: string;
+    cleanupOlderThan: string;
+    days: string;
+    cleanupNow: string;
+    cleanupSuccess: string;
+    cleanupError: string;
+    calculating: string;
+    noData: string;
+    storageLocation: string;
+    openInFinder: string;
+    exportData: string;
+    importData: string;
+    backupData: string;
+    restoreData: string;
+    dataIntegrity: string;
+    checkIntegrity: string;
+    repairData: string;
+    integrityCheck: string;
+    integrityOk: string;
+    integrityIssues: string;
+    autoCleanup: string;
+    autoCleanupDesc: string;
+    enableAutoCleanup: string;
+    cleanupInterval: string;
   };
 }
 
