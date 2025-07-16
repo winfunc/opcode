@@ -180,14 +180,14 @@ export const StorageTab: React.FC = () => {
    */
   const getPrimaryKeyValues = (row: Record<string, any>): Record<string, any> => {
     if (!tableData) return {};
-    
+
     const pkColumns = tableData.columns.filter(col => col.pk);
     const pkValues: Record<string, any> = {};
-    
+
     pkColumns.forEach(col => {
       pkValues[col.name] = row[col.name];
     });
-    
+
     return pkValues;
   };
 
@@ -259,7 +259,7 @@ export const StorageTab: React.FC = () => {
       setSqlError(null);
       const result = await api.storageExecuteSql(sqlQuery);
       setSqlResult(result);
-      
+
       // Refresh tables and data if it was a non-SELECT query
       if (result.rows_affected !== undefined) {
         await loadTables();
@@ -310,7 +310,7 @@ export const StorageTab: React.FC = () => {
     if (value === undefined) return "";
     if (typeof value === "boolean") return value ? t.storage.trueValue : t.storage.falseValue;
     if (typeof value === "object") return JSON.stringify(value);
-    
+
     const stringValue = String(value);
     if (stringValue.length > maxLength) {
       return stringValue.substring(0, maxLength) + "...";
@@ -454,12 +454,12 @@ export const StorageTab: React.FC = () => {
                       {tableData.columns.map((column) => {
                         const value = row[column.name];
                         const formattedValue = formatCellValue(value, 50);
-                        const fullValue = value === null ? "NULL" : 
-                                        value === undefined ? "" : 
-                                        typeof value === "object" ? JSON.stringify(value, null, 2) : 
-                                        String(value);
+                        const fullValue = value === null ? "NULL" :
+                          value === undefined ? "" :
+                            typeof value === "object" ? JSON.stringify(value, null, 2) :
+                              String(value);
                         const isTruncated = fullValue.length > 50;
-                        
+
                         return (
                           <td
                             key={column.name}
@@ -473,8 +473,8 @@ export const StorageTab: React.FC = () => {
                                       {formattedValue}
                                     </span>
                                   </TooltipTrigger>
-                                  <TooltipContent 
-                                    side="bottom" 
+                                  <TooltipContent
+                                    side="bottom"
                                     className="max-w-[500px] max-h-[300px] overflow-auto"
                                   >
                                     <pre className="text-xs whitespace-pre-wrap">{fullValue}</pre>
@@ -873,12 +873,12 @@ export const StorageTab: React.FC = () => {
                             <tr key={i} className="border-b">
                               {row.map((cell, j) => {
                                 const formattedValue = formatCellValue(cell, 50);
-                                const fullValue = cell === null ? "NULL" : 
-                                                cell === undefined ? "" : 
-                                                typeof cell === "object" ? JSON.stringify(cell, null, 2) : 
-                                                String(cell);
+                                const fullValue = cell === null ? "NULL" :
+                                  cell === undefined ? "" :
+                                    typeof cell === "object" ? JSON.stringify(cell, null, 2) :
+                                      String(cell);
                                 const isTruncated = fullValue.length > 50;
-                                
+
                                 return (
                                   <td key={j} className="px-2 py-1 font-mono">
                                     {isTruncated ? (
@@ -889,8 +889,8 @@ export const StorageTab: React.FC = () => {
                                               {formattedValue}
                                             </span>
                                           </TooltipTrigger>
-                                          <TooltipContent 
-                                            side="bottom" 
+                                          <TooltipContent
+                                            side="bottom"
                                             className="max-w-[500px] max-h-[300px] overflow-auto"
                                           >
                                             <pre className="text-xs whitespace-pre-wrap">{fullValue}</pre>

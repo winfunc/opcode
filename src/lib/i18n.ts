@@ -487,6 +487,11 @@ export interface Translations {
     fromFile: string;
     fromGitHub: string;
     createFirstAgentDesc: string;
+    ccAgentsTitle: string;
+    page: string;
+    of: string;
+    deleteAgentConfirmation: string;
+    deleting: string;
   };
 
   // 钩子编辑器翻译

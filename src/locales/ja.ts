@@ -450,6 +450,11 @@ export const ja: Translations = {
     fromFile: 'ファイルから',
     fromGitHub: 'GitHubから',
     createFirstAgentDesc: '最初のCCエージェントを作成して開始',
+    ccAgentsTitle: 'CCエージェント',
+    page: 'ページ',
+    of: '/',
+    deleteAgentConfirmation: 'エージェント"{name}"を削除してもよろしいですか？この操作は元に戻せず、エージェントとそのすべての関連データが永続的に削除されます。',
+    deleting: '削除中...',
   },
 
   // Hooks Editor translations
