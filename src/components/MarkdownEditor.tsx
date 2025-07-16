@@ -53,7 +53,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
       setOriginalContent(prompt);
     } catch (err) {
       console.error("Failed to load system prompt:", err);
-      setError("Failed to load CLAUDE.md file");
+      setError(t.claudemd.failedToLoad);
     } finally {
       setLoading(false);
     }
@@ -66,11 +66,11 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
       setToast(null);
       await api.saveSystemPrompt(content);
       setOriginalContent(content);
-      setToast({ message: "CLAUDE.md saved successfully", type: "success" });
+      setToast({ message: t.claudemd.savedSuccessfully, type: "success" });
     } catch (err) {
       console.error("Failed to save system prompt:", err);
-      setError("Failed to save CLAUDE.md file");
-      setToast({ message: "Failed to save CLAUDE.md", type: "error" });
+      setError(t.claudemd.failedToSave);
+      setToast({ message: t.claudemd.failedToSave, type: "error" });
     } finally {
       setSaving(false);
     }
@@ -79,7 +79,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
   const handleBack = () => {
     if (hasChanges) {
       const confirmLeave = window.confirm(
-        "You have unsaved changes. Are you sure you want to leave?"
+        t.claudemd.unsavedChanges
       );
       if (!confirmLeave) return;
     }
@@ -106,9 +106,9 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div>
-              <h2 className="text-lg font-semibold">CLAUDE.md</h2>
+              <h2 className="text-lg font-semibold">{t.claudemd.title}</h2>
               <p className="text-xs text-muted-foreground">
-                Edit your Claude Code system prompt
+                {t.claudemd.editSystemPrompt}
               </p>
             </div>
           </div>
