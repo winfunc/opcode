@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Toast, ToastContainer } from "@/components/ui/toast";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/lib/i18n";
 
 interface MarkdownEditorProps {
   /**
@@ -28,6 +29,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
   onBack,
   className,
 }) => {
+  const { t } = useI18n();
   const [content, setContent] = useState<string>("");
   const [originalContent, setOriginalContent] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -121,7 +123,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
             ) : (
               <Save className="mr-2 h-4 w-4" />
             )}
-            {saving ? "Saving..." : "Save"}
+            {saving ? t.common.loading : t.common.save}
           </Button>
         </motion.div>
         

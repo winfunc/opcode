@@ -51,6 +51,7 @@ import {
 import { cn } from '@/lib/utils';
 import { HooksManager } from '@/lib/hooksManager';
 import { api } from '@/lib/api';
+import { useI18n } from '@/lib/i18n';
 import {
   HooksConfiguration,
   HookEvent,
@@ -116,6 +117,7 @@ export const HooksEditor: React.FC<HooksEditorProps> = ({
   onChange,
   hideActions = false
 }) => {
+  const { t } = useI18n();
   const [selectedEvent, setSelectedEvent] = useState<HookEvent>('PreToolUse');
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
@@ -781,7 +783,7 @@ export const HooksEditor: React.FC<HooksEditorProps> = ({
                         ) : (
                           <Save className="h-4 w-4 mr-2" />
                         )}
-                        {isSaving ? "Saving..." : "Save"}
+                        {isSaving ? t.hooks.savingHooks : t.common.save}
                       </Button>
                     )}
                   </>

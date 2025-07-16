@@ -18,6 +18,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { FilePicker } from "./FilePicker";
 import { SlashCommandPicker } from "./SlashCommandPicker";
 import { ImagePreview } from "./ImagePreview";
+import { useI18n } from "@/lib/i18n";
 import { type FileEntry, type SlashCommand } from "@/lib/api";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 
@@ -135,21 +136,6 @@ type Model = {
   icon: React.ReactNode;
 };
 
-const MODELS: Model[] = [
-  {
-    id: "sonnet",
-    name: "Claude 4 Sonnet",
-    description: "Faster, efficient for most tasks",
-    icon: <Zap className="h-4 w-4" />
-  },
-  {
-    id: "opus",
-    name: "Claude 4 Opus",
-    description: "More capable, better for complex tasks",
-    icon: <Sparkles className="h-4 w-4" />
-  }
-];
-
 /**
  * FloatingPromptInput component - Fixed position prompt input with model picker
  * 
@@ -173,6 +159,23 @@ const FloatingPromptInputInner = (
   }: FloatingPromptInputProps,
   ref: React.Ref<FloatingPromptInputRef>,
 ) => {
+  const { t } = useI18n();
+  
+  const MODELS: Model[] = [
+    {
+      id: "sonnet",
+      name: t.agents.claude4Sonnet,
+      description: t.agents.fasterEfficient,
+      icon: <Zap className="h-4 w-4" />
+    },
+    {
+      id: "opus",
+      name: t.agents.claude4Opus,
+      description: t.agents.moreCapable,
+      icon: <Sparkles className="h-4 w-4" />
+    }
+  ];
+
   const [prompt, setPrompt] = useState("");
   const [selectedModel, setSelectedModel] = useState<"sonnet" | "opus">(defaultModel);
   const [selectedThinkingMode, setSelectedThinkingMode] = useState<ThinkingMode>("auto");
