@@ -59,7 +59,10 @@ const PLATFORMS = {
 async function runCommand(command, args) {
   return new Promise((resolve, reject) => {
     console.log(`Running: ${command} ${args.join(' ')}`);
-    const child = spawn(command, args, { stdio: 'inherit' });
+    const child = spawn(command, args, { 
+      stdio: 'inherit',
+      shell: process.platform === 'win32'
+    });
     
     child.on('error', reject);
     child.on('exit', (code) => {
