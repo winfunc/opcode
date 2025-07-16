@@ -605,6 +605,7 @@ export const zh: Translations = {
     loadingHooks: '加载钩子配置中...',
     savingHooks: '保存中...',
     hooksConfiguration: '钩子配置',
+    chooseTemplate: '选择预配置的钩子模板以快速开始',
   },
 
   // 斜杠命令管理器翻译

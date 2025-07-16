@@ -605,6 +605,7 @@ export const ja: Translations = {
     loadingHooks: 'フック設定を読み込み中...',
     savingHooks: '保存中...',
     hooksConfiguration: 'フック設定',
+    chooseTemplate: '事前設定されたフックテンプレートを選択して素早く開始',
   },
 
   // Slash Commands Manager translations
