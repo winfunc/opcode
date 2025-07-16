@@ -1,0 +1,116 @@
+name: Build Windows Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., v0.1.0)'
+        required: false
+        default: 'v0.1.0'
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-pc-windows-msvc
+            arch: x64
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: |
+          bun install
+          
+      - name: Build executables for Windows
+        run: |
+          bun run build:executables:windows
+          
+      - name: Fix Windows icon format
+        run: |
+          # Install ImageMagick for icon conversion
+          choco install imagemagick -y
+          
+          # Convert PNG to proper ICO format for Windows
+          magick convert src-tauri/icons/icon.png -define icon:auto-resize=256,128,64,48,32,16 src-tauri/icons/icon.ico
+
+      - name: Build Tauri application
+        run: |
+          bun run tauri build --target ${{ matrix.target }}
+
+      - name: Create artifact directory
+        run: |
+          New-Item -ItemType Directory -Force -Path "dist-${{ matrix.arch }}"
+
+      - name: Copy build artifacts
+        run: |
+          # Copy MSI installer
+          Copy-Item "src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi" -Destination "dist-${{ matrix.arch }}/" -Force
+          
+          # Copy NSIS installer if exists
+          if (Test-Path "src-tauri/target/${{ matrix.target }}/release/bundle/nsis/*.exe") {
+            Copy-Item "src-tauri/target/${{ matrix.target }}/release/bundle/nsis/*.exe" -Destination "dist-${{ matrix.arch }}/" -Force
+          }
+          
+          # Copy portable executable
+          Copy-Item "src-tauri/target/${{ matrix.target }}/release/claudia.exe" -Destination "dist-${{ matrix.arch }}/claudia-portable.exe" -Force
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: claudia-windows-${{ matrix.arch }}
+          path: dist-${{ matrix.arch }}/
+          retention-days: 7
+
+  create-release:
+    needs: build-windows
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Claudia ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            artifacts/**/*.msi
+            artifacts/**/*.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
