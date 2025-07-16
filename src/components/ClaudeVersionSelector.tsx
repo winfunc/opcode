@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { api, type ClaudeInstallation } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { CheckCircle, Package, HardDrive, Settings } from "lucide-react";
+import { useI18n } from "@/lib/i18n";
 
 interface ClaudeVersionSelectorProps {
   /**
@@ -53,6 +54,7 @@ export const ClaudeVersionSelector: React.FC<ClaudeVersionSelectorProps> = ({
   onSave,
   isSaving = false,
 }) => {
+  const { t } = useI18n();
   const [installations, setInstallations] = useState<ClaudeInstallation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -294,7 +296,7 @@ export const ClaudeVersionSelector: React.FC<ClaudeVersionSelectorProps> = ({
             disabled={isSaving || !selectedInstallation}
             className="w-full"
           >
-            {isSaving ? "Saving..." : "Save Selection"}
+            {isSaving ? t.common.loading : t.settings.saveSettings}
           </Button>
         )}
       </CardContent>
