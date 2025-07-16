@@ -450,6 +450,11 @@ export const es: Translations = {
     fromFile: 'Desde archivo',
     fromGitHub: 'Desde GitHub',
     createFirstAgentDesc: 'Crea tu primer Agente CC para comenzar',
+    ccAgentsTitle: 'Agentes CC',
+    page: 'Página',
+    of: 'de',
+    deleteAgentConfirmation: '¿Estás seguro de que quieres eliminar el agente "{name}"? Esta acción no se puede deshacer y eliminará permanentemente el agente y todos sus datos asociados.',
+    deleting: 'Eliminando...',
   },
 
   // Hooks Editor translations

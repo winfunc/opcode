@@ -450,6 +450,11 @@ export const zh: Translations = {
     fromFile: '从文件',
     fromGitHub: '从 GitHub',
     createFirstAgentDesc: '创建您的第一个 CC 智能体以开始使用',
+    ccAgentsTitle: 'CC 智能体',
+    page: '第',
+    of: '页，共',
+    deleteAgentConfirmation: '确定要删除智能体"{name}"吗？此操作无法撤销，将永久删除智能体及其所有相关数据。',
+    deleting: '删除中...',
   },
 
   // 钩子编辑器翻译
