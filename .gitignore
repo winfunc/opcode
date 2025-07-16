@@ -11,6 +11,10 @@ node_modules
 dist
 dist-ssr
 *.local
+*.bun-build
+
+# Tauri binaries (built executables)
+src-tauri/binaries/
 
 # Editor directories and files
 .vscode/*
@@ -30,3 +34,6 @@ CLAUDE.md
 *_TASK.md
 .serena/
 settings.local.json
+
+# Claude project-specific files
+.claude/

@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  X, 
   Maximize2, 
   Minimize2, 
   Copy, 
@@ -12,7 +11,7 @@ import {
   Clock,
   Hash,
   DollarSign,
-  ExternalLink
+  StopCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,20 +26,17 @@ import { ErrorBoundary } from './ErrorBoundary';
 import { formatISOTimestamp } from '@/lib/date-utils';
 import { AGENT_ICONS } from './CCAgents';
 import type { ClaudeStreamMessage } from './AgentExecution';
+import { useTabState } from '@/hooks/useTabState';
 
 interface AgentRunOutputViewerProps {
   /**
-   * The agent run to display
+   * The agent run ID to display
    */
-  run: AgentRunWithMetrics;
+  agentRunId: string;
   /**
-   * Callback when the viewer is closed
+   * Tab ID for this agent run
    */
-  onClose: () => void;
-  /**
-   * Optional callback to open full view
-   */
-  onOpenFullView?: () => void;
+  tabId: string;
   /**
    * Optional className for styling
    */
@@ -57,19 +53,24 @@ interface AgentRunOutputViewerProps {
  * />
  */
 export function AgentRunOutputViewer({ 
-  run, 
-  onClose, 
-  onOpenFullView,
+  agentRunId, 
+  tabId,
   className 
 }: AgentRunOutputViewerProps) {
+  const { updateTabTitle, updateTabStatus } = useTabState();
+  const [run, setRun] = useState<AgentRunWithMetrics | null>(null);
   const [messages, setMessages] = useState<ClaudeStreamMessage[]>([]);
   const [rawJsonlOutput, setRawJsonlOutput] = useState<string[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [copyPopoverOpen, setCopyPopoverOpen] = useState(false);
   const [hasUserScrolled, setHasUserScrolled] = useState(false);
+  
+  // Track whether we're in the initial load phase
+  const isInitialLoadRef = useRef(true);
+  const hasSetupListenersRef = useRef(false);
   
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const outputEndRef = useRef<HTMLDivElement>(null);
@@ -98,10 +99,34 @@ export function AgentRunOutputViewer({
     }
   };
 
-  // Clean up listeners on unmount
+  // Load agent run on mount
+  useEffect(() => {
+    const loadAgentRun = async () => {
+      try {
+        setLoading(true);
+        const agentRun = await api.getAgentRun(parseInt(agentRunId));
+        setRun(agentRun);
+        updateTabTitle(tabId, `Agent: ${agentRun.agent_name || 'Unknown'}`);
+        updateTabStatus(tabId, agentRun.status === 'running' ? 'running' : agentRun.status === 'failed' ? 'error' : 'complete');
+      } catch (error) {
+        console.error('Failed to load agent run:', error);
+        updateTabStatus(tabId, 'error');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    if (agentRunId) {
+      loadAgentRun();
+    }
+  }, [agentRunId, tabId, updateTabTitle, updateTabStatus]);
+
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
       unlistenRefs.current.forEach(unlisten => unlisten());
+      unlistenRefs.current = [];
+      hasSetupListenersRef.current = false;
     };
   }, []);
 
@@ -114,25 +139,83 @@ export function AgentRunOutputViewer({
   }, [messages, hasUserScrolled, isFullscreen]);
 
   const loadOutput = async (skipCache = false) => {
-    if (!run.id) return;
+    if (!run?.id) return;
+
+    console.log('[AgentRunOutputViewer] Loading output for run:', {
+      runId: run.id,
+      status: run.status,
+      sessionId: run.session_id,
+      skipCache
+    });
 
     try {
       // Check cache first if not skipping cache
       if (!skipCache) {
         const cached = getCachedOutput(run.id);
         if (cached) {
+          console.log('[AgentRunOutputViewer] Found cached output');
           const cachedJsonlLines = cached.output.split('\n').filter(line => line.trim());
           setRawJsonlOutput(cachedJsonlLines);
           setMessages(cached.messages);
           // If cache is recent (less than 5 seconds old) and session isn't running, use cache only
           if (Date.now() - cached.lastUpdated < 5000 && run.status !== 'running') {
+            console.log('[AgentRunOutputViewer] Using recent cache, skipping refresh');
             return;
           }
         }
       }
 
       setLoading(true);
+
+      // If we have a session_id, try to load from JSONL file first
+      if (run.session_id && run.session_id !== '') {
+        console.log('[AgentRunOutputViewer] Attempting to load from JSONL with session_id:', run.session_id);
+        try {
+          const history = await api.loadAgentSessionHistory(run.session_id);
+          console.log('[AgentRunOutputViewer] Successfully loaded JSONL history:', history.length, 'messages');
+          
+          // Convert history to messages format
+          const loadedMessages: ClaudeStreamMessage[] = history.map(entry => ({
+            ...entry,
+            type: entry.type || "assistant"
+          }));
+          
+          setMessages(loadedMessages);
+          setRawJsonlOutput(history.map(h => JSON.stringify(h)));
+          
+          // Update cache
+          setCachedOutput(run.id, {
+            output: history.map(h => JSON.stringify(h)).join('\n'),
+            messages: loadedMessages,
+            lastUpdated: Date.now(),
+            status: run.status
+          });
+          
+          // Set up live event listeners for running sessions
+          if (run.status === 'running') {
+            console.log('[AgentRunOutputViewer] Setting up live listeners for running session');
+            setupLiveEventListeners();
+            
+            try {
+              await api.streamSessionOutput(run.id);
+            } catch (streamError) {
+              console.warn('[AgentRunOutputViewer] Failed to start streaming, will poll instead:', streamError);
+            }
+          }
+          
+          return;
+        } catch (err) {
+          console.warn('[AgentRunOutputViewer] Failed to load from JSONL:', err);
+          console.warn('[AgentRunOutputViewer] Falling back to regular output method');
+        }
+      } else {
+        console.log('[AgentRunOutputViewer] No session_id available, using fallback method');
+      }
+
+      // Fallback to the original method if JSONL loading fails or no session_id
+      console.log('[AgentRunOutputViewer] Using getSessionOutput fallback');
       const rawOutput = await api.getSessionOutput(run.id);
+      console.log('[AgentRunOutputViewer] Received raw output:', rawOutput.length, 'characters');
       
       // Parse JSONL output into messages
       const jsonlLines = rawOutput.split('\n').filter(line => line.trim());
@@ -144,9 +227,10 @@ export function AgentRunOutputViewer({
           const message = JSON.parse(line) as ClaudeStreamMessage;
           parsedMessages.push(message);
         } catch (err) {
-          console.error("Failed to parse message:", err, line);
+          console.error("[AgentRunOutputViewer] Failed to parse message:", err, line);
         }
       }
+      console.log('[AgentRunOutputViewer] Parsed', parsedMessages.length, 'messages from output');
       setMessages(parsedMessages);
       
       // Update cache
@@ -159,12 +243,13 @@ export function AgentRunOutputViewer({
       
       // Set up live event listeners for running sessions
       if (run.status === 'running') {
+        console.log('[AgentRunOutputViewer] Setting up live listeners for running session (fallback)');
         setupLiveEventListeners();
         
         try {
           await api.streamSessionOutput(run.id);
         } catch (streamError) {
-          console.warn('Failed to start streaming, will poll instead:', streamError);
+          console.warn('[AgentRunOutputViewer] Failed to start streaming (fallback), will poll instead:', streamError);
         }
       }
     } catch (error) {
@@ -175,17 +260,33 @@ export function AgentRunOutputViewer({
     }
   };
 
+  // Set up live event listeners for running sessions
   const setupLiveEventListeners = async () => {
-    if (!run.id) return;
+    if (!run?.id || hasSetupListenersRef.current) return;
     
     try {
       // Clean up existing listeners
       unlistenRefs.current.forEach(unlisten => unlisten());
       unlistenRefs.current = [];
 
+      // Mark that we've set up listeners
+      hasSetupListenersRef.current = true;
+      
+      // After setup, we're no longer in initial load
+      // Small delay to ensure any pending messages are processed
+      setTimeout(() => {
+        isInitialLoadRef.current = false;
+      }, 100);
+
       // Set up live event listeners with run ID isolation
-      const outputUnlisten = await listen<string>(`agent-output:${run.id}`, (event) => {
+      const outputUnlisten = await listen<string>(`agent-output:${run!.id}`, (event) => {
         try {
+          // Skip messages during initial load phase
+          if (isInitialLoadRef.current) {
+            console.log('[AgentRunOutputViewer] Skipping message during initial load');
+            return;
+          }
+          
           // Store raw JSONL
           setRawJsonlOutput(prev => [...prev, event.payload]);
           
@@ -193,26 +294,27 @@ export function AgentRunOutputViewer({
           const message = JSON.parse(event.payload) as ClaudeStreamMessage;
           setMessages(prev => [...prev, message]);
         } catch (err) {
-          console.error("Failed to parse message:", err, event.payload);
+          console.error("[AgentRunOutputViewer] Failed to parse message:", err, event.payload);
         }
       });
 
-      const errorUnlisten = await listen<string>(`agent-error:${run.id}`, (event) => {
-        console.error("Agent error:", event.payload);
+      const errorUnlisten = await listen<string>(`agent-error:${run!.id}`, (event) => {
+        console.error("[AgentRunOutputViewer] Agent error:", event.payload);
         setToast({ message: event.payload, type: 'error' });
       });
 
-      const completeUnlisten = await listen<boolean>(`agent-complete:${run.id}`, () => {
+      const completeUnlisten = await listen<boolean>(`agent-complete:${run!.id}`, () => {
         setToast({ message: 'Agent execution completed', type: 'success' });
+        // Don't set status here as the parent component should handle it
       });
 
-      const cancelUnlisten = await listen<boolean>(`agent-cancelled:${run.id}`, () => {
+      const cancelUnlisten = await listen<boolean>(`agent-cancelled:${run!.id}`, () => {
         setToast({ message: 'Agent execution was cancelled', type: 'error' });
       });
 
       unlistenRefs.current = [outputUnlisten, errorUnlisten, completeUnlisten, cancelUnlisten];
     } catch (error) {
-      console.error('Failed to set up live event listeners:', error);
+      console.error('[AgentRunOutputViewer] Failed to set up live event listeners:', error);
     }
   };
 
@@ -225,6 +327,7 @@ export function AgentRunOutputViewer({
   };
 
   const handleCopyAsMarkdown = async () => {
+    if (!run) return;
     let markdown = `# Agent Execution: ${run.agent_name}\n\n`;
     markdown += `**Task:** ${run.task}\n`;
     markdown += `**Model:** ${run.model === 'opus' ? 'Claude 4 Opus' : 'Claude 4 Sonnet'}\n`;
@@ -281,10 +384,61 @@ export function AgentRunOutputViewer({
     setToast({ message: 'Output copied as Markdown', type: 'success' });
   };
 
-  const refreshOutput = async () => {
+  const handleRefresh = async () => {
     setRefreshing(true);
-    await loadOutput(true); // Skip cache
+    await loadOutput();
     setRefreshing(false);
+  };
+
+  const handleStop = async () => {
+    if (!run?.id) {
+      console.error('[AgentRunOutputViewer] No run ID available to stop');
+      return;
+    }
+
+    try {
+      // Call the API to kill the agent session
+      const success = await api.killAgentSession(run.id);
+      
+      if (success) {
+        console.log(`[AgentRunOutputViewer] Successfully stopped agent session ${run.id}`);
+        setToast({ message: 'Agent execution stopped', type: 'success' });
+        
+        // Clean up listeners
+        unlistenRefs.current.forEach(unlisten => unlisten());
+        unlistenRefs.current = [];
+        hasSetupListenersRef.current = false;
+        
+        // Add a message indicating execution was stopped
+        const stopMessage: ClaudeStreamMessage = {
+          type: "result",
+          subtype: "error",
+          is_error: true,
+          result: "Execution stopped by user",
+          duration_ms: 0,
+          usage: {
+            input_tokens: 0,
+            output_tokens: 0
+          }
+        };
+        setMessages(prev => [...prev, stopMessage]);
+        
+        // Update the tab status
+        updateTabStatus(tabId, 'idle');
+        
+        // Refresh the output to get updated status
+        await loadOutput(true);
+      } else {
+        console.warn(`[AgentRunOutputViewer] Failed to stop agent session ${run.id} - it may have already finished`);
+        setToast({ message: 'Failed to stop agent - it may have already finished', type: 'error' });
+      }
+    } catch (err) {
+      console.error('[AgentRunOutputViewer] Failed to stop agent:', err);
+      setToast({ 
+        message: `Failed to stop execution: ${err instanceof Error ? err.message : 'Unknown error'}`, 
+        type: 'error' 
+      });
+    }
   };
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -296,10 +450,10 @@ export function AgentRunOutputViewer({
 
   // Load output on mount
   useEffect(() => {
-    if (!run.id) return;
+    if (!run?.id) return;
     
     // Check cache immediately for instant display
-    const cached = getCachedOutput(run.id);
+    const cached = getCachedOutput(run!.id);
     if (cached) {
       const cachedJsonlLines = cached.output.split('\n').filter(line => line.trim());
       setRawJsonlOutput(cachedJsonlLines);
@@ -308,7 +462,7 @@ export function AgentRunOutputViewer({
     
     // Then load fresh data
     loadOutput();
-  }, [run.id]);
+  }, [run?.id]);
 
   const displayableMessages = useMemo(() => {
     return messages.filter((message) => {
@@ -376,25 +530,23 @@ export function AgentRunOutputViewer({
     return tokens.toString();
   };
 
+  if (!run) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading agent run...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40"
-        onClick={onClose}
-      />
-      
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className={`fixed inset-x-4 top-[10%] bottom-[10%] z-50 max-w-4xl mx-auto ${className}`}
-      >
-        <Card className="h-full flex flex-col shadow-xl">
-          <CardHeader className="pb-3">
-            <div className="flex items-start justify-between gap-4">
+      <div className={`h-full flex flex-col ${className || ''}`}>
+        <Card className="h-full flex flex-col">
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between gap-4">
               <div className="flex items-start gap-3 flex-1 min-w-0">
                 <div className="mt-0.5">
                   {renderIcon(run.agent_icon)}
@@ -475,17 +627,6 @@ export function AgentRunOutputViewer({
                   onOpenChange={setCopyPopoverOpen}
                   align="end"
                 />
-                {onOpenFullView && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={onOpenFullView}
-                    title="Open in full view"
-                    className="h-8 px-2"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                  </Button>
-                )}
                 <Button
                   variant="ghost"
                   size="sm"
@@ -502,26 +643,30 @@ export function AgentRunOutputViewer({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={refreshOutput}
+                  onClick={handleRefresh}
                   disabled={refreshing}
                   title="Refresh output"
                   className="h-8 px-2"
                 >
                   <RotateCcw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
                 </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={onClose}
-                  className="h-8 px-2"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
+                {run.status === 'running' && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleStop}
+                    disabled={refreshing}
+                    title="Stop execution"
+                    className="h-8 px-2 text-destructive hover:text-destructive"
+                  >
+                    <StopCircle className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
-            </div>
-          </CardHeader>
-          <CardContent className={`${isFullscreen ? 'h-[calc(100vh-120px)]' : 'flex-1'} p-0 overflow-hidden`}>
-            {loading ? (
+          </div>
+        </CardHeader>
+        <CardContent className={`${isFullscreen ? 'h-[calc(100vh-120px)]' : 'flex-1'} p-0 overflow-hidden`}>
+          {loading ? (
               <div className="flex items-center justify-center h-full">
                 <div className="flex items-center space-x-2">
                   <RefreshCw className="h-4 w-4 animate-spin" />
@@ -554,10 +699,10 @@ export function AgentRunOutputViewer({
                 </AnimatePresence>
                 <div ref={outputEndRef} />
               </div>
-            )}
-          </CardContent>
+          )}
+        </CardContent>
         </Card>
-      </motion.div>
+      </div>
 
       {/* Fullscreen Modal */}
       {isFullscreen && (
@@ -607,11 +752,22 @@ export function AgentRunOutputViewer({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={refreshOutput}
+                onClick={handleRefresh}
                 disabled={refreshing}
               >
                 <RotateCcw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
               </Button>
+              {run.status === 'running' && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleStop}
+                  disabled={refreshing}
+                >
+                  <StopCircle className="h-4 w-4 mr-2" />
+                  Stop
+                </Button>
+              )}
               <Button
                 variant="outline"
                 size="sm"
@@ -668,4 +824,6 @@ export function AgentRunOutputViewer({
       </ToastContainer>
     </>
   );
-} 
+}
+
+export default AgentRunOutputViewer; 

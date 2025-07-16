@@ -15,6 +15,7 @@ import { claudeSyntaxTheme } from "@/lib/claudeSyntaxTheme";
 import type { ClaudeStreamMessage } from "./AgentExecution";
 import {
   TodoWidget,
+  TodoReadWidget,
   LSWidget,
   ReadWidget,
   ReadResultWidget,
@@ -205,6 +206,12 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                         return <TodoWidget todos={input.todos} result={toolResult} />;
                       }
                       
+                      // TodoRead tool
+                      if (toolName === "todoread") {
+                        renderedSomething = true;
+                        return <TodoReadWidget todos={input?.todos} result={toolResult} />;
+                      }
+                      
                       // LS tool
                       if (toolName === "ls" && input?.path) {
                         renderedSomething = true;
@@ -368,7 +375,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                           const toolUse = prevMsg.message.content.find((c: any) => c.type === 'tool_use' && c.id === content.tool_use_id);
                           if (toolUse) {
                             const toolName = toolUse.name?.toLowerCase();
-                            const toolsWithWidgets = ['task','edit','multiedit','todowrite','ls','read','glob','bash','write','grep','websearch','webfetch'];
+                            const toolsWithWidgets = ['task','edit','multiedit','todowrite','todoread','ls','read','glob','bash','write','grep','websearch','webfetch'];
                             if (toolsWithWidgets.includes(toolName) || toolUse.name?.startsWith('mcp__')) {
                               hasCorrespondingWidget = true;
                             }

@@ -3,11 +3,12 @@ import { motion } from "framer-motion";
 import { 
   ArrowLeft, 
   Copy, 
-  ChevronDown,
+  ChevronDown, 
   Clock,
   Hash,
   DollarSign,
-  Bot
+  Bot,
+  StopCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -64,7 +65,25 @@ export const AgentRunView: React.FC<AgentRunViewProps> = ({
       const runData = await api.getAgentRunWithRealTimeMetrics(runId);
       setRun(runData);
       
-      // Parse JSONL output into messages
+      // If we have a session_id, try to load from JSONL file first
+      if (runData.session_id && runData.session_id !== '') {
+        try {
+          const history = await api.loadAgentSessionHistory(runData.session_id);
+          
+          // Convert history to messages format
+          const loadedMessages: ClaudeStreamMessage[] = history.map(entry => ({
+            ...entry,
+            type: entry.type || "assistant"
+          }));
+          
+          setMessages(loadedMessages);
+          return;
+        } catch (err) {
+          console.warn('Failed to load from JSONL, falling back to output field:', err);
+        }
+      }
+      
+      // Fallback: Parse JSONL output from the output field
       if (runData.output) {
         const parsedMessages: ClaudeStreamMessage[] = [];
         const lines = runData.output.split('\n').filter(line => line.trim());
@@ -97,14 +116,16 @@ export const AgentRunView: React.FC<AgentRunViewProps> = ({
   const handleCopyAsMarkdown = async () => {
     if (!run) return;
     
-    let markdown = `# Agent Execution: ${run.agent_name}\n\n`;
+    let markdown = `# Agent Run: ${run.agent_name}\n\n`;
     markdown += `**Task:** ${run.task}\n`;
-    markdown += `**Model:** ${run.model === 'opus' ? 'Claude 4 Opus' : 'Claude 4 Sonnet'}\n`;
-    markdown += `**Date:** ${formatISOTimestamp(run.created_at)}\n`;
-    if (run.metrics?.duration_ms) markdown += `**Duration:** ${(run.metrics.duration_ms / 1000).toFixed(2)}s\n`;
-    if (run.metrics?.total_tokens) markdown += `**Total Tokens:** ${run.metrics.total_tokens}\n`;
-    if (run.metrics?.cost_usd) markdown += `**Cost:** $${run.metrics.cost_usd.toFixed(4)} USD\n`;
-    markdown += `\n---\n\n`;
+    markdown += `**Model:** ${run.model}\n`;
+    markdown += `**Status:** ${run.status}\n`;
+    if (run.metrics) {
+      markdown += `**Tokens:** ${run.metrics.total_tokens || 'N/A'}\n`;
+      markdown += `**Cost:** $${run.metrics.cost_usd?.toFixed(4) || 'N/A'}\n`;
+    }
+    markdown += `**Date:** ${new Date(run.created_at).toISOString()}\n\n`;
+    markdown += `---\n\n`;
 
     for (const msg of messages) {
       if (msg.type === "system" && msg.subtype === "init") {
@@ -150,6 +171,50 @@ export const AgentRunView: React.FC<AgentRunViewProps> = ({
 
     await navigator.clipboard.writeText(markdown);
     setCopyPopoverOpen(false);
+  };
+
+  const handleStop = async () => {
+    if (!runId) {
+      console.error('[AgentRunView] No run ID available to stop');
+      return;
+    }
+
+    try {
+      // Call the API to kill the agent session
+      const success = await api.killAgentSession(runId);
+      
+      if (success) {
+        console.log(`[AgentRunView] Successfully stopped agent session ${runId}`);
+        
+        // Update the run status locally
+        if (run) {
+          setRun({ ...run, status: 'cancelled' });
+        }
+        
+        // Add a message indicating execution was stopped
+        const stopMessage: ClaudeStreamMessage = {
+          type: "result",
+          subtype: "error",
+          is_error: true,
+          result: "Execution stopped by user",
+          duration_ms: 0,
+          usage: {
+            input_tokens: 0,
+            output_tokens: 0
+          }
+        };
+        setMessages(prev => [...prev, stopMessage]);
+        
+        // Reload the run data after a short delay
+        setTimeout(() => {
+          loadRun();
+        }, 1000);
+      } else {
+        console.warn(`[AgentRunView] Failed to stop agent session ${runId} - it may have already finished`);
+      }
+    } catch (err) {
+      console.error('[AgentRunView] Failed to stop agent:', err);
+    }
   };
 
   const renderIcon = (iconName: string) => {
@@ -202,42 +267,56 @@ export const AgentRunView: React.FC<AgentRunViewProps> = ({
             </div>
           </div>
           
-          <Popover
-            trigger={
+          <div className="flex items-center gap-2">
+            {run?.status === 'running' && (
               <Button
-                variant="ghost"
                 size="sm"
-                className="flex items-center gap-2"
+                variant="ghost"
+                onClick={handleStop}
+                className="text-destructive hover:text-destructive"
               >
-                <Copy className="h-4 w-4" />
-                Copy Output
-                <ChevronDown className="h-3 w-3" />
+                <StopCircle className="h-4 w-4 mr-1" />
+                Stop
               </Button>
-            }
-            content={
-              <div className="w-44 p-1">
+            )}
+            
+            <Popover
+              trigger={
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="w-full justify-start"
-                  onClick={handleCopyAsJsonl}
+                  className="flex items-center gap-2"
                 >
-                  Copy as JSONL
+                  <Copy className="h-4 w-4" />
+                  Copy Output
+                  <ChevronDown className="h-3 w-3" />
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full justify-start"
-                  onClick={handleCopyAsMarkdown}
-                >
-                  Copy as Markdown
-                </Button>
-              </div>
-            }
-            open={copyPopoverOpen}
-            onOpenChange={setCopyPopoverOpen}
-            align="end"
-          />
+              }
+              content={
+                <div className="w-44 p-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={handleCopyAsJsonl}
+                  >
+                    Copy as JSONL
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={handleCopyAsMarkdown}
+                  >
+                    Copy as Markdown
+                  </Button>
+                </div>
+              }
+              open={copyPopoverOpen}
+              onOpenChange={setCopyPopoverOpen}
+              align="end"
+            />
+          </div>
         </motion.div>
         
         {/* Run Details */}

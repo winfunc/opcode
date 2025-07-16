@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Loader2, Bot, FolderCode } from "lucide-react";
 import { api, type Project, type Session, type ClaudeMdFile } from "@/lib/api";
 import { OutputCacheProvider } from "@/lib/outputCache";
+import { TabProvider } from "@/contexts/TabContext";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ProjectList } from "@/components/ProjectList";
@@ -13,32 +14,51 @@ import { MarkdownEditor } from "@/components/MarkdownEditor";
 import { ClaudeFileEditor } from "@/components/ClaudeFileEditor";
 import { Settings } from "@/components/Settings";
 import { CCAgents } from "@/components/CCAgents";
-import { ClaudeCodeSession } from "@/components/ClaudeCodeSession";
 import { UsageDashboard } from "@/components/UsageDashboard";
 import { MCPManager } from "@/components/MCPManager";
 import { NFOCredits } from "@/components/NFOCredits";
 import { ClaudeBinaryDialog } from "@/components/ClaudeBinaryDialog";
 import { Toast, ToastContainer } from "@/components/ui/toast";
+import { ProjectSettings } from '@/components/ProjectSettings';
+import { TabManager } from "@/components/TabManager";
+import { TabContent } from "@/components/TabContent";
+import { AgentsModal } from "@/components/AgentsModal";
+import { useTabState } from "@/hooks/useTabState";
 
-type View = "welcome" | "projects" | "agents" | "editor" | "settings" | "claude-file-editor" | "claude-code-session" | "usage-dashboard" | "mcp";
+type View = 
+  | "welcome" 
+  | "projects" 
+  | "editor" 
+  | "claude-file-editor" 
+  | "settings"
+  | "cc-agents"
+  | "create-agent"
+  | "github-agents"
+  | "agent-execution"
+  | "agent-run-view"
+  | "mcp"
+  | "usage-dashboard"
+  | "project-settings"
+  | "tabs"; // New view for tab-based interface
 
 /**
- * Main App component - Manages the Claude directory browser UI
+ * AppContent component - Contains the main app logic, wrapped by providers
  */
-function App() {
-  const [view, setView] = useState<View>("welcome");
+function AppContent() {
+  const [view, setView] = useState<View>("tabs");
+  const { createClaudeMdTab, createSettingsTab, createUsageTab, createMCPTab } = useTabState();
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [editingClaudeFile, setEditingClaudeFile] = useState<ClaudeMdFile | null>(null);
-  const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showNFO, setShowNFO] = useState(false);
   const [showClaudeBinaryDialog, setShowClaudeBinaryDialog] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
-  const [activeClaudeSessionId, setActiveClaudeSessionId] = useState<string | null>(null);
-  const [isClaudeStreaming, setIsClaudeStreaming] = useState(false);
+  const [projectForSettings, setProjectForSettings] = useState<Project | null>(null);
+  const [previousView] = useState<View>("welcome");
+  const [showAgentsModal, setShowAgentsModal] = useState(false);
 
   // Load projects on mount when in projects view
   useEffect(() => {
@@ -50,22 +70,56 @@ function App() {
     }
   }, [view]);
 
-  // Listen for Claude session selection events
+  // Keyboard shortcuts for tab navigation
   useEffect(() => {
-    const handleSessionSelected = (event: CustomEvent) => {
-      const { session } = event.detail;
-      setSelectedSession(session);
-      handleViewChange("claude-code-session");
+    if (view !== "tabs") return;
+    
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      const modKey = isMac ? e.metaKey : e.ctrlKey;
+      
+      if (modKey) {
+        switch (e.key) {
+          case 't':
+            e.preventDefault();
+            window.dispatchEvent(new CustomEvent('create-chat-tab'));
+            break;
+          case 'w':
+            e.preventDefault();
+            window.dispatchEvent(new CustomEvent('close-current-tab'));
+            break;
+          case 'Tab':
+            e.preventDefault();
+            if (e.shiftKey) {
+              window.dispatchEvent(new CustomEvent('switch-to-previous-tab'));
+            } else {
+              window.dispatchEvent(new CustomEvent('switch-to-next-tab'));
+            }
+            break;
+          default:
+            // Handle number keys 1-9
+            if (e.key >= '1' && e.key <= '9') {
+              e.preventDefault();
+              const index = parseInt(e.key) - 1;
+              window.dispatchEvent(new CustomEvent('switch-to-tab-by-index', { detail: { index } }));
+            }
+            break;
+        }
+      }
     };
 
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [view]);
+
+  // Listen for Claude not found events
+  useEffect(() => {
     const handleClaudeNotFound = () => {
       setShowClaudeBinaryDialog(true);
     };
 
-    window.addEventListener('claude-session-selected', handleSessionSelected as EventListener);
     window.addEventListener('claude-not-found', handleClaudeNotFound as EventListener);
     return () => {
-      window.removeEventListener('claude-session-selected', handleSessionSelected as EventListener);
       window.removeEventListener('claude-not-found', handleClaudeNotFound as EventListener);
     };
   }, []);
@@ -109,8 +163,8 @@ function App() {
    * Opens a new Claude Code session in the interactive UI
    */
   const handleNewSession = async () => {
-    handleViewChange("claude-code-session");
-    setSelectedSession(null);
+    handleViewChange("tabs");
+    // The tab system will handle creating a new chat tab
   };
 
   /**
@@ -141,21 +195,18 @@ function App() {
    * Handles view changes with navigation protection
    */
   const handleViewChange = (newView: View) => {
-    // Check if we're navigating away from an active Claude session
-    if (view === "claude-code-session" && isClaudeStreaming && activeClaudeSessionId) {
-      const shouldLeave = window.confirm(
-        "Claude is still responding. If you navigate away, Claude will continue running in the background.\n\n" +
-        "You can return to this session from the Projects view.\n\n" +
-        "Do you want to continue?"
-      );
-      
-      if (!shouldLeave) {
-        return;
-      }
-    }
-    
+    // No need for navigation protection with tabs since sessions stay open
     setView(newView);
   };
+
+  /**
+   * Handles navigating to hooks configuration
+   */
+  const handleProjectSettings = (project: Project) => {
+    setProjectForSettings(project);
+    handleViewChange("project-settings");
+  };
+
 
   const renderContent = () => {
     switch (view) {
@@ -185,8 +236,8 @@ function App() {
                   transition={{ duration: 0.5, delay: 0.1 }}
                 >
                   <Card 
-                    className="h-64 cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-lg border border-border/50 shimmer-hover"
-                    onClick={() => handleViewChange("agents")}
+                    className="h-64 cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-lg border border-border/50 shimmer-hover trailing-border"
+                    onClick={() => handleViewChange("cc-agents")}
                   >
                     <div className="h-full flex flex-col items-center justify-center p-8">
                       <Bot className="h-16 w-16 mb-4 text-primary" />
@@ -202,7 +253,7 @@ function App() {
                   transition={{ duration: 0.5, delay: 0.2 }}
                 >
                   <Card 
-                    className="h-64 cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-lg border border-border/50 shimmer-hover"
+                    className="h-64 cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-lg border border-border/50 shimmer-hover trailing-border"
                     onClick={() => handleViewChange("projects")}
                   >
                     <div className="h-full flex flex-col items-center justify-center p-8">
@@ -217,11 +268,11 @@ function App() {
           </div>
         );
 
-      case "agents":
+      case "cc-agents":
         return (
-          <div className="flex-1 overflow-hidden">
-            <CCAgents onBack={() => handleViewChange("welcome")} />
-          </div>
+          <CCAgents 
+            onBack={() => handleViewChange("welcome")} 
+          />
         );
 
       case "editor":
@@ -240,8 +291,8 @@ function App() {
       
       case "projects":
         return (
-          <div className="flex h-full items-center justify-center p-4 overflow-y-auto">
-            <div className="w-full max-w-2xl">
+          <div className="flex-1 overflow-y-auto">
+            <div className="container mx-auto p-6">
               {/* Header with back button */}
               <motion.div
                 initial={{ opacity: 0, y: -20 }}
@@ -257,7 +308,7 @@ function App() {
                 >
                   ← Back to Home
                 </Button>
-                <div className="text-center">
+                <div className="mb-4">
                   <h1 className="text-3xl font-bold tracking-tight">CC Projects</h1>
                   <p className="mt-1 text-sm text-muted-foreground">
                     Browse your Claude Code sessions
@@ -270,7 +321,7 @@ function App() {
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="mb-4 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-xs text-destructive"
+                  className="mb-4 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-xs text-destructive max-w-2xl"
                 >
                   {error}
                 </motion.div>
@@ -308,18 +359,18 @@ function App() {
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: 20 }}
                       transition={{ duration: 0.3 }}
-                      className="space-y-4"
                     >
                       {/* New session button at the top */}
                       <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5 }}
+                        className="mb-4"
                       >
                         <Button
                           onClick={handleNewSession}
                           size="default"
-                          className="w-full"
+                          className="w-full max-w-md"
                         >
                           <Plus className="mr-2 h-4 w-4" />
                           New Claude Code session
@@ -334,6 +385,9 @@ function App() {
                         <ProjectList
                           projects={projects}
                           onProjectClick={handleProjectClick}
+                          onProjectSettings={handleProjectSettings}
+                          loading={loading}
+                          className="animate-fade-in"
                         />
                       ) : (
                         <div className="py-8 text-center">
@@ -358,19 +412,14 @@ function App() {
           />
         ) : null;
       
-      case "claude-code-session":
+      case "tabs":
         return (
-          <ClaudeCodeSession
-            session={selectedSession || undefined}
-            onBack={() => {
-              setSelectedSession(null);
-              handleViewChange("projects");
-            }}
-            onStreamingChange={(isStreaming, sessionId) => {
-              setIsClaudeStreaming(isStreaming);
-              setActiveClaudeSessionId(sessionId);
-            }}
-          />
+          <div className="h-full flex flex-col">
+            <TabManager className="flex-shrink-0" />
+            <div className="flex-1 overflow-hidden">
+              <TabContent />
+            </div>
+          </div>
         );
       
       case "usage-dashboard":
@@ -383,54 +432,86 @@ function App() {
           <MCPManager onBack={() => handleViewChange("welcome")} />
         );
       
+      case "project-settings":
+        if (projectForSettings) {
+          return (
+            <ProjectSettings
+              project={projectForSettings}
+              onBack={() => {
+                setProjectForSettings(null);
+                handleViewChange(previousView || "projects");
+              }}
+            />
+          );
+        }
+        break;
+      
       default:
         return null;
     }
   };
 
   return (
-    <OutputCacheProvider>
-      <div className="h-screen bg-background flex flex-col">
-        {/* Topbar */}
-        <Topbar
-          onClaudeClick={() => handleViewChange("editor")}
-          onSettingsClick={() => handleViewChange("settings")}
-          onUsageClick={() => handleViewChange("usage-dashboard")}
-          onMCPClick={() => handleViewChange("mcp")}
-          onInfoClick={() => setShowNFO(true)}
-        />
-        
-        {/* Main Content */}
-        <div className="flex-1 overflow-y-auto">
-          {renderContent()}
-        </div>
-        
-        {/* NFO Credits Modal */}
-        {showNFO && <NFOCredits onClose={() => setShowNFO(false)} />}
-        
-        {/* Claude Binary Dialog */}
-        <ClaudeBinaryDialog
-          open={showClaudeBinaryDialog}
-          onOpenChange={setShowClaudeBinaryDialog}
-          onSuccess={() => {
-            setToast({ message: "Claude binary path saved successfully", type: "success" });
-            // Trigger a refresh of the Claude version check
-            window.location.reload();
-          }}
-          onError={(message) => setToast({ message, type: "error" })}
-        />
-        
-        {/* Toast Container */}
-        <ToastContainer>
-          {toast && (
-            <Toast
-              message={toast.message}
-              type={toast.type}
-              onDismiss={() => setToast(null)}
-            />
-          )}
-        </ToastContainer>
+    <div className="h-screen bg-background flex flex-col">
+      {/* Topbar */}
+      <Topbar
+        onClaudeClick={() => createClaudeMdTab()}
+        onSettingsClick={() => createSettingsTab()}
+        onUsageClick={() => createUsageTab()}
+        onMCPClick={() => createMCPTab()}
+        onInfoClick={() => setShowNFO(true)}
+        onAgentsClick={() => setShowAgentsModal(true)}
+      />
+      
+      {/* Main Content */}
+      <div className="flex-1 overflow-hidden">
+        {renderContent()}
       </div>
+      
+      {/* NFO Credits Modal */}
+      {showNFO && <NFOCredits onClose={() => setShowNFO(false)} />}
+      
+      {/* Agents Modal */}
+      <AgentsModal 
+        open={showAgentsModal} 
+        onOpenChange={setShowAgentsModal} 
+      />
+      
+      {/* Claude Binary Dialog */}
+      <ClaudeBinaryDialog
+        open={showClaudeBinaryDialog}
+        onOpenChange={setShowClaudeBinaryDialog}
+        onSuccess={() => {
+          setToast({ message: "Claude binary path saved successfully", type: "success" });
+          // Trigger a refresh of the Claude version check
+          window.location.reload();
+        }}
+        onError={(message) => setToast({ message, type: "error" })}
+      />
+      
+      {/* Toast Container */}
+      <ToastContainer>
+        {toast && (
+          <Toast
+            message={toast.message}
+            type={toast.type}
+            onDismiss={() => setToast(null)}
+          />
+        )}
+      </ToastContainer>
+    </div>
+  );
+}
+
+/**
+ * Main App component - Wraps the app with providers
+ */
+function App() {
+  return (
+    <OutputCacheProvider>
+      <TabProvider>
+        <AppContent />
+      </TabProvider>
     </OutputCacheProvider>
   );
 }
