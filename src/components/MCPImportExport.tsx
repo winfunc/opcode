@@ -38,12 +38,12 @@ export const MCPImportExport: React.FC<MCPImportExportProps> = ({
       setImportingDesktop(true);
       // Always use "user" scope for Claude Desktop imports (was previously "global")
       const result = await api.mcpAddFromClaudeDesktop("user");
-      
+
       // Show detailed results if available
       if (result.servers && result.servers.length > 0) {
         const successfulServers = result.servers.filter(s => s.success);
         const failedServers = result.servers.filter(s => !s.success);
-        
+
         if (successfulServers.length > 0) {
           const successMessage = t.mcp.successfullyImported.replace('{servers}', successfulServers.map(s => s.name).join(", "));
           onImportCompleted(result.imported_count, result.failed_count);
@@ -52,7 +52,7 @@ export const MCPImportExport: React.FC<MCPImportExportProps> = ({
             onError(successMessage);
           }
         }
-        
+
         if (failedServers.length > 0) {
           const failureDetails = failedServers
             .map(s => `${s.name}: ${s.error || "Unknown error"}`)
@@ -80,7 +80,7 @@ export const MCPImportExport: React.FC<MCPImportExportProps> = ({
     try {
       setImportingJson(true);
       const content = await file.text();
-      
+
       // Parse the JSON to validate it
       let jsonData;
       try {
@@ -104,7 +104,7 @@ export const MCPImportExport: React.FC<MCPImportExportProps> = ({
               args: (config as any).args || [],
               env: (config as any).env || {}
             };
-            
+
             const result = await api.mcpAddJson(name, JSON.stringify(serverConfig), importScope);
             if (result.success) {
               imported++;
@@ -115,7 +115,7 @@ export const MCPImportExport: React.FC<MCPImportExportProps> = ({
             failed++;
           }
         }
-        
+
         onImportCompleted(imported, failed);
       } else if (jsonData.type && jsonData.command) {
         // Single server format
@@ -336,7 +336,7 @@ export const MCPImportExport: React.FC<MCPImportExportProps> = ({
             <div>
               <p className="font-medium text-muted-foreground mb-1">{t.mcp.singleServer}</p>
               <pre className="bg-background p-3 rounded-lg overflow-x-auto">
-{`{
+                {`{
   "type": "stdio",
   "command": "/path/to/server",
   "args": ["--arg1", "value"],
@@ -347,7 +347,7 @@ export const MCPImportExport: React.FC<MCPImportExportProps> = ({
             <div>
               <p className="font-medium text-muted-foreground mb-1">{t.mcp.multipleServers}</p>
               <pre className="bg-background p-3 rounded-lg overflow-x-auto">
-{`{
+                {`{
   "mcpServers": {
     "server1": {
       "command": "/path/to/server1",
