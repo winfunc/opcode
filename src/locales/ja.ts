@@ -365,6 +365,16 @@ export const ja: Translations = {
     output: '出力',
     avgCostPerSession: 'セッション当たり平均コスト',
     modelsUsed: '使用モデル数',
+    // 新増缺失的翻译键
+    trackUsageAndCosts: 'Claude Codeの使用状況とコストを追跡',
+    totalSessions: '総セッション数',
+    tokenBreakdownTitle: 'トークン内訳',
+    failedToLoadUsageStats: '使用統計の読み込みに失敗しました。再試行してください。',
+    noUsageDataForPeriod: '選択した期間の使用データがありません',
+    cacheWriteShort: 'キャッシュ書',
+    cacheReadShort: 'キャッシュ読',
+    model: 'モデル',
+    models: 'モデル',
   },
 
   agents: {

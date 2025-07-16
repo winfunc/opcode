@@ -401,6 +401,16 @@ export interface Translations {
     output: string;
     avgCostPerSession: string;
     modelsUsed: string;
+    // 新增缺失的翻译键
+    trackUsageAndCosts: string;
+    totalSessions: string;
+    tokenBreakdownTitle: string;
+    failedToLoadUsageStats: string;
+    noUsageDataForPeriod: string;
+    cacheWriteShort: string;
+    cacheReadShort: string;
+    model: string;
+    models: string;
   };
 
   // CC Agents

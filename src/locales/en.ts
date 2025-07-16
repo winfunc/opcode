@@ -365,6 +365,16 @@ export const en: Translations = {
     output: 'Output',
     avgCostPerSession: 'Avg Cost per Session',
     modelsUsed: 'Models Used',
+    // 新增缺失的翻译键
+    trackUsageAndCosts: 'Track your Claude Code usage and costs',
+    totalSessions: 'Total Sessions',
+    tokenBreakdownTitle: 'Token Breakdown',
+    failedToLoadUsageStats: 'Failed to load usage statistics. Please try again.',
+    noUsageDataForPeriod: 'No usage data available for the selected period',
+    cacheWriteShort: 'Cache W',
+    cacheReadShort: 'Cache R',
+    model: 'model',
+    models: 'models',
   },
 
   agents: {
