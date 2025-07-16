@@ -61,7 +61,7 @@ export const ClaudeFileEditor: React.FC<ClaudeFileEditorProps> = ({
       setOriginalContent(fileContent);
     } catch (err) {
       console.error("Failed to load file:", err);
-      setError("Failed to load CLAUDE.md file");
+      setError(t.claudemd.failedToLoad);
     } finally {
       setLoading(false);
     }
@@ -74,11 +74,11 @@ export const ClaudeFileEditor: React.FC<ClaudeFileEditorProps> = ({
       setToast(null);
       await api.saveClaudeMdFile(file.absolute_path, content);
       setOriginalContent(content);
-      setToast({ message: "File saved successfully", type: "success" });
+      setToast({ message: t.claudemd.savedSuccessfully, type: "success" });
     } catch (err) {
       console.error("Failed to save file:", err);
-      setError("Failed to save CLAUDE.md file");
-      setToast({ message: "Failed to save file", type: "error" });
+      setError(t.claudemd.failedToSave);
+      setToast({ message: t.claudemd.failedToSave, type: "error" });
     } finally {
       setSaving(false);
     }
@@ -87,7 +87,7 @@ export const ClaudeFileEditor: React.FC<ClaudeFileEditorProps> = ({
   const handleBack = () => {
     if (hasChanges) {
       const confirmLeave = window.confirm(
-        "You have unsaved changes. Are you sure you want to leave?"
+        t.claudemd.unsavedChanges
       );
       if (!confirmLeave) return;
     }
@@ -116,7 +116,7 @@ export const ClaudeFileEditor: React.FC<ClaudeFileEditorProps> = ({
             <div className="min-w-0 flex-1">
               <h2 className="text-lg font-semibold truncate">{file.relative_path}</h2>
               <p className="text-xs text-muted-foreground">
-                Edit project-specific Claude Code system prompt
+                {t.claudemd.editProjectPrompt}
               </p>
             </div>
           </div>
