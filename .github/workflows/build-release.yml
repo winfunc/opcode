@@ -294,7 +294,9 @@ jobs:
           VERSION="${{ steps.get-version.outputs.version }}"
           echo "## 🚀 Claudia ${VERSION}" > CHANGELOG.md
           echo "" >> CHANGELOG.md
-          echo "### 📦 安装包下载" >> CHANGELOG.md
+          
+          # 中文版本
+          echo "### 📦 安装包下载 / Download Packages" >> CHANGELOG.md
           echo "" >> CHANGELOG.md
           
           for file in ./release-files/*; do
@@ -317,15 +319,50 @@ jobs:
           done
           
           echo "" >> CHANGELOG.md
-          echo "### 📋 系统要求" >> CHANGELOG.md
-          echo "- **Linux**: Ubuntu 18.04+ 或其他现代Linux发行版" >> CHANGELOG.md
-          echo "- **Windows**: Windows 10+ (64位)" >> CHANGELOG.md
+          echo "### 📋 系统要求 / System Requirements" >> CHANGELOG.md
+          echo "- **Linux**: Ubuntu 18.04+ 或其他现代Linux发行版 / Ubuntu 18.04+ or other modern Linux distributions" >> CHANGELOG.md
+          echo "- **Windows**: Windows 10+ (64位) / Windows 10+ (64-bit)" >> CHANGELOG.md
           echo "- **macOS**: macOS 10.15+ (Catalina)" >> CHANGELOG.md
           echo "" >> CHANGELOG.md
-          echo "### 🔧 安装说明" >> CHANGELOG.md
-          echo "- **Linux**: 下载 .AppImage 文件，添加执行权限后直接运行" >> CHANGELOG.md
-          echo "- **Windows**: 下载 .msi 文件，双击安装" >> CHANGELOG.md
-          echo "- **macOS**: 下载 .dmg 文件，打开后拖拽到应用程序文件夹" >> CHANGELOG.md
+          echo "### 🔧 安装说明 / Installation Instructions" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "#### Linux" >> CHANGELOG.md
+          echo "**AppImage**:" >> CHANGELOG.md
+          echo "- 中文：下载 \`.AppImage\` 文件，添加执行权限后直接运行" >> CHANGELOG.md
+          echo "- English: Download the \`.AppImage\` file, add execute permission and run directly" >> CHANGELOG.md
+          echo "\`\`\`bash" >> CHANGELOG.md
+          echo "chmod +x claudia-linux-x86_64.AppImage" >> CHANGELOG.md
+          echo "./claudia-linux-x86_64.AppImage" >> CHANGELOG.md
+          echo "\`\`\`" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "**DEB Package**:" >> CHANGELOG.md
+          echo "- 中文：下载 \`.deb\` 文件，使用包管理器安装" >> CHANGELOG.md
+          echo "- English: Download the \`.deb\` file and install using package manager" >> CHANGELOG.md
+          echo "\`\`\`bash" >> CHANGELOG.md
+          echo "# Ubuntu/Debian" >> CHANGELOG.md
+          echo "sudo dpkg -i claudia-linux-x86_64.deb" >> CHANGELOG.md
+          echo "sudo apt-get install -f  # 解决依赖问题 / Fix dependencies if needed" >> CHANGELOG.md
+          echo "\`\`\`" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "#### Windows" >> CHANGELOG.md
+          echo "**MSI Installer**:" >> CHANGELOG.md
+          echo "- 中文：下载 \`.msi\` 文件，双击安装（推荐）" >> CHANGELOG.md
+          echo "- English: Download the \`.msi\` file and double-click to install (Recommended)" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "**EXE Installer**:" >> CHANGELOG.md
+          echo "- 中文：下载 \`.exe\` 文件，右键以管理员身份运行安装" >> CHANGELOG.md
+          echo "- English: Download the \`.exe\` file, right-click and run as administrator to install" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "#### macOS" >> CHANGELOG.md
+          echo "**DMG Package**:" >> CHANGELOG.md
+          echo "- 中文：下载 \`.dmg\` 文件，打开后拖拽到应用程序文件夹" >> CHANGELOG.md
+          echo "- English: Download the \`.dmg\` file, open it and drag to Applications folder" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "### ⚠️ 安全提示 / Security Notes" >> CHANGELOG.md
+          echo "- 中文：首次运行时，系统可能会提示安全警告，请在系统设置中允许运行" >> CHANGELOG.md
+          echo "- English: On first run, the system may show security warnings. Please allow the app to run in system settings" >> CHANGELOG.md
+          echo "- **macOS**: 系统偏好设置 → 安全性与隐私 → 通用 / System Preferences → Security & Privacy → General" >> CHANGELOG.md
+          echo "- **Windows**: Windows安全中心 → 应用和浏览器控制 / Windows Security → App & browser control" >> CHANGELOG.md
 
       # 创建GitHub Release
       - name: Create GitHub Release
