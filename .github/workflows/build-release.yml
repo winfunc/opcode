@@ -29,36 +29,42 @@ jobs:
             artifact-name: linux-x86_64-appimage
             bundle-type: appimage
             bundle-pattern: '*.AppImage'
+            file-suffix: appimage
           - name: Linux DEB
             os: ubuntu-latest
             rust-target: x86_64-unknown-linux-gnu
             artifact-name: linux-x86_64-deb
             bundle-type: deb
             bundle-pattern: '*.deb'
+            file-suffix: deb
           - name: Windows MSI
             os: windows-latest
             rust-target: x86_64-pc-windows-msvc
             artifact-name: windows-x86_64-msi
             bundle-type: msi
             bundle-pattern: '*.msi'
+            file-suffix: msi
           - name: Windows EXE
             os: windows-latest
             rust-target: x86_64-pc-windows-msvc
             artifact-name: windows-x86_64-exe
             bundle-type: nsis
             bundle-pattern: '*.exe'
+            file-suffix: exe
           - name: macOS Intel
             os: macos-latest
             rust-target: x86_64-apple-darwin
             artifact-name: macos-x86_64
             bundle-type: dmg
             bundle-pattern: '*.dmg'
+            file-suffix: dmg
           - name: macOS Apple Silicon
             os: macos-latest
             rust-target: aarch64-apple-darwin
             artifact-name: macos-aarch64
             bundle-type: dmg
             bundle-pattern: '*.dmg'
+            file-suffix: dmg
     
     runs-on: ${{ matrix.platform.os }}
     
@@ -202,11 +208,28 @@ jobs:
         run: |
           ORIGINAL_NAME="${{ steps.find-artifacts.outputs.bundle_name }}"
           EXTENSION="${ORIGINAL_NAME##*.}"
-          NEW_NAME="claudia-${{ matrix.platform.artifact-name }}.${EXTENSION}"
+          
+          # 根据平台和架构生成文件名，不包含文件类型后缀
+          if [ "${{ matrix.platform.bundle-type }}" = "appimage" ]; then
+            NEW_NAME="claudia-linux-x86_64.${EXTENSION}"
+          elif [ "${{ matrix.platform.bundle-type }}" = "deb" ]; then
+            NEW_NAME="claudia-linux-x86_64.${EXTENSION}"
+          elif [ "${{ matrix.platform.bundle-type }}" = "msi" ]; then
+            NEW_NAME="claudia-windows-x86_64.${EXTENSION}"
+          elif [ "${{ matrix.platform.bundle-type }}" = "nsis" ]; then
+            NEW_NAME="claudia-windows-x86_64.${EXTENSION}"
+          elif [ "${{ matrix.platform.bundle-type }}" = "dmg" ]; then
+            if [ "${{ matrix.platform.rust-target }}" = "aarch64-apple-darwin" ]; then
+              NEW_NAME="claudia-macos-aarch64.${EXTENSION}"
+            else
+              NEW_NAME="claudia-macos-x86_64.${EXTENSION}"
+            fi
+          fi
           
           cp "${{ steps.find-artifacts.outputs.bundle_path }}" "$NEW_NAME"
           echo "ARTIFACT_PATH=$NEW_NAME" >> $GITHUB_ENV
           echo "ARTIFACT_NAME=$NEW_NAME" >> $GITHUB_ENV
+          echo "✅ 重命名文件: $ORIGINAL_NAME -> $NEW_NAME"
         shell: bash
 
       # 上传构建产物
@@ -277,17 +300,17 @@ jobs:
           for file in ./release-files/*; do
             if [ -f "$file" ]; then
               filename=$(basename "$file")
-              if [[ "$filename" == *"linux"* && "$filename" == *"appimage"* ]]; then
+              if [[ "$filename" == *"linux"* && "$filename" == *".AppImage" ]]; then
                 echo "- **Linux AppImage (x86_64)**: \`$filename\`" >> CHANGELOG.md
-              elif [[ "$filename" == *"linux"* && "$filename" == *"deb"* ]]; then
+              elif [[ "$filename" == *"linux"* && "$filename" == *".deb" ]]; then
                 echo "- **Linux DEB (x86_64)**: \`$filename\`" >> CHANGELOG.md
-              elif [[ "$filename" == *"windows"* && "$filename" == *"msi"* ]]; then
+              elif [[ "$filename" == *"windows"* && "$filename" == *".msi" ]]; then
                 echo "- **Windows MSI (x86_64)**: \`$filename\`" >> CHANGELOG.md
-              elif [[ "$filename" == *"windows"* && "$filename" == *"exe"* ]]; then
+              elif [[ "$filename" == *"windows"* && "$filename" == *".exe" ]]; then
                 echo "- **Windows EXE (x86_64)**: \`$filename\`" >> CHANGELOG.md
-              elif [[ "$filename" == *"macos-x86_64"* ]]; then
+              elif [[ "$filename" == *"macos-x86_64"* && "$filename" == *".dmg" ]]; then
                 echo "- **macOS (Intel)**: \`$filename\`" >> CHANGELOG.md
-              elif [[ "$filename" == *"macos-aarch64"* ]]; then
+              elif [[ "$filename" == *"macos-aarch64"* && "$filename" == *".dmg" ]]; then
                 echo "- **macOS (Apple Silicon)**: \`$filename\`" >> CHANGELOG.md
               fi
             fi
