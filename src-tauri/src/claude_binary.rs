@@ -8,6 +8,12 @@ use std::path::PathBuf;
 use std::process::Command;
 use tauri::Manager;
 
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
+
+#[cfg(target_os = "windows")]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
+
 /// Type of Claude installation
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum InstallationType {
@@ -226,7 +232,14 @@ fn discover_system_installations() -> Vec<ClaudeInstallation> {
 fn try_which_command() -> Option<ClaudeInstallation> {
     debug!("Trying 'which claude' to find binary...");
 
-    match Command::new("which").arg("claude").output() {
+    let mut cmd = Command::new("which");
+    cmd.arg("claude");
+    #[cfg(target_os = "windows")]
+    {
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+    
+    match cmd.output() {
         Ok(output) if output.status.success() => {
             let output_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
 
@@ -370,18 +383,46 @@ fn find_standard_installations() -> Vec<ClaudeInstallation> {
         }
     }
 
-    // Also check if claude is available in PATH (without full path)
-    if let Ok(output) = Command::new("claude").arg("--version").output() {
+    // Use platform-specific commands to find claude in PATH with full path resolution
+    let path_finder_cmd = if cfg!(target_os = "windows") { "where" } else { "which" };
+    
+    let mut cmd = Command::new(path_finder_cmd);
+    cmd.arg("claude");
+    #[cfg(target_os = "windows")]
+    {
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+    
+    if let Ok(output) = cmd.output() {
         if output.status.success() {
-            debug!("claude is available in PATH");
-            let version = extract_version_from_output(&output.stdout);
-
-            installations.push(ClaudeInstallation {
-                path: "claude".to_string(),
-                version,
-                source: "PATH".to_string(),
-                installation_type: InstallationType::System,
-            });
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            // 'where' on Windows can return multiple paths, one per line
+            // 'which' on Unix typically returns a single path
+            for line in stdout.lines() {
+                let path = line.trim();
+                if !path.is_empty() {
+                    debug!("Found claude at: {}", path);
+                    // Use the full path to get version
+                    let mut version_cmd = Command::new(path);
+                    version_cmd.arg("--version");
+                    #[cfg(target_os = "windows")]
+                    {
+                        version_cmd.creation_flags(CREATE_NO_WINDOW);
+                    }
+                    
+                    if let Ok(version_output) = version_cmd.output() {
+                        if version_output.status.success() {
+                            let version = extract_version_from_output(&version_output.stdout);
+                            installations.push(ClaudeInstallation {
+                                path: path.to_string(),
+                                version,
+                                source: "PATH".to_string(),
+                                installation_type: InstallationType::System,
+                            });
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -390,7 +431,14 @@ fn find_standard_installations() -> Vec<ClaudeInstallation> {
 
 /// Get Claude version by running --version command
 fn get_claude_version(path: &str) -> Result<Option<String>, String> {
-    match Command::new(path).arg("--version").output() {
+    let mut cmd = Command::new(path);
+    cmd.arg("--version");
+    #[cfg(target_os = "windows")]
+    {
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+    
+    match cmd.output() {
         Ok(output) => {
             if output.status.success() {
                 Ok(extract_version_from_output(&output.stdout))

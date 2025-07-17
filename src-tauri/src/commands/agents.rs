@@ -15,6 +15,12 @@ use tauri_plugin_shell::ShellExt;
 use tokio::io::{AsyncBufReadExt, BufReader as TokioBufReader};
 use tokio::process::Command;
 
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
+
+#[cfg(target_os = "windows")]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
+
 /// Finds the full path to the claude binary
 /// This is necessary because macOS apps have a limited PATH environment
 fn find_claude_binary(app_handle: &AppHandle) -> Result<String, String> {
@@ -1284,10 +1290,13 @@ async fn spawn_agent_system(
                     "🔍 Process likely stuck waiting for input, attempting to kill PID: {}",
                     pid
                 );
-                let kill_result = std::process::Command::new("kill")
-                    .arg("-TERM")
-                    .arg(pid.to_string())
-                    .output();
+                let mut kill_cmd = std::process::Command::new("kill");
+                kill_cmd.arg("-TERM").arg(pid.to_string());
+                #[cfg(target_os = "windows")]
+                {
+                    kill_cmd.creation_flags(CREATE_NO_WINDOW);
+                }
+                let kill_result = kill_cmd.output();
 
                 match kill_result {
                     Ok(output) if output.status.success() => {
@@ -1295,10 +1304,13 @@ async fn spawn_agent_system(
                     }
                     Ok(_) => {
                         warn!("🔍 Failed to kill process with TERM, trying KILL");
-                        let _ = std::process::Command::new("kill")
-                            .arg("-KILL")
-                            .arg(pid.to_string())
-                            .output();
+                        let mut kill_kill_cmd = std::process::Command::new("kill");
+                        kill_kill_cmd.arg("-KILL").arg(pid.to_string());
+                        #[cfg(target_os = "windows")]
+                        {
+                            kill_kill_cmd.creation_flags(CREATE_NO_WINDOW);
+                        }
+                        let _ = kill_kill_cmd.output();
                     }
                     Err(e) => {
                         warn!("🔍 Error killing process: {}", e);
@@ -1537,10 +1549,14 @@ pub async fn cleanup_finished_processes(db: State<'_, AgentDb>) -> Result<Vec<i6
         // Check if the process is still running
         let is_running = if cfg!(target_os = "windows") {
             // On Windows, use tasklist to check if process exists
-            match std::process::Command::new("tasklist")
-                .args(["/FI", &format!("PID eq {}", pid)])
-                .args(["/FO", "CSV"])
-                .output()
+            let mut cmd = std::process::Command::new("tasklist");
+            cmd.args(["/FI", &format!("PID eq {}", pid)])
+               .args(["/FO", "CSV"]);
+            #[cfg(target_os = "windows")]
+            {
+                cmd.creation_flags(CREATE_NO_WINDOW);
+            }
+            match cmd.output()
             {
                 Ok(output) => {
                     let output_str = String::from_utf8_lossy(&output.stdout);
@@ -1550,9 +1566,13 @@ pub async fn cleanup_finished_processes(db: State<'_, AgentDb>) -> Result<Vec<i6
             }
         } else {
             // On Unix-like systems, use kill -0 to check if process exists
-            match std::process::Command::new("kill")
-                .args(["-0", &pid.to_string()])
-                .output()
+            let mut check_cmd = std::process::Command::new("kill");
+            check_cmd.args(["-0", &pid.to_string()]);
+            #[cfg(target_os = "windows")]
+            {
+                check_cmd.creation_flags(CREATE_NO_WINDOW);
+            }
+            match check_cmd.output()
             {
                 Ok(output) => output.status.success(),
                 Err(_) => false,
@@ -1984,6 +2004,12 @@ fn create_command_with_env(program: &str) -> Command {
         {
             tokio_cmd.env(&key, &value);
         }
+    }
+    
+    // Hide console window on Windows
+    #[cfg(target_os = "windows")]
+    {
+        tokio_cmd.creation_flags(CREATE_NO_WINDOW);
     }
 
     // Add NVM support if the program is in an NVM directory
