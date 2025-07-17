@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Circle, FileText, Settings, ExternalLink, BarChart3, Network, Info } from "lucide-react";
+import { Circle, FileText, Settings, ExternalLink, BarChart3, Network, Info, Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover } from "@/components/ui/popover";
 import { LanguageSelector } from "@/components/LanguageSelector";
@@ -30,6 +30,10 @@ interface TopbarProps {
    */
   onInfoClick: () => void;
   /**
+   * Callback when Agents is clicked
+   */
+  onAgentsClick?: () => void;
+  /**
    * Optional className for styling
    */
   className?: string;
@@ -52,6 +56,7 @@ export const Topbar: React.FC<TopbarProps> = ({
   onUsageClick,
   onMCPClick,
   onInfoClick,
+  onAgentsClick,
   className,
 }) => {
   const { t } = useI18n();
@@ -176,6 +181,18 @@ export const Topbar: React.FC<TopbarProps> = ({
       
       {/* Action Buttons */}
       <div className="flex items-center space-x-2">
+        {onAgentsClick && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onAgentsClick}
+            className="text-xs"
+          >
+            <Bot className="mr-2 h-3 w-3" />
+            Agents
+          </Button>
+        )}
+        
         <Button
           variant="ghost"
           size="sm"
