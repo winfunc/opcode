@@ -83,7 +83,7 @@ export const useAgentStore = create<AgentState>()(
       
       try {
         const output = await api.getAgentRunWithRealTimeMetrics(runId).then(run => run.output || '');
-        set(state => ({
+        set((state: AgentState) => ({
           sessionOutputs: {
             ...state.sessionOutputs,
             [runId]: output
@@ -107,7 +107,7 @@ export const useAgentStore = create<AgentState>()(
         const run = await api.getAgentRun(runId);
         
         // Update local state immediately
-        set(state => ({
+        set((state: AgentState) => ({
           agentRuns: [run, ...state.agentRuns],
           runningAgents: new Set([...state.runningAgents, runId.toString()])
         }));
@@ -127,8 +127,8 @@ export const useAgentStore = create<AgentState>()(
         await api.killAgentSession(runId);
         
         // Update local state
-        set(state => ({
-          agentRuns: state.agentRuns.map(r =>
+        set((state: AgentState) => ({
+          agentRuns: state.agentRuns.map((r: AgentRunWithMetrics) =>
             r.id === runId ? { ...r, status: 'cancelled' } : r
           ),
           runningAgents: new Set(
@@ -147,7 +147,7 @@ export const useAgentStore = create<AgentState>()(
     deleteAgentRun: async (runId: number) => {
       try {
         // First ensure the run is cancelled if it's still running
-        const run = get().agentRuns.find(r => r.id === runId);
+        const run = get().agentRuns.find((r: AgentRunWithMetrics) => r.id === runId);
         if (run && (run.status === 'running' || run.status === 'pending')) {
           await api.killAgentSession(runId);
         }
@@ -156,8 +156,8 @@ export const useAgentStore = create<AgentState>()(
         // The run will remain in the database but won't be shown in the UI
         
         // Update local state
-        set(state => ({
-          agentRuns: state.agentRuns.filter(r => r.id !== runId),
+        set((state: AgentState) => ({
+          agentRuns: state.agentRuns.filter((r: AgentRunWithMetrics) => r.id !== runId),
           runningAgents: new Set(
             [...state.runningAgents].filter(id => id !== runId.toString())
           ),
@@ -178,8 +178,8 @@ export const useAgentStore = create<AgentState>()(
     
     // Handle real-time agent run updates
     handleAgentRunUpdate: (run: AgentRunWithMetrics) => {
-      set(state => {
-        const existingIndex = state.agentRuns.findIndex(r => r.id === run.id);
+      set((state: AgentState) => {
+        const existingIndex = state.agentRuns.findIndex((r: AgentRunWithMetrics) => r.id === run.id);
         const updatedRuns = [...state.agentRuns];
         
         if (existingIndex >= 0) {

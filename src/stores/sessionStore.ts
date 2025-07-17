@@ -62,7 +62,7 @@ export const useSessionStore = create<SessionState>()(
       set({ isLoadingSessions: true, error: null });
       try {
         const projectSessions = await api.getProjectSessions(projectId);
-        set(state => ({
+        set((state: SessionState) => ({
           sessions: {
             ...state.sessions,
             [projectId]: projectSessions
@@ -85,7 +85,7 @@ export const useSessionStore = create<SessionState>()(
       if (sessionId) {
         // Find session across all projects
         for (const projectSessions of Object.values(sessions)) {
-          const found = projectSessions.find(s => s.id === sessionId);
+          const found = (projectSessions as Session[]).find((s: Session) => s.id === sessionId);
           if (found) {
             currentSession = found;
             break;
@@ -101,7 +101,7 @@ export const useSessionStore = create<SessionState>()(
       set({ isLoadingOutputs: true, error: null });
       try {
         const output = await api.getClaudeSessionOutput(sessionId);
-        set(state => ({
+        set((state: SessionState) => ({
           sessionOutputs: {
             ...state.sessionOutputs,
             [sessionId]: output
@@ -123,10 +123,10 @@ export const useSessionStore = create<SessionState>()(
         console.warn('deleteSession not implemented in API');
         
         // Update local state
-        set(state => ({
+        set((state: SessionState) => ({
           sessions: {
             ...state.sessions,
-            [projectId]: state.sessions[projectId]?.filter(s => s.id !== sessionId) || []
+            [projectId]: state.sessions[projectId]?.filter((s: Session) => s.id !== sessionId) || []
           },
           currentSessionId: state.currentSessionId === sessionId ? null : state.currentSessionId,
           currentSession: state.currentSession?.id === sessionId ? null : state.currentSession,
@@ -147,10 +147,10 @@ export const useSessionStore = create<SessionState>()(
     
     // Handle session update
     handleSessionUpdate: (session: Session) => {
-      set(state => {
+      set((state: SessionState) => {
         const projectId = session.project_id;
         const projectSessions = state.sessions[projectId] || [];
-        const existingIndex = projectSessions.findIndex(s => s.id === session.id);
+        const existingIndex = projectSessions.findIndex((s: Session) => s.id === session.id);
         
         let updatedSessions;
         if (existingIndex >= 0) {
@@ -172,7 +172,7 @@ export const useSessionStore = create<SessionState>()(
     
     // Handle output update
     handleOutputUpdate: (sessionId: string, output: string) => {
-      set(state => ({
+      set((state: SessionState) => ({
         sessionOutputs: {
           ...state.sessionOutputs,
           [sessionId]: output
