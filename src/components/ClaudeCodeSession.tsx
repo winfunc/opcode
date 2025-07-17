@@ -94,7 +94,12 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   const [forkSessionName, setForkSessionName] = useState("");
   
   // Queued prompts state
-  const [queuedPrompts, setQueuedPrompts] = useState<Array<{ id: string; prompt: string; model: "sonnet" | "opus" }>>([]);
+  const [queuedPrompts, setQueuedPrompts] = useState<Array<{ 
+    id: string; 
+    prompt: string; 
+    model: "sonnet" | "opus" | "sonnet-3-7";
+    _modelId?: string;
+  }>>([]);
   
   // New state for preview feature
   const [showPreview, setShowPreview] = useState(false);
@@ -110,7 +115,12 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   const unlistenRefs = useRef<UnlistenFn[]>([]);
   const hasActiveSessionRef = useRef(false);
   const floatingPromptRef = useRef<FloatingPromptInputRef>(null);
-  const queuedPromptsRef = useRef<Array<{ id: string; prompt: string; model: "sonnet" | "opus" }>>([]);
+  const queuedPromptsRef = useRef<Array<{ 
+    id: string; 
+    prompt: string; 
+    model: "sonnet" | "opus" | "sonnet-3-7";
+    _modelId?: string;
+  }>>([]);
   const isMountedRef = useRef(true);
   const isListeningRef = useRef(false);
 
@@ -398,9 +408,14 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     }
   };
 
-  const handleSendPrompt = async (prompt: string, model: "sonnet" | "opus") => {
+  const handleSendPrompt = async (prompt: string, model: "sonnet" | "opus" | "sonnet-3-7") => {
     console.log('[ClaudeCodeSession] handleSendPrompt called with:', { prompt, model, projectPath, claudeSessionId, effectiveSession });
     
+    // Map UI model selection to the actual model ID to send to Claude CLI
+    const modelId = model === "sonnet-3-7" 
+      ? "us.anthropic.claude-3-7-sonnet-20250219-v1:0" 
+      : model;
+      
     if (!projectPath) {
       setError("Please select a project directory first");
       return;
@@ -411,7 +426,8 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       const newPrompt = {
         id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         prompt,
-        model
+        model, // Keep the UI model value for type safety
+        _modelId: modelId // Store the mapped model ID for actual API calls
       };
       setQueuedPrompts(prev => [...prev, newPrompt]);
       return;
@@ -556,7 +572,28 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
             
             // Small delay to ensure UI updates
             setTimeout(() => {
-              handleSendPrompt(nextPrompt.prompt, nextPrompt.model);
+              // If we have a stored _modelId from mapping, use that directly
+              if (nextPrompt._modelId) {
+                // Here we directly call the API with the stored modelId
+                const modelId = nextPrompt._modelId;
+                (async () => {
+                  try {
+                    setIsLoading(true);
+                    if (effectiveSession && !isFirstPrompt) {
+                      await api.resumeClaudeCode(projectPath, effectiveSession.id, nextPrompt.prompt, modelId);
+                    } else {
+                      setIsFirstPrompt(false);
+                      await api.executeClaudeCode(projectPath, nextPrompt.prompt, modelId);
+                    }
+                  } catch (err) {
+                    console.error("Failed to process queued prompt:", err);
+                    setIsLoading(false);
+                  }
+                })();
+              } else {
+                // Fall back to normal flow if _modelId isn't available
+                handleSendPrompt(nextPrompt.prompt, nextPrompt.model);
+              }
             }, 100);
           }
         };
@@ -595,11 +632,11 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         // Execute the appropriate command
         if (effectiveSession && !isFirstPrompt) {
           console.log('[ClaudeCodeSession] Resuming session:', effectiveSession.id);
-          await api.resumeClaudeCode(projectPath, effectiveSession.id, prompt, model);
+          await api.resumeClaudeCode(projectPath, effectiveSession.id, prompt, modelId);
         } else {
           console.log('[ClaudeCodeSession] Starting new session');
           setIsFirstPrompt(false);
-          await api.executeClaudeCode(projectPath, prompt, model);
+          await api.executeClaudeCode(projectPath, prompt, modelId);
         }
       }
     } catch (err) {

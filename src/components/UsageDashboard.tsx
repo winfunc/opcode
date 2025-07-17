@@ -114,8 +114,10 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
     const modelMap: Record<string, string> = {
       "claude-4-opus": "Opus 4",
       "claude-4-sonnet": "Sonnet 4",
+      "claude-3.7-sonnet": "Sonnet 3.7",
       "claude-3.5-sonnet": "Sonnet 3.5",
       "claude-3-opus": "Opus 3",
+      "us.anthropic.claude-3-7-sonnet-20250219-v1:0": "Sonnet 3.7",
     };
     return modelMap[model] || model;
   };
