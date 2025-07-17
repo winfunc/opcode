@@ -61,6 +61,16 @@
     ],
     "externalBin": [
       "binaries/claude-code"
-    ]
+    ],
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": ""
+    },
+    "linux": {
+      "deb": {
+        "depends": []
+      }
+    }
   }
 }

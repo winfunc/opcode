@@ -137,13 +137,19 @@ jobs:
       - name: Build frontend
         run: bun run build
 
+      # 确保构建目录存在
+      - name: Prepare build directories
+        run: |
+          mkdir -p src-tauri/target/release/bundle
+          echo "📁 创建构建目录完成"
+
       # 构建Tauri应用程序
       - name: Build Tauri application
         run: |
           if [ "${{ matrix.platform.rust-target }}" = "aarch64-apple-darwin" ]; then
-            bun run tauri build --target ${{ matrix.platform.rust-target }} --bundles ${{ matrix.platform.bundle-type }}
+            bun run tauri build --target ${{ matrix.platform.rust-target }} --bundles ${{ matrix.platform.bundle-type }} --verbose
           else
-            bun run tauri build --bundles ${{ matrix.platform.bundle-type }}
+            bun run tauri build --bundles ${{ matrix.platform.bundle-type }} --verbose
           fi
         shell: bash
         env:
@@ -154,6 +160,14 @@ jobs:
       - name: Find build artifacts
         id: find-artifacts
         run: |
+          echo "🔍 查找构建产物..."
+          echo "Bundle type: ${{ matrix.platform.bundle-type }}"
+          echo "Rust target: ${{ matrix.platform.rust-target }}"
+          
+          # 显示构建目录结构
+          echo "📁 构建目录结构:"
+          find src-tauri/target -type f -name "*.${{ matrix.platform.bundle-pattern }}" 2>/dev/null || true
+          
           if [ "${{ matrix.platform.bundle-type }}" = "appimage" ]; then
             BUNDLE_PATH=$(find src-tauri/target/release/bundle/appimage -name "*.AppImage" | head -1)
           elif [ "${{ matrix.platform.bundle-type }}" = "deb" ]; then
@@ -170,6 +184,15 @@ jobs:
             fi
           fi
           
+          if [ -z "$BUNDLE_PATH" ] || [ ! -f "$BUNDLE_PATH" ]; then
+            echo "❌ 未找到构建产物!"
+            echo "查找路径:"
+            find src-tauri/target -type d -name "bundle" 2>/dev/null || true
+            find src-tauri/target -type f \( -name "*.AppImage" -o -name "*.deb" -o -name "*.msi" -o -name "*.exe" -o -name "*.dmg" \) 2>/dev/null || true
+            exit 1
+          fi
+          
+          echo "✅ 找到构建产物: $BUNDLE_PATH"
           echo "bundle_path=$BUNDLE_PATH" >> $GITHUB_OUTPUT
           echo "bundle_name=$(basename "$BUNDLE_PATH")" >> $GITHUB_OUTPUT
         shell: bash
@@ -216,8 +239,20 @@ jobs:
       - name: Prepare release files
         run: |
           mkdir -p ./release-files
+          echo "📦 查找所有构建产物..."
+          find ./artifacts -type f \( -name "*.AppImage" -o -name "*.deb" -o -name "*.msi" -o -name "*.exe" -o -name "*.dmg" \) -print
+          echo "📦 复制构建产物到发布目录..."
           find ./artifacts -type f \( -name "*.AppImage" -o -name "*.deb" -o -name "*.msi" -o -name "*.exe" -o -name "*.dmg" \) -exec cp {} ./release-files/ \;
+          echo "📦 发布文件列表:"
           ls -la ./release-files/
+          
+          # 检查是否有文件被复制
+          if [ -z "$(ls -A ./release-files/)" ]; then
+            echo "❌ 没有找到任何构建产物!"
+            echo "artifacts 目录内容:"
+            find ./artifacts -type f -ls
+            exit 1
+          fi
 
       # 获取版本标签
       - name: Get version tag
