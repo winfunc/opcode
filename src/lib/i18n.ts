@@ -48,12 +48,7 @@ export interface Translations {
     sort: string;
     refresh: string;
     copy: string;
-    paste: string;
-    cut: string;
-    undo: string;
-    redo: string;
     select: string;
-    selectAll: string;
     clear: string;
     reset: string;
     apply: string;
@@ -68,40 +63,14 @@ export interface Translations {
     about: string;
     version: string;
     language: string;
-    theme: string;
-    profile: string;
-    account: string;
-    logout: string;
-    login: string;
-    register: string;
-    forgotPassword: string;
-    changePassword: string;
     email: string;
     password: string;
     username: string;
     name: string;
-    firstName: string;
-    lastName: string;
-    phone: string;
-    address: string;
-    city: string;
-    country: string;
-    zipCode: string;
     date: string;
     time: string;
     dateTime: string;
     today: string;
-    yesterday: string;
-    tomorrow: string;
-    thisWeek: string;
-    lastWeek: string;
-    nextWeek: string;
-    thisMonth: string;
-    lastMonth: string;
-    nextMonth: string;
-    thisYear: string;
-    lastYear: string;
-    nextYear: string;
   };
 
   // 应用标题和导航
@@ -303,18 +272,8 @@ export interface Translations {
     unknownError: string;
   };
 
-  // 表单验证
   validation: {
     required: string;
-    invalidEmail: string;
-    invalidUrl: string;
-    invalidNumber: string;
-    minLength: string;
-    maxLength: string;
-    passwordMismatch: string;
-    invalidFormat: string;
-    fileTooBig: string;
-    invalidFileType: string;
   };
 
   // 时间格式
@@ -323,15 +282,6 @@ export interface Translations {
     minutesAgo: string;
     hoursAgo: string;
     daysAgo: string;
-    weeksAgo: string;
-    monthsAgo: string;
-    yearsAgo: string;
-    inMinutes: string;
-    inHours: string;
-    inDays: string;
-    inWeeks: string;
-    inMonths: string;
-    inYears: string;
   };
 
   // MCP相关
@@ -866,15 +816,9 @@ export const formatRelativeTime = (timestamp: number, _language: Language, trans
   const minutes = Math.floor(seconds / 60);
   const hours = Math.floor(minutes / 60);
   const days = Math.floor(hours / 24);
-  const weeks = Math.floor(days / 7);
-  const months = Math.floor(days / 30);
-  const years = Math.floor(days / 365);
 
   if (seconds < 60) return translations.time.justNow;
   if (minutes < 60) return translations.time.minutesAgo.replace('{count}', minutes.toString());
   if (hours < 24) return translations.time.hoursAgo.replace('{count}', hours.toString());
-  if (days < 7) return translations.time.daysAgo.replace('{count}', days.toString());
-  if (weeks < 4) return translations.time.weeksAgo.replace('{count}', weeks.toString());
-  if (months < 12) return translations.time.monthsAgo.replace('{count}', months.toString());
-  return translations.time.yearsAgo.replace('{count}', years.toString());
+  return translations.time.daysAgo.replace('{count}', days.toString());
 };
