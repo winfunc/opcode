@@ -193,6 +193,26 @@ export interface Translations {
     chatRetentionDesc: string;
     claudeInstallation: string;
     claudeInstallationDesc: string;
+    choosePreferredInstallation: string;
+    availableInstallations: string;
+    selectedInstallation: string;
+    bundled: string;
+    system: string;
+    custom: string;
+    path: string;
+    source: string;
+    version: string;
+    claudeCodeBundled: string;
+    loadingInstallations: string;
+    selectClaudeInstallation: string;
+    pleaseSelectInstallation: string;
+    multipleInstallationsFound: string;
+    claudeNotFoundInLocations: string;
+    searchingForInstallations: string;
+    installationGuide: string;
+    saveSelection: string;
+    noInstallationsFound: string;
+    validating: string;
     binaryPathChanged: string;
     
     // 权限设置
