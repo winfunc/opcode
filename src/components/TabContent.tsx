@@ -8,6 +8,7 @@ import { ProjectList } from '@/components/ProjectList';
 import { SessionList } from '@/components/SessionList';
 import { RunningClaudeSessions } from '@/components/RunningClaudeSessions';
 import { Button } from '@/components/ui/button';
+import { useI18n } from '@/lib/i18n';
 
 // Lazy load heavy components
 const ClaudeCodeSession = lazy(() => import('@/components/ClaudeCodeSession').then(m => ({ default: m.ClaudeCodeSession })));
@@ -28,6 +29,7 @@ interface TabPanelProps {
 }
 
 const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
+  const { t } = useI18n();
   const { updateTab, createChatTab } = useTabState();
   const [projects, setProjects] = React.useState<Project[]>([]);
   const [selectedProject, setSelectedProject] = React.useState<Project | null>(null);
@@ -92,9 +94,9 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
             <div className="container mx-auto p-6">
               {/* Header */}
               <div className="mb-6">
-                <h1 className="text-3xl font-bold tracking-tight">CC Projects</h1>
+                <h1 className="text-3xl font-bold tracking-tight">{t.projects.title}</h1>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Browse your Claude Code sessions
+                  {t.projects.subtitle}
                 </p>
               </div>
 
@@ -170,7 +172,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
                           className="w-full max-w-md"
                         >
                           <Plus className="mr-2 h-4 w-4" />
-                          New Claude Code session
+                          {t.projects.newClaudeCodeSession}
                         </Button>
                       </motion.div>
 
@@ -213,7 +215,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
               // Go back to projects view in the same tab
               updateTab(tab.id, {
                 type: 'projects',
-                title: 'CC Projects',
+                title: t.projects.title,
               });
             }}
           />
