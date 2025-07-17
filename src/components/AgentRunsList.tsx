@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { formatISOTimestamp } from "@/lib/date-utils";
 import type { AgentRunWithMetrics } from "@/lib/api";
 import { AGENT_ICONS } from "./CCAgents";
-import { AgentRunOutputViewer } from "./AgentRunOutputViewer";
+import { useTabState } from "@/hooks/useTabState";
 
 interface AgentRunsListProps {
   /**
@@ -42,7 +42,7 @@ export const AgentRunsList: React.FC<AgentRunsListProps> = ({
   className,
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedRun, setSelectedRun] = useState<AgentRunWithMetrics | null>(null);
+  const { createAgentTab } = useTabState();
   
   // Calculate pagination
   const totalPages = Math.ceil(runs.length / ITEMS_PER_PAGE);
@@ -81,9 +81,9 @@ export const AgentRunsList: React.FC<AgentRunsListProps> = ({
     // If there's a callback, use it (for full-page navigation)
     if (onRunClick) {
       onRunClick(run);
-    } else {
-      // Otherwise, open in modal preview
-      setSelectedRun(run);
+    } else if (run.id) {
+      // Otherwise, open in new tab
+      createAgentTab(run.id.toString(), run.agent_name);
     }
   };
   
@@ -196,13 +196,6 @@ export const AgentRunsList: React.FC<AgentRunsListProps> = ({
         )}
       </div>
 
-      {/* Agent Run Output Viewer Modal */}
-      {selectedRun && (
-        <AgentRunOutputViewer
-          run={selectedRun}
-          onClose={() => setSelectedRun(null)}
-        />
-      )}
     </>
   );
 }; 

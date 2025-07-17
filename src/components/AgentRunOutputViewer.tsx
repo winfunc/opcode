@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  X, 
   Maximize2, 
   Minimize2, 
   Copy, 
@@ -12,7 +11,6 @@ import {
   Clock,
   Hash,
   DollarSign,
-  ExternalLink,
   StopCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -28,20 +26,17 @@ import { ErrorBoundary } from './ErrorBoundary';
 import { formatISOTimestamp } from '@/lib/date-utils';
 import { AGENT_ICONS } from './CCAgents';
 import type { ClaudeStreamMessage } from './AgentExecution';
+import { useTabState } from '@/hooks/useTabState';
 
 interface AgentRunOutputViewerProps {
   /**
-   * The agent run to display
+   * The agent run ID to display
    */
-  run: AgentRunWithMetrics;
+  agentRunId: string;
   /**
-   * Callback when the viewer is closed
+   * Tab ID for this agent run
    */
-  onClose: () => void;
-  /**
-   * Optional callback to open full view
-   */
-  onOpenFullView?: () => void;
+  tabId: string;
   /**
    * Optional className for styling
    */
@@ -58,11 +53,12 @@ interface AgentRunOutputViewerProps {
  * />
  */
 export function AgentRunOutputViewer({ 
-  run, 
-  onClose, 
-  onOpenFullView,
+  agentRunId, 
+  tabId,
   className 
 }: AgentRunOutputViewerProps) {
+  const { updateTabTitle, updateTabStatus } = useTabState();
+  const [run, setRun] = useState<AgentRunWithMetrics | null>(null);
   const [messages, setMessages] = useState<ClaudeStreamMessage[]>([]);
   const [rawJsonlOutput, setRawJsonlOutput] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -103,6 +99,28 @@ export function AgentRunOutputViewer({
     }
   };
 
+  // Load agent run on mount
+  useEffect(() => {
+    const loadAgentRun = async () => {
+      try {
+        setLoading(true);
+        const agentRun = await api.getAgentRun(parseInt(agentRunId));
+        setRun(agentRun);
+        updateTabTitle(tabId, `Agent: ${agentRun.agent_name || 'Unknown'}`);
+        updateTabStatus(tabId, agentRun.status === 'running' ? 'running' : agentRun.status === 'failed' ? 'error' : 'complete');
+      } catch (error) {
+        console.error('Failed to load agent run:', error);
+        updateTabStatus(tabId, 'error');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    if (agentRunId) {
+      loadAgentRun();
+    }
+  }, [agentRunId, tabId, updateTabTitle, updateTabStatus]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -121,7 +139,7 @@ export function AgentRunOutputViewer({
   }, [messages, hasUserScrolled, isFullscreen]);
 
   const loadOutput = async (skipCache = false) => {
-    if (!run.id) return;
+    if (!run?.id) return;
 
     console.log('[AgentRunOutputViewer] Loading output for run:', {
       runId: run.id,
@@ -244,7 +262,7 @@ export function AgentRunOutputViewer({
 
   // Set up live event listeners for running sessions
   const setupLiveEventListeners = async () => {
-    if (!run.id || hasSetupListenersRef.current) return;
+    if (!run?.id || hasSetupListenersRef.current) return;
     
     try {
       // Clean up existing listeners
@@ -261,7 +279,7 @@ export function AgentRunOutputViewer({
       }, 100);
 
       // Set up live event listeners with run ID isolation
-      const outputUnlisten = await listen<string>(`agent-output:${run.id}`, (event) => {
+      const outputUnlisten = await listen<string>(`agent-output:${run!.id}`, (event) => {
         try {
           // Skip messages during initial load phase
           if (isInitialLoadRef.current) {
@@ -280,17 +298,17 @@ export function AgentRunOutputViewer({
         }
       });
 
-      const errorUnlisten = await listen<string>(`agent-error:${run.id}`, (event) => {
+      const errorUnlisten = await listen<string>(`agent-error:${run!.id}`, (event) => {
         console.error("[AgentRunOutputViewer] Agent error:", event.payload);
         setToast({ message: event.payload, type: 'error' });
       });
 
-      const completeUnlisten = await listen<boolean>(`agent-complete:${run.id}`, () => {
+      const completeUnlisten = await listen<boolean>(`agent-complete:${run!.id}`, () => {
         setToast({ message: 'Agent execution completed', type: 'success' });
         // Don't set status here as the parent component should handle it
       });
 
-      const cancelUnlisten = await listen<boolean>(`agent-cancelled:${run.id}`, () => {
+      const cancelUnlisten = await listen<boolean>(`agent-cancelled:${run!.id}`, () => {
         setToast({ message: 'Agent execution was cancelled', type: 'error' });
       });
 
@@ -309,6 +327,7 @@ export function AgentRunOutputViewer({
   };
 
   const handleCopyAsMarkdown = async () => {
+    if (!run) return;
     let markdown = `# Agent Execution: ${run.agent_name}\n\n`;
     markdown += `**Task:** ${run.task}\n`;
     markdown += `**Model:** ${run.model === 'opus' ? 'Claude 4 Opus' : 'Claude 4 Sonnet'}\n`;
@@ -372,7 +391,7 @@ export function AgentRunOutputViewer({
   };
 
   const handleStop = async () => {
-    if (!run.id) {
+    if (!run?.id) {
       console.error('[AgentRunOutputViewer] No run ID available to stop');
       return;
     }
@@ -404,11 +423,11 @@ export function AgentRunOutputViewer({
         };
         setMessages(prev => [...prev, stopMessage]);
         
-        // Update the run status locally
-        // Optionally refresh the parent component
-        setTimeout(() => {
-          window.location.reload(); // Simple refresh to update the status
-        }, 1000);
+        // Update the tab status
+        updateTabStatus(tabId, 'idle');
+        
+        // Refresh the output to get updated status
+        await loadOutput(true);
       } else {
         console.warn(`[AgentRunOutputViewer] Failed to stop agent session ${run.id} - it may have already finished`);
         setToast({ message: 'Failed to stop agent - it may have already finished', type: 'error' });
@@ -431,10 +450,10 @@ export function AgentRunOutputViewer({
 
   // Load output on mount
   useEffect(() => {
-    if (!run.id) return;
+    if (!run?.id) return;
     
     // Check cache immediately for instant display
-    const cached = getCachedOutput(run.id);
+    const cached = getCachedOutput(run!.id);
     if (cached) {
       const cachedJsonlLines = cached.output.split('\n').filter(line => line.trim());
       setRawJsonlOutput(cachedJsonlLines);
@@ -443,7 +462,7 @@ export function AgentRunOutputViewer({
     
     // Then load fresh data
     loadOutput();
-  }, [run.id]);
+  }, [run?.id]);
 
   const displayableMessages = useMemo(() => {
     return messages.filter((message) => {
@@ -511,25 +530,23 @@ export function AgentRunOutputViewer({
     return tokens.toString();
   };
 
+  if (!run) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading agent run...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40"
-        onClick={onClose}
-      />
-      
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className={`fixed inset-x-4 top-[10%] bottom-[10%] z-50 max-w-4xl mx-auto ${className}`}
-      >
-        <Card className="h-full flex flex-col shadow-xl">
-          <CardHeader className="pb-3">
-            <div className="flex items-start justify-between gap-4">
+      <div className={`h-full flex flex-col ${className || ''}`}>
+        <Card className="h-full flex flex-col">
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between gap-4">
               <div className="flex items-start gap-3 flex-1 min-w-0">
                 <div className="mt-0.5">
                   {renderIcon(run.agent_icon)}
@@ -610,17 +627,6 @@ export function AgentRunOutputViewer({
                   onOpenChange={setCopyPopoverOpen}
                   align="end"
                 />
-                {onOpenFullView && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={onOpenFullView}
-                    title="Open in full view"
-                    className="h-8 px-2"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                  </Button>
-                )}
                 <Button
                   variant="ghost"
                   size="sm"
@@ -656,19 +662,11 @@ export function AgentRunOutputViewer({
                     <StopCircle className="h-4 w-4" />
                   </Button>
                 )}
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={onClose}
-                  className="h-8 px-2"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
               </div>
-            </div>
-          </CardHeader>
-          <CardContent className={`${isFullscreen ? 'h-[calc(100vh-120px)]' : 'flex-1'} p-0 overflow-hidden`}>
-            {loading ? (
+          </div>
+        </CardHeader>
+        <CardContent className={`${isFullscreen ? 'h-[calc(100vh-120px)]' : 'flex-1'} p-0 overflow-hidden`}>
+          {loading ? (
               <div className="flex items-center justify-center h-full">
                 <div className="flex items-center space-x-2">
                   <RefreshCw className="h-4 w-4 animate-spin" />
@@ -701,10 +699,10 @@ export function AgentRunOutputViewer({
                 </AnimatePresence>
                 <div ref={outputEndRef} />
               </div>
-            )}
-          </CardContent>
+          )}
+        </CardContent>
         </Card>
-      </motion.div>
+      </div>
 
       {/* Fullscreen Modal */}
       {isFullscreen && (
@@ -826,4 +824,6 @@ export function AgentRunOutputViewer({
       </ToastContainer>
     </>
   );
-} 
+}
+
+export default AgentRunOutputViewer; 
