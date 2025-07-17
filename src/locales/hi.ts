@@ -475,6 +475,12 @@ export const hi: Translations = {
   agents: {
     title: 'CC एजेंट्स',
     subtitle: 'अपने Claude Code एजेंट्स प्रबंधित करें',
+    agentManagement: 'एजेंट प्रबंधन',
+    createNewAgentsOrManage: 'नए एजेंट बनाएं या चल रहे एजेंट निष्पादन को प्रबंधित करें',
+    availableAgents: 'उपलब्ध एजेंट',
+    runningAgents: 'चल रहे एजेंट',
+    noAgentsAvailable: 'कोई एजेंट उपलब्ध नहीं',
+    createFirstAgentToGetStarted: 'शुरू करने के लिए अपना पहला एजेंट बनाएं',
     createAgent: 'एजेंट बनाएं',
     agentName: 'एजेंट नाम',
     agentDescription: 'विवरण',

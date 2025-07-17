@@ -477,6 +477,12 @@ export const fr: Translations = {
   agents: {
     title: 'Agents CC',
     subtitle: 'Gérer vos agents Claude Code',
+    agentManagement: 'Gestion des agents',
+    createNewAgentsOrManage: 'Créer de nouveaux agents ou gérer les exécutions d\'agents en cours',
+    availableAgents: 'Agents disponibles',
+    runningAgents: 'Agents en cours d\'exécution',
+    noAgentsAvailable: 'Aucun agent disponible',
+    createFirstAgentToGetStarted: 'Créez votre premier agent pour commencer',
     createAgent: 'Créer un agent',
     agentName: 'Nom de l\'agent',
     agentDescription: 'Description',

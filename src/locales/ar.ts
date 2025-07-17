@@ -465,7 +465,13 @@ export const ar: Translations = {
 
   agents: {
     title: 'وكلاء CC',
-    subtitle: 'إدارة وكلاء Claude Code الخاصين بك',
+    subtitle: 'إدارة وكلاء Claude Code الخاصة بك',
+    agentManagement: 'إدارة الوكلاء',
+    createNewAgentsOrManage: 'إنشاء وكلاء جدد أو إدارة تنفيذ الوكلاء الجارية',
+    availableAgents: 'الوكلاء المتاحون',
+    runningAgents: 'الوكلاء قيد التشغيل',
+    noAgentsAvailable: 'لا توجد وكلاء متاحة',
+    createFirstAgentToGetStarted: 'أنشئ وكيلك الأول للبدء',
     createAgent: 'إنشاء وكيل',
     agentName: 'اسم الوكيل',
     agentDescription: 'الوصف',

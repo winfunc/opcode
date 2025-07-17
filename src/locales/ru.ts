@@ -477,6 +477,12 @@ export const ru: Translations = {
   agents: {
     title: 'CC Агенты',
     subtitle: 'Управление вашими агентами Claude Code',
+    agentManagement: 'Управление агентами',
+    createNewAgentsOrManage: 'Создать новых агентов или управлять выполнением агентов',
+    availableAgents: 'Доступные агенты',
+    runningAgents: 'Запущенные агенты',
+    noAgentsAvailable: 'Нет доступных агентов',
+    createFirstAgentToGetStarted: 'Создайте своего первого агента для начала работы',
     createAgent: 'Создать агента',
     agentName: 'Имя агента',
     agentDescription: 'Описание',

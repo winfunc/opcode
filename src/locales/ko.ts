@@ -477,6 +477,12 @@ export const ko: Translations = {
   agents: {
     title: 'CC 에이전트',
     subtitle: 'Claude Code 에이전트 관리',
+    agentManagement: '에이전트 관리',
+    createNewAgentsOrManage: '새 에이전트를 생성하거나 실행 중인 에이전트 실행을 관리',
+    availableAgents: '사용 가능한 에이전트',
+    runningAgents: '실행 중인 에이전트',
+    noAgentsAvailable: '사용 가능한 에이전트가 없습니다',
+    createFirstAgentToGetStarted: '시작하려면 첫 번째 에이전트를 생성하세요',
     createAgent: '에이전트 생성',
     agentName: '에이전트 이름',
     agentDescription: '설명',
