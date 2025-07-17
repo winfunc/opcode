@@ -25,6 +25,7 @@ import { formatISOTimestamp } from '@/lib/date-utils';
 import { open as openDialog, save } from '@tauri-apps/plugin-dialog';
 import { invoke } from '@tauri-apps/api/core';
 import { GitHubAgentBrowser } from '@/components/GitHubAgentBrowser';
+import { useI18n } from '@/lib/i18n';
 
 interface AgentsModalProps {
   open: boolean;
@@ -32,6 +33,7 @@ interface AgentsModalProps {
 }
 
 export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) => {
+  const { t } = useI18n();
   const [activeTab, setActiveTab] = useState('agents');
   const [agents, setAgents] = useState<Agent[]>([]);
   const [runningAgents, setRunningAgents] = useState<AgentRunWithMetrics[]>([]);
@@ -201,18 +203,18 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
         <DialogHeader className="px-6 pt-6">
           <DialogTitle className="flex items-center gap-2">
             <Bot className="w-5 h-5" />
-            Agent Management
+            {t.agents.agentManagement}
           </DialogTitle>
           <DialogDescription>
-            Create new agents or manage running agent executions
+            {t.agents.createNewAgentsOrManage}
           </DialogDescription>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
           <TabsList className="mx-6">
-            <TabsTrigger value="agents">Available Agents</TabsTrigger>
+            <TabsTrigger value="agents">{t.agents.availableAgents}</TabsTrigger>
             <TabsTrigger value="running" className="relative">
-              Running Agents
+              {t.agents.runningAgents}
               {runningAgents.length > 0 && (
                 <Badge variant="secondary" className="ml-2 h-5 px-1.5">
                   {runningAgents.length}
@@ -228,13 +230,13 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
                 <div className="flex gap-2 mb-4 pt-4">
                   <Button onClick={handleCreateAgent} className="flex-1">
                     <Plus className="w-4 h-4 mr-2" />
-                    Create Agent
+                    {t.agents.createAgent}
                   </Button>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="outline" className="flex-1">
                         <Import className="w-4 h-4 mr-2" />
-                        Import Agent
+                        {t.agents.importAgent}
                         <ChevronDown className="w-4 h-4 ml-2" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -257,16 +259,16 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
                 ) : agents.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-center">
                     <Bot className="w-12 h-12 text-muted-foreground mb-4" />
-                    <p className="text-lg font-medium mb-2">No agents available</p>
+                    <p className="text-lg font-medium mb-2">{t.agents.noAgentsAvailable}</p>
                     <p className="text-sm text-muted-foreground mb-4">
-                      Create your first agent to get started
+                      {t.agents.createFirstAgentToGetStarted}
                     </p>
                     <Button onClick={() => {
                       onOpenChange(false);
                       window.dispatchEvent(new CustomEvent('open-create-agent-tab'));
                     }}>
                       <Plus className="w-4 h-4 mr-2" />
-                      Create Agent
+                      {t.agents.createAgent}
                     </Button>
                   </div>
                 ) : (

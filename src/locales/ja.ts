@@ -477,6 +477,12 @@ export const ja: Translations = {
   agents: {
     title: 'CCエージェント',
     subtitle: 'Claude Codeエージェントを管理',
+    agentManagement: 'エージェント管理',
+    createNewAgentsOrManage: '新しいエージェントを作成するか、実行中のエージェントを管理',
+    availableAgents: '利用可能なエージェント',
+    runningAgents: '実行中のエージェント',
+    noAgentsAvailable: 'エージェントがありません',
+    createFirstAgentToGetStarted: '最初のエージェントを作成して開始',
     createAgent: 'エージェントを作成',
     agentName: 'エージェント名',
     agentDescription: '説明',

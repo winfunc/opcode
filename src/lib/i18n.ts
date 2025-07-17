@@ -514,6 +514,12 @@ export interface Translations {
   agents: {
     title: string;
     subtitle: string;
+    agentManagement: string;
+    createNewAgentsOrManage: string;
+    availableAgents: string;
+    runningAgents: string;
+    noAgentsAvailable: string;
+    createFirstAgentToGetStarted: string;
     createAgent: string;
     agentName: string;
     agentDescription: string;

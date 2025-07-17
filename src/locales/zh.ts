@@ -477,6 +477,12 @@ export const zh: Translations = {
   agents: {
     title: 'CC 智能体',
     subtitle: '管理您的 Claude Code 智能体',
+    agentManagement: '智能体管理',
+    createNewAgentsOrManage: '创建新智能体或管理运行中的智能体执行',
+    availableAgents: '可用智能体',
+    runningAgents: '运行中的智能体',
+    noAgentsAvailable: '暂无可用智能体',
+    createFirstAgentToGetStarted: '创建您的第一个智能体以开始使用',
     createAgent: '创建智能体',
     agentName: '智能体名称',
     agentDescription: '描述',
