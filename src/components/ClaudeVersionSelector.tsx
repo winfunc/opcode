@@ -138,8 +138,8 @@ export const ClaudeVersionSelector: React.FC<ClaudeVersionSelectorProps> = ({
     return (
       <Card className={className}>
         <CardHeader>
-          <CardTitle>Claude Code Installation</CardTitle>
-          <CardDescription>Loading available installations...</CardDescription>
+          <CardTitle>{t.settings.claudeInstallation}</CardTitle>
+          <CardDescription>{t.settings.loadingInstallations}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center py-4">
@@ -154,7 +154,7 @@ export const ClaudeVersionSelector: React.FC<ClaudeVersionSelectorProps> = ({
     return (
       <Card className={className}>
         <CardHeader>
-          <CardTitle>Claude Code Installation</CardTitle>
+          <CardTitle>{t.settings.claudeInstallation}</CardTitle>
           <CardDescription>Error loading installations</CardDescription>
         </CardHeader>
         <CardContent>
@@ -176,19 +176,19 @@ export const ClaudeVersionSelector: React.FC<ClaudeVersionSelectorProps> = ({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <CheckCircle className="h-5 w-5" />
-          Claude Code Installation
+          {t.settings.claudeInstallation}
         </CardTitle>
         <CardDescription>
-          Choose your preferred Claude Code installation. Bundled version is recommended for best compatibility.
+          {t.settings.choosePreferredInstallation}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Available Installations */}
         <div className="space-y-3">
-          <Label className="text-sm font-medium">Available Installations</Label>
+          <Label className="text-sm font-medium">{t.settings.availableInstallations}</Label>
           <Select value={selectedInstallation?.path || ""} onValueChange={handleInstallationChange}>
             <SelectTrigger>
-              <SelectValue placeholder="Select Claude installation">
+              <SelectValue placeholder={t.settings.selectClaudeInstallation}>
                 {selectedInstallation && (
                   <div className="flex items-center gap-2">
                     {getInstallationIcon(selectedInstallation)}
@@ -203,13 +203,13 @@ export const ClaudeVersionSelector: React.FC<ClaudeVersionSelectorProps> = ({
             <SelectContent>
               {bundledInstallations.length > 0 && (
                 <>
-                  <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Bundled</div>
+                  <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">{t.settings.bundled}</div>
                   {bundledInstallations.map((installation) => (
                     <SelectItem key={installation.path} value={installation.path}>
                       <div className="flex items-center gap-2 w-full">
                         {getInstallationIcon(installation)}
                         <div className="flex-1 min-w-0">
-                          <div className="font-medium">Claude Code (Bundled)</div>
+                          <div className="font-medium">{t.settings.claudeCodeBundled}</div>
                           <div className="text-xs text-muted-foreground">
                             {installation.version || "Version unknown"} • {installation.source}
                           </div>
@@ -274,16 +274,16 @@ export const ClaudeVersionSelector: React.FC<ClaudeVersionSelectorProps> = ({
         {selectedInstallation && (
           <div className="p-3 bg-muted rounded-lg space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Selected Installation</span>
+              <span className="text-sm font-medium">{t.settings.selectedInstallation}</span>
               <Badge className={cn("text-xs", getInstallationTypeColor(selectedInstallation))}>
                 {selectedInstallation.installation_type}
               </Badge>
             </div>
             <div className="text-sm text-muted-foreground">
-              <div><strong>Path:</strong> {selectedInstallation.path}</div>
-              <div><strong>Source:</strong> {selectedInstallation.source}</div>
+              <div><strong>{t.settings.path}:</strong> {selectedInstallation.path}</div>
+              <div><strong>{t.settings.source}:</strong> {selectedInstallation.source}</div>
               {selectedInstallation.version && (
-                <div><strong>Version:</strong> {selectedInstallation.version}</div>
+                <div><strong>{t.settings.version}:</strong> {selectedInstallation.version}</div>
               )}
             </div>
           </div>

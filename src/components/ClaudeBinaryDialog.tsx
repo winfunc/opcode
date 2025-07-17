@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ExternalLink, FileQuestion, Terminal, AlertCircle, Loader2 } from "lucide-react";
 import { ClaudeVersionSelector } from "./ClaudeVersionSelector";
+import { useI18n } from "@/lib/i18n";
 
 interface ClaudeBinaryDialogProps {
   open: boolean;
@@ -13,6 +14,7 @@ interface ClaudeBinaryDialogProps {
 }
 
 export function ClaudeBinaryDialog({ open, onOpenChange, onSuccess, onError }: ClaudeBinaryDialogProps) {
+  const { t } = useI18n();
   const [selectedInstallation, setSelectedInstallation] = useState<ClaudeInstallation | null>(null);
   const [isValidating, setIsValidating] = useState(false);
   const [hasInstallations, setHasInstallations] = useState(true);
@@ -39,7 +41,7 @@ export function ClaudeBinaryDialog({ open, onOpenChange, onSuccess, onError }: C
 
   const handleSave = async () => {
     if (!selectedInstallation) {
-      onError("Please select a Claude installation");
+      onError(t.settings.pleaseSelectInstallation);
       return;
     }
 
@@ -62,24 +64,22 @@ export function ClaudeBinaryDialog({ open, onOpenChange, onSuccess, onError }: C
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileQuestion className="w-5 h-5" />
-            Select Claude Code Installation
+            {t.settings.claudeInstallation}
           </DialogTitle>
           <DialogDescription className="space-y-3 mt-4">
             {checkingInstallations ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                <span className="ml-2 text-sm text-muted-foreground">Searching for Claude installations...</span>
+                <span className="ml-2 text-sm text-muted-foreground">{t.settings.searchingForInstallations}</span>
               </div>
             ) : hasInstallations ? (
               <p>
-                Multiple Claude Code installations were found on your system. 
-                Please select which one you'd like to use.
+                {t.settings.multipleInstallationsFound}
               </p>
             ) : (
               <>
                 <p>
-                  Claude Code was not found in any of the common installation locations. 
-                  Please install Claude Code to continue.
+                  {t.settings.claudeNotFoundInLocations}
                 </p>
                 <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
                   <AlertCircle className="w-4 h-4 text-muted-foreground" />
@@ -118,7 +118,7 @@ export function ClaudeBinaryDialog({ open, onOpenChange, onSuccess, onError }: C
             className="mr-auto"
           >
             <ExternalLink className="w-4 h-4 mr-2" />
-            Installation Guide
+            {t.settings.installationGuide}
           </Button>
           <Button
             variant="outline"
@@ -131,7 +131,7 @@ export function ClaudeBinaryDialog({ open, onOpenChange, onSuccess, onError }: C
             onClick={handleSave} 
             disabled={isValidating || !selectedInstallation || !hasInstallations}
           >
-            {isValidating ? "Validating..." : hasInstallations ? "Save Selection" : "No Installations Found"}
+            {isValidating ? t.settings.validating : hasInstallations ? t.settings.saveSelection : t.settings.noInstallationsFound}
           </Button>
         </DialogFooter>
       </DialogContent>
