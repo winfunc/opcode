@@ -251,6 +251,44 @@ fn create_command_with_env(program: &str) -> Command {
         }
     }
 
+    // On Windows, ensure SHELL environment variable is set for Claude CLI
+    if cfg!(target_os = "windows") {
+        // Always set SHELL environment variable on Windows for Claude CLI compatibility
+        let shell_candidates = [
+            "C:\\Program Files\\Git\\bin\\bash.exe",
+            "C:\\Program Files (x86)\\Git\\bin\\bash.exe", 
+            "C:\\msys64\\usr\\bin\\bash.exe",
+            "C:\\cygwin64\\bin\\bash.exe",
+            "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+            "powershell.exe",
+            "cmd.exe"
+        ];
+        
+        let mut shell_found = false;
+        for shell_path in &shell_candidates {
+            if std::path::Path::new(shell_path).exists() {
+                log::debug!("Setting SHELL environment variable for Windows: {}", shell_path);
+                tokio_cmd.env("SHELL", shell_path);
+                shell_found = true;
+                break;
+            }
+        }
+        
+        // If no shell found, default to bash (Claude CLI prefers POSIX shells)
+        if !shell_found {
+            log::debug!("No suitable shell found, defaulting to bash for Claude CLI compatibility");
+            tokio_cmd.env("SHELL", "bash");
+        }
+        
+        // Also set other Windows-specific environment variables that Claude CLI might need
+        if let Ok(userprofile) = std::env::var("USERPROFILE") {
+            tokio_cmd.env("HOME", userprofile);
+        }
+        if let Ok(comspec) = std::env::var("COMSPEC") {
+            tokio_cmd.env("COMSPEC", comspec);
+        }
+    }
+
     // Add NVM support if the program is in an NVM directory
     if program.contains("/.nvm/versions/node/") {
         if let Some(node_bin_dir) = std::path::Path::new(program).parent() {
@@ -287,6 +325,76 @@ fn create_sidecar_command(
     
     // Set working directory
     sidecar_cmd = sidecar_cmd.current_dir(project_path);
+    
+    // Set environment variables for Windows shell compatibility
+    if cfg!(target_os = "windows") {
+        // Always set SHELL environment variable on Windows for Claude CLI compatibility
+        let shell_candidates = [
+            "C:\\Program Files\\Git\\bin\\bash.exe",
+            "C:\\Program Files (x86)\\Git\\bin\\bash.exe", 
+            "C:\\msys64\\usr\\bin\\bash.exe",
+            "C:\\cygwin64\\bin\\bash.exe",
+            "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+            "powershell.exe",
+            "cmd.exe"
+        ];
+        
+        let mut shell_found = false;
+        for shell_path in &shell_candidates {
+            if std::path::Path::new(shell_path).exists() {
+                log::debug!("Setting SHELL environment variable for Windows sidecar: {}", shell_path);
+                sidecar_cmd = sidecar_cmd.env("SHELL", shell_path);
+                shell_found = true;
+                break;
+            }
+        }
+        
+        // If no shell found, default to bash (Claude CLI prefers POSIX shells)
+        if !shell_found {
+            log::debug!("No suitable shell found, defaulting to bash for Claude CLI compatibility");
+            sidecar_cmd = sidecar_cmd.env("SHELL", "bash");
+        }
+        
+        // Also set other essential environment variables for Windows
+        for (key, value) in std::env::vars() {
+            if key == "PATH"
+                || key == "HOME"
+                || key == "USER"
+                || key == "USERPROFILE"
+                || key == "APPDATA"
+                || key == "LOCALAPPDATA"
+                || key == "TEMP"
+                || key == "TMP"
+                || key == "LANG"
+                || key == "LC_ALL"
+                || key.starts_with("LC_")
+                || key == "NODE_PATH"
+                || key == "NVM_DIR"
+                || key == "NVM_BIN"
+            {
+                sidecar_cmd = sidecar_cmd.env(&key, &value);
+            }
+        }
+    } else {
+        // For Unix-like systems, inherit essential environment variables
+        for (key, value) in std::env::vars() {
+            if key == "PATH"
+                || key == "HOME"
+                || key == "USER"
+                || key == "SHELL"
+                || key == "LANG"
+                || key == "LC_ALL"
+                || key.starts_with("LC_")
+                || key == "NODE_PATH"
+                || key == "NVM_DIR"
+                || key == "NVM_BIN"
+                || key == "HOMEBREW_PREFIX"
+                || key == "HOMEBREW_CELLAR"
+            {
+                sidecar_cmd = sidecar_cmd.env(&key, &value);
+            }
+        }
+    }
     
     Ok(sidecar_cmd)
 }
@@ -586,10 +694,8 @@ pub async fn check_claude_version(app: AppHandle) -> Result<ClaudeVersionStatus,
         let temp_dir = std::env::temp_dir();
         
         // Create sidecar command with --version flag
-        let sidecar_cmd = match app
-            .shell()
-            .sidecar("claude-code") {
-            Ok(cmd) => cmd.args(["--version"]).current_dir(&temp_dir),
+        let sidecar_cmd = match create_sidecar_command(&app, vec!["--version".to_string()], &temp_dir.to_string_lossy()) {
+            Ok(cmd) => cmd,
             Err(e) => {
                 log::error!("Failed to create sidecar command: {}", e);
                 return Ok(ClaudeVersionStatus {
