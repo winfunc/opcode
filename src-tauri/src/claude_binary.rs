@@ -531,6 +531,44 @@ pub fn create_command_with_env(program: &str) -> Command {
         }
     }
 
+    // On Windows, ensure SHELL environment variable is set for Claude CLI
+    if cfg!(target_os = "windows") {
+        // Always set SHELL environment variable on Windows for Claude CLI compatibility
+        let shell_candidates = [
+            "C:\\Program Files\\Git\\bin\\bash.exe",
+            "C:\\Program Files (x86)\\Git\\bin\\bash.exe", 
+            "C:\\msys64\\usr\\bin\\bash.exe",
+            "C:\\cygwin64\\bin\\bash.exe",
+            "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+            "powershell.exe",
+            "cmd.exe"
+        ];
+        
+        let mut shell_found = false;
+        for shell_path in &shell_candidates {
+            if std::path::Path::new(shell_path).exists() {
+                debug!("Setting SHELL environment variable for Windows: {}", shell_path);
+                cmd.env("SHELL", shell_path);
+                shell_found = true;
+                break;
+            }
+        }
+        
+        // If no shell found, default to bash (Claude CLI prefers POSIX shells)
+        if !shell_found {
+            debug!("No suitable shell found, defaulting to bash for Claude CLI compatibility");
+            cmd.env("SHELL", "bash");
+        }
+        
+        // Also set other Windows-specific environment variables that Claude CLI might need
+        if let Ok(userprofile) = std::env::var("USERPROFILE") {
+            cmd.env("HOME", userprofile);
+        }
+        if let Ok(comspec) = std::env::var("COMSPEC") {
+            cmd.env("COMSPEC", comspec);
+        }
+    }
+
     // Add NVM support if the program is in an NVM directory
     if program.contains("/.nvm/versions/node/") {
         if let Some(node_bin_dir) = std::path::Path::new(program).parent() {

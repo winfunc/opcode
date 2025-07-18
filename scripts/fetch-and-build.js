@@ -207,8 +207,25 @@ async function copyRequiredFiles(packageDir) {
         await rm(destPath, { recursive: true, force: true });
       }
       
-      // Copy directory recursively using cp command
-      await runCommand('cp', ['-r', srcPath, destPath]);
+      // Copy directory recursively - use platform-appropriate method
+      if (process.platform === 'win32') {
+        // Windows: use robocopy or xcopy
+        try {
+          await runCommand('robocopy', [srcPath, destPath, '/E', '/NFL', '/NDL', '/NJH', '/NJS', '/nc', '/ns', '/np']);
+        } catch (error) {
+          // robocopy returns exit code 1 for successful copy, so we need to handle this
+          if (error.message.includes('exit code 1')) {
+            // Exit code 1 means files were copied successfully
+            console.log('✓ Directory copied successfully with robocopy');
+          } else {
+            // Try xcopy as fallback
+            await runCommand('xcopy', [srcPath, destPath, '/E', '/I', '/Q']);
+          }
+        }
+      } else {
+        // Unix/Linux/macOS: use cp command
+        await runCommand('cp', ['-r', srcPath, destPath]);
+      }
     } else {
       console.warn(`Warning: ${dir}/ directory not found in package`);
     }
