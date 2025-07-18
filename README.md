@@ -4,6 +4,11 @@
   <a href="https://claudiacode.com"><h1>Claudia</h1></a>
   
   <p>
+    <a href="README.md">🇺🇸 English</a> | 
+    <a href="README_zh.md">🇨🇳 中文</a>
+  </p>
+  
+  <p>
     <strong>A powerful GUI app and Toolkit for Claude Code</strong>
   </p>
   <p>
