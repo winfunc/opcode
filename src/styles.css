@@ -35,8 +35,8 @@
   --radius-xl: 1rem;
 
   /* Fonts */
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", "Noto Sans Thai", "TH Sarabun New", "Leelawadee UI", "Tahoma", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, "Noto Sans Mono", "TH Sarabun New", monospace;
 
   /* Transitions */
   --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
@@ -52,6 +52,21 @@ body {
   background-color: var(--color-background);
   color: var(--color-foreground);
   font-family: var(--font-sans);
+}
+
+/* Thai font support for all text elements */
+* {
+  font-family: var(--font-sans);
+}
+
+/* Ensure code elements use mono font with Thai support */
+code, pre, .font-mono {
+  font-family: var(--font-mono);
+}
+
+/* Specific Thai language support */
+:lang(th) {
+  font-family: "Noto Sans Thai", "TH Sarabun New", "Leelawadee UI", "Tahoma", sans-serif;
 }
 
 /* Placeholder text styling */
