@@ -20,13 +20,14 @@ import { SlashCommandPicker } from "./SlashCommandPicker";
 import { ImagePreview } from "./ImagePreview";
 import { useI18n } from "@/lib/i18n";
 import { type FileEntry, type SlashCommand } from "@/lib/api";
+import { type ClaudeModel } from "@/types/models";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 
 interface FloatingPromptInputProps {
   /**
    * Callback when prompt is sent
    */
-  onSend: (prompt: string, model: "sonnet" | "opus") => void;
+  onSend: (prompt: string, model: ClaudeModel) => void;
   /**
    * Whether the input is loading
    */
@@ -38,7 +39,7 @@ interface FloatingPromptInputProps {
   /**
    * Default model to select
    */
-  defaultModel?: "sonnet" | "opus";
+  defaultModel?: ClaudeModel;
   /**
    * Project path for file picker
    */
@@ -130,7 +131,7 @@ const ThinkingModeIndicator: React.FC<{ level: number }> = ({ level }) => {
 };
 
 type Model = {
-  id: "sonnet" | "opus";
+  id: ClaudeModel;
   name: string;
   description: string;
   icon: React.ReactNode;
@@ -152,7 +153,7 @@ const FloatingPromptInputInner = (
     onSend,
     isLoading = false,
     disabled = false,
-    defaultModel = "sonnet",
+    defaultModel = "sonnet-3-5",
     projectPath,
     className,
     onCancel,
@@ -162,6 +163,24 @@ const FloatingPromptInputInner = (
   const { t } = useI18n();
   
   const MODELS: Model[] = [
+    {
+      id: "haiku",
+      name: t.agents.claude35Haiku,
+      description: t.agents.fastAffordable,
+      icon: <Zap className="h-4 w-4" />
+    },
+    {
+      id: "sonnet-3-5",
+      name: t.agents.claude35Sonnet,
+      description: t.agents.balancedPerformance,
+      icon: <Sparkles className="h-4 w-4" />
+    },
+    {
+      id: "sonnet-3-7",
+      name: t.agents.claude37Sonnet,
+      description: t.agents.advancedReasoning,
+      icon: <Brain className="h-4 w-4" />
+    },
     {
       id: "sonnet",
       name: t.agents.claude4Sonnet,
@@ -177,7 +196,7 @@ const FloatingPromptInputInner = (
   ];
 
   const [prompt, setPrompt] = useState("");
-  const [selectedModel, setSelectedModel] = useState<"sonnet" | "opus">(defaultModel);
+  const [selectedModel, setSelectedModel] = useState<ClaudeModel>(defaultModel);
   const [selectedThinkingMode, setSelectedThinkingMode] = useState<ThinkingMode>("auto");
   const [isExpanded, setIsExpanded] = useState(false);
   const [modelPickerOpen, setModelPickerOpen] = useState(false);

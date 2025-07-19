@@ -4,11 +4,12 @@ import { X, Clock, Sparkles, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { type ClaudeModel } from '@/types/models';
 
 interface QueuedPrompt {
   id: string;
   prompt: string;
-  model: "sonnet" | "opus";
+  model: ClaudeModel;
 }
 
 interface PromptQueueProps {
@@ -52,17 +53,33 @@ export const PromptQueue: React.FC<PromptQueueProps> = React.memo(({
                 className="flex items-start gap-2 p-2 rounded-md bg-background/50"
               >
                 <div className="flex-shrink-0 mt-0.5">
-                  {queuedPrompt.model === "opus" ? (
-                    <Sparkles className="h-3.5 w-3.5 text-purple-500" />
-                  ) : (
-                    <Zap className="h-3.5 w-3.5 text-amber-500" />
-                  )}
+                  {(() => {
+                    switch (queuedPrompt.model) {
+                      case "opus":
+                        return <Sparkles className="h-3.5 w-3.5 text-purple-500" />;
+                      case "haiku":
+                        return <Zap className="h-3.5 w-3.5 text-green-500" />;
+                      case "sonnet-3-7":
+                        return <Sparkles className="h-3.5 w-3.5 text-blue-500" />;
+                      default:
+                        return <Zap className="h-3.5 w-3.5 text-amber-500" />;
+                    }
+                  })()}
                 </div>
                 
                 <div className="flex-1 min-w-0">
                   <p className="text-sm truncate">{queuedPrompt.prompt}</p>
                   <span className="text-xs text-muted-foreground">
-                    {queuedPrompt.model === "opus" ? "Opus" : "Sonnet"}
+                    {(() => {
+                      const modelNames = {
+                        "haiku": "Haiku",
+                        "sonnet-3-5": "Sonnet 3.5",
+                        "sonnet-3-7": "Sonnet 3.7",
+                        "sonnet": "Sonnet 4",
+                        "opus": "Opus"
+                      };
+                      return modelNames[queuedPrompt.model as keyof typeof modelNames] || queuedPrompt.model;
+                    })()}
                   </span>
                 </div>
                 

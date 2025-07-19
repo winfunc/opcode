@@ -233,7 +233,7 @@ pub fn init_database(app: &AppHandle) -> SqliteResult<Connection> {
             icon TEXT NOT NULL,
             system_prompt TEXT NOT NULL,
             default_task TEXT,
-            model TEXT NOT NULL DEFAULT 'sonnet',
+            model TEXT NOT NULL DEFAULT 'sonnet-3-5',
             enable_file_read BOOLEAN NOT NULL DEFAULT 1,
             enable_file_write BOOLEAN NOT NULL DEFAULT 1,
             enable_network BOOLEAN NOT NULL DEFAULT 0,
@@ -247,7 +247,7 @@ pub fn init_database(app: &AppHandle) -> SqliteResult<Connection> {
     // Add columns to existing table if they don't exist
     let _ = conn.execute("ALTER TABLE agents ADD COLUMN default_task TEXT", []);
     let _ = conn.execute(
-        "ALTER TABLE agents ADD COLUMN model TEXT DEFAULT 'sonnet'",
+        "ALTER TABLE agents ADD COLUMN model TEXT DEFAULT 'sonnet-3-5'",
         [],
     );
     let _ = conn.execute("ALTER TABLE agents ADD COLUMN hooks TEXT", []);
@@ -397,7 +397,7 @@ pub async fn create_agent(
     hooks: Option<String>,
 ) -> Result<Agent, String> {
     let conn = db.0.lock().map_err(|e| e.to_string())?;
-    let model = model.unwrap_or_else(|| "sonnet".to_string());
+    let model = model.unwrap_or_else(|| "sonnet-3-5".to_string());
     let enable_file_read = enable_file_read.unwrap_or(true);
     let enable_file_write = enable_file_write.unwrap_or(true);
     let enable_network = enable_network.unwrap_or(false);
@@ -453,7 +453,7 @@ pub async fn update_agent(
     hooks: Option<String>,
 ) -> Result<Agent, String> {
     let conn = db.0.lock().map_err(|e| e.to_string())?;
-    let model = model.unwrap_or_else(|| "sonnet".to_string());
+    let model = model.unwrap_or_else(|| "sonnet-3-5".to_string());
 
     // Build dynamic query based on provided parameters
     let mut query =
@@ -549,7 +549,7 @@ pub async fn get_agent(db: State<'_, AgentDb>, id: i64) -> Result<Agent, String>
                     icon: row.get(2)?,
                     system_prompt: row.get(3)?,
                     default_task: row.get(4)?,
-                    model: row.get::<_, String>(5).unwrap_or_else(|_| "sonnet".to_string()),
+                    model: row.get::<_, String>(5).unwrap_or_else(|_| "sonnet-3-5".to_string()),
                     enable_file_read: row.get::<_, bool>(6).unwrap_or(true),
                     enable_file_write: row.get::<_, bool>(7).unwrap_or(true),
                     enable_network: row.get::<_, bool>(8).unwrap_or(false),

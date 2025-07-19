@@ -63,7 +63,35 @@ pub struct ProjectUsage {
     last_used: String,
 }
 
-// Claude 4 pricing constants (per million tokens)
+// Claude model pricing constants (per million tokens)
+// Based on https://docs.anthropic.com/zh-CN/docs/about-claude/pricing
+// Updated: 2025-01-19
+
+// Claude 3.5 Haiku pricing
+const HAIKU_3_5_INPUT_PRICE: f64 = 0.8;
+const HAIKU_3_5_OUTPUT_PRICE: f64 = 4.0;
+const HAIKU_3_5_CACHE_WRITE_PRICE: f64 = 1.0;
+const HAIKU_3_5_CACHE_READ_PRICE: f64 = 0.08;
+
+// Claude 3.5 Sonnet pricing
+const SONNET_3_5_INPUT_PRICE: f64 = 3.0;
+const SONNET_3_5_OUTPUT_PRICE: f64 = 15.0;
+const SONNET_3_5_CACHE_WRITE_PRICE: f64 = 3.75;
+const SONNET_3_5_CACHE_READ_PRICE: f64 = 0.30;
+
+// Claude 3.7 Sonnet pricing
+const SONNET_3_7_INPUT_PRICE: f64 = 4.0;
+const SONNET_3_7_OUTPUT_PRICE: f64 = 20.0;
+const SONNET_3_7_CACHE_WRITE_PRICE: f64 = 5.0;
+const SONNET_3_7_CACHE_READ_PRICE: f64 = 0.40;
+
+// Claude 3 Opus pricing (legacy)
+const OPUS_3_INPUT_PRICE: f64 = 15.0;
+const OPUS_3_OUTPUT_PRICE: f64 = 75.0;
+const OPUS_3_CACHE_WRITE_PRICE: f64 = 18.75;
+const OPUS_3_CACHE_READ_PRICE: f64 = 1.50;
+
+// Legacy Claude 4 pricing constants (for backward compatibility)
 const OPUS_4_INPUT_PRICE: f64 = 15.0;
 const OPUS_4_OUTPUT_PRICE: f64 = 75.0;
 const OPUS_4_CACHE_WRITE_PRICE: f64 = 18.75;
@@ -108,25 +136,52 @@ fn calculate_cost(model: &str, usage: &UsageData) -> f64 {
     let cache_read_tokens = usage.cache_read_input_tokens.unwrap_or(0) as f64;
 
     // Calculate cost based on model
-    let (input_price, output_price, cache_write_price, cache_read_price) =
-        if model.contains("opus-4") || model.contains("claude-opus-4") {
-            (
-                OPUS_4_INPUT_PRICE,
-                OPUS_4_OUTPUT_PRICE,
-                OPUS_4_CACHE_WRITE_PRICE,
-                OPUS_4_CACHE_READ_PRICE,
-            )
-        } else if model.contains("sonnet-4") || model.contains("claude-sonnet-4") {
-            (
-                SONNET_4_INPUT_PRICE,
-                SONNET_4_OUTPUT_PRICE,
-                SONNET_4_CACHE_WRITE_PRICE,
-                SONNET_4_CACHE_READ_PRICE,
-            )
-        } else {
-            // Return 0 for unknown models to avoid incorrect cost estimations.
-            (0.0, 0.0, 0.0, 0.0)
-        };
+    let (input_price, output_price, cache_write_price, cache_read_price) = match model {
+        // Claude 3.5 Haiku
+        m if m.contains("claude-3-5-haiku") || m == "haiku" => (
+            HAIKU_3_5_INPUT_PRICE,
+            HAIKU_3_5_OUTPUT_PRICE,
+            HAIKU_3_5_CACHE_WRITE_PRICE,
+            HAIKU_3_5_CACHE_READ_PRICE,
+        ),
+        // Claude 3.5 Sonnet
+        m if m.contains("claude-3-5-sonnet") || m == "sonnet-3-5" => (
+            SONNET_3_5_INPUT_PRICE,
+            SONNET_3_5_OUTPUT_PRICE,
+            SONNET_3_5_CACHE_WRITE_PRICE,
+            SONNET_3_5_CACHE_READ_PRICE,
+        ),
+        // Claude 3.7 Sonnet
+        m if m.contains("claude-3-7-sonnet") || m == "sonnet-3-7" => (
+            SONNET_3_7_INPUT_PRICE,
+            SONNET_3_7_OUTPUT_PRICE,
+            SONNET_3_7_CACHE_WRITE_PRICE,
+            SONNET_3_7_CACHE_READ_PRICE,
+        ),
+        // Claude 3 Opus
+        m if m.contains("claude-3-opus") || m.contains("opus-3") => (
+            OPUS_3_INPUT_PRICE,
+            OPUS_3_OUTPUT_PRICE,
+            OPUS_3_CACHE_WRITE_PRICE,
+            OPUS_3_CACHE_READ_PRICE,
+        ),
+        // Legacy Claude 4 Opus (backward compatibility)
+        m if m.contains("opus-4") || m.contains("claude-opus-4") || m == "opus" => (
+            OPUS_4_INPUT_PRICE,
+            OPUS_4_OUTPUT_PRICE,
+            OPUS_4_CACHE_WRITE_PRICE,
+            OPUS_4_CACHE_READ_PRICE,
+        ),
+        // Legacy Claude 4 Sonnet (backward compatibility)
+        m if m.contains("sonnet-4") || m.contains("claude-sonnet-4") || m == "sonnet" => (
+            SONNET_4_INPUT_PRICE,
+            SONNET_4_OUTPUT_PRICE,
+            SONNET_4_CACHE_WRITE_PRICE,
+            SONNET_4_CACHE_READ_PRICE,
+        ),
+        // Unknown models - return 0 to avoid incorrect cost estimations
+        _ => (0.0, 0.0, 0.0, 0.0),
+    };
 
     // Calculate cost (prices are per million tokens)
     let cost = (input_tokens * input_price / 1_000_000.0)
