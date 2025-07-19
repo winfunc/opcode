@@ -1,5 +1,20 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 
+/**
+ * Toast notification function
+ * This would typically be imported from a toast library or context
+ */
+function showToast(message: string, type: 'success' | 'error' | 'info' | 'warning') {
+  // For now, use console logging with enhanced formatting
+  const timestamp = new Date().toLocaleTimeString();
+  const prefix = type === 'error' ? '❌' : type === 'success' ? '✅' : 'ℹ️';
+  
+  console.log(`${prefix} [${timestamp}] ${message}`);
+  
+  // In a real implementation, this would trigger a toast notification
+  // Example: toast({ message, type, duration: 3000 });
+}
+
 interface ApiCallOptions {
   onSuccess?: (data: any) => void;
   onError?: (error: Error) => void;
@@ -43,6 +58,11 @@ export function useApiCall<T>(
   const call = useCallback(
     async (...args: any[]): Promise<T | null> => {
       try {
+        // Input validation
+        if (!apiFunction) {
+          throw new Error('API function is required');
+        }
+
         // Cancel any pending request
         if (abortControllerRef.current) {
           abortControllerRef.current.abort();
@@ -54,20 +74,38 @@ export function useApiCall<T>(
         setIsLoading(true);
         setError(null);
 
-        const result = await apiFunction(...args);
+        // Add timeout protection
+        const timeoutId = setTimeout(() => {
+          if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+          }
+        }, 30000); // 30 second timeout
 
-        // Only update state if component is still mounted
-        if (!isMountedRef.current) return null;
+        try {
+          const result = await apiFunction(...args);
+          clearTimeout(timeoutId);
 
-        setData(result);
-        
-        if (showSuccessToast) {
-          // TODO: Implement toast notification
-          console.log('Success:', successMessage);
+          // Only update state if component is still mounted
+          if (!isMountedRef.current) return null;
+
+          // Validate result
+          if (result === undefined) {
+            console.warn('API function returned undefined, this might indicate an error');
+          }
+
+          setData(result);
+          
+          if (showSuccessToast) {
+            // Show success toast notification
+            showToast(successMessage, 'success');
+          }
+
+          onSuccess?.(result);
+          return result;
+        } catch (apiError) {
+          clearTimeout(timeoutId);
+          throw apiError;
         }
-
-        onSuccess?.(result);
-        return result;
       } catch (err) {
         // Ignore aborted requests
         if (err instanceof Error && err.name === 'AbortError') {
@@ -77,12 +115,26 @@ export function useApiCall<T>(
         // Only update state if component is still mounted
         if (!isMountedRef.current) return null;
 
-        const error = err instanceof Error ? err : new Error('An error occurred');
+        // Enhanced error handling with more specific error types
+        let error: Error;
+        if (err instanceof Error) {
+          error = err;
+        } else if (typeof err === 'string') {
+          error = new Error(err);
+        } else {
+          error = new Error('An unexpected error occurred');
+        }
+
+        // Add additional context to network errors
+        if (error.message.includes('fetch')) {
+          error = new Error(`Network error: ${error.message}`);
+        }
+
         setError(error);
 
         if (showErrorToast) {
-          // TODO: Implement toast notification
-          console.error('Error:', errorMessage || error.message);
+          // Show error toast notification
+          showToast(errorMessage || error.message, 'error');
         }
 
         onError?.(error);

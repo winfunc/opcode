@@ -3,30 +3,53 @@ import { subscribeWithSelector } from 'zustand/middleware';
 import { api } from '@/lib/api';
 import type { Session, Project } from '@/lib/api';
 
+/**
+ * Session store state interface
+ * 
+ * Manages the global state for projects, sessions, and their outputs.
+ * Provides actions for fetching, updating, and managing session data.
+ */
 interface SessionState {
   // Projects and sessions data
+  /** Array of all available projects */
   projects: Project[];
+  /** Sessions grouped by project ID */
   sessions: Record<string, Session[]>; // Keyed by projectId
+  /** ID of the currently selected session */
   currentSessionId: string | null;
+  /** Currently selected session object */
   currentSession: Session | null;
+  /** Session outputs cached by session ID */
   sessionOutputs: Record<string, string>; // Keyed by sessionId
   
   // UI state
+  /** Whether projects are currently being loaded */
   isLoadingProjects: boolean;
+  /** Whether sessions are currently being loaded */
   isLoadingSessions: boolean;
+  /** Whether session outputs are currently being loaded */
   isLoadingOutputs: boolean;
+  /** Current error message, if any */
   error: string | null;
   
   // Actions
+  /** Fetch all available projects */
   fetchProjects: () => Promise<void>;
+  /** Fetch sessions for a specific project */
   fetchProjectSessions: (projectId: string) => Promise<void>;
+  /** Set the currently selected session */
   setCurrentSession: (sessionId: string | null) => void;
+  /** Fetch output for a specific session */
   fetchSessionOutput: (sessionId: string) => Promise<void>;
+  /** Delete a session and update local state */
   deleteSession: (sessionId: string, projectId: string) => Promise<void>;
+  /** Clear any current error */
   clearError: () => void;
   
   // Real-time updates
+  /** Handle real-time session updates */
   handleSessionUpdate: (session: Session) => void;
+  /** Handle real-time output updates */
   handleOutputUpdate: (sessionId: string, output: string) => void;
 }
 

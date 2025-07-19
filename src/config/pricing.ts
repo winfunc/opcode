@@ -78,14 +78,44 @@ export const MODEL_PRICING: Record<string, ModelPricing> = {
 };
 
 /**
- * 获取模型定价信息
+ * 获取指定模型的定价信息
+ * 
+ * @param model - 模型名称或别名
+ * @returns 模型定价信息，如果模型不存在则返回 null
+ * 
+ * @example
+ * ```typescript
+ * const pricing = getModelPricing('claude-3-5-sonnet-20241022');
+ * if (pricing) {
+ *   console.log(`Input: $${pricing.inputPrice}/M tokens`);
+ * }
+ * ```
  */
 export function getModelPricing(model: string): ModelPricing | null {
   return MODEL_PRICING[model] || null;
 }
 
 /**
- * 计算使用成本
+ * 计算模型使用的总成本
+ * 
+ * 根据输入输出token数量和缓存使用情况计算总费用。
+ * 如果模型不存在，会在控制台输出警告并返回0。
+ * 
+ * @param model - 模型名称
+ * @param inputTokens - 输入token数量
+ * @param outputTokens - 输出token数量
+ * @param cacheCreationTokens - 缓存创建token数量（可选）
+ * @param cacheReadTokens - 缓存读取token数量（可选）
+ * @returns 总成本（美元）
+ * 
+ * @example
+ * ```typescript
+ * const cost = calculateCost('claude-3-5-sonnet-20241022', 1000, 500);
+ * console.log(`Total cost: $${cost.toFixed(4)}`);
+ * 
+ * // 包含缓存的计算
+ * const costWithCache = calculateCost('haiku', 1000, 500, 100, 200);
+ * ```
  */
 export function calculateCost(
   model: string,
@@ -110,7 +140,16 @@ export function calculateCost(
 }
 
 /**
- * 格式化价格显示
+ * 格式化价格为美元显示格式
+ * 
+ * @param price - 价格数值
+ * @returns 格式化的价格字符串，保留两位小数
+ * 
+ * @example
+ * ```typescript
+ * formatPrice(0.0123) // "$0.01"
+ * formatPrice(1.5) // "$1.50"
+ * ```
  */
 export function formatPrice(price: number): string {
   return `$${price.toFixed(2)}`;
@@ -118,6 +157,21 @@ export function formatPrice(price: number): string {
 
 /**
  * 获取模型性价比评级
+ * 
+ * 基于模型的平均价格计算性价比等级：
+ * - high: 平均价格 ≤ $3/M tokens (如 Haiku)
+ * - medium: 平均价格 ≤ $10/M tokens (如 Sonnet)
+ * - low: 平均价格 > $10/M tokens (如 Opus)
+ * 
+ * @param model - 模型名称
+ * @returns 性价比评级
+ * 
+ * @example
+ * ```typescript
+ * getModelCostEfficiency('claude-3-5-haiku-20241022') // 'high'
+ * getModelCostEfficiency('claude-3-5-sonnet-20241022') // 'medium'
+ * getModelCostEfficiency('claude-3-opus-20240229') // 'low'
+ * ```
  */
 export function getModelCostEfficiency(model: string): 'high' | 'medium' | 'low' {
   const pricing = getModelPricing(model);
