@@ -1,4 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
+
+/**
+ * @fileoverview API layer for communicating with the Tauri backend
+ * Provides type-safe interfaces for all backend operations including
+ * project management, agent execution, and Claude Code integration.
+ */
 import { getApiModel, type ClaudeModel } from "@/types/models";
 import type { HooksConfiguration } from '@/types/hooks';
 import { HooksManager } from '@/lib/hooksManager';

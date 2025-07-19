@@ -114,10 +114,10 @@ impl AgentRunMetrics {
                 if let Some(timestamp_str) = json.get("timestamp").and_then(|t| t.as_str()) {
                     if let Ok(timestamp) = chrono::DateTime::parse_from_rfc3339(timestamp_str) {
                         let utc_time = timestamp.with_timezone(&chrono::Utc);
-                        if start_time.is_none() || utc_time < start_time.unwrap() {
+                        if start_time.map_or(true, |st| utc_time < st) {
                             start_time = Some(utc_time);
                         }
-                        if end_time.is_none() || utc_time > end_time.unwrap() {
+                        if end_time.map_or(true, |et| utc_time > et) {
                             end_time = Some(utc_time);
                         }
                     }
@@ -219,8 +219,14 @@ pub fn init_database(app: &AppHandle) -> SqliteResult<Connection> {
     let app_dir = app
         .path()
         .app_data_dir()
-        .expect("Failed to get app data dir");
-    std::fs::create_dir_all(&app_dir).expect("Failed to create app data dir");
+        .map_err(|e| rusqlite::Error::SqliteFailure(
+            rusqlite::ffi::Error::new(rusqlite::ffi::SQLITE_CANTOPEN),
+            Some(format!("Failed to get app data dir: {}", e))
+        ))?;
+    std::fs::create_dir_all(&app_dir).map_err(|e| rusqlite::Error::SqliteFailure(
+        rusqlite::ffi::Error::new(rusqlite::ffi::SQLITE_CANTOPEN),
+        Some(format!("Failed to create app data dir: {}", e))
+    ))?;
 
     let db_path = app_dir.join("agents.db");
     let conn = Connection::open(db_path)?;
@@ -865,7 +871,7 @@ async fn spawn_agent_sidecar(
     let app_dir = app
         .path()
         .app_data_dir()
-        .expect("Failed to get app data dir");
+        .map_err(|e| format!("Failed to get app data dir: {}", e))?;
     let db_path = app_dir.join("agents.db");
     let db_path_for_stream = db_path.clone(); // Clone for the streaming task
 
@@ -1109,7 +1115,7 @@ async fn spawn_agent_system(
     let app_dir = app
         .path()
         .app_data_dir()
-        .expect("Failed to get app data dir");
+        .map_err(|e| format!("Failed to get app data dir: {}", e))?;
     let db_path = app_dir.join("agents.db");
 
     // Shared state for collecting session ID and live output
@@ -1725,12 +1731,8 @@ pub async fn stream_session_output(
 
             // Check if the session is still running by querying the database
             // If the session is no longer running, stop streaming
-            if let Ok(conn) = rusqlite::Connection::open(
-                app.path()
-                    .app_data_dir()
-                    .expect("Failed to get app data dir")
-                    .join("agents.db"),
-            ) {
+            if let Ok(app_dir) = app.path().app_data_dir() {
+                if let Ok(conn) = rusqlite::Connection::open(app_dir.join("agents.db")) {
                 if let Ok(status) = conn.query_row(
                     "SELECT status FROM agent_runs WHERE id = ?1",
                     rusqlite::params![run_id],
@@ -1747,6 +1749,11 @@ pub async fn stream_session_output(
                         run_id
                     );
                 }
+                } else {
+                    debug!("Could not open database connection for session status check");
+                }
+            } else {
+                debug!("Could not get app data dir for session status check");
             }
 
             tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;

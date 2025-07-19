@@ -82,10 +82,10 @@ fn parse_markdown_with_frontmatter(content: &str) -> Result<(Option<CommandFront
 }
 
 /// Extract command name and namespace from file path
-fn extract_command_info(file_path: &Path, base_path: &Path) -> Result<(String, Option<String>)> {
+fn extract_command_info(file_path: &Path, base_path: &Path) -> Result<(String, Option<String>), String> {
     let relative_path = file_path
         .strip_prefix(base_path)
-        .context("Failed to get relative path")?;
+        .map_err(|e| format!("Failed to get relative path: {}", e))?;
     
     // Remove .md extension
     let path_without_ext = relative_path
@@ -97,7 +97,7 @@ fn extract_command_info(file_path: &Path, base_path: &Path) -> Result<(String, O
     let components: Vec<&str> = path_without_ext.split('/').collect();
     
     if components.is_empty() {
-        return Err(anyhow::anyhow!("Invalid command path"));
+        return Err("Invalid command path".to_string());
     }
     
     if components.len() == 1 {
@@ -105,7 +105,7 @@ fn extract_command_info(file_path: &Path, base_path: &Path) -> Result<(String, O
         Ok((components[0].to_string(), None))
     } else {
         // Last component is the command name, rest is namespace
-        let command_name = components.last().unwrap().to_string();
+        let command_name = components.last().ok_or("Invalid command path".to_string())?.to_string();
         let namespace = components[..components.len() - 1].join(":");
         Ok((command_name, Some(namespace)))
     }
@@ -127,7 +127,8 @@ fn load_command_from_file(
     let (frontmatter, body) = parse_markdown_with_frontmatter(&content)?;
     
     // Extract command info
-    let (name, namespace) = extract_command_info(file_path, base_path)?;
+    let (name, namespace) = extract_command_info(file_path, base_path)
+        .map_err(|e| anyhow::anyhow!("Failed to extract command info: {}", e))?;
     
     // Build full command (no scope prefix, just /command or /namespace:command)
     let full_command = match &namespace {

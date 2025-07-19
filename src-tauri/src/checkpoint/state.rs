@@ -142,7 +142,7 @@ mod tests {
     #[tokio::test]
     async fn test_checkpoint_state_lifecycle() {
         let state = CheckpointState::new();
-        let temp_dir = TempDir::new().unwrap();
+        let temp_dir = TempDir::new().map_err(|e| format!("Failed to create temp dir: {}", e))?;
         let claude_dir = temp_dir.path().to_path_buf();
 
         // Set Claude directory

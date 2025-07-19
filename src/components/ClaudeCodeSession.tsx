@@ -66,8 +66,24 @@ interface ClaudeCodeSessionProps {
 /**
  * ClaudeCodeSession component for interactive Claude Code sessions
  * 
+ * This component provides a complete interface for running Claude Code sessions
+ * with features like streaming output, checkpoint management, and session resumption.
+ * 
+ * @param session - Optional existing session to resume
+ * @param initialProjectPath - Initial project path for new sessions
+ * @param onBack - Callback function to navigate back
+ * @param onProjectSettings - Callback to open project settings
+ * @param className - Optional CSS class name
+ * @param onStreamingChange - Callback when streaming state changes
+ * 
  * @example
- * <ClaudeCodeSession onBack={() => setView('projects')} />
+ * ```tsx
+ * <ClaudeCodeSession 
+ *   session={existingSession}
+ *   onBack={() => setView('projects')} 
+ *   onProjectSettings={(path) => openSettings(path)}
+ * />
+ * ```
  */
 export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   session,
