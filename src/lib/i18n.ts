@@ -522,8 +522,14 @@ export interface Translations {
     model: string;
     claude4Sonnet: string;
     claude4Opus: string;
+    claude35Haiku: string;
+    claude35Sonnet: string;
+    claude37Sonnet: string;
     fasterEfficient: string;
     moreCapable: string;
+    fastAffordable: string;
+    balancedPerformance: string;
+    advancedReasoning: string;
     defaultTask: string;
     defaultTaskPlaceholder: string;
     defaultTaskDesc: string;

@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { getApiModel, type ClaudeModel } from "@/types/models";
 import type { HooksConfiguration } from '@/types/hooks';
 
 /** Process type for tracking in ProcessRegistry */
@@ -810,7 +811,9 @@ export const api = {
    */
   async executeAgent(agentId: number, projectPath: string, task: string, model?: string): Promise<number> {
     try {
-      return await invoke<number>('execute_agent', { agentId, projectPath, task, model });
+      // Map shorthand model names to API model identifiers
+      const apiModel = model ? getApiModel(model as ClaudeModel) : undefined;
+      return await invoke<number>('execute_agent', { agentId, projectPath, task, model: apiModel });
     } catch (error) {
       console.error("Failed to execute agent:", error);
       // Return a sentinel value to indicate error
@@ -983,21 +986,24 @@ export const api = {
    * Executes a new interactive Claude Code session with streaming output
    */
   async executeClaudeCode(projectPath: string, prompt: string, model: string): Promise<void> {
-    return invoke("execute_claude_code", { projectPath, prompt, model });
+    const apiModel = getApiModel(model as ClaudeModel);
+    return invoke("execute_claude_code", { projectPath, prompt, model: apiModel });
   },
 
   /**
    * Continues an existing Claude Code conversation with streaming output
    */
   async continueClaudeCode(projectPath: string, prompt: string, model: string): Promise<void> {
-    return invoke("continue_claude_code", { projectPath, prompt, model });
+    const apiModel = getApiModel(model as ClaudeModel);
+    return invoke("continue_claude_code", { projectPath, prompt, model: apiModel });
   },
 
   /**
    * Resumes an existing Claude Code session by ID with streaming output
    */
   async resumeClaudeCode(projectPath: string, sessionId: string, prompt: string, model: string): Promise<void> {
-    return invoke("resume_claude_code", { projectPath, sessionId, prompt, model });
+    const apiModel = getApiModel(model as ClaudeModel);
+    return invoke("resume_claude_code", { projectPath, sessionId, prompt, model: apiModel });
   },
 
   /**
