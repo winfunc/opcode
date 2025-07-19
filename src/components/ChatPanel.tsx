@@ -153,24 +153,21 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   };
 
   const MessageItem: React.FC<{ message: Message }> = ({ message }) => (
-    <div className={cn(
-      "group flex gap-3 p-3 hover:bg-accent/30 transition-colors",
-      message.role === 'user' && "bg-accent/10"
-    )}>
+    <div className="group flex gap-3 hover:bg-accent/20 transition-colors rounded-lg p-2 -m-2">
       <div className="flex-shrink-0">
         {message.role === 'user' ? (
-          <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-            <User className="w-3 h-3" />
+          <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+            <User className="w-4 h-4" />
           </div>
         ) : (
-          <div className="w-6 h-6 rounded-full bg-muted text-muted-foreground flex items-center justify-center">
-            <Bot className="w-3 h-3" />
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center">
+            <span className="text-white text-xs font-bold">C</span>
           </div>
         )}
       </div>
       
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1">
+        <div className="flex items-center gap-2 mb-2">
           <span className="text-sm font-medium">
             {message.role === 'user' ? 'You' : 'Claude'}
           </span>
@@ -182,17 +179,17 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           </span>
         </div>
         
-        <div className="text-sm text-foreground whitespace-pre-wrap break-words">
+        <div className="text-sm text-foreground whitespace-pre-wrap break-words leading-relaxed">
           {message.content}
         </div>
         
         {/* Message actions */}
-        <div className="flex items-center gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-1 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => copyMessage(message.content)}
-            className="h-6 w-6"
+            className="h-7 w-7 hover:bg-background"
             title="Copy message"
           >
             <Copy className="w-3 h-3" />
@@ -203,7 +200,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6"
+                className="h-7 w-7 hover:bg-background hover:text-green-600"
                 title="Good response"
               >
                 <ThumbsUp className="w-3 h-3" />
@@ -211,10 +208,18 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6"
+                className="h-7 w-7 hover:bg-background hover:text-red-500"
                 title="Poor response"
               >
                 <ThumbsDown className="w-3 h-3" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 hover:bg-background"
+                title="Regenerate response"
+              >
+                <RefreshCw className="w-3 h-3" />
               </Button>
             </>
           )}
@@ -238,9 +243,11 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         style={{ width }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-3 border-b border-border/50">
+        <div className="flex items-center justify-between p-3 border-b border-border/50 bg-background/95 backdrop-blur">
           <div className="flex items-center gap-2">
-            <MessageSquare className="w-4 h-4" />
+            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center">
+              <span className="text-white text-xs font-bold">C</span>
+            </div>
             <span className="font-medium text-sm">Claude Chat</span>
           </div>
           
@@ -279,59 +286,115 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         </div>
 
         {/* Messages */}
-        <ScrollArea className="flex-1 min-h-0">
-          <div className="space-y-0">
-            {messages.map((message) => (
-              <MessageItem key={message.id} message={message} />
-            ))}
-            
-            {/* Typing indicator */}
-            {isTyping && (
-              <div className="flex gap-3 p-3">
-                <div className="w-6 h-6 rounded-full bg-muted text-muted-foreground flex items-center justify-center">
-                  <Bot className="w-3 h-3" />
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="flex gap-1">
-                    <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+        <div className="flex-1 min-h-0 relative">
+          <ScrollArea className="h-full">
+            <div className="p-4 space-y-6">
+              {messages.map((message) => (
+                <MessageItem key={message.id} message={message} />
+              ))}
+              
+              {/* Typing indicator */}
+              {isTyping && (
+                <div className="flex gap-3">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center flex-shrink-0">
+                    <span className="text-white text-xs font-bold">C</span>
                   </div>
-                  <span className="text-xs text-muted-foreground ml-2">Claude is typing...</span>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-sm font-medium">Claude</span>
+                      <span className="text-xs text-muted-foreground">thinking...</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="flex gap-1">
+                        <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            )}
-            
-            <div ref={messagesEndRef} />
-          </div>
-        </ScrollArea>
+              )}
+              
+              <div ref={messagesEndRef} />
+            </div>
+          </ScrollArea>
+          
+          {/* Scroll to bottom button */}
+          {messages.length > 5 && (
+            <button
+              onClick={() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })}
+              className="absolute bottom-4 right-4 w-8 h-8 bg-background border border-border rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-110 flex items-center justify-center"
+              title="Scroll to bottom"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+              </svg>
+            </button>
+          )}
+        </div>
 
-        {/* Input */}
-        <div className="p-3 border-t border-border/50">
-          <div className="flex gap-2">
-            <div className="flex-1 relative">
+        {/* Enhanced Input Area - Cursor Style */}
+        <div className="border-t border-border/50 bg-background">
+          {/* Model Selector */}
+          <div className="px-4 py-2 border-b border-border/20">
+            <div className="flex items-center gap-2 text-sm">
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span className="font-medium">Claude 4 Sonnet</span>
+              </div>
+              <button className="ml-auto p-1 hover:bg-muted rounded">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          {/* Main Input */}
+          <div className="p-4">
+            <div className="relative bg-muted/30 rounded-lg border border-border/50 focus-within:border-primary/50 transition-colors">
               <Textarea
                 ref={textareaRef}
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Ask Claude anything..."
-                className="min-h-[40px] max-h-[120px] resize-none pr-10 text-sm"
+                className="min-h-[60px] max-h-[120px] resize-none border-0 bg-transparent p-4 pr-12 text-sm placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
                 rows={1}
               />
+              
+              {/* Send Button */}
               <Button
                 size="icon"
                 onClick={handleSendMessage}
                 disabled={!inputValue.trim() || isTyping}
-                className="absolute right-1 bottom-1 h-8 w-8"
+                className={cn(
+                  "absolute right-2 bottom-2 h-8 w-8 rounded-md transition-all",
+                  inputValue.trim() 
+                    ? "bg-primary text-primary-foreground hover:bg-primary/90" 
+                    : "bg-muted text-muted-foreground cursor-not-allowed"
+                )}
               >
-                <Send className="w-3 h-3" />
+                <Send className="w-4 h-4" />
               </Button>
             </div>
-          </div>
-          
-          <div className="text-xs text-muted-foreground mt-2 text-center">
-            Press Enter to send, Shift+Enter for new line
+            
+            {/* Footer Info */}
+            <div className="flex items-center justify-between mt-3 text-xs text-muted-foreground">
+              <span>Press Enter to send, Shift+Enter for new line</span>
+              <div className="flex items-center gap-2">
+                <button className="hover:text-foreground transition-colors">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                  </svg>
+                </button>
+                <button className="hover:text-foreground transition-colors" title="Voice input">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                  </svg>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
