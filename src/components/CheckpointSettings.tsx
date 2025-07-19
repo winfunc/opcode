@@ -14,6 +14,7 @@ import { SelectComponent, type SelectOption } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { api, type CheckpointStrategy } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/lib/i18n";
 
 interface CheckpointSettingsProps {
   sessionId: string;
@@ -40,6 +41,7 @@ export const CheckpointSettings: React.FC<CheckpointSettingsProps> = ({
   onClose,
   className,
 }) => {
+  const { t } = useI18n();
   const [autoCheckpointEnabled, setAutoCheckpointEnabled] = useState(true);
   const [checkpointStrategy, setCheckpointStrategy] = useState<CheckpointStrategy>("smart");
   const [totalCheckpoints, setTotalCheckpoints] = useState(0);
@@ -53,7 +55,7 @@ export const CheckpointSettings: React.FC<CheckpointSettingsProps> = ({
     { value: "manual", label: "Manual Only" },
     { value: "per_prompt", label: "After Each Prompt" },
     { value: "per_tool_use", label: "After Tool Use" },
-    { value: "smart", label: "Smart (Recommended)" },
+    { value: "smart", label: t.sessions.smartRecommended },
   ];
 
   useEffect(() => {
@@ -137,11 +139,11 @@ export const CheckpointSettings: React.FC<CheckpointSettingsProps> = ({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Settings className="h-5 w-5" />
-          <h3 className="text-lg font-semibold">Checkpoint Settings</h3>
+          <h3 className="text-lg font-semibold">{t.sessions.checkpointSettings}</h3>
         </div>
         {onClose && (
           <Button variant="ghost" size="sm" onClick={onClose}>
-            Close
+            {t.sessions.close}
           </Button>
         )}
       </div>
@@ -151,9 +153,9 @@ export const CheckpointSettings: React.FC<CheckpointSettingsProps> = ({
         <div className="flex items-start gap-2">
           <AlertCircle className="h-4 w-4 text-yellow-600 mt-0.5" />
           <div className="text-xs">
-            <p className="font-medium text-yellow-600">Experimental Feature</p>
+            <p className="font-medium text-yellow-600">{t.sessions.experimentalFeature}</p>
             <p className="text-yellow-600/80">
-              Checkpointing may affect directory structure or cause data loss. Use with caution.
+              {t.sessions.checkpointingWarning}
             </p>
           </div>
         </div>
@@ -186,9 +188,9 @@ export const CheckpointSettings: React.FC<CheckpointSettingsProps> = ({
         {/* Auto-checkpoint toggle */}
         <div className="flex items-center justify-between">
           <div className="space-y-0.5">
-            <Label htmlFor="auto-checkpoint">Automatic Checkpoints</Label>
+            <Label htmlFor="auto-checkpoint">{t.sessions.automaticCheckpoints}</Label>
             <p className="text-sm text-muted-foreground">
-              Automatically create checkpoints based on the selected strategy
+              {t.sessions.automaticCheckpointsDesc}
             </p>
           </div>
           <Switch
@@ -201,7 +203,7 @@ export const CheckpointSettings: React.FC<CheckpointSettingsProps> = ({
 
         {/* Checkpoint strategy */}
         <div className="space-y-2">
-          <Label htmlFor="strategy">Checkpoint Strategy</Label>
+          <Label htmlFor="strategy">{t.sessions.checkpointStrategy}</Label>
           <SelectComponent
             value={checkpointStrategy}
             onValueChange={(value: string) => setCheckpointStrategy(value as CheckpointStrategy)}
@@ -212,7 +214,7 @@ export const CheckpointSettings: React.FC<CheckpointSettingsProps> = ({
             {checkpointStrategy === "manual" && "Checkpoints will only be created manually"}
             {checkpointStrategy === "per_prompt" && "A checkpoint will be created after each user prompt"}
             {checkpointStrategy === "per_tool_use" && "A checkpoint will be created after each tool use"}
-            {checkpointStrategy === "smart" && "Checkpoints will be created after destructive operations"}
+            {checkpointStrategy === "smart" && t.sessions.smartStrategyDesc}
           </p>
         </div>
 
@@ -225,12 +227,12 @@ export const CheckpointSettings: React.FC<CheckpointSettingsProps> = ({
           {isSaving ? (
             <>
               <Save className="h-4 w-4 mr-2 animate-spin" />
-              Saving...
+              {t.common.loading}
             </>
           ) : (
             <>
               <Save className="h-4 w-4 mr-2" />
-              Save Settings
+              {t.sessions.saveSettings}
             </>
           )}
         </Button>
@@ -239,9 +241,9 @@ export const CheckpointSettings: React.FC<CheckpointSettingsProps> = ({
       <div className="border-t pt-6 space-y-4">
         <div className="flex items-center justify-between">
           <div className="space-y-0.5">
-            <Label>Storage Management</Label>
+            <Label>{t.sessions.storageManagement}</Label>
             <p className="text-sm text-muted-foreground">
-              Total checkpoints: {totalCheckpoints}
+              {t.sessions.totalCheckpoints}: {totalCheckpoints}
             </p>
           </div>
           <HardDrive className="h-5 w-5 text-muted-foreground" />
@@ -249,7 +251,7 @@ export const CheckpointSettings: React.FC<CheckpointSettingsProps> = ({
 
         {/* Cleanup settings */}
         <div className="space-y-2">
-          <Label htmlFor="keep-count">Keep Recent Checkpoints</Label>
+          <Label htmlFor="keep-count">{t.sessions.keepRecentCheckpoints}</Label>
           <div className="flex gap-2">
             <Input
               id="keep-count"
@@ -267,11 +269,11 @@ export const CheckpointSettings: React.FC<CheckpointSettingsProps> = ({
               disabled={isLoading || totalCheckpoints <= keepCount}
             >
               <Trash2 className="h-4 w-4 mr-2" />
-              Clean Up
+              {t.sessions.cleanUp}
             </Button>
           </div>
           <p className="text-xs text-muted-foreground">
-            Remove old checkpoints, keeping only the most recent {keepCount}
+            {t.sessions.removeOldCheckpoints} {keepCount}
           </p>
         </div>
       </div>

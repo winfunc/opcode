@@ -34,6 +34,7 @@ import { SplitPane } from "@/components/ui/split-pane";
 import { WebviewPreview } from "./WebviewPreview";
 import type { ClaudeStreamMessage } from "./AgentExecution";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { useI18n } from "@/lib/i18n";
 
 interface ClaudeCodeSessionProps {
   /**
@@ -76,6 +77,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   className,
   onStreamingChange,
 }) => {
+  const { t } = useI18n();
   const [projectPath, setProjectPath] = useState(initialProjectPath || session?.project_path || "");
   const [messages, setMessages] = useState<ClaudeStreamMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -979,7 +981,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
             <div className="flex items-center gap-2">
               <Terminal className="h-5 w-5 text-muted-foreground" />
               <div className="flex-1">
-                <h1 className="text-xl font-bold">Claude Code Session</h1>
+                <h1 className="text-xl font-bold">{t.sessions.claudeCodeSession}</h1>
                 <p className="text-sm text-muted-foreground">
                   {projectPath ? `${projectPath}` : "No project selected"}
                 </p>
@@ -1007,7 +1009,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                 disabled={isLoading}
               >
                 <Command className="h-4 w-4 mr-2" />
-                Commands
+                {t.sessions.commands}
               </Button>
             )}
             <div className="flex items-center gap-2">
@@ -1031,7 +1033,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Checkpoint Settings</p>
+                    <p>{t.sessions.checkpointSettingsTooltip}</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -1049,7 +1051,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Timeline Navigator</p>
+                      <p>{t.sessions.timelineNavigatorTooltip}</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -1063,7 +1065,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                       className="flex items-center gap-2"
                     >
                       <Copy className="h-4 w-4" />
-                      Copy Output
+                      {t.sessions.copyOutput}
                       <ChevronDown className="h-3 w-3" />
                     </Button>
                   }
@@ -1075,7 +1077,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                         onClick={handleCopyAsMarkdown}
                         className="w-full justify-start"
                       >
-                        Copy as Markdown
+                        {t.sessions.copyAsMarkdown}
                       </Button>
                       <Button
                         variant="ghost"
@@ -1083,7 +1085,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                         onClick={handleCopyAsJsonl}
                         className="w-full justify-start"
                       >
-                        Copy as JSONL
+                        {t.sessions.copyAsJsonl}
                       </Button>
                     </div>
                   }
@@ -1323,7 +1325,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
               <div className="h-full flex flex-col">
                 {/* Timeline Header */}
                 <div className="flex items-center justify-between p-4 border-b border-border">
-                  <h3 className="text-lg font-semibold">Session Timeline</h3>
+                  <h3 className="text-lg font-semibold">{t.sessions.sessionTimeline}</h3>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -1416,9 +1418,9 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         <Dialog open={showSlashCommandsSettings} onOpenChange={setShowSlashCommandsSettings}>
           <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
             <DialogHeader>
-              <DialogTitle>Slash Commands</DialogTitle>
+              <DialogTitle>{t.sessions.slashCommands}</DialogTitle>
               <DialogDescription>
-                Manage project-specific slash commands for {projectPath}
+                {t.sessions.manageProjectSpecificSlashCommands} {projectPath}
               </DialogDescription>
             </DialogHeader>
             <div className="flex-1 overflow-y-auto">
