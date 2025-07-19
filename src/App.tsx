@@ -24,6 +24,9 @@ import { TabManager } from "@/components/TabManager";
 import { TabContent } from "@/components/TabContent";
 import { AgentsModal } from "@/components/AgentsModal";
 import { useTabState } from "@/hooks/useTabState";
+import { CursorStyleApp } from "@/components/CursorStyleApp";
+import { LayoutSwitcher } from "@/components/LayoutSwitcher";
+import "@/styles/cursor-layout.css";
 
 type View = 
   | "welcome" 
@@ -45,6 +48,12 @@ type View =
  * AppContent component - Contains the main app logic, wrapped by providers
  */
 function AppContent() {
+  // Layout state - check localStorage for saved preference
+  const [layoutType, setLayoutType] = useState<'classic' | 'cursor'>(() => {
+    const saved = localStorage.getItem('claudia-preferred-layout');
+    return (saved === 'cursor' || saved === 'classic') ? saved : 'cursor'; // Default to cursor layout
+  });
+  
   const [view, setView] = useState<View>("tabs");
   const { createClaudeMdTab, createSettingsTab, createUsageTab, createMCPTab } = useTabState();
   const [projects, setProjects] = useState<Project[]>([]);
@@ -217,6 +226,16 @@ function AppContent() {
   const performanceEditClaudeFile = usePerformanceClick(handleEditClaudeFile);
   const performanceProjectSettings = usePerformanceClick(handleProjectSettings);
 
+  // Handle layout changes
+  const handleLayoutChange = (newLayout: 'classic' | 'cursor') => {
+    setLayoutType(newLayout);
+    localStorage.setItem('claudia-preferred-layout', newLayout);
+  };
+
+  // If using cursor layout, render the cursor-style app
+  if (layoutType === 'cursor') {
+    return <CursorStyleApp />;
+  }
 
   const renderContent = () => {
     switch (view) {
@@ -452,6 +471,15 @@ function AppContent() {
         onInfoClick={() => setShowNFO(true)}
         onAgentsClick={() => setShowAgentsModal(true)}
       />
+      
+      {/* Layout Switcher - add to topbar area */}
+      <div className="px-4 py-2 border-b border-border bg-muted/30 flex justify-between items-center">
+        <span className="text-sm text-muted-foreground">Current Layout: Classic</span>
+        <LayoutSwitcher 
+          currentLayout={layoutType}
+          onLayoutChange={handleLayoutChange}
+        />
+      </div>
       
       {/* Main Content */}
       <div className="flex-1 overflow-hidden">
