@@ -289,24 +289,24 @@ function AppContent() {
       case "projects":
         return (
           <div className="flex-1 overflow-y-auto">
-            <div className="container mx-auto p-6">
-              {/* Header with back button */}
-              <div className="mb-6 fade-in-fast">
+            <div className="container mx-auto px-4 md:px-8 lg:px-12 py-6 md:py-10 lg:py-12">
+              {/* Header with back button - 行业标准间距 */}
+              <header className="mb-16 fade-in-fast">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => performanceViewChange("welcome")}
-                  className="mb-4 btn-perf instant-feedback"
+                  className="mb-8 btn-perf instant-feedback"
                 >
                   ← Back to Home
                 </Button>
-                <div className="mb-4">
-                  <h1 className="text-3xl font-bold tracking-tight">CC Projects</h1>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Browse your Claude Code sessions
+                <div className="space-y-3">
+                  <h1 className="text-4xl md:text-5xl font-bold tracking-tight">CC Projects</h1>
+                  <p className="text-base md:text-lg text-muted-foreground max-w-2xl">
+                    Browse and manage your Claude Code sessions
                   </p>
                 </div>
-              </div>
+              </header>
 
               {/* Error display */}
               {error && (
@@ -336,28 +336,28 @@ function AppContent() {
                     </div>
                   ) : (
                     <div className="slide-in-fast">
-                      {/* 改进的布局结构 */}
-                      <div className="space-y-8">
+                      {/* 改进的布局结构 - 使用行业标准间距 */}
+                      <div className="space-y-16">
                         {/* New session button at the top */}
-                        <div className="slide-up-fast">
+                        <section className="slide-up-fast">
                           <Button
                             onClick={performanceNewSession}
-                            size="default"
-                            className="w-full max-w-md btn-perf instant-feedback"
+                            size="lg"
+                            className="w-full md:w-auto min-w-[280px] btn-perf instant-feedback"
                           >
-                            <Plus className="mr-2 h-4 w-4" />
+                            <Plus className="mr-2 h-5 w-5" />
                             New Claude Code session
                           </Button>
-                        </div>
+                        </section>
 
-                        {/* Running Claude Sessions - 增加间距 */}
-                        <div className="pb-8 border-b">
+                        {/* Running Claude Sessions - 增强视觉分离 */}
+                        <section>
                           <RunningClaudeSessions />
-                        </div>
+                        </section>
 
                         {/* Project list - 明确的视觉分隔 */}
-                        <div>
-                          <h2 className="text-lg font-semibold mb-6">All Projects</h2>
+                        <section>
+                          <h2 className="text-2xl font-semibold mb-8">All Projects</h2>
                           {projects.length > 0 ? (
                             <ProjectList
                               projects={projects}
@@ -367,14 +367,25 @@ function AppContent() {
                               className="fade-in-fast"
                             />
                           ) : (
-                            <div className="py-16 text-center">
-                              <p className="text-sm text-muted-foreground">
-                                No projects found in ~/.claude/projects
+                            <div className="py-24 text-center">
+                              <div className="w-16 h-16 mx-auto mb-6 bg-muted/20 rounded-full flex items-center justify-center">
+                                <FolderCode className="h-8 w-8 text-muted-foreground/50" />
+                              </div>
+                              <h3 className="text-lg font-medium mb-2">No projects yet</h3>
+                              <p className="text-muted-foreground mb-8 max-w-sm mx-auto">
+                                Start a new Claude Code session to create your first project
                               </p>
+                              <Button size="lg" onClick={performanceNewSession}>
+                                <Plus className="mr-2 h-4 w-4" />
+                                Create New Session
+                              </Button>
                             </div>
                           )}
-                        </div>
+                        </section>
                       </div>
+                      
+                      {/* 页脚留白 */}
+                      <div className="h-16" />
                     </div>
                   )}
                 </>

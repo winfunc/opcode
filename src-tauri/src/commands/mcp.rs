@@ -96,23 +96,58 @@ pub struct ImportServerResult {
 }
 
 /// Executes a claude mcp command
-fn execute_claude_mcp_command(app_handle: &AppHandle, args: Vec<&str>) -> Result<String> {
+async fn execute_claude_mcp_command(app_handle: &AppHandle, args: Vec<&str>) -> Result<String> {
     info!("Executing claude mcp command with args: {:?}", args);
 
     let claude_path = find_claude_binary(app_handle)?;
-    let mut cmd = create_command_with_env(&claude_path);
-    cmd.arg("mcp");
-    for arg in args {
-        cmd.arg(arg);
-    }
-
-    let output = cmd.output().context("Failed to execute claude command")?;
-
-    if output.status.success() {
-        Ok(String::from_utf8_lossy(&output.stdout).to_string())
+    
+    // Check if we should use sidecar
+    if claude_path == "claude-code" {
+        // Use Tauri sidecar API
+        use tauri_plugin_shell::ShellExt;
+        
+        // Create sidecar command
+        let mut sidecar_cmd = app_handle
+            .shell()
+            .sidecar("claude-code")
+            .map_err(|e| anyhow::anyhow!("Failed to create sidecar command: {}", e))?
+            .arg("mcp");
+        
+        // Add all arguments
+        for arg in args {
+            sidecar_cmd = sidecar_cmd.arg(arg);
+        }
+        
+        info!("Executing sidecar command");
+        
+        // Execute the command
+        let output = sidecar_cmd
+            .output()
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to execute sidecar: {}", e))?;
+        
+        if output.status.success() {
+            Ok(String::from_utf8_lossy(&output.stdout).to_string())
+        } else {
+            let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+            Err(anyhow::anyhow!("Sidecar command failed: {}", stderr))
+        }
     } else {
-        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-        Err(anyhow::anyhow!("Command failed: {}", stderr))
+        // Use regular command execution
+        let mut cmd = create_command_with_env(&claude_path);
+        cmd.arg("mcp");
+        for arg in args {
+            cmd.arg(arg);
+        }
+
+        let output = cmd.output().context("Failed to execute claude command")?;
+
+        if output.status.success() {
+            Ok(String::from_utf8_lossy(&output.stdout).to_string())
+        } else {
+            let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+            Err(anyhow::anyhow!("Command failed: {}", stderr))
+        }
     }
 }
 
@@ -188,7 +223,7 @@ pub async fn mcp_add(
         }
     }
 
-    match execute_claude_mcp_command(&app, cmd_args) {
+    match execute_claude_mcp_command(&app, cmd_args).await {
         Ok(output) => {
             info!("Successfully added MCP server: {}", name);
             Ok(AddServerResult {
@@ -213,7 +248,7 @@ pub async fn mcp_add(
 pub async fn mcp_list(app: AppHandle) -> Result<Vec<MCPServer>, String> {
     info!("Listing MCP servers");
 
-    match execute_claude_mcp_command(&app, vec!["list"]) {
+    match execute_claude_mcp_command(&app, vec!["list"]).await {
         Ok(output) => {
             info!("Raw output from 'claude mcp list': {:?}", output);
             let trimmed = output.trim();
@@ -335,7 +370,7 @@ pub async fn mcp_list(app: AppHandle) -> Result<Vec<MCPServer>, String> {
 pub async fn mcp_get(app: AppHandle, name: String) -> Result<MCPServer, String> {
     info!("Getting MCP server details for: {}", name);
 
-    match execute_claude_mcp_command(&app, vec!["get", &name]) {
+    match execute_claude_mcp_command(&app, vec!["get", &name]).await {
         Ok(output) => {
             // Parse the structured text output
             let mut scope = "local".to_string();
@@ -404,7 +439,7 @@ pub async fn mcp_get(app: AppHandle, name: String) -> Result<MCPServer, String> 
 pub async fn mcp_remove(app: AppHandle, name: String) -> Result<String, String> {
     info!("Removing MCP server: {}", name);
 
-    match execute_claude_mcp_command(&app, vec!["remove", &name]) {
+    match execute_claude_mcp_command(&app, vec!["remove", &name]).await {
         Ok(output) => {
             info!("Successfully removed MCP server: {}", name);
             Ok(output.trim().to_string())
@@ -437,7 +472,7 @@ pub async fn mcp_add_json(
     cmd_args.push(scope_flag);
     cmd_args.push(&scope);
 
-    match execute_claude_mcp_command(&app, cmd_args) {
+    match execute_claude_mcp_command(&app, cmd_args).await {
         Ok(output) => {
             info!("Successfully added MCP server from JSON: {}", name);
             Ok(AddServerResult {
@@ -624,17 +659,49 @@ pub async fn mcp_serve(app: AppHandle) -> Result<String, String> {
         }
     };
 
-    let mut cmd = create_command_with_env(&claude_path);
-    cmd.arg("mcp").arg("serve");
-
-    match cmd.spawn() {
-        Ok(_) => {
-            info!("Successfully started Claude Code MCP server");
-            Ok("Claude Code MCP server started".to_string())
+    // Check if we should use sidecar
+    if claude_path == "claude-code" {
+        // Use Tauri sidecar API
+        use tauri_plugin_shell::ShellExt;
+        
+        info!("Starting MCP server using sidecar");
+        
+        let sidecar = app
+            .shell()
+            .sidecar("claude-code")
+            .map_err(|e| {
+                error!("Failed to create sidecar command: {}", e);
+                format!("Failed to create sidecar command: {}", e)
+            })?
+            .arg("mcp")
+            .arg("serve");
+        
+        // Spawn the sidecar process
+        match sidecar.spawn() {
+            Ok(mut child) => {
+                // Store the child process handle if needed
+                info!("Successfully started Claude Code MCP server via sidecar");
+                Ok("Claude Code MCP server started".to_string())
+            }
+            Err(e) => {
+                error!("Failed to spawn MCP server sidecar: {}", e);
+                Err(format!("Failed to start MCP server: {}", e))
+            }
         }
-        Err(e) => {
-            error!("Failed to start MCP server: {}", e);
-            Err(e.to_string())
+    } else {
+        // Use regular command execution
+        let mut cmd = create_command_with_env(&claude_path);
+        cmd.arg("mcp").arg("serve");
+
+        match cmd.spawn() {
+            Ok(_) => {
+                info!("Successfully started Claude Code MCP server");
+                Ok("Claude Code MCP server started".to_string())
+            }
+            Err(e) => {
+                error!("Failed to start MCP server: {}", e);
+                Err(e.to_string())
+            }
         }
     }
 }
@@ -645,7 +712,7 @@ pub async fn mcp_test_connection(app: AppHandle, name: String) -> Result<String,
     info!("Testing connection to MCP server: {}", name);
 
     // For now, we'll use the get command to test if the server exists
-    match execute_claude_mcp_command(&app, vec!["get", &name]) {
+    match execute_claude_mcp_command(&app, vec!["get", &name]).await {
         Ok(_) => Ok(format!("Connection to {} successful", name)),
         Err(e) => Err(e.to_string()),
     }
@@ -656,7 +723,7 @@ pub async fn mcp_test_connection(app: AppHandle, name: String) -> Result<String,
 pub async fn mcp_reset_project_choices(app: AppHandle) -> Result<String, String> {
     info!("Resetting MCP project choices");
 
-    match execute_claude_mcp_command(&app, vec!["reset-project-choices"]) {
+    match execute_claude_mcp_command(&app, vec!["reset-project-choices"]).await {
         Ok(output) => {
             info!("Successfully reset MCP project choices");
             Ok(output.trim().to_string())

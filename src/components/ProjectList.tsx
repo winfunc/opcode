@@ -84,8 +84,8 @@ export const ProjectList: React.FC<ProjectListProps> = ({
   }, [projects.length]);
   
   return (
-    <div className={cn("space-y-4", className)}>
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+    <div className={cn("space-y-6", className)}>
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
         {currentProjects.map((project, index) => (
           <motion.div
             key={project.id}
@@ -98,14 +98,16 @@ export const ProjectList: React.FC<ProjectListProps> = ({
             }}
           >
             <Card
-              className="p-6 hover:shadow-lg transition-all duration-200 cursor-pointer group h-full border-muted/50 hover:border-muted"
+              className="p-8 hover:shadow-xl transition-all duration-200 cursor-pointer group h-full border-muted/50 hover:border-muted"
               onClick={() => onProjectClick(project)}
             >
               <div className="flex flex-col h-full">
                 <div className="flex-1">
-                  <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <FolderOpen className="h-5 w-5 text-primary shrink-0" />
+                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
+                        <FolderOpen className="h-5 w-5 text-primary" />
+                      </div>
                       <h3 className="font-semibold text-lg truncate">
                         {getProjectName(project.path)}
                       </h3>
@@ -117,13 +119,13 @@ export const ProjectList: React.FC<ProjectListProps> = ({
                     )}
                   </div>
                   
-                  <p className="text-sm text-muted-foreground mb-4 font-mono truncate">
+                  <p className="text-sm text-muted-foreground mb-6 font-mono truncate">
                     {project.path}
                   </p>
                 </div>
                 
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                <div className="pt-4 border-t flex items-center justify-between">
+                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
                     <div className="flex items-center gap-1">
                       <Calendar className="h-3 w-3" />
                       <span>{formatTimeAgo(project.created_at * 1000)}</span>
@@ -164,11 +166,14 @@ export const ProjectList: React.FC<ProjectListProps> = ({
         ))}
       </div>
       
-      <Pagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={setCurrentPage}
-      />
+      {/* 分页区域：增加上方间距 */}
+      <div className="pt-8">
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+        />
+      </div>
     </div>
   );
 }; 
