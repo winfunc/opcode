@@ -20,6 +20,9 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
 
+    /* Testing */
+    "types": ["vitest/globals", "@testing-library/jest-dom"],
+
     /* Path aliases */
     "baseUrl": ".",
     "paths": {

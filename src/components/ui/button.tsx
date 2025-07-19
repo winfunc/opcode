@@ -49,6 +49,29 @@ export interface ButtonProps
  *   Click me
  * </Button>
  */
+/**
+ * Button component with multiple variants and sizes
+ * 
+ * A versatile button component that supports different visual styles,
+ * sizes, and can render as different elements using the asChild prop.
+ * 
+ * @param variant - Visual style variant
+ * @param size - Size variant
+ * @param asChild - Render as child element instead of button
+ * @param className - Additional CSS classes
+ * @param children - Button content
+ * 
+ * @example
+ * ```tsx
+ * <Button variant="default" size="md">
+ *   Click me
+ * </Button>
+ * 
+ * <Button variant="destructive" size="sm" asChild>
+ *   <a href="/delete">Delete</a>
+ * </Button>
+ * ```
+ */
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, ...props }, ref) => {
     return (

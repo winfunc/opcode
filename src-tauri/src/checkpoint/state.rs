@@ -152,7 +152,7 @@ mod tests {
         let session_id = "test-session-123".to_string();
         let project_id = "test-project".to_string();
         let project_path = temp_dir.path().join("project");
-        std::fs::create_dir_all(&project_path).unwrap();
+        std::fs::create_dir_all(&project_path).expect("Failed to create test project directory");
 
         let manager1 = state
             .get_or_create_manager(session_id.clone(), project_id.clone(), project_path.clone())
@@ -163,7 +163,7 @@ mod tests {
         let manager2 = state
             .get_or_create_manager(session_id.clone(), project_id.clone(), project_path.clone())
             .await
-            .unwrap();
+            .expect("Failed to create checkpoint manager in test");
 
         assert!(Arc::ptr_eq(&manager1, &manager2));
         assert_eq!(state.active_count().await, 1);
@@ -177,7 +177,7 @@ mod tests {
         let manager3 = state
             .get_or_create_manager(session_id.clone(), project_id, project_path)
             .await
-            .unwrap();
+            .expect("Failed to create checkpoint manager in test");
 
         assert!(!Arc::ptr_eq(&manager1, &manager3));
     }

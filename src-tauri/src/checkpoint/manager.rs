@@ -119,7 +119,8 @@ impl CheckpointManager {
                 .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
                 .map(|d| {
                     Utc.timestamp_opt(d.as_secs() as i64, d.subsec_nanos())
-                        .unwrap()
+                        .single()
+                        .unwrap_or_else(Utc::now)
                 })
                 .unwrap_or_else(Utc::now);
 

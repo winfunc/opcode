@@ -1345,7 +1345,7 @@ async fn spawn_claude_process(app: AppHandle, mut cmd: Command, prompt: String, 
             if let Ok(msg) = serde_json::from_str::<serde_json::Value>(&line) {
                 if msg["type"] == "system" && msg["subtype"] == "init" {
                     if let Some(claude_session_id) = msg["session_id"].as_str() {
-                        let mut session_id_guard = session_id_holder_clone.lock().unwrap();
+                        let mut session_id_guard = session_id_holder_clone.lock().expect("Failed to lock session_id_holder");
                         if session_id_guard.is_none() {
                             *session_id_guard = Some(claude_session_id.to_string());
                             log::info!("Extracted Claude session ID: {}", claude_session_id);
@@ -1360,7 +1360,7 @@ async fn spawn_claude_process(app: AppHandle, mut cmd: Command, prompt: String, 
                             ) {
                                 Ok(run_id) => {
                                     log::info!("Registered Claude session with run_id: {}", run_id);
-                                    let mut run_id_guard = run_id_holder_clone.lock().unwrap();
+                                    let mut run_id_guard = run_id_holder_clone.lock().expect("Failed to lock run_id_holder");
                                     *run_id_guard = Some(run_id);
                                 }
                                 Err(e) => {
@@ -1393,7 +1393,7 @@ async fn spawn_claude_process(app: AppHandle, mut cmd: Command, prompt: String, 
         while let Ok(Some(line)) = lines.next_line().await {
             log::error!("Claude stderr: {}", line);
             // Emit error lines to the frontend with session isolation if we have session ID
-            if let Some(ref session_id) = *session_id_holder_clone2.lock().unwrap() {
+            if let Some(ref session_id) = *session_id_holder_clone2.lock().expect("Failed to lock session_id_holder") {
                 let _ = app_handle_stderr.emit(&format!("claude-error:{}", session_id), &line);
             }
             // Also emit to the generic event for backward compatibility
@@ -1443,7 +1443,7 @@ async fn spawn_claude_process(app: AppHandle, mut cmd: Command, prompt: String, 
         }
 
         // Unregister from ProcessRegistry if we have a run_id
-        if let Some(run_id) = *run_id_holder_clone2.lock().unwrap() {
+        if let Some(run_id) = *run_id_holder_clone2.lock().expect("Failed to lock run_id_holder") {
             let _ = registry_clone2.unregister_process(run_id);
         }
 
