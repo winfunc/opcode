@@ -1,17 +1,20 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { X, Maximize2, Minimize2, Copy, RefreshCw, RotateCcw, ChevronDown } from 'lucide-react';
+import { X, Maximize2, Minimize2, Copy, RefreshCw, RotateCcw, ChevronDown, Layers, LayoutList } from 'lucide-react';
 import { usePerformanceClick } from '@/hooks/useDebounceClick';
+import { useSmartScroll, NewMessageIndicator } from '@/hooks/useSmartScroll';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Toast, ToastContainer } from '@/components/ui/toast';
 import { Popover } from '@/components/ui/popover';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { api } from '@/lib/api';
 import { useOutputCache } from '@/lib/outputCache';
 import type { AgentRun } from '@/lib/api';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { StreamMessage } from './StreamMessage';
 import { ErrorBoundary } from './ErrorBoundary';
+import { CompactSessionView, type MessageFilters } from './CompactSessionView';
 
 interface SessionOutputViewerProps {
   session: AgentRun;
@@ -45,35 +48,46 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
   const [refreshing, setRefreshing] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [copyPopoverOpen, setCopyPopoverOpen] = useState(false);
-  const [hasUserScrolled, setHasUserScrolled] = useState(false);
+  const [viewMode, setViewMode] = useState<'standard' | 'compact'>('standard');
+  const [messageFilters, setMessageFilters] = useState<MessageFilters>({
+    showThinking: true,
+    showSystemMessages: false,
+    showUserMessages: false,
+    showEdits: false,
+    showResults: true
+  });
+  const prevMessageCountRef = useRef(messages.length);
 
   
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const outputEndRef = useRef<HTMLDivElement>(null);
-  const fullscreenScrollRef = useRef<HTMLDivElement>(null);
-  const fullscreenMessagesEndRef = useRef<HTMLDivElement>(null);
   const unlistenRefs = useRef<UnlistenFn[]>([]);
   const { getCachedOutput, setCachedOutput } = useOutputCache();
 
-  // Auto-scroll logic similar to AgentExecution
-  const isAtBottom = () => {
-    const container = isFullscreen ? fullscreenScrollRef.current : scrollAreaRef.current;
-    if (container) {
-      const { scrollTop, scrollHeight, clientHeight } = container;
-      const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-      return distanceFromBottom < 1;
-    }
-    return true;
-  };
+  // 使用智能滚动Hook
+  const smartScroll = useSmartScroll({ threshold: 100 });
+  const fullscreenSmartScroll = useSmartScroll({ threshold: 100 });
+  
+  // 根据是否全屏选择对应的滚动系统
+  const currentScroll = isFullscreen ? fullscreenSmartScroll : smartScroll;
 
-  const scrollToBottom = () => {
-    if (!hasUserScrolled) {
-      const endRef = isFullscreen ? fullscreenMessagesEndRef.current : outputEndRef.current;
-      if (endRef) {
-        endRef.scrollIntoView({ behavior: 'smooth' });
+  // 计算Token使用和成本
+  const tokenUsage = useMemo(() => {
+    let totalInputTokens = 0;
+    let totalOutputTokens = 0;
+    
+    messages.forEach(msg => {
+      if (msg.type === 'assistant' && msg.message?.usage) {
+        totalInputTokens += msg.message.usage.input_tokens || 0;
+        totalOutputTokens += msg.message.usage.output_tokens || 0;
       }
-    }
-  };
+    });
+    
+    // 简单的成本计算（根据Claude的定价调整）
+    const inputCost = totalInputTokens * 0.000003; // $3 per 1M tokens
+    const outputCost = totalOutputTokens * 0.000015; // $15 per 1M tokens
+    const totalCost = inputCost + outputCost;
+    
+    return { totalInputTokens, totalOutputTokens, totalCost };
+  }, [messages]);
 
   // Clean up listeners on unmount
   useEffect(() => {
@@ -82,13 +96,13 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
     };
   }, []);
 
-  // Auto-scroll when messages change
+  // 处理新消息到达时的智能滚动
   useEffect(() => {
-    const shouldAutoScroll = !hasUserScrolled || isAtBottom();
-    if (shouldAutoScroll) {
-      scrollToBottom();
+    if (messages.length > prevMessageCountRef.current) {
+      currentScroll.handleNewContent();
     }
-  }, [messages, hasUserScrolled, isFullscreen]);
+    prevMessageCountRef.current = messages.length;
+  }, [messages, currentScroll]);
 
 
   const loadOutput = async (skipCache = false) => {
@@ -408,6 +422,23 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
               <div className="flex items-center space-x-2">
                 {messages.length > 0 && (
                   <>
+                    {/* 视图模式切换 */}
+                    <ToggleGroup
+                      type="single"
+                      value={viewMode}
+                      onValueChange={(value: string) => value && setViewMode(value as 'standard' | 'compact')}
+                      className="mr-2"
+                    >
+                      <ToggleGroupItem value="standard" size="sm">
+                        <LayoutList className="h-4 w-4 mr-1" />
+                        Standard
+                      </ToggleGroupItem>
+                      <ToggleGroupItem value="compact" size="sm">
+                        <Layers className="h-4 w-4 mr-1" />
+                        Compact
+                      </ToggleGroupItem>
+                    </ToggleGroup>
+                    
                     <Button
                       variant="outline"
                       size="sm"
@@ -484,22 +515,22 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
                   <span>Loading output...</span>
                 </div>
               </div>
+            ) : viewMode === 'compact' ? (
+              // 压缩视图模式
+              <CompactSessionView
+                messages={messages}
+                filters={messageFilters}
+                onFilterChange={setMessageFilters}
+                tokenUsage={tokenUsage}
+              />
             ) : (
-              <div 
-                className="h-full overflow-y-auto p-6 space-y-3 session-output scroll-performance" 
-                ref={scrollAreaRef}
-                onScroll={() => {
-                  // Mark that user has scrolled manually
-                  if (!hasUserScrolled) {
-                    setHasUserScrolled(true);
-                  }
-                  
-                  // If user scrolls back to bottom, re-enable auto-scroll
-                  if (isAtBottom()) {
-                    setHasUserScrolled(false);
-                  }
-                }}
-              >
+              // 标准视图模式
+              <div className="relative h-full">
+                <div 
+                  className="h-full overflow-y-auto p-6 space-y-3 session-output scroll-performance" 
+                  ref={smartScroll.scrollContainerRef}
+                  onScroll={smartScroll.handleScroll}
+                >
                 {messages.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-center">
                     {session.status === 'running' ? (
@@ -535,8 +566,18 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
                         </ErrorBoundary>
                       </div>
                     ))}
-                    <div ref={outputEndRef} />
+                    <div ref={smartScroll.scrollAnchorRef} />
                   </>
+                )}
+                
+                </div>
+                
+                {/* 新消息提示 */}
+                {smartScroll.showNewMessageIndicator && (
+                  <NewMessageIndicator 
+                    onClick={smartScroll.dismissNewMessageIndicator}
+                    count={messages.length - prevMessageCountRef.current}
+                  />
                 )}
               </div>
             )}
@@ -613,19 +654,9 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
           {/* Modal Content */}
           <div className="flex-1 overflow-hidden p-6">
             <div 
-              ref={fullscreenScrollRef}
+              ref={fullscreenSmartScroll.scrollContainerRef}
               className="h-full overflow-y-auto space-y-3 session-output scroll-performance"
-              onScroll={() => {
-                // Mark that user has scrolled manually
-                if (!hasUserScrolled) {
-                  setHasUserScrolled(true);
-                }
-                
-                // If user scrolls back to bottom, re-enable auto-scroll
-                if (isAtBottom()) {
-                  setHasUserScrolled(false);
-                }
-              }}
+              onScroll={fullscreenSmartScroll.handleScroll}
             >
               {messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center">
@@ -652,10 +683,18 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
                       </ErrorBoundary>
                     </div>
                   ))}
-                  <div ref={fullscreenMessagesEndRef} />
+                  <div ref={fullscreenSmartScroll.scrollAnchorRef} />
                 </>
               )}
             </div>
+            
+            {/* 全屏模式下的新消息提示 */}
+            {fullscreenSmartScroll.showNewMessageIndicator && (
+              <NewMessageIndicator 
+                onClick={fullscreenSmartScroll.dismissNewMessageIndicator}
+                count={messages.length - prevMessageCountRef.current}
+              />
+            )}
           </div>
         </div>
       )}

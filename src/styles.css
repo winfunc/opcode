@@ -1418,4 +1418,69 @@ tr.interactive:hover {
   font-synthesis: none;
   -webkit-font-smoothing: subpixel-antialiased;
   text-rendering: optimizeSpeed;
+}
+
+/* ============================
+   14. 智能滚动和压缩视图样式
+   ============================ */
+
+/* 新消息提示动画 */
+@keyframes slide-up {
+  from {
+    transform: translateX(-50%) translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+
+/* 新消息提示按钮悬停效果 */
+.new-message-indicator:hover {
+  transform: translateX(-50%) translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* 压缩视图的过渡效果 */
+.compact-view-transition {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 消息过滤器开关动画 */
+.filter-toggle-enter {
+  animation: filter-toggle-enter 0.2s ease-out;
+}
+
+@keyframes filter-toggle-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* 压缩视图侧边栏样式 */
+.compact-sidebar {
+  background: linear-gradient(to bottom, var(--muted) 0%, transparent 100%);
+  backdrop-filter: blur(10px);
+}
+
+/* 消息卡片压缩模式 */
+.compact-message-card {
+  transition: all 0.2s ease;
+  border-left: 3px solid transparent;
+}
+
+.compact-message-card:hover {
+  border-left-color: var(--primary);
+  transform: translateX(2px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 } 
