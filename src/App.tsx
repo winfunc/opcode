@@ -336,37 +336,45 @@ function AppContent() {
                     </div>
                   ) : (
                     <div className="slide-in-fast">
-                      {/* New session button at the top */}
-                      <div className="mb-4 slide-up-fast">
-                        <Button
-                          onClick={performanceNewSession}
-                          size="default"
-                          className="w-full max-w-md btn-perf instant-feedback"
-                        >
-                          <Plus className="mr-2 h-4 w-4" />
-                          New Claude Code session
-                        </Button>
-                      </div>
-
-                      {/* Running Claude Sessions */}
-                      <RunningClaudeSessions />
-
-                      {/* Project list */}
-                      {projects.length > 0 ? (
-                        <ProjectList
-                          projects={projects}
-                          onProjectClick={performanceProjectClick}
-                          onProjectSettings={performanceProjectSettings}
-                          loading={loading}
-                          className="fade-in-fast"
-                        />
-                      ) : (
-                        <div className="py-8 text-center">
-                          <p className="text-sm text-muted-foreground">
-                            No projects found in ~/.claude/projects
-                          </p>
+                      {/* 改进的布局结构 */}
+                      <div className="space-y-8">
+                        {/* New session button at the top */}
+                        <div className="slide-up-fast">
+                          <Button
+                            onClick={performanceNewSession}
+                            size="default"
+                            className="w-full max-w-md btn-perf instant-feedback"
+                          >
+                            <Plus className="mr-2 h-4 w-4" />
+                            New Claude Code session
+                          </Button>
                         </div>
-                      )}
+
+                        {/* Running Claude Sessions - 增加间距 */}
+                        <div className="pb-8 border-b">
+                          <RunningClaudeSessions />
+                        </div>
+
+                        {/* Project list - 明确的视觉分隔 */}
+                        <div>
+                          <h2 className="text-lg font-semibold mb-6">All Projects</h2>
+                          {projects.length > 0 ? (
+                            <ProjectList
+                              projects={projects}
+                              onProjectClick={performanceProjectClick}
+                              onProjectSettings={performanceProjectSettings}
+                              loading={loading}
+                              className="fade-in-fast"
+                            />
+                          ) : (
+                            <div className="py-16 text-center">
+                              <p className="text-sm text-muted-foreground">
+                                No projects found in ~/.claude/projects
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   )}
                 </>

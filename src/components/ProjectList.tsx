@@ -85,7 +85,7 @@ export const ProjectList: React.FC<ProjectListProps> = ({
   
   return (
     <div className={cn("space-y-4", className)}>
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {currentProjects.map((project, index) => (
           <motion.div
             key={project.id}
@@ -98,15 +98,15 @@ export const ProjectList: React.FC<ProjectListProps> = ({
             }}
           >
             <Card
-              className="p-4 hover:shadow-md transition-all duration-200 cursor-pointer group h-full"
+              className="p-6 hover:shadow-lg transition-all duration-200 cursor-pointer group h-full border-muted/50 hover:border-muted"
               onClick={() => onProjectClick(project)}
             >
               <div className="flex flex-col h-full">
                 <div className="flex-1">
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
                       <FolderOpen className="h-5 w-5 text-primary shrink-0" />
-                      <h3 className="font-semibold text-base truncate">
+                      <h3 className="font-semibold text-lg truncate">
                         {getProjectName(project.path)}
                       </h3>
                     </div>
@@ -117,7 +117,7 @@ export const ProjectList: React.FC<ProjectListProps> = ({
                     )}
                   </div>
                   
-                  <p className="text-sm text-muted-foreground mb-3 font-mono truncate">
+                  <p className="text-sm text-muted-foreground mb-4 font-mono truncate">
                     {project.path}
                   </p>
                 </div>
