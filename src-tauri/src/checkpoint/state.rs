@@ -157,7 +157,7 @@ mod tests {
         let manager1 = state
             .get_or_create_manager(session_id.clone(), project_id.clone(), project_path.clone())
             .await
-            .unwrap();
+            .expect("Failed to create checkpoint manager in test");
 
         // Getting the same session should return the same manager
         let manager2 = state

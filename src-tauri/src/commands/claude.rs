@@ -1506,26 +1506,28 @@ async fn spawn_claude_sidecar(
                         if let Ok(msg) = serde_json::from_str::<serde_json::Value>(line_str) {
                             if msg["type"] == "system" && msg["subtype"] == "init" {
                                 if let Some(claude_session_id) = msg["session_id"].as_str() {
-                                    let mut session_id_guard = session_id_holder_clone.lock().unwrap();
-                                    if session_id_guard.is_none() {
-                                        *session_id_guard = Some(claude_session_id.to_string());
-                                        log::info!("Extracted Claude session ID: {}", claude_session_id);
+                                    if let Ok(mut session_id_guard) = session_id_holder_clone.lock() {
+                                        if session_id_guard.is_none() {
+                                            *session_id_guard = Some(claude_session_id.to_string());
+                                            log::info!("Extracted Claude session ID: {}", claude_session_id);
                                         
-                                        // Register with ProcessRegistry using Claude's session ID
-                                        match registry_clone.register_claude_session(
-                                            claude_session_id.to_string(),
-                                            pid,
-                                            project_path_clone.clone(),
-                                            prompt_clone.clone(),
-                                            model_clone.clone(),
-                                        ) {
-                                            Ok(run_id) => {
-                                                log::info!("Registered Claude sidecar session with run_id: {}", run_id);
-                                                let mut run_id_guard = run_id_holder_clone.lock().unwrap();
-                                                *run_id_guard = Some(run_id);
-                                            }
-                                            Err(e) => {
-                                                log::error!("Failed to register Claude sidecar session: {}", e);
+                                            // Register with ProcessRegistry using Claude's session ID
+                                            match registry_clone.register_claude_session(
+                                                claude_session_id.to_string(),
+                                                pid,
+                                                project_path_clone.clone(),
+                                                prompt_clone.clone(),
+                                                model_clone.clone(),
+                                            ) {
+                                                Ok(run_id) => {
+                                                    log::info!("Registered Claude sidecar session with run_id: {}", run_id);
+                                                    if let Ok(mut run_id_guard) = run_id_holder_clone.lock() {
+                                                        *run_id_guard = Some(run_id);
+                                                    }
+                                                }
+                                                Err(e) => {
+                                                    log::error!("Failed to register Claude sidecar session: {}", e);
+                                                }
                                             }
                                         }
                                     }
@@ -1534,8 +1536,10 @@ async fn spawn_claude_sidecar(
                         }
                         
                         // Store live output in registry if we have a run_id
-                        if let Some(run_id) = *run_id_holder_clone.lock().unwrap() {
-                            let _ = registry_clone.append_live_output(run_id, line_str);
+                        if let Ok(guard) = run_id_holder_clone.lock() {
+                            if let Some(run_id) = *guard {
+                                let _ = registry_clone.append_live_output(run_id, line_str);
+                            }
                         }
                         
                         // Emit the line to the frontend with session isolation if we have session ID
@@ -1576,8 +1580,10 @@ async fn spawn_claude_sidecar(
                     let _ = app_handle.emit("claude-complete", success);
                     
                     // Unregister from ProcessRegistry if we have a run_id
-                    if let Some(run_id) = *run_id_holder_clone.lock().unwrap() {
-                        let _ = registry_clone.unregister_process(run_id);
+                    if let Ok(guard) = run_id_holder_clone.lock() {
+                        if let Some(run_id) = *guard {
+                            let _ = registry_clone.unregister_process(run_id);
+                        }
                     }
                     
                     break;
