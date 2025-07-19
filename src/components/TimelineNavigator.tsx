@@ -22,6 +22,7 @@ import { Label } from "@/components/ui/label";
 import { api, type Checkpoint, type TimelineNode, type SessionTimeline, type CheckpointDiff } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
+import { useI18n } from "@/lib/i18n";
 
 interface TimelineNavigatorProps {
   sessionId: string;
@@ -51,6 +52,7 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
   refreshVersion = 0,
   className
 }) => {
+  const { t } = useI18n();
   const [timeline, setTimeline] = useState<SessionTimeline | null>(null);
   const [selectedCheckpoint, setSelectedCheckpoint] = useState<Checkpoint | null>(null);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
@@ -381,9 +383,9 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
         <div className="flex items-start gap-2">
           <AlertCircle className="h-4 w-4 text-yellow-600 mt-0.5" />
           <div className="text-xs">
-            <p className="font-medium text-yellow-600">Experimental Feature</p>
+            <p className="font-medium text-yellow-600">{t.sessions.experimentalFeature}</p>
             <p className="text-yellow-600/80">
-              Checkpointing may affect directory structure or cause data loss. Use with caution.
+              {t.sessions.checkpointingWarning}
             </p>
           </div>
         </div>
@@ -393,10 +395,10 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <GitBranch className="h-5 w-5 text-muted-foreground" />
-          <h3 className="text-sm font-medium">Timeline</h3>
+          <h3 className="text-sm font-medium">{t.sessions.timeline}</h3>
           {timeline && (
             <Badge variant="outline" className="text-xs">
-              {timeline.totalCheckpoints} checkpoints
+              {timeline.totalCheckpoints} {t.sessions.totalCheckpoints}
             </Badge>
           )}
         </div>
@@ -427,7 +429,7 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
         </div>
       ) : (
         <div className="text-center py-8 text-sm text-muted-foreground">
-          {isLoading ? "Loading timeline..." : "No checkpoints yet"}
+          {isLoading ? t.sessions.loadingTimeline : t.sessions.noCheckpointsYet}
         </div>
       )}
       

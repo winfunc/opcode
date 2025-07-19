@@ -132,6 +132,34 @@ export interface Translations {
     completed: string;
     failed: string;
     cancelled: string;
+    claudeCodeSession: string;
+    commands: string;
+    copyOutput: string;
+    slashCommands: string;
+    manageProjectSpecificSlashCommands: string;
+    checkpointSettings: string;
+    close: string;
+    experimentalFeature: string;
+    checkpointingWarning: string;
+    automaticCheckpoints: string;
+    automaticCheckpointsDesc: string;
+    checkpointStrategy: string;
+    smartRecommended: string;
+    smartStrategyDesc: string;
+    saveSettings: string;
+    storageManagement: string;
+    totalCheckpoints: string;
+    keepRecentCheckpoints: string;
+    cleanUp: string;
+    removeOldCheckpoints: string;
+    sessionTimeline: string;
+    timeline: string;
+    noCheckpointsYet: string;
+    loadingTimeline: string;
+    copyAsMarkdown: string;
+    copyAsJsonl: string;
+    checkpointSettingsTooltip: string;
+    timelineNavigatorTooltip: string;
   };
 
   // 设置页面
