@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useEffect } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTabState } from '@/hooks/useTabState';
 import { Tab } from '@/contexts/TabContext';
@@ -9,17 +9,14 @@ import { SessionList } from '@/components/SessionList';
 import { RunningClaudeSessions } from '@/components/RunningClaudeSessions';
 import { Button } from '@/components/ui/button';
 import { useI18n } from '@/lib/i18n';
-
-// Lazy load heavy components
-const ClaudeCodeSession = lazy(() => import('@/components/ClaudeCodeSession').then(m => ({ default: m.ClaudeCodeSession })));
-const AgentRunOutputViewer = lazy(() => import('@/components/AgentRunOutputViewer'));
-const AgentExecution = lazy(() => import('@/components/AgentExecution').then(m => ({ default: m.AgentExecution })));
-const CreateAgent = lazy(() => import('@/components/CreateAgent').then(m => ({ default: m.CreateAgent })));
-const UsageDashboard = lazy(() => import('@/components/UsageDashboard').then(m => ({ default: m.UsageDashboard })));
-const MCPManager = lazy(() => import('@/components/MCPManager').then(m => ({ default: m.MCPManager })));
-const Settings = lazy(() => import('@/components/Settings').then(m => ({ default: m.Settings })));
-const MarkdownEditor = lazy(() => import('@/components/MarkdownEditor').then(m => ({ default: m.MarkdownEditor })));
-// const ClaudeFileEditor = lazy(() => import('@/components/ClaudeFileEditor').then(m => ({ default: m.ClaudeFileEditor })));
+import { ClaudeCodeSession } from '@/components/ClaudeCodeSession';
+import AgentRunOutputViewer from '@/components/AgentRunOutputViewer';
+import { AgentExecution } from '@/components/AgentExecution';
+import { CreateAgent } from '@/components/CreateAgent';
+import { UsageDashboard } from '@/components/UsageDashboard';
+import { MCPManager } from '@/components/MCPManager';
+import { Settings } from '@/components/Settings';
+import { MarkdownEditor } from '@/components/MarkdownEditor';
 
 // Import non-lazy components for projects view
 
@@ -36,14 +33,14 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
   const [sessions, setSessions] = React.useState<Session[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  
+
   // Load projects when tab becomes active and is of type 'projects'
   useEffect(() => {
     if (isActive && tab.type === 'projects') {
       loadProjects();
     }
   }, [isActive, tab.type]);
-  
+
   const loadProjects = async () => {
     try {
       setLoading(true);
@@ -57,7 +54,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
       setLoading(false);
     }
   };
-  
+
   const handleProjectClick = async (project: Project) => {
     try {
       setLoading(true);
@@ -72,20 +69,20 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
       setLoading(false);
     }
   };
-  
+
   const handleBack = () => {
     setSelectedProject(null);
     setSessions([]);
   };
-  
+
   const handleNewSession = () => {
     // Create a new chat tab
     createChatTab();
   };
-  
+
   // Panel visibility - hide when not active
   const panelVisibilityClass = isActive ? "" : "hidden";
-  
+
   const renderContent = () => {
     switch (tab.type) {
       case 'projects':
@@ -145,8 +142,8 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
                         }}
                         onEditClaudeFile={(file: ClaudeMdFile) => {
                           // Open CLAUDE.md file in a new tab
-                          window.dispatchEvent(new CustomEvent('open-claude-file', { 
-                            detail: { file } 
+                          window.dispatchEvent(new CustomEvent('open-claude-file', {
+                            detail: { file }
                           }));
                         }}
                       />
@@ -205,7 +202,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
             </div>
           </div>
         );
-      
+
       case 'chat':
         return (
           <ClaudeCodeSession
@@ -220,7 +217,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
             }}
           />
         );
-      
+
       case 'agent':
         if (!tab.agentRunId) {
           return <div className="p-4">No agent run ID specified</div>;
@@ -231,20 +228,20 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
             tabId={tab.id}
           />
         );
-      
-      
+
+
       case 'usage':
-        return <UsageDashboard onBack={() => {}} />;
-      
+        return <UsageDashboard onBack={() => { }} />;
+
       case 'mcp':
-        return <MCPManager onBack={() => {}} />;
-      
+        return <MCPManager onBack={() => { }} />;
+
       case 'settings':
-        return <Settings onBack={() => {}} />;
-      
+        return <Settings onBack={() => { }} />;
+
       case 'claude-md':
-        return <MarkdownEditor onBack={() => {}} />;
-      
+        return <MarkdownEditor onBack={() => { }} />;
+
       case 'claude-file':
         if (!tab.claudeFileId) {
           return <div className="p-4">No Claude file ID specified</div>;
@@ -252,7 +249,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
         // Note: We need to get the actual file object for ClaudeFileEditor
         // For now, returning a placeholder
         return <div className="p-4">Claude file editor not yet implemented in tabs</div>;
-      
+
       case 'agent-execution':
         if (!tab.agentData) {
           return <div className="p-4">No agent data specified</div>;
@@ -260,10 +257,10 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
         return (
           <AgentExecution
             agent={tab.agentData}
-            onBack={() => {}}
+            onBack={() => { }}
           />
         );
-      
+
       case 'create-agent':
         return (
           <CreateAgent
@@ -277,11 +274,11 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
             }}
           />
         );
-      
+
       case 'import-agent':
         // TODO: Implement import agent component
         return <div className="p-4">Import agent functionality coming soon...</div>;
-      
+
       default:
         return <div className="p-4">Unknown tab type: {tab.type}</div>;
     }
@@ -310,12 +307,12 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
 
 export const TabContent: React.FC = () => {
   const { tabs, activeTabId, createChatTab, findTabBySessionId, createClaudeFileTab, createAgentExecutionTab, createCreateAgentTab, createImportAgentTab, closeTab, updateTab } = useTabState();
-  
+
   // Listen for events to open sessions in tabs
   useEffect(() => {
     const handleOpenSessionInTab = (event: CustomEvent) => {
       const { session } = event.detail;
-      
+
       // Check if tab already exists for this session
       const existingTab = findTabBySessionId(session.id);
       if (existingTab) {
@@ -397,7 +394,7 @@ export const TabContent: React.FC = () => {
       window.removeEventListener('claude-session-selected', handleClaudeSessionSelected as EventListener);
     };
   }, [createChatTab, findTabBySessionId, createClaudeFileTab, createAgentExecutionTab, createCreateAgentTab, createImportAgentTab, closeTab, updateTab]);
-  
+
   return (
     <div className="flex-1 h-full relative">
       <AnimatePresence mode="wait">
@@ -409,7 +406,7 @@ export const TabContent: React.FC = () => {
           />
         ))}
       </AnimatePresence>
-      
+
       {tabs.length === 0 && (
         <div className="flex items-center justify-center h-full text-muted-foreground">
           <div className="text-center">
