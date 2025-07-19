@@ -1,7 +1,7 @@
 {
   "name": "claudia",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.1.1",
   "license": "AGPL-3.0",
   "type": "module",
   "scripts": {
@@ -9,11 +9,11 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "prebuild": "bun run build:executables:current",
-    "build:executables": "bun run scripts/fetch-and-build.js --version=1.0.41",
-    "build:executables:current": "bun run scripts/fetch-and-build.js current --version=1.0.41",
-    "build:executables:linux": "bun run scripts/fetch-and-build.js linux --version=1.0.41",
-    "build:executables:macos": "bun run scripts/fetch-and-build.js macos --version=1.0.41",
-    "build:executables:windows": "bun run scripts/fetch-and-build.js windows --version=1.0.41",
+    "build:executables": "bun run scripts/fetch-and-build.js --version=1.0.55",
+    "build:executables:current": "bun run scripts/fetch-and-build.js current --version=1.0.55",
+    "build:executables:linux": "bun run scripts/fetch-and-build.js linux --version=1.0.55",
+    "build:executables:macos": "bun run scripts/fetch-and-build.js macos --version=1.0.55",
+    "build:executables:windows": "bun run scripts/fetch-and-build.js windows --version=1.0.55",
     "preview": "vite preview",
     "tauri": "tauri"
   },

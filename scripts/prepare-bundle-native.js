@@ -68,22 +68,31 @@ if (shebangMatch) {
 }
 
 // 2. Replace yoga.wasm loading - handle top-level await properly
-// Original: var k81=await nUA(await VP9(CP9(import.meta.url).resolve("./yoga.wasm")));
-// Since this uses top-level await, we need to preserve that structure
-const yogaLoadPattern = /var k81=await nUA\(await VP9\(CP9\(import\.meta\.url\)\.resolve\("\.\/yoga\.wasm"\)\)\);/;
-// Use an IIFE to handle the async loading
-const yogaLoadReplacement = `var k81=await(async()=>{return await nUA(await Bun.file(__embeddedYogaWasm).arrayBuffer())})();`;
+// Handle both 1.0.41 and 1.0.55 patterns
+// 1.0.41: var k81=await nUA(await VP9(CP9(import.meta.url).resolve("./yoga.wasm")));
+// 1.0.55: var B71=await OPA(await WtB(JtB(import.meta.url).resolve("./yoga.wasm")));
 
-if (yogaLoadPattern.test(cliContent)) {
-  cliContent = cliContent.replace(yogaLoadPattern, yogaLoadReplacement);
-  console.log('✓ Replaced yoga.wasm loading with embedded version');
+// Try 1.0.55 pattern first (newer version)
+const yoga155Pattern = /var B71=await OPA\(await WtB\(JtB\(import\.meta\.url\)\.resolve\("\.\/yoga\.wasm"\)\)\);/;
+const yoga155Replacement = `var B71=await(async()=>{return await OPA(await Bun.file(__embeddedYogaWasm).arrayBuffer())})();`;
+
+// Try 1.0.41 pattern (older version)
+const yoga141Pattern = /var k81=await nUA\(await VP9\(CP9\(import\.meta\.url\)\.resolve\("\.\/yoga\.wasm"\)\)\);/;
+const yoga141Replacement = `var k81=await(async()=>{return await nUA(await Bun.file(__embeddedYogaWasm).arrayBuffer())})();`;
+
+if (yoga155Pattern.test(cliContent)) {
+  cliContent = cliContent.replace(yoga155Pattern, yoga155Replacement);
+  console.log('✓ Replaced yoga.wasm loading with embedded version (1.0.55 pattern)');
+} else if (yoga141Pattern.test(cliContent)) {
+  cliContent = cliContent.replace(yoga141Pattern, yoga141Replacement);
+  console.log('✓ Replaced yoga.wasm loading with embedded version (1.0.41 pattern)');
 } else {
   console.error('Warning: Could not find yoga.wasm loading pattern');
-  // Try a more general pattern
-  const generalYogaPattern = /var\s+(\w+)\s*=\s*await\s+nUA\s*\(\s*await\s+VP9\s*\([^)]+\.resolve\s*\(\s*["']\.\/yoga\.wasm["']\s*\)\s*\)\s*\)/;
+  // Try a more general pattern that works for both versions
+  const generalYogaPattern = /var\s+(\w+)\s*=\s*await\s+(\w+)\s*\(\s*await\s+(\w+)\s*\([^)]+\.resolve\s*\(\s*["']\.\/yoga\.wasm["']\s*\)\s*\)\s*\)/;
   if (generalYogaPattern.test(cliContent)) {
-    cliContent = cliContent.replace(generalYogaPattern, (match, varName) => {
-      return `var ${varName}=await(async()=>{return await nUA(await Bun.file(__embeddedYogaWasm).arrayBuffer())})()`;
+    cliContent = cliContent.replace(generalYogaPattern, (match, varName, func1, func2) => {
+      return `var ${varName}=await(async()=>{return await ${func1}(await Bun.file(__embeddedYogaWasm).arrayBuffer())})()`;
     });
     console.log('✓ Replaced yoga.wasm loading with embedded version (general pattern)');
   }
