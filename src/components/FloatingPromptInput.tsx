@@ -13,7 +13,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Popover } from "@/components/ui/popover";
-import { Textarea } from "@/components/ui/textarea";
+import { ResizableTextarea } from "@/components/ui/resizable-textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { FilePicker } from "./FilePicker";
 import { SlashCommandPicker } from "./SlashCommandPicker";
@@ -756,13 +756,17 @@ const FloatingPromptInputInner = (
                 />
               )}
 
-              <Textarea
+              <ResizableTextarea
                 ref={expandedTextareaRef}
                 value={prompt}
                 onChange={handleTextChange}
                 onPaste={handlePaste}
                 placeholder="Type your prompt here..."
-                className="min-h-[200px] resize-none"
+                className=""
+                minHeight={200}
+                maxHeight={500}
+                autoResize={true}
+                showResizeHandle={true}
                 disabled={disabled}
                 onDragEnter={handleDrag}
                 onDragLeave={handleDrag}
@@ -998,7 +1002,7 @@ const FloatingPromptInputInner = (
 
               {/* Prompt Input */}
               <div className="flex-1 relative">
-                <Textarea
+                <ResizableTextarea
                   ref={textareaRef}
                   value={prompt}
                   onChange={handleTextChange}
@@ -1007,9 +1011,13 @@ const FloatingPromptInputInner = (
                   placeholder={dragActive ? "Drop images here..." : "Ask Claude anything..."}
                   disabled={disabled}
                   className={cn(
-                    "min-h-[44px] max-h-[120px] resize-none pr-10",
+                    "pr-10",
                     dragActive && "border-primary"
                   )}
+                  minHeight={44}
+                  maxHeight={200}
+                  autoResize={true}
+                  showResizeHandle={true}
                   rows={1}
                 />
 
