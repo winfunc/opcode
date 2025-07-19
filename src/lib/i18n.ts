@@ -581,6 +581,22 @@ export interface Translations {
     of: string;
     deleteAgentConfirmation: string;
     deleting: string;
+    // 定价相关翻译
+    pricing: string;
+    pricingInfo: string;
+    inputTokens: string;
+    outputTokens: string;
+    cacheWrite: string;
+    cacheRead: string;
+    perMillionTokens: string;
+    costEfficiency: string;
+    highEfficiency: string;
+    mediumEfficiency: string;
+    lowEfficiency: string;
+    recommendedUseCases: string;
+    costEstimate: string;
+    pricingDetails: string;
+    basedOnOfficialPricing: string;
   };
 
   // 钩子编辑器翻译
