@@ -31,8 +31,8 @@ export const BashWidget: React.FC<BashWidgetProps> = ({ command, description, re
   }
   
   return (
-    <div className="rounded-lg border bg-zinc-950 overflow-hidden">
-      <div className="px-4 py-2 bg-zinc-900/50 flex items-center gap-2 border-b">
+    <div className="rounded-lg border bg-card overflow-hidden interactive-card">
+      <div className="px-4 py-2 bg-muted/50 flex items-center gap-2 border-b">
         <Terminal className="h-3.5 w-3.5 text-green-500" />
         <span className="text-xs font-mono text-muted-foreground">Terminal</span>
         {description && (
@@ -44,7 +44,7 @@ export const BashWidget: React.FC<BashWidgetProps> = ({ command, description, re
         {/* Show loading indicator when no result yet */}
         {!result && (
           <div className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
-            <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse" />
+            <div className="h-2 w-2 bg-green-500 rounded-full loading-pulse" />
             <span>Running...</span>
           </div>
         )}

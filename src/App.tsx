@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Loader2, Bot, FolderCode } from "lucide-react";
+import { usePerformanceClick } from "@/hooks/useDebounceClick";
 import { api, type Project, type Session, type ClaudeMdFile } from "@/lib/api";
 import { OutputCacheProvider } from "@/lib/outputCache";
 import { TabProvider } from "@/contexts/TabContext";
@@ -59,6 +59,7 @@ function AppContent() {
   const [projectForSettings, setProjectForSettings] = useState<Project | null>(null);
   const [previousView] = useState<View>("welcome");
   const [showAgentsModal, setShowAgentsModal] = useState(false);
+
 
   // Load projects on mount when in projects view
   useEffect(() => {
@@ -207,6 +208,15 @@ function AppContent() {
     handleViewChange("project-settings");
   };
 
+  // 性能优化的事件处理器
+  const performanceViewChange = usePerformanceClick((newView: View) => {
+    handleViewChange(newView);
+  });
+  const performanceProjectClick = usePerformanceClick(handleProjectClick);
+  const performanceNewSession = usePerformanceClick(handleNewSession);
+  const performanceEditClaudeFile = usePerformanceClick(handleEditClaudeFile);
+  const performanceProjectSettings = usePerformanceClick(handleProjectSettings);
+
 
   const renderContent = () => {
     switch (view) {
@@ -215,53 +225,40 @@ function AppContent() {
           <div className="flex items-center justify-center p-4" style={{ height: "100%" }}>
             <div className="w-full max-w-4xl">
               {/* Welcome Header */}
-              <motion.div
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                className="mb-12 text-center"
-              >
+              <div className="mb-12 text-center fade-in-fast">
                 <h1 className="text-4xl font-bold tracking-tight">
                   <span className="rotating-symbol"></span>
                   Welcome to Claudia
                 </h1>
-              </motion.div>
+              </div>
 
               {/* Navigation Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
                 {/* CC Agents Card */}
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.5, delay: 0.1 }}
-                >
+                <div className="scale-in-fast" style={{ animationDelay: '0.1s' }}>
                   <Card 
-                    className="h-64 cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-lg border border-border/50 shimmer-hover trailing-border"
-                    onClick={() => handleViewChange("cc-agents")}
+                    className="h-64 cursor-pointer card-fast ultra-hover border border-border/50 shimmer-hover trailing-border instant-feedback"
+                    onClick={() => performanceViewChange("cc-agents")}
                   >
                     <div className="h-full flex flex-col items-center justify-center p-8">
                       <Bot className="h-16 w-16 mb-4 text-primary" />
                       <h2 className="text-xl font-semibold">CC Agents</h2>
                     </div>
                   </Card>
-                </motion.div>
+                </div>
 
                 {/* CC Projects Card */}
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.5, delay: 0.2 }}
-                >
+                <div className="scale-in-fast" style={{ animationDelay: '0.2s' }}>
                   <Card 
-                    className="h-64 cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-lg border border-border/50 shimmer-hover trailing-border"
-                    onClick={() => handleViewChange("projects")}
+                    className="h-64 cursor-pointer card-fast ultra-hover border border-border/50 shimmer-hover trailing-border instant-feedback"
+                    onClick={() => performanceViewChange("projects")}
                   >
                     <div className="h-full flex flex-col items-center justify-center p-8">
                       <FolderCode className="h-16 w-16 mb-4 text-primary" />
                       <h2 className="text-xl font-semibold">CC Projects</h2>
                     </div>
                   </Card>
-                </motion.div>
+                </div>
 
               </div>
             </div>
@@ -294,17 +291,12 @@ function AppContent() {
           <div className="flex-1 overflow-y-auto">
             <div className="container mx-auto p-6">
               {/* Header with back button */}
-              <motion.div
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                className="mb-6"
-              >
+              <div className="mb-6 fade-in-fast">
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => handleViewChange("welcome")}
-                  className="mb-4"
+                  onClick={() => performanceViewChange("welcome")}
+                  className="mb-4 btn-perf instant-feedback"
                 >
                   ← Back to Home
                 </Button>
@@ -314,17 +306,13 @@ function AppContent() {
                     Browse your Claude Code sessions
                   </p>
                 </div>
-              </motion.div>
+              </div>
 
               {/* Error display */}
               {error && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="mb-4 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-xs text-destructive max-w-2xl"
-                >
+                <div className="mb-4 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-xs text-destructive max-w-2xl fade-in-fast">
                   {error}
-                </motion.div>
+                </div>
               )}
 
               {/* Loading state */}
@@ -336,46 +324,29 @@ function AppContent() {
 
               {/* Content */}
               {!loading && (
-                <AnimatePresence mode="wait">
+                <>
                   {selectedProject ? (
-                    <motion.div
-                      key="sessions"
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -20 }}
-                      transition={{ duration: 0.3 }}
-                    >
+                    <div className="slide-in-fast">
                       <SessionList
                         sessions={sessions}
                         projectPath={selectedProject.path}
                         onBack={handleBack}
-                        onEditClaudeFile={handleEditClaudeFile}
+                        onEditClaudeFile={performanceEditClaudeFile}
                       />
-                    </motion.div>
+                    </div>
                   ) : (
-                    <motion.div
-                      key="projects"
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
-                      transition={{ duration: 0.3 }}
-                    >
+                    <div className="slide-in-fast">
                       {/* New session button at the top */}
-                      <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5 }}
-                        className="mb-4"
-                      >
+                      <div className="mb-4 slide-up-fast">
                         <Button
-                          onClick={handleNewSession}
+                          onClick={performanceNewSession}
                           size="default"
-                          className="w-full max-w-md"
+                          className="w-full max-w-md btn-perf instant-feedback"
                         >
                           <Plus className="mr-2 h-4 w-4" />
                           New Claude Code session
                         </Button>
-                      </motion.div>
+                      </div>
 
                       {/* Running Claude Sessions */}
                       <RunningClaudeSessions />
@@ -384,10 +355,10 @@ function AppContent() {
                       {projects.length > 0 ? (
                         <ProjectList
                           projects={projects}
-                          onProjectClick={handleProjectClick}
-                          onProjectSettings={handleProjectSettings}
+                          onProjectClick={performanceProjectClick}
+                          onProjectSettings={performanceProjectSettings}
                           loading={loading}
-                          className="animate-fade-in"
+                          className="fade-in-fast"
                         />
                       ) : (
                         <div className="py-8 text-center">
@@ -396,9 +367,9 @@ function AppContent() {
                           </p>
                         </div>
                       )}
-                    </motion.div>
+                    </div>
                   )}
-                </AnimatePresence>
+                </>
               )}
             </div>
           </div>
@@ -452,7 +423,7 @@ function AppContent() {
   };
 
   return (
-    <div className="h-screen bg-background flex flex-col">
+    <div className="h-screen bg-background flex flex-col main-content scroll-performance">
       {/* Topbar */}
       <Topbar
         onClaudeClick={() => createClaudeMdTab()}

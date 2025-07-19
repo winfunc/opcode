@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { usePerformanceClick } from "@/hooks/useDebounceClick";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -88,6 +88,13 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
     }
   };
 
+  // 性能优化的点击处理器
+  const performanceOnBack = usePerformanceClick(onBack);
+  const performanceLoadStats = usePerformanceClick(loadUsageStats);
+  const performanceDateRangeClick = usePerformanceClick((range: "all" | "7d" | "30d") => {
+    setSelectedDateRange(range);
+  });
+
   const formatCurrency = (amount: number): string => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -127,21 +134,16 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
   };
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
+    <div className="flex-1 flex flex-col h-full">
       {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-        className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
-      >
+      <div className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 fade-in-fast">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center space-x-4">
             <Button
               variant="ghost"
               size="icon"
-              onClick={onBack}
-              className="h-8 w-8"
+              onClick={performanceOnBack}
+              className="h-8 w-8 btn-perf instant-feedback"
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
@@ -162,8 +164,8 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                   key={range}
                   variant={selectedDateRange === range ? "default" : "ghost"}
                   size="sm"
-                  onClick={() => setSelectedDateRange(range)}
-                  className="text-xs"
+                  onClick={() => performanceDateRangeClick(range)}
+                  className="text-xs btn-perf instant-feedback"
                 >
                   {range === "all" ? "All Time" : range === "7d" ? "Last 7 Days" : "Last 30 Days"}
                 </Button>
@@ -171,7 +173,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
             </div>
           </div>
         </div>
-      </motion.div>
+      </div>
 
       {/* Main Content */}
       <div className="flex-1 overflow-auto p-4">
@@ -186,22 +188,21 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
           <div className="flex items-center justify-center h-full">
             <div className="text-center max-w-md">
               <p className="text-sm text-destructive mb-4">{error}</p>
-              <Button onClick={loadUsageStats} size="sm">
+              <Button 
+                onClick={performanceLoadStats} 
+                size="sm"
+                className="btn-perf instant-feedback"
+              >
                 Try Again
               </Button>
             </div>
           </div>
         ) : stats ? (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.3 }}
-            className="max-w-6xl mx-auto space-y-6"
-          >
+          <div className="max-w-6xl mx-auto space-y-6 slide-up-fast">
             {/* Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               {/* Total Cost Card */}
-              <Card className="p-4 shimmer-hover">
+              <Card className="p-4 shimmer-hover card-fast">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs text-muted-foreground">Total Cost</p>
@@ -214,7 +215,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
               </Card>
 
               {/* Total Sessions Card */}
-              <Card className="p-4 shimmer-hover">
+              <Card className="p-4 shimmer-hover card-fast">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs text-muted-foreground">Total Sessions</p>
@@ -227,7 +228,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
               </Card>
 
               {/* Total Tokens Card */}
-              <Card className="p-4 shimmer-hover">
+              <Card className="p-4 shimmer-hover card-fast">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs text-muted-foreground">Total Tokens</p>
@@ -240,7 +241,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
               </Card>
 
               {/* Average Cost per Session Card */}
-              <Card className="p-4 shimmer-hover">
+              <Card className="p-4 shimmer-hover card-fast">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs text-muted-foreground">Avg Cost/Session</p>
@@ -341,7 +342,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
               <TabsContent value="models">
                 <Card className="p-6">
                   <h3 className="text-sm font-semibold mb-4">Usage by Model</h3>
-                  <div className="space-y-4">
+                  <div className="space-y-4 max-h-[60vh] overflow-y-auto scroll-container">
                     {stats.by_model.map((model) => (
                       <div key={model.model} className="space-y-2">
                         <div className="flex items-center justify-between">
@@ -388,7 +389,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
               <TabsContent value="projects">
                 <Card className="p-6">
                   <h3 className="text-sm font-semibold mb-4">Usage by Project</h3>
-                  <div className="space-y-3">
+                  <div className="space-y-3 max-h-[60vh] overflow-y-auto scroll-container">
                     {stats.by_project.map((project) => (
                       <div key={project.project_path} className="flex items-center justify-between py-2 border-b border-border last:border-0">
                         <div className="flex flex-col truncate">
@@ -420,7 +421,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
               <TabsContent value="sessions">
                   <Card className="p-6">
                       <h3 className="text-sm font-semibold mb-4">Usage by Session</h3>
-                      <div className="space-y-3">
+                      <div className="space-y-3 max-h-[60vh] overflow-y-auto scroll-container">
                           {sessionStats?.map((session) => (
                               <div key={`${session.project_path}-${session.project_name}`} className="flex items-center justify-between py-2 border-b border-border last:border-0">
                                   <div className="flex flex-col">
@@ -500,8 +501,11 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                                 
                                 {/* Bar */}
                                 <div 
-                                  className="w-full bg-[#d97757] hover:opacity-80 transition-opacity rounded-t cursor-pointer"
-                                  style={{ height: `${heightPercent}%` }}
+                                  className="w-full hover:opacity-80 transition-opacity rounded-t cursor-pointer"
+                                  style={{ 
+                                    height: `${heightPercent}%`,
+                                    backgroundColor: 'rgb(150, 74, 46)'
+                                  }}
                                 />
                                 
                                 {/* X-axis label – absolutely positioned below the bar so it doesn't affect bar height */}
@@ -529,7 +533,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                 </Card>
               </TabsContent>
             </Tabs>
-          </motion.div>
+          </div>
         ) : null}
       </div>
     </div>

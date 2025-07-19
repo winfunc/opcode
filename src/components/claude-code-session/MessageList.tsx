@@ -94,7 +94,7 @@ export const MessageList: React.FC<MessageListProps> = React.memo(({
     <div
       ref={scrollContainerRef}
       onScroll={handleScroll}
-      className={cn("flex-1 overflow-y-auto scroll-smooth", className)}
+      className={cn("flex-1 overflow-y-auto scroll-smooth message-list scroll-performance", className)}
     >
       <div
         style={{

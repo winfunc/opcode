@@ -502,8 +502,8 @@ export const ReadResultWidget: React.FC<{ content: string; filePath?: string }> 
   const isLargeFile = lineCount > 20;
 
   return (
-    <div className="rounded-lg overflow-hidden border bg-zinc-950 w-full">
-      <div className="px-4 py-2 border-b bg-zinc-900/50 flex items-center justify-between">
+    <div className="rounded-lg overflow-hidden border bg-card w-full interactive-card">
+      <div className="px-4 py-2 border-b bg-muted/50 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <FileText className="h-3.5 w-3.5 text-muted-foreground" />
           <span className="text-xs font-mono text-muted-foreground">
@@ -651,8 +651,8 @@ export const BashWidget: React.FC<{
   }
   
   return (
-    <div className="rounded-lg border bg-zinc-950 overflow-hidden">
-      <div className="px-4 py-2 bg-zinc-900/50 flex items-center gap-2 border-b">
+    <div className="rounded-lg border bg-card overflow-hidden interactive-card">
+      <div className="px-4 py-2 bg-muted/50 flex items-center gap-2 border-b">
         <Terminal className="h-3.5 w-3.5 text-green-500" />
         <span className="text-xs font-mono text-muted-foreground">Terminal</span>
         {description && (
@@ -755,9 +755,9 @@ export const WriteWidget: React.FC<{ filePath: string; content: string; result?:
         />
         
         {/* Modal content */}
-        <div className="relative w-[90vw] h-[90vh] max-w-7xl bg-zinc-950 rounded-lg border shadow-2xl overflow-hidden flex flex-col">
+        <div className="relative w-[90vw] h-[90vh] max-w-7xl bg-card rounded-lg border shadow-2xl overflow-hidden flex flex-col">
           {/* Header */}
-          <div className="px-6 py-4 border-b bg-zinc-950 flex items-center justify-between">
+          <div className="px-6 py-4 border-b bg-card flex items-center justify-between">
             <div className="flex items-center gap-3">
               <FileText className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm font-mono text-muted-foreground">{filePath}</span>
@@ -798,7 +798,7 @@ export const WriteWidget: React.FC<{ filePath: string; content: string; result?:
 
   const CodePreview = ({ codeContent, truncated }: { codeContent: string; truncated: boolean }) => (
     <div 
-      className="rounded-lg border bg-zinc-950 overflow-hidden w-full"
+      className="rounded-lg border bg-card overflow-hidden interactive-card w-full"
       style={{ 
         height: truncated ? '440px' : 'auto', 
         maxHeight: truncated ? '440px' : undefined,
@@ -806,7 +806,7 @@ export const WriteWidget: React.FC<{ filePath: string; content: string; result?:
         flexDirection: 'column' 
       }}
     >
-      <div className="px-4 py-2 border-b bg-zinc-950 flex items-center justify-between sticky top-0 z-10">
+      <div className="px-4 py-2 border-b bg-card flex items-center justify-between sticky top-0 z-10">
         <span className="text-xs font-mono text-muted-foreground">Preview</span>
         {isLargeContent && truncated && (
           <div className="flex items-center gap-2">
@@ -1014,8 +1014,8 @@ export const GrepWidget: React.FC<{
               </button>
               
               {isExpanded && (
-                <div className="rounded-lg border bg-zinc-950 overflow-hidden">
-                  <div className="max-h-[400px] overflow-y-auto">
+                <div className="rounded-lg border bg-card overflow-hidden interactive-card">
+                  <div className="max-h-[400px] overflow-y-auto scroll-container">
                     {grepResults.map((match, idx) => {
                       const fileName = match.file.split('/').pop() || match.file;
                       const dirPath = match.file.substring(0, match.file.lastIndexOf('/'));
@@ -1024,7 +1024,7 @@ export const GrepWidget: React.FC<{
                         <div 
                           key={idx} 
                           className={cn(
-                            "flex items-start gap-3 p-3 border-b border-zinc-800 hover:bg-zinc-900/50 transition-colors",
+                            "flex items-start gap-3 p-3 border-b border-zinc-800 hover:bg-muted/50 transition-colors",
                             idx === grepResults.length - 1 && "border-b-0"
                           )}
                         >
@@ -1138,8 +1138,8 @@ export const EditWidget: React.FC<{
         </code>
       </div>
 
-      <div className="rounded-lg border bg-zinc-950 overflow-hidden text-xs font-mono">
-        <div className="max-h-[440px] overflow-y-auto overflow-x-auto">
+      <div className="rounded-lg border bg-card overflow-hidden interactive-card text-xs font-mono">
+        <div className="max-h-[440px] overflow-y-auto overflow-x-auto scroll-container">
           {diffResult.map((part, index) => {
             const partClass = part.added 
               ? 'bg-green-950/20' 
@@ -1231,7 +1231,7 @@ export const EditResultWidget: React.FC<{ content: string }> = ({ content }) => 
   const language = getLanguage(filePath);
 
   return (
-    <div className="rounded-lg border bg-zinc-950 overflow-hidden">
+    <div className="rounded-lg border bg-card overflow-hidden interactive-card">
       <div className="px-4 py-2 border-b bg-emerald-950/30 flex items-center gap-2">
         <GitBranch className="h-3.5 w-3.5 text-emerald-500" />
         <span className="text-xs font-mono text-emerald-400">Edit Result</span>
@@ -1383,10 +1383,10 @@ export const MCPWidget: React.FC<{
           )}>
             <div className="relative">
               <div className={cn(
-                "rounded-lg border bg-zinc-950/50 overflow-hidden",
+                "rounded-lg border bg-card/50 overflow-hidden",
                 !isExpanded && isLargeInput && "max-h-[200px]"
               )}>
-                <div className="px-3 py-2 border-b bg-zinc-900/50 flex items-center gap-2">
+                <div className="px-3 py-2 border-b bg-muted/50 flex items-center gap-2">
                   <Code className="h-3 w-3 text-violet-500" />
                   <span className="text-xs font-mono text-muted-foreground">Parameters</span>
                 </div>
@@ -1452,8 +1452,8 @@ export const CommandWidget: React.FC<{
   commandArgs?: string;
 }> = ({ commandName, commandMessage, commandArgs }) => {
   return (
-    <div className="rounded-lg border bg-zinc-950/50 overflow-hidden">
-      <div className="px-4 py-2 border-b bg-zinc-900/50 flex items-center gap-2">
+    <div className="rounded-lg border bg-card/50 overflow-hidden">
+      <div className="px-4 py-2 border-b bg-muted/50 flex items-center gap-2">
         <Terminal className="h-3.5 w-3.5 text-blue-500" />
         <span className="text-xs font-mono text-blue-400">Command</span>
       </div>
@@ -1532,8 +1532,8 @@ export const CommandOutputWidget: React.FC<{
   };
 
   return (
-    <div className="rounded-lg border bg-zinc-950/50 overflow-hidden">
-      <div className="px-4 py-2 bg-zinc-900/50 flex items-center gap-2">
+    <div className="rounded-lg border bg-card/50 overflow-hidden">
+      <div className="px-4 py-2 bg-muted/50 flex items-center gap-2">
         <ChevronRight className="h-3 w-3 text-green-500" />
         <span className="text-xs font-mono text-green-400">Output</span>
       </div>
@@ -1618,7 +1618,7 @@ export const MultiEditWidget: React.FC<{
                 return (
                   <div key={index} className="space-y-1">
                     <div className="text-xs font-medium text-muted-foreground">Edit {index + 1}</div>
-                    <div className="rounded-lg border bg-zinc-950 overflow-hidden text-xs font-mono">
+                    <div className="rounded-lg border bg-card overflow-hidden interactive-card text-xs font-mono">
                       <div className="max-h-[300px] overflow-y-auto overflow-x-auto">
                         {diffResult.map((part, partIndex) => {
                           const partClass = part.added 
@@ -2267,17 +2267,17 @@ export const ThinkingWidget: React.FC<{
   const trimmedThinking = thinking.trim();
   
   return (
-    <div className="rounded-lg border border-gray-500/20 bg-gray-500/5 overflow-hidden">
+    <div className="rounded-lg border border-border bg-muted/20 overflow-hidden">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-500/10 transition-colors"
+        className="w-full px-4 py-3 flex items-center justify-between hover:bg-muted/30 transition-colors"
       >
         <div className="flex items-center gap-2">
           <div className="relative">
             <Bot className="h-4 w-4 text-gray-500" />
             <Sparkles className="h-2.5 w-2.5 text-gray-400 absolute -top-1 -right-1 animate-pulse" />
           </div>
-          <span className="text-sm font-medium text-gray-600 dark:text-gray-400 italic">
+          <span className="text-sm font-medium text-muted-foreground italic">
             Thinking...
           </span>
         </div>
@@ -2288,8 +2288,8 @@ export const ThinkingWidget: React.FC<{
       </button>
       
       {isExpanded && (
-        <div className="px-4 pb-4 pt-2 border-t border-gray-500/20">
-          <pre className="text-xs font-mono text-gray-600 dark:text-gray-400 whitespace-pre-wrap bg-gray-500/5 p-3 rounded-lg italic">
+        <div className="px-4 pb-4 pt-2 border-t border-border">
+          <pre className="text-xs font-mono text-muted-foreground whitespace-pre-wrap bg-muted/20 p-3 rounded-lg italic">
             {trimmedThinking}
           </pre>
         </div>
