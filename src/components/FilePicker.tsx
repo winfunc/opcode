@@ -177,7 +177,7 @@ export const FilePicker: React.FC<FilePickerProps> = ({
         globalThis.clearTimeout(searchDebounceRef.current);
       }
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery, basePath]);
 
   // Reset selected index when entries change
@@ -186,7 +186,7 @@ export const FilePicker: React.FC<FilePickerProps> = ({
   }, [entries, searchResults]);
 
   // Keyboard navigation
-   
+
   useEffect(() => {
     const handleKeyDown = (e: globalThis.KeyboardEvent) => {
       const displayEntries = searchQuery.trim() ? searchResults : entries;
@@ -238,16 +238,8 @@ export const FilePicker: React.FC<FilePickerProps> = ({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    entries,
-    searchResults,
-    selectedIndex,
-    searchQuery,
-    canGoBack,
-    onSelect,
-    onClose,
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entries, searchResults, selectedIndex, searchQuery, canGoBack, onSelect, onClose]);
 
   // Scroll selected item into view
   useEffect(() => {

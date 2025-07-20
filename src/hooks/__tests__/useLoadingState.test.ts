@@ -8,14 +8,18 @@ describe("useLoadingState Hook", () => {
   };
 
   it("should initialize with loading false", () => {
-    const { result } = renderHook(() => useLoadingState(mockAsyncFunction as (...args: unknown[]) => Promise<string>));
+    const { result } = renderHook(() =>
+      useLoadingState(mockAsyncFunction as (...args: unknown[]) => Promise<string>)
+    );
 
     expect(result.current.isLoading).toBe(false);
     expect(result.current.error).toBeNull();
   });
 
   it("should handle async function execution", async () => {
-    const { result } = renderHook(() => useLoadingState(mockAsyncFunction as (...args: unknown[]) => Promise<string>));
+    const { result } = renderHook(() =>
+      useLoadingState(mockAsyncFunction as (...args: unknown[]) => Promise<string>)
+    );
 
     let promise: Promise<string> | undefined;
 
@@ -91,7 +95,9 @@ describe("useLoadingState Hook", () => {
     expect(result.current.error).toBeTruthy();
 
     // Now test with successful function
-    const { result: result2 } = renderHook(() => useLoadingState(mockAsyncFunction as (...args: unknown[]) => Promise<string>));
+    const { result: result2 } = renderHook(() =>
+      useLoadingState(mockAsyncFunction as (...args: unknown[]) => Promise<string>)
+    );
 
     let promise2: Promise<string> | undefined;
 
@@ -109,7 +115,9 @@ describe("useLoadingState Hook", () => {
   });
 
   it("should reset state correctly", () => {
-    const { result } = renderHook(() => useLoadingState(mockAsyncFunction as (...args: unknown[]) => Promise<string>));
+    const { result } = renderHook(() =>
+      useLoadingState(mockAsyncFunction as (...args: unknown[]) => Promise<string>)
+    );
 
     act(() => {
       result.current.reset();

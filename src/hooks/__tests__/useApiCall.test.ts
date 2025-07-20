@@ -35,7 +35,7 @@ describe("useApiCall Hook", () => {
       throw new Error("Promise was not assigned");
     }
 
-    const response = await promise
+    const response = await promise;
 
     expect(response).toBe(mockData);
     expect(result.current.isLoading).toBe(false);

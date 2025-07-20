@@ -16,7 +16,7 @@ type ToastContextValue = {
   showInfo: (message: string, duration?: number) => void;
   dismissToast: (id: string) => void;
   clearAllToasts: () => void;
-}
+};
 
 interface ToastProviderProps {
   children: ReactNode;

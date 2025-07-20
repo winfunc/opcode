@@ -46,9 +46,7 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
 }) => {
   const { t } = useI18n();
   const [name, setName] = useState(agent?.name || "");
-  const [selectedIcon, setSelectedIcon] = useState<string>(
-    agent?.icon || "Bot"
-  );
+  const [selectedIcon, setSelectedIcon] = useState<string>(agent?.icon || "Bot");
   const [systemPrompt, setSystemPrompt] = useState(agent?.system_prompt || "");
   const [defaultTask, setDefaultTask] = useState(agent?.default_task || "");
   const [model, setModel] = useState(agent?.model || "sonnet-3-5");

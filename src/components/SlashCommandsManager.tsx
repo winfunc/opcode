@@ -343,7 +343,10 @@ export const SlashCommandsManager: React.FC<SlashCommandsManagerProps> = ({
           </div>
         </div>
         {scopeFilter === "all" && (
-          <Select value={selectedScope} onValueChange={(value) => setSelectedScope(value as "user" | "project" | "all")}>
+          <Select
+            value={selectedScope}
+            onValueChange={(value) => setSelectedScope(value as "user" | "project" | "all")}
+          >
             <SelectTrigger className="w-[150px]">
               <SelectValue />
             </SelectTrigger>

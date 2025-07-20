@@ -17,7 +17,9 @@ interface OutputCacheProviderProps {
 export function OutputCacheProvider({ children }: OutputCacheProviderProps) {
   const [cache, setCache] = useState<Map<number, CachedSessionOutput>>(new Map());
   const [isPolling, setIsPolling] = useState(false);
-  const [pollingInterval, setPollingInterval] = useState<ReturnType<typeof setInterval> | null>(null);
+  const [pollingInterval, setPollingInterval] = useState<ReturnType<typeof setInterval> | null>(
+    null
+  );
 
   const getCachedOutput = useCallback(
     (sessionId: number): CachedSessionOutput | null => {

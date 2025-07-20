@@ -189,7 +189,11 @@ export function AgentRunOutputViewer({ agentRunId, tabId, className }: AgentRunO
             // Convert history to messages format
             const loadedMessages: ClaudeStreamMessage[] = history.map((entry) => ({
               ...(entry as object),
-              type: ((entry as { type?: string }).type || "assistant") as "system" | "user" | "assistant" | "result",
+              type: ((entry as { type?: string }).type || "assistant") as
+                | "system"
+                | "user"
+                | "assistant"
+                | "result",
             }));
 
             setMessages(loadedMessages);
@@ -284,13 +288,7 @@ export function AgentRunOutputViewer({ agentRunId, tabId, className }: AgentRunO
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [
-      run?.id,
-      getCachedOutput,
-      run?.session_id,
-      run?.status,
-      setCachedOutput,
-    ]
+    [run?.id, getCachedOutput, run?.session_id, run?.status, setCachedOutput]
   );
 
   // Set up live event listeners for running sessions

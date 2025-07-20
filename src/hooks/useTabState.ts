@@ -14,7 +14,10 @@ interface UseTabStateReturn {
   // Operations
   createChatTab: (projectId?: string, title?: string) => string;
   createAgentTab: (agentRunId: string, agentName: string) => string;
-  createAgentExecutionTab: (agent: { name: string; [key: string]: unknown }, tabId: string) => string;
+  createAgentExecutionTab: (
+    agent: { name: string; [key: string]: unknown },
+    tabId: string
+  ) => string;
   createProjectsTab: () => string | null;
   createUsageTab: () => string | null;
   createMCPTab: () => string | null;

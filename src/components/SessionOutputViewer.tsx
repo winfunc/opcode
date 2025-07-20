@@ -84,7 +84,9 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
         if (!skipCache) {
           const cached = getCachedOutput(session.id);
           if (cached) {
-            const cachedJsonlLines = cached.output.split("\n").filter((line: string) => line.trim());
+            const cachedJsonlLines = cached.output
+              .split("\n")
+              .filter((line: string) => line.trim());
             setRawJsonlOutput(cachedJsonlLines);
             setMessages(cached.messages);
             // If cache is recent (less than 5 seconds old) and session isn't running, use cache only
@@ -104,7 +106,9 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
             // Convert history to messages format using AgentExecution style
             const loadedMessages: ClaudeStreamMessage[] = history.map((entry) => ({
               ...(entry as Record<string, unknown>),
-              type: ((entry as { type?: string }).type as "system" | "user" | "assistant" | "result") || "assistant",
+              type:
+                ((entry as { type?: string }).type as "system" | "user" | "assistant" | "result") ||
+                "assistant",
             }));
 
             setMessages(loadedMessages);
@@ -179,13 +183,7 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [
-      session.id,
-      session.session_id,
-      session.status,
-      getCachedOutput,
-      setCachedOutput,
-    ]
+    [session.id, session.session_id, session.status, getCachedOutput, setCachedOutput]
   );
 
   const setupLiveEventListeners = useCallback(async () => {
@@ -252,7 +250,8 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
         markdown += `- Session ID: \`${msg.session_id || "N/A"}\`\n`;
         markdown += `- Model: \`${msg.model || "default"}\`\n`;
         if (msg.cwd) markdown += `- Working Directory: \`${msg.cwd}\`\n`;
-        if ((msg.tools as string[])?.length) markdown += `- Tools: ${(msg.tools as string[]).join(", ")}\n`;
+        if ((msg.tools as string[])?.length)
+          markdown += `- Tools: ${(msg.tools as string[]).join(", ")}\n`;
         markdown += `\n`;
       } else if (msg.type === "assistant" && msg.message) {
         markdown += `## Assistant\n\n`;
@@ -374,8 +373,8 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
                         "grep",
                       ];
                       if (
-                        toolName && (toolsWithWidgets.includes(toolName) ||
-                        toolUse.name?.startsWith("mcp__"))
+                        toolName &&
+                        (toolsWithWidgets.includes(toolName) || toolUse.name?.startsWith("mcp__"))
                       ) {
                         willBeSkipped = true;
                       }

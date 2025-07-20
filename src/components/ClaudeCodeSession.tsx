@@ -318,7 +318,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     try {
       const historyOutput = await api.getSessionOutput(parseInt(session.id));
       // Parse the JSONL output into messages
-      const lines = historyOutput.split('\n').filter(line => line.trim());
+      const lines = historyOutput.split("\n").filter((line) => line.trim());
       const parsedMessages: ClaudeStreamMessage[] = [];
       for (const line of lines) {
         try {
@@ -388,7 +388,6 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     setTotalTokens(tokens);
   }, [messages]);
 
-   
   // Remove unused function - commented out to fix TS6133 error
   /*
   const _reconnectToSession = async (_sessionId: string) => {
@@ -749,7 +748,8 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
             const textContent =
               typeof content.text === "string"
                 ? content.text
-                : (content.text as unknown as { text?: string })?.text || JSON.stringify(content.text || content);
+                : (content.text as unknown as { text?: string })?.text ||
+                  JSON.stringify(content.text || content);
             markdown += `${textContent}\n\n`;
           } else if (content.type === "tool_use") {
             markdown += `### Tool: ${content.name}\n\n`;
@@ -766,7 +766,8 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
             const textContent =
               typeof content.text === "string"
                 ? content.text
-                : (content.text as unknown as { text?: string })?.text || JSON.stringify(content.text);
+                : (content.text as unknown as { text?: string })?.text ||
+                  JSON.stringify(content.text);
             markdown += `${textContent}\n\n`;
           } else if (content.type === "tool_result") {
             markdown += `### Tool Result\n\n`;

@@ -67,7 +67,11 @@ export const AgentRunView: React.FC<AgentRunViewProps> = ({ runId, onBack, class
           // Convert history to messages format
           const loadedMessages: ClaudeStreamMessage[] = history.map((entry) => ({
             ...(entry as object),
-            type: ((entry as { type?: string }).type || "assistant") as "system" | "user" | "assistant" | "result",
+            type: ((entry as { type?: string }).type || "assistant") as
+              | "system"
+              | "user"
+              | "assistant"
+              | "result",
           }));
 
           setMessages(loadedMessages);

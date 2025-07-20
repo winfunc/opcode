@@ -876,7 +876,9 @@ export const HooksEditor: React.FC<HooksEditorProps> = ({
           <Tabs value={selectedEvent} onValueChange={(v) => setSelectedEvent(v as HookEvent)}>
             <TabsList className="w-full">
               {(Object.keys(EVENT_INFO) as HookEvent[]).map((event) => {
-                const isMatcherEvent = matcherEvents.includes(event as "PreToolUse" | "PostToolUse");
+                const isMatcherEvent = matcherEvents.includes(
+                  event as "PreToolUse" | "PostToolUse"
+                );
                 const count = isMatcherEvent
                   ? (editableHooks[event as "PreToolUse" | "PostToolUse"] as EditableHookMatcher[])
                       .length
@@ -981,11 +983,12 @@ export const HooksEditor: React.FC<HooksEditorProps> = ({
                         <Badge>{EVENT_INFO[template.event].label}</Badge>
                       </div>
                       <p className="text-sm text-muted-foreground">{template.description}</p>
-                      {matcherEvents.includes(template.event as "PreToolUse" | "PostToolUse") && template.matcher && (
-                        <p className="text-xs font-mono bg-muted px-2 py-1 rounded inline-block">
-                          {t.hooks.pattern}: {template.matcher}
-                        </p>
-                      )}
+                      {matcherEvents.includes(template.event as "PreToolUse" | "PostToolUse") &&
+                        template.matcher && (
+                          <p className="text-xs font-mono bg-muted px-2 py-1 rounded inline-block">
+                            {t.hooks.pattern}: {template.matcher}
+                          </p>
+                        )}
                     </div>
                   </Card>
                 ))}

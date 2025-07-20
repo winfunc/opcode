@@ -38,7 +38,11 @@ interface BashWidgetProps {
  * />
  * ```
  */
-export const BashWidget: React.FC<BashWidgetProps> = ({ command, description, result }): React.ReactElement => {
+export const BashWidget: React.FC<BashWidgetProps> = ({
+  command,
+  description,
+  result,
+}): React.ReactElement => {
   // Extract result content if available
   let resultContent = "";
   let isError = false;
@@ -87,18 +91,20 @@ export const BashWidget: React.FC<BashWidgetProps> = ({ command, description, re
         <code className="text-xs font-mono text-green-400 block">$ {command}</code>
 
         {/* Show result if available */}
-        {(result && (
-          <div
-            className={cn(
-              "mt-3 p-3 rounded-md border text-xs font-mono whitespace-pre-wrap overflow-x-auto",
-              isError
-                ? "border-red-500/20 bg-red-500/5 text-red-400"
-                : "border-green-500/20 bg-green-500/5 text-green-300"
-            )}
-          >
-            {resultContent || (isError ? "Command failed" : "Command completed")}
-          </div>
-        )) as React.ReactNode}
+        {
+          (result && (
+            <div
+              className={cn(
+                "mt-3 p-3 rounded-md border text-xs font-mono whitespace-pre-wrap overflow-x-auto",
+                isError
+                  ? "border-red-500/20 bg-red-500/5 text-red-400"
+                  : "border-green-500/20 bg-green-500/5 text-green-300"
+              )}
+            >
+              {resultContent || (isError ? "Command failed" : "Command completed")}
+            </div>
+          )) as React.ReactNode
+        }
       </div>
     </div>
   );

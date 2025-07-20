@@ -90,7 +90,12 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
       message.summary &&
       (message as Record<string, unknown>).type === "summary"
     ) {
-      return <SummaryWidget summary={String(message.summary || "")} leafUuid={String(message.leafUuid || "")} />;
+      return (
+        <SummaryWidget
+          summary={String(message.summary || "")}
+          leafUuid={String(message.leafUuid || "")}
+        />
+      );
     }
 
     // System initialization message
@@ -136,8 +141,21 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
                           <ReactMarkdown
                             remarkPlugins={[remarkGfm]}
                             components={{
-                              code(props: React.ComponentProps<"code"> & { node?: unknown; inline?: boolean }) {
-                                const { node: _node, inline, className, children, ref: _ref, style: _style, ...restProps } = props;
+                              code(
+                                props: React.ComponentProps<"code"> & {
+                                  node?: unknown;
+                                  inline?: boolean;
+                                }
+                              ) {
+                                const {
+                                  node: _node,
+                                  inline,
+                                  className,
+                                  children,
+                                  ref: _ref,
+                                  style: _style,
+                                  ...restProps
+                                } = props;
                                 const match = /language-(\w+)/.exec((className as string) || "");
                                 return !inline && match ? (
                                   <SyntaxHighlighter
@@ -163,7 +181,11 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
                     }
 
                     // Thinking content - render with ThinkingWidget
-                    const contentObj = content as { type?: string; thinking?: string; signature?: string };
+                    const contentObj = content as {
+                      type?: string;
+                      thinking?: string;
+                      signature?: string;
+                    };
                     if (contentObj.type === "thinking") {
                       renderedSomething = true;
                       return (
@@ -177,7 +199,12 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
                     }
 
                     // Tool use - render custom widgets based on tool name
-                    const toolContent = content as { type?: string; name?: string; input?: unknown; id?: string };
+                    const toolContent = content as {
+                      type?: string;
+                      name?: string;
+                      input?: unknown;
+                      id?: string;
+                    };
                     if (toolContent.type === "tool_use") {
                       const toolName = toolContent.name?.toLowerCase();
                       const input = toolContent.input as Record<string, unknown>;
@@ -203,51 +230,94 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
                         // Edit tool
                         if (toolName === "edit" && input?.file_path) {
                           renderedSomething = true;
-                          return <EditWidget {...(input as { file_path: string; old_string: string; new_string: string })} result={toolResult} />;
+                          return (
+                            <EditWidget
+                              {...(input as {
+                                file_path: string;
+                                old_string: string;
+                                new_string: string;
+                              })}
+                              result={toolResult}
+                            />
+                          );
                         }
 
                         // MultiEdit tool
                         if (toolName === "multiedit" && input?.file_path && input?.edits) {
                           renderedSomething = true;
-                          return <MultiEditWidget {...(input as { file_path: string; edits: { old_string: string; new_string: string }[] })} result={toolResult} />;
+                          return (
+                            <MultiEditWidget
+                              {...(input as {
+                                file_path: string;
+                                edits: { old_string: string; new_string: string }[];
+                              })}
+                              result={toolResult}
+                            />
+                          );
                         }
 
                         // MCP tools (starting with mcp__)
                         if (toolContent.name?.startsWith("mcp__")) {
                           renderedSomething = true;
                           return (
-                            <MCPWidget toolName={toolContent.name} input={input} result={toolResult} />
+                            <MCPWidget
+                              toolName={toolContent.name}
+                              input={input}
+                              result={toolResult}
+                            />
                           );
                         }
 
                         // TodoWrite tool
                         if (toolName === "todowrite" && input?.todos) {
                           renderedSomething = true;
-                          return <TodoWidget todos={(input?.todos as TodoItem[]) || []} result={toolResult} />;
+                          return (
+                            <TodoWidget
+                              todos={(input?.todos as TodoItem[]) || []}
+                              result={toolResult}
+                            />
+                          );
                         }
 
                         // TodoRead tool
                         if (toolName === "todoread") {
                           renderedSomething = true;
-                          return <TodoReadWidget todos={input?.todos as TodoItem[]} result={toolResult} />;
+                          return (
+                            <TodoReadWidget
+                              todos={input?.todos as TodoItem[]}
+                              result={toolResult}
+                            />
+                          );
                         }
 
                         // LS tool
                         if (toolName === "ls" && input?.path) {
                           renderedSomething = true;
-                          return <LSWidget path={input?.path as string || ""} result={toolResult} />;
+                          return (
+                            <LSWidget path={(input?.path as string) || ""} result={toolResult} />
+                          );
                         }
 
                         // Read tool
                         if (toolName === "read" && input?.file_path) {
                           renderedSomething = true;
-                          return <ReadWidget filePath={input?.file_path as string || ""} result={toolResult} />;
+                          return (
+                            <ReadWidget
+                              filePath={(input?.file_path as string) || ""}
+                              result={toolResult}
+                            />
+                          );
                         }
 
                         // Glob tool
                         if (toolName === "glob" && input?.pattern) {
                           renderedSomething = true;
-                          return <GlobWidget pattern={input.pattern as string || ""} result={toolResult} />;
+                          return (
+                            <GlobWidget
+                              pattern={(input.pattern as string) || ""}
+                              result={toolResult}
+                            />
+                          );
                         }
 
                         // Bash tool
@@ -255,7 +325,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
                           renderedSomething = true;
                           return (
                             <BashWidget
-                              command={input.command as string || ""}
+                              command={(input.command as string) || ""}
                               description={input.description as string}
                               result={toolResult}
                             />
@@ -267,8 +337,8 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
                           renderedSomething = true;
                           return (
                             <WriteWidget
-                              filePath={input.file_path as string || ""}
-                              content={input.content as string || ""}
+                              filePath={(input.file_path as string) || ""}
+                              content={(input.content as string) || ""}
                               result={toolResult}
                             />
                           );
@@ -279,7 +349,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
                           renderedSomething = true;
                           return (
                             <GrepWidget
-                              pattern={input.pattern as string || ""}
+                              pattern={(input.pattern as string) || ""}
                               include={input.include as string}
                               path={input.path as string}
                               exclude={input.exclude as string}
@@ -291,7 +361,12 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
                         // WebSearch tool
                         if (toolName === "websearch" && input?.query) {
                           renderedSomething = true;
-                          return <WebSearchWidget query={input.query as string || ""} result={toolResult} />;
+                          return (
+                            <WebSearchWidget
+                              query={(input.query as string) || ""}
+                              result={toolResult}
+                            />
+                          );
                         }
 
                         // WebFetch tool
@@ -299,7 +374,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
                           renderedSomething = true;
                           return (
                             <WebFetchWidget
-                              url={input.url as string || ""}
+                              url={(input.url as string) || ""}
                               prompt={input.prompt as string}
                               result={toolResult}
                             />
@@ -373,42 +448,43 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
               <User className="h-5 w-5 text-muted-foreground mt-0.5" />
               <div className="flex-1 space-y-2 min-w-0">
                 {/* Handle content that is a simple string (e.g. from user commands) */}
-                {(typeof msg.content === "string" ||
-                  (msg.content && !Array.isArray(msg.content))) ? (() => {
-                    const contentStr =
-                      typeof msg.content === "string" ? msg.content : String(msg.content);
-                    if (contentStr.trim() === "") return null;
-                    renderedSomething = true;
+                {typeof msg.content === "string" || (msg.content && !Array.isArray(msg.content))
+                  ? (() => {
+                      const contentStr =
+                        typeof msg.content === "string" ? msg.content : String(msg.content);
+                      if (contentStr.trim() === "") return null;
+                      renderedSomething = true;
 
-                    // Check if it's a command message
-                    const commandMatch = contentStr.match(
-                      /<command-name>(.+?)<\/command-name>[\s\S]*?<command-message>(.+?)<\/command-message>[\s\S]*?<command-args>(.*?)<\/command-args>/
-                    );
-                    if (commandMatch) {
-                      const [, commandName, commandMessage, commandArgs] = commandMatch;
-                      return (
-                        <CommandWidget
-                          commandName={commandName.trim()}
-                          commandMessage={commandMessage.trim()}
-                          commandArgs={commandArgs?.trim()}
-                        />
+                      // Check if it's a command message
+                      const commandMatch = contentStr.match(
+                        /<command-name>(.+?)<\/command-name>[\s\S]*?<command-message>(.+?)<\/command-message>[\s\S]*?<command-args>(.*?)<\/command-args>/
                       );
-                    }
+                      if (commandMatch) {
+                        const [, commandName, commandMessage, commandArgs] = commandMatch;
+                        return (
+                          <CommandWidget
+                            commandName={commandName.trim()}
+                            commandMessage={commandMessage.trim()}
+                            commandArgs={commandArgs?.trim()}
+                          />
+                        );
+                      }
 
-                    // Check if it's command output
-                    const stdoutMatch = contentStr.match(
-                      /<local-command-stdout>([\s\S]*?)<\/local-command-stdout>/
-                    );
-                    if (stdoutMatch) {
-                      const [, output] = stdoutMatch;
-                      return (
-                        <CommandOutputWidget output={output} onLinkDetected={onLinkDetected} />
+                      // Check if it's command output
+                      const stdoutMatch = contentStr.match(
+                        /<local-command-stdout>([\s\S]*?)<\/local-command-stdout>/
                       );
-                    }
+                      if (stdoutMatch) {
+                        const [, output] = stdoutMatch;
+                        return (
+                          <CommandOutputWidget output={output} onLinkDetected={onLinkDetected} />
+                        );
+                      }
 
-                    // Otherwise render as plain text
-                    return <div className="text-sm">{contentStr}</div>;
-                  })() : null}
+                      // Otherwise render as plain text
+                      return <div className="text-sm">{contentStr}</div>;
+                    })()
+                  : null}
 
                 {/* Handle content that is an array of parts */}
                 {Array.isArray(msg.content) &&
@@ -570,7 +646,8 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
                       // Check if this is an LS tool result (directory tree structure)
                       const isLSResult = (() => {
                         const toolResultContent = content as { tool_use_id?: string };
-                        if (!toolResultContent.tool_use_id || typeof contentText !== "string") return false;
+                        if (!toolResultContent.tool_use_id || typeof contentText !== "string")
+                          return false;
 
                         // Check if this result came from an LS tool by looking for the tool call
                         let isFromLSTool = false;
@@ -713,13 +790,17 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
                     }
 
                     // Text content
-                    const textContent = content as { type?: string; text?: string | { text?: string } };
+                    const textContent = content as {
+                      type?: string;
+                      text?: string | { text?: string };
+                    };
                     if (textContent.type === "text") {
                       // Handle both string and object formats
                       const textValue =
                         typeof textContent.text === "string"
                           ? textContent.text
-                          : (textContent.text as { text?: string })?.text || JSON.stringify(textContent.text);
+                          : (textContent.text as { text?: string })?.text ||
+                            JSON.stringify(textContent.text);
 
                       renderedSomething = true;
                       return (
@@ -770,7 +851,9 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm]}
                       components={{
-                        code(props: React.ComponentProps<"code"> & { node?: unknown; inline?: boolean }) {
+                        code(
+                          props: React.ComponentProps<"code"> & { node?: unknown; inline?: boolean }
+                        ) {
                           const {
                             node: _node,
                             inline,
@@ -808,7 +891,8 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
                 <div className="text-xs text-muted-foreground space-y-1 mt-2">
                   {(message.cost_usd !== undefined || message.total_cost_usd !== undefined) && (
                     <div>
-                      Cost: ${Number(message.cost_usd || message.total_cost_usd || 0).toFixed(4)} USD
+                      Cost: ${Number(message.cost_usd || message.total_cost_usd || 0).toFixed(4)}{" "}
+                      USD
                     </div>
                   )}
                   {message.duration_ms !== undefined && (

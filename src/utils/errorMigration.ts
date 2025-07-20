@@ -17,27 +17,45 @@ import {
 export const migrationHelpers = {
   // 替换简单的console.error调用
   replaceConsoleError: (error: unknown, context?: string) => {
-    return handleError(error instanceof Error ? error : String(error), { source: "console_migration", context });
+    return handleError(error instanceof Error ? error : String(error), {
+      source: "console_migration",
+      context,
+    });
   },
 
   // 替换API错误处理
   replaceApiErrorHandling: (error: unknown, operation: string, params?: unknown) => {
-    return handleApiError(error instanceof Error ? error : String(error), { operation, params, source: "api_migration" });
+    return handleApiError(error instanceof Error ? error : String(error), {
+      operation,
+      params,
+      source: "api_migration",
+    });
   },
 
   // 替换网络错误处理
   replaceNetworkErrorHandling: (error: unknown, url?: string) => {
-    return handleNetworkError(error instanceof Error ? error : String(error), { url, source: "network_migration" });
+    return handleNetworkError(error instanceof Error ? error : String(error), {
+      url,
+      source: "network_migration",
+    });
   },
 
   // 替换验证错误处理
   replaceValidationErrorHandling: (error: unknown, field?: string, value?: unknown) => {
-    return handleValidationError(error instanceof Error ? error : String(error), { field, value, source: "validation_migration" });
+    return handleValidationError(error instanceof Error ? error : String(error), {
+      field,
+      value,
+      source: "validation_migration",
+    });
   },
 
   // 替换权限错误处理
   replacePermissionErrorHandling: (error: unknown, resource?: string, action?: string) => {
-    return handlePermissionError(error instanceof Error ? error : String(error), { resource, action, source: "permission_migration" });
+    return handlePermissionError(error instanceof Error ? error : String(error), {
+      resource,
+      action,
+      source: "permission_migration",
+    });
   },
 };
 

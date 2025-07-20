@@ -110,7 +110,9 @@ const extractResultContent = (result: unknown): { content: string; isError: bool
       content = contentObj.text;
     } else if (Array.isArray(contentObj)) {
       content = contentObj
-        .map((c: unknown) => (typeof c === "string" ? c : (c as { text?: string }).text || JSON.stringify(c)))
+        .map((c: unknown) =>
+          typeof c === "string" ? c : (c as { text?: string }).text || JSON.stringify(c)
+        )
         .join("\n");
     } else {
       content = JSON.stringify(resultObj.content, null, 2);
@@ -162,18 +164,18 @@ export const TodoWidget: React.FC<{ todos: TodoItem[]; result?: unknown }> = ({
                 {todo.content}
               </p>
               {todo.priority && (
-              <Badge
-                variant="outline"
-                className={cn(
-                  "text-xs",
-                  priorityColors[todo.priority as keyof typeof priorityColors]
-                )}
-              >
-                {todo.priority}
-              </Badge>
-            )}
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "text-xs",
+                    priorityColors[todo.priority as keyof typeof priorityColors]
+                  )}
+                >
+                  {todo.priority}
+                </Badge>
+              )}
+            </div>
           </div>
-        </div>
         ))}
       </div>
     </div>
@@ -196,7 +198,9 @@ export const LSWidget: React.FC<{ path: string; result?: unknown }> = ({ path, r
         resultContent = contentObj.text;
       } else if (Array.isArray(resultObj.content)) {
         resultContent = resultObj.content
-          .map((c: unknown) => (typeof c === "string" ? c : (c as { text?: string }).text || JSON.stringify(c)))
+          .map((c: unknown) =>
+            typeof c === "string" ? c : (c as { text?: string }).text || JSON.stringify(c)
+          )
           .join("\n");
       } else {
         resultContent = JSON.stringify(resultObj.content, null, 2);
@@ -420,7 +424,9 @@ export const ReadWidget: React.FC<{ filePath: string; result?: unknown }> = ({
         resultContent = (resultObj.content as ContentObject).text || "";
       } else if (Array.isArray(resultObj.content)) {
         resultContent = resultObj.content
-          .map((c: unknown) => (typeof c === "string" ? c : (c as { text?: string }).text || JSON.stringify(c)))
+          .map((c: unknown) =>
+            typeof c === "string" ? c : (c as { text?: string }).text || JSON.stringify(c)
+          )
           .join("\n");
       } else {
         resultContent = JSON.stringify(resultObj.content, null, 2);
@@ -899,7 +905,13 @@ export const WriteWidget: React.FC<{ filePath: string; content: string; result?:
 /**
  * Widget for Grep tool
  */
-export const GrepWidget = ({ pattern, include, path, exclude, result }: {
+export const GrepWidget = ({
+  pattern,
+  include,
+  path,
+  exclude,
+  result,
+}: {
   pattern: string;
   include?: string;
   path?: string;
@@ -1355,28 +1367,30 @@ export const MCPWidget: React.FC<{
               MCP Tool
             </span>
           </div>
-          {(hasInput && (
-            <div className="flex items-center gap-2">
-              <Badge
-                variant="outline"
-                className="text-xs border-violet-500/30 text-violet-600 dark:text-violet-400"
-              >
-                ~{inputTokens} tokens
-              </Badge>
-              {isLargeInput && (
-                <button
-                  onClick={() => setIsExpanded(!isExpanded)}
-                  className="text-violet-500 hover:text-violet-600 transition-colors"
+          {
+            (hasInput && (
+              <div className="flex items-center gap-2">
+                <Badge
+                  variant="outline"
+                  className="text-xs border-violet-500/30 text-violet-600 dark:text-violet-400"
                 >
-                  {isExpanded ? (
-                    <ChevronUp className="h-3.5 w-3.5" />
-                  ) : (
-                    <ChevronDown className="h-3.5 w-3.5" />
-                  )}
-                </button>
-              )}
-            </div>
-          )) as React.ReactNode}
+                  ~{inputTokens} tokens
+                </Badge>
+                {isLargeInput && (
+                  <button
+                    onClick={() => setIsExpanded(!isExpanded)}
+                    className="text-violet-500 hover:text-violet-600 transition-colors"
+                  >
+                    {isExpanded ? (
+                      <ChevronUp className="h-3.5 w-3.5" />
+                    ) : (
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    )}
+                  </button>
+                )}
+              </div>
+            )) as React.ReactNode
+          }
         </div>
       </div>
 
@@ -1399,64 +1413,66 @@ export const MCPWidget: React.FC<{
         </div>
 
         {/* Input Parameters */}
-        {(hasInput && (
-          <div
-            className={cn(
-              "transition-all duration-200",
-              !isExpanded && isLargeInput && "max-h-[200px]"
-            )}
-          >
-            <div className="relative">
-              <div
-                className={cn(
-                  "rounded-lg border bg-zinc-950/50 overflow-hidden",
-                  !isExpanded && isLargeInput && "max-h-[200px]"
-                )}
-              >
-                <div className="px-3 py-2 border-b bg-zinc-900/50 flex items-center gap-2">
-                  <Code className="h-3 w-3 text-violet-500" />
-                  <span className="text-xs font-mono text-muted-foreground">Parameters</span>
-                </div>
+        {
+          (hasInput && (
+            <div
+              className={cn(
+                "transition-all duration-200",
+                !isExpanded && isLargeInput && "max-h-[200px]"
+              )}
+            >
+              <div className="relative">
                 <div
-                  className={cn("overflow-auto", !isExpanded && isLargeInput && "max-h-[150px]")}
+                  className={cn(
+                    "rounded-lg border bg-zinc-950/50 overflow-hidden",
+                    !isExpanded && isLargeInput && "max-h-[200px]"
+                  )}
                 >
-                  <SyntaxHighlighter
-                    language="json"
-                    style={claudeSyntaxTheme}
-                    customStyle={{
-                      margin: 0,
-                      padding: "0.75rem",
-                      background: "transparent",
-                      fontSize: "0.75rem",
-                      lineHeight: "1.5",
-                    }}
-                    wrapLongLines={false}
+                  <div className="px-3 py-2 border-b bg-zinc-900/50 flex items-center gap-2">
+                    <Code className="h-3 w-3 text-violet-500" />
+                    <span className="text-xs font-mono text-muted-foreground">Parameters</span>
+                  </div>
+                  <div
+                    className={cn("overflow-auto", !isExpanded && isLargeInput && "max-h-[150px]")}
                   >
-                    {inputString}
-                  </SyntaxHighlighter>
+                    <SyntaxHighlighter
+                      language="json"
+                      style={claudeSyntaxTheme}
+                      customStyle={{
+                        margin: 0,
+                        padding: "0.75rem",
+                        background: "transparent",
+                        fontSize: "0.75rem",
+                        lineHeight: "1.5",
+                      }}
+                      wrapLongLines={false}
+                    >
+                      {inputString}
+                    </SyntaxHighlighter>
+                  </div>
                 </div>
+
+                {/* Gradient fade for collapsed view */}
+                {!isExpanded && isLargeInput && (
+                  <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-zinc-950/80 to-transparent pointer-events-none" />
+                )}
               </div>
 
-              {/* Gradient fade for collapsed view */}
+              {/* Expand hint */}
               {!isExpanded && isLargeInput && (
-                <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-zinc-950/80 to-transparent pointer-events-none" />
+                <div className="text-center mt-2">
+                  <button
+                    onClick={() => setIsExpanded(true)}
+                    className="text-xs text-violet-500 hover:text-violet-600 transition-colors inline-flex items-center gap-1"
+                  >
+                    <ChevronDown className="h-3 w-3" />
+                    Show full parameters
+                  </button>
+                </div>
               )}
             </div>
-
-            {/* Expand hint */}
-            {!isExpanded && isLargeInput && (
-              <div className="text-center mt-2">
-                <button
-                  onClick={() => setIsExpanded(true)}
-                  className="text-xs text-violet-500 hover:text-violet-600 transition-colors inline-flex items-center gap-1"
-                >
-                  <ChevronDown className="h-3 w-3" />
-                  Show full parameters
-                </button>
-              </div>
-            )}
-          </div>
-        )) as React.ReactNode}
+          )) as React.ReactNode
+        }
 
         {/* No input message */}
         {!hasInput && (
@@ -2097,7 +2113,10 @@ export const TaskWidget: React.FC<{
 /**
  * Widget for WebSearch tool - displays web search query and results
  */
-export const WebSearchWidget = ({ query, result }: {
+export const WebSearchWidget = ({
+  query,
+  result,
+}: {
   query: string;
   result?: unknown;
 }): React.JSX.Element => {
@@ -2174,7 +2193,9 @@ export const WebSearchWidget = ({ query, result }: {
         resultContent = (resultObj.content as ContentObject).text || "";
       } else if (Array.isArray(resultObj.content)) {
         resultContent = resultObj.content
-          .map((c: unknown) => (typeof c === "string" ? c : (c as ContentObject).text || JSON.stringify(c)))
+          .map((c: unknown) =>
+            typeof c === "string" ? c : (c as ContentObject).text || JSON.stringify(c)
+          )
           .join("\n");
       } else {
         resultContent = JSON.stringify(resultObj.content, null, 2);
@@ -2381,7 +2402,9 @@ export const WebFetchWidget: React.FC<{
         fetchedContent = (resultObj.content as ContentObject).text || "";
       } else if (Array.isArray(resultObj.content)) {
         fetchedContent = resultObj.content
-          .map((c: unknown) => (typeof c === "string" ? c : (c as ContentObject).text || JSON.stringify(c)))
+          .map((c: unknown) =>
+            typeof c === "string" ? c : (c as ContentObject).text || JSON.stringify(c)
+          )
           .join("\n");
       } else {
         fetchedContent = JSON.stringify(resultObj.content, null, 2);
@@ -2546,7 +2569,6 @@ export const WebFetchWidget: React.FC<{
     </div>
   );
 };
-
 
 /**
  * Widget for TodoRead tool - displays todos with advanced viewing capabilities
@@ -2907,7 +2929,9 @@ export const TodoReadWidget: React.FC<{ todos?: TodoItem[]; result?: unknown }> 
     return (
       <div className="space-y-4">
         {rootTodos.map((todo) => renderTodoWithDependents(todo))}
-        {todos.filter((t) => t.id && !rendered.has(t.id)).map((todo) => renderTodoWithDependents(todo))}
+        {todos
+          .filter((t) => t.id && !rendered.has(t.id))
+          .map((todo) => renderTodoWithDependents(todo))}
       </div>
     );
   };
