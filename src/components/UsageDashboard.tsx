@@ -19,6 +19,9 @@ import {
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
 import { handleError } from "@/lib/errorHandler";
+/**
+ * Props interface for the UsageDashboard component
+ */
 interface UsageDashboardProps {
   /**
    * Callback when back button is clicked
@@ -29,8 +32,16 @@ interface UsageDashboardProps {
 /**
  * UsageDashboard component - Displays Claude API usage statistics and costs
  *
+ * A comprehensive analytics dashboard for monitoring Claude API usage, costs,
+ * and performance metrics. Features include date range filtering, project-wise
+ * breakdowns, cost analysis, token usage trends, and detailed session statistics.
+ *
+ * @param onBack - Callback when back button is clicked
+ *
  * @example
+ * ```tsx
  * <UsageDashboard onBack={() => setView('welcome')} />
+ * ```
  */
 export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
   const { t } = useI18n();
@@ -58,6 +69,12 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
         const days = selectedDateRange === "7d" ? 7 : 30;
         startDate.setDate(startDate.getDate() - days);
 
+        /**
+         * Format date for API request
+         *
+         * @param date - Date to format
+         * @returns Formatted date string
+         */
         const formatDateForApi = (date: Date) => {
           const year = date.getFullYear();
           const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -87,6 +104,12 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
     loadUsageStats();
   }, [selectedDateRange, loadUsageStats]);
 
+  /**
+   * Format amount as currency
+   *
+   * @param amount - Amount to format
+   * @returns Formatted currency string
+   */
   const formatCurrency = (amount: number): string => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -96,10 +119,22 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
     }).format(amount);
   };
 
+  /**
+   * Format number with thousand separators
+   *
+   * @param num - Number to format
+   * @returns Formatted number string
+   */
   const formatNumber = (num: number): string => {
     return new Intl.NumberFormat("en-US").format(num);
   };
 
+  /**
+   * Format token count with appropriate units
+   *
+   * @param num - Token count to format
+   * @returns Formatted token string (e.g., "1.2K", "500")
+   */
   const formatTokens = (num: number): string => {
     if (num >= 1_000_000) {
       return `${(num / 1_000_000).toFixed(2)}M`;
@@ -109,6 +144,12 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
     return formatNumber(num);
   };
 
+  /**
+   * Get display name for a model
+   *
+   * @param model - Model identifier
+   * @returns Human-readable model name
+   */
   const getModelDisplayName = (model: string): string => {
     const modelMap: Record<string, string> = {
       "claude-4-opus": "Opus 4",
@@ -119,6 +160,12 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
     return modelMap[model] || model;
   };
 
+  /**
+   * Get color for a model in charts
+   *
+   * @param model - Model identifier
+   * @returns CSS color class or hex color
+   */
   const getModelColor = (model: string): string => {
     if (model.includes("opus")) return "text-purple-500";
     if (model.includes("sonnet")) return "text-blue-500";

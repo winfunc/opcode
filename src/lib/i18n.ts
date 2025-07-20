@@ -1,6 +1,11 @@
 import { createContext, useContext } from "react";
 
-// 支持的语言列表
+/**
+ * Supported languages configuration
+ *
+ * Maps language codes to their display names in their native language.
+ * Used for language selection UI and internationalization.
+ */
 export const SUPPORTED_LANGUAGES = {
   en: "English",
   zh: "中文",
@@ -16,6 +21,9 @@ export const SUPPORTED_LANGUAGES = {
   hi: "हिन्दी",
 } as const;
 
+/**
+ * Language code type derived from supported languages
+ */
 export type Language = keyof typeof SUPPORTED_LANGUAGES;
 
 // 翻译键的类型定义
@@ -836,9 +844,29 @@ export interface I18nContextType {
   isRTL: boolean;
 }
 
+/**
+ * React context for internationalization
+ *
+ * Provides language state, translation functions, and RTL support
+ * throughout the application component tree.
+ */
 export const I18nContext = createContext<I18nContextType | undefined>(undefined);
 
-// Hook for using i18n
+/**
+ * Hook for accessing internationalization context
+ *
+ * Provides access to current language, translation function, and RTL state.
+ * Must be used within an I18nProvider component.
+ *
+ * @returns I18n context with language state and translation functions
+ * @throws Error if used outside I18nProvider
+ *
+ * @example
+ * ```tsx
+ * const { t, language, setLanguage } = useI18n();
+ * return <h1>{t.common.welcome}</h1>;
+ * ```
+ */
 export const useI18n = (): I18nContextType => {
   const context = useContext(I18nContext);
   if (!context) {
@@ -847,18 +875,62 @@ export const useI18n = (): I18nContextType => {
   return context;
 };
 
-// 获取浏览器语言
+/**
+ * Get the browser's preferred language
+ *
+ * Detects the user's browser language and returns a supported language code.
+ * Falls back to English if the browser language is not supported.
+ *
+ * @returns Supported language code based on browser preference
+ *
+ * @example
+ * ```typescript
+ * const browserLang = getBrowserLanguage();
+ * // Returns 'zh' for Chinese browsers, 'en' for unsupported languages
+ * ```
+ */
 export const getBrowserLanguage = (): Language => {
   const browserLang = navigator.language.split("-")[0] as Language;
   return Object.keys(SUPPORTED_LANGUAGES).includes(browserLang) ? browserLang : "en";
 };
 
-// 检查是否为RTL语言
+/**
+ * Check if a language uses right-to-left text direction
+ *
+ * @param language - Language code to check
+ * @returns True if the language uses RTL text direction
+ *
+ * @example
+ * ```typescript
+ * isRTLLanguage('ar') // true (Arabic)
+ * isRTLLanguage('en') // false (English)
+ * ```
+ */
 export const isRTLLanguage = (language: Language): boolean => {
   return ["ar"].includes(language);
 };
 
-// 格式化相对时间
+/**
+ * Format relative time using localized strings
+ *
+ * Converts a timestamp to a human-readable relative time string
+ * using the provided translations (e.g., "2 hours ago", "just now").
+ *
+ * @param timestamp - Unix timestamp in milliseconds
+ * @param _language - Language code (currently unused but reserved for future locale-specific formatting)
+ * @param translations - Translation object containing time-related strings
+ * @returns Localized relative time string
+ *
+ * @example
+ * ```typescript
+ * const relativeTime = formatRelativeTime(
+ *   Date.now() - 3600000,
+ *   'en',
+ *   translations
+ * );
+ * // Returns: "1 hour ago" (in the specified language)
+ * ```
+ */
 export const formatRelativeTime = (
   timestamp: number,
   _language: Language,

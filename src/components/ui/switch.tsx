@@ -1,6 +1,9 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
+/**
+ * Props interface for the Switch component
+ */
 export interface SwitchProps extends React.InputHTMLAttributes<HTMLInputElement> {
   /**
    * Whether the switch is checked
@@ -15,8 +18,29 @@ export interface SwitchProps extends React.InputHTMLAttributes<HTMLInputElement>
 /**
  * Switch component for toggling boolean values
  *
+ * A toggle switch component that provides an alternative to checkboxes
+ * for boolean values. Features smooth animations and accessibility support.
+ *
+ * @param checked - Whether the switch is in the on position
+ * @param onCheckedChange - Callback when the switch state changes
+ * @param disabled - Whether the switch is disabled
+ * @param className - Additional CSS classes
+ *
  * @example
- * <Switch checked={isEnabled} onCheckedChange={setIsEnabled} />
+ * ```tsx
+ * const [isEnabled, setIsEnabled] = useState(false);
+ *
+ * <Switch
+ *   checked={isEnabled}
+ *   onCheckedChange={setIsEnabled}
+ * />
+ *
+ * <Switch
+ *   checked={notifications}
+ *   onCheckedChange={setNotifications}
+ *   disabled={isLoading}
+ * />
+ * ```
  */
 const Switch = React.forwardRef<HTMLInputElement, SwitchProps>(
   ({ className, checked, onCheckedChange, disabled, ...props }, ref) => {

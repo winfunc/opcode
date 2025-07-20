@@ -43,16 +43,32 @@ export const ImagePreview: React.FC<ImagePreviewProps> = ({ images, onRemove, cl
   // Limit to 10 images
   const displayImages = images.slice(0, 10);
 
+  /**
+   * Handle image loading errors
+   *
+   * @param index - Index of the image that failed to load
+   */
   const handleImageError = (index: number) => {
     setImageErrors((prev) => new Set(prev).add(index));
   };
 
+  /**
+   * Handle removing an image with event propagation control
+   *
+   * @param e - Mouse event to stop propagation
+   * @param index - Index of the image to remove
+   */
   const handleRemove = (e: React.MouseEvent, index: number) => {
     e.stopPropagation();
     onRemove(index);
   };
 
-  // Helper to get the image source - handles both file paths and data URLs
+  /**
+   * Get the image source URL - handles both file paths and data URLs
+   *
+   * @param imagePath - File path or data URL of the image
+   * @returns Processed image source URL
+   */
   const getImageSrc = (imagePath: string): string => {
     // If it's already a data URL, return as-is
     if (imagePath.startsWith("data:")) {

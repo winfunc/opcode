@@ -2,7 +2,20 @@ import type React from "react";
 
 /**
  * Claude-themed syntax highlighting theme
- * Features orange, purple, and violet colors to match Claude's aesthetic
+ *
+ * A comprehensive syntax highlighting theme designed to match Claude's aesthetic.
+ * Features orange, purple, and violet colors with carefully chosen contrast ratios
+ * for optimal readability in both light and dark environments.
+ *
+ * @example
+ * ```tsx
+ * import { claudeSyntaxTheme } from '@/lib/claudeSyntaxTheme';
+ *
+ * // Use with Prism.js or similar syntax highlighter
+ * <SyntaxHighlighter style={claudeSyntaxTheme} language="javascript">
+ *   {code}
+ * </SyntaxHighlighter>
+ * ```
  */
 export const claudeSyntaxTheme: { [key: string]: React.CSSProperties } = {
   'code[class*="language-"]': {

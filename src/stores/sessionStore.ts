@@ -55,6 +55,28 @@ interface SessionState {
   handleOutputUpdate: (sessionId: string, output: string) => void;
 }
 
+/**
+ * Zustand store for managing session and project state
+ *
+ * Provides centralized state management for projects, sessions, and their outputs
+ * with real-time updates, error handling, and efficient caching mechanisms.
+ *
+ * @example
+ * ```typescript
+ * const {
+ *   projects,
+ *   sessions,
+ *   fetchProjects,
+ *   setCurrentSession
+ * } = useSessionStore();
+ *
+ * // Fetch all projects
+ * await fetchProjects();
+ *
+ * // Set active session
+ * setCurrentSession('session-id-123');
+ * ```
+ */
 export const useSessionStore = create<SessionState>()(
   subscribeWithSelector((set, get) => ({
     // Initial state

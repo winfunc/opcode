@@ -160,8 +160,25 @@ const DEFAULT_ERROR_CONFIGS: Record<ErrorType, ErrorConfig> = {
   },
 };
 
-// 错误分类器
+/**
+ * Error classifier utility for categorizing errors by type
+ *
+ * Analyzes error messages to automatically determine the appropriate error type
+ * for consistent error handling across the application.
+ */
 export class ErrorClassifier {
+  /**
+   * Classify an error based on its message content
+   *
+   * @param error - Error object or error message string to classify
+   * @returns The determined error type for appropriate handling
+   *
+   * @example
+   * ```typescript
+   * const type = ErrorClassifier.classify(new Error('Network timeout'));
+   * // Returns: ErrorType.NETWORK
+   * ```
+   */
   static classify(error: Error | string): ErrorType {
     const message = typeof error === "string" ? error : error.message;
     const lowerMessage = message.toLowerCase();
@@ -238,7 +255,13 @@ export class ErrorClassifier {
   }
 }
 
-// 错误处理器类
+/**
+ * Centralized error handler for the application
+ *
+ * Provides comprehensive error handling with automatic classification,
+ * retry mechanisms, user notifications, and error reporting capabilities.
+ * Implements singleton pattern for consistent error handling across the app.
+ */
 export class ErrorHandler {
   private static instance: ErrorHandler;
   private errorConfigs: Map<ErrorType, ErrorConfig> = new Map();
@@ -258,6 +281,11 @@ export class ErrorHandler {
     });
   }
 
+  /**
+   * Get the singleton instance of ErrorHandler
+   *
+   * @returns The singleton ErrorHandler instance
+   */
   static getInstance(): ErrorHandler {
     if (!ErrorHandler.instance) {
       ErrorHandler.instance = new ErrorHandler();
@@ -265,7 +293,14 @@ export class ErrorHandler {
     return ErrorHandler.instance;
   }
 
-  // 设置通知回调
+  /**
+   * Set notification callbacks for different error handling strategies
+   *
+   * @param callbacks - Object containing callback functions for toast, modal, and redirect
+   * @param callbacks.toast - Function to show toast notifications
+   * @param callbacks.modal - Function to show modal dialogs
+   * @param callbacks.redirect - Function to perform redirects
+   */
   setNotificationCallbacks(callbacks: {
     toast?: (message: string, type: "error" | "warning" | "info") => void;
     modal?: (title: string, message: string, details?: string) => void;
@@ -276,13 +311,37 @@ export class ErrorHandler {
     this.redirectCallback = callbacks.redirect;
   }
 
-  // 更新错误配置
+  /**
+   * Update error configuration for a specific error type
+   *
+   * @param type - The error type to update configuration for
+   * @param config - Partial configuration to merge with existing config
+   */
   updateErrorConfig(type: ErrorType, config: Partial<ErrorConfig>) {
     const existingConfig = this.errorConfigs.get(type) || DEFAULT_ERROR_CONFIGS[type];
     this.errorConfigs.set(type, { ...existingConfig, ...config });
   }
 
-  // 主要错误处理方法
+  /**
+   * Main error handling method
+   *
+   * Processes errors through classification, configuration lookup, and strategy execution.
+   * Provides comprehensive error handling with logging, user notification, and recovery.
+   *
+   * @param error - Error object or message to handle
+   * @param context - Additional context information for debugging
+   * @param customConfig - Custom configuration to override defaults
+   * @returns Promise resolving to the handling result
+   *
+   * @example
+   * ```typescript
+   * const result = await errorHandler.handle(
+   *   new Error('API failed'),
+   *   { userId: '123', operation: 'fetchData' },
+   *   { strategy: ErrorStrategy.RETRY }
+   * );
+   * ```
+   */
   async handle(
     error: Error | string,
     context?: Record<string, unknown>,

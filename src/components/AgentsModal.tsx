@@ -42,11 +42,32 @@ import { GitHubAgentBrowser } from "@/components/GitHubAgentBrowser";
 import { useI18n } from "@/lib/i18n";
 
 import { handleError } from "@/lib/errorHandler";
+/**
+ * Props interface for the AgentsModal component
+ */
 interface AgentsModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
+/**
+ * AgentsModal component for managing Claude Code agents
+ *
+ * A comprehensive modal interface for agent management including viewing,
+ * creating, importing, exporting, and executing agents. Features tabbed
+ * navigation between local agents and GitHub browser with full CRUD operations.
+ *
+ * @param open - Whether the modal is currently open
+ * @param onOpenChange - Callback when modal open state changes
+ *
+ * @example
+ * ```tsx
+ * <AgentsModal
+ *   open={showAgentsModal}
+ *   onOpenChange={setShowAgentsModal}
+ * />
+ * ```
+ */
 export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) => {
   const { t } = useI18n();
   const [activeTab, setActiveTab] = useState("agents");

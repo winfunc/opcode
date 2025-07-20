@@ -10,6 +10,13 @@ import {
   throttle,
 } from "../performance";
 
+/**
+ * Test suite for performance utilities
+ *
+ * Tests all performance optimization utilities including memoization,
+ * caching, batch processing, virtual scrolling, lazy loading, monitoring,
+ * and throttling functionality.
+ */
 describe("Performance Utilities", () => {
   beforeEach(() => {
     vi.clearAllMocks();

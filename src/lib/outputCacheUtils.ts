@@ -55,6 +55,19 @@ export interface OutputCacheContextType {
   stopBackgroundPolling: () => void;
 }
 
+/**
+ * Create a standardized error for output cache context usage outside provider
+ *
+ * @param hookName - Name of the hook that was called outside the provider
+ * @returns Error object with descriptive message
+ *
+ * @example
+ * ```typescript
+ * if (!context) {
+ *   throw createOutputCacheError('useOutputCache');
+ * }
+ * ```
+ */
 export const createOutputCacheError = (hookName: string): Error => {
   return new Error(`${hookName} must be used within an OutputCacheProvider`);
 };

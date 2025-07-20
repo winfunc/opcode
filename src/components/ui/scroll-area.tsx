@@ -1,6 +1,9 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
+/**
+ * Props interface for the ScrollArea component
+ */
 interface ScrollAreaProps extends React.HTMLAttributes<HTMLDivElement> {
   /**
    * Optional className for styling
@@ -15,10 +18,28 @@ interface ScrollAreaProps extends React.HTMLAttributes<HTMLDivElement> {
 /**
  * ScrollArea component for scrollable content with custom scrollbar styling
  *
+ * Provides a scrollable container with custom-styled scrollbars that match
+ * the application theme. Automatically handles overflow and provides smooth
+ * scrolling experience across different browsers.
+ *
+ * @param className - Additional CSS classes for styling
+ * @param children - Content to be made scrollable
+ *
  * @example
- * <ScrollArea className="h-[200px]">
- *   <div>Scrollable content here</div>
+ * ```tsx
+ * <ScrollArea className="h-[200px] w-full">
+ *   <div className="p-4">
+ *     <p>Long content that needs scrolling...</p>
+ *     <p>More content...</p>
+ *   </div>
  * </ScrollArea>
+ *
+ * <ScrollArea className="max-h-96">
+ *   <ul>
+ *     {items.map(item => <li key={item.id}>{item.name}</li>)}
+ *   </ul>
+ * </ScrollArea>
+ * ```
  */
 export const ScrollArea = React.forwardRef<HTMLDivElement, ScrollAreaProps>(
   ({ className, children, ...props }, ref) => {

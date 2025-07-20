@@ -3,8 +3,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+/**
+ * Available toast notification types
+ */
 export type ToastType = "success" | "error" | "info" | "warning";
 
+/**
+ * Props interface for the Toast component
+ */
 interface ToastProps {
   /**
    * The message to display
@@ -95,11 +101,29 @@ export const Toast: React.FC<ToastProps> = ({
   );
 };
 
-// Toast container for positioning
+/**
+ * Props interface for the ToastContainer component
+ */
 interface ToastContainerProps {
   children: React.ReactNode;
 }
 
+/**
+ * Container component for positioning toast notifications
+ *
+ * Provides a fixed position container at the bottom of the screen
+ * for displaying toast notifications with proper z-index and animations.
+ *
+ * @param children - Toast components to display
+ *
+ * @example
+ * ```tsx
+ * <ToastContainer>
+ *   <Toast message="Success!" type="success" />
+ *   <Toast message="Error occurred" type="error" />
+ * </ToastContainer>
+ * ```
+ */
 export const ToastContainer: React.FC<ToastContainerProps> = ({ children }) => {
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center p-4 pointer-events-none">

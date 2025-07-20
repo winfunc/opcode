@@ -2,7 +2,19 @@ import { describe, it, expect } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useLoadingState } from "../useLoadingState";
 
+/**
+ * Test suite for useLoadingState hook
+ *
+ * Tests loading state management including async function execution,
+ * error handling, state transitions, and reset functionality.
+ */
 describe("useLoadingState Hook", () => {
+  /**
+   * Mock async function for testing
+   *
+   * @param value - Input value to process
+   * @returns Processed string with prefix
+   */
   const mockAsyncFunction = async (value: string) => {
     return `processed: ${value}`;
   };

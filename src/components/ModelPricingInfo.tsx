@@ -17,7 +17,28 @@ interface ModelPricingInfoProps {
 }
 
 /**
- * 显示模型定价信息的组件
+ * ModelPricingInfo component - Displays model pricing information
+ *
+ * Shows detailed pricing information for Claude models including input/output
+ * token costs, cache pricing, cost efficiency ratings, and recommended use cases.
+ * Supports both compact and detailed display modes.
+ *
+ * @param model - Model identifier to show pricing for
+ * @param showDetails - Whether to show detailed pricing breakdown (default: false)
+ * @param className - Additional CSS classes for styling
+ *
+ * @example
+ * ```tsx
+ * // Compact pricing display
+ * <ModelPricingInfo model="claude-3-5-sonnet" />
+ *
+ * // Detailed pricing breakdown
+ * <ModelPricingInfo
+ *   model="claude-3-5-sonnet"
+ *   showDetails={true}
+ *   className="max-w-md"
+ * />
+ * ```
  */
 export const ModelPricingInfo: React.FC<ModelPricingInfoProps> = ({
   model,

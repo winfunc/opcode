@@ -23,11 +23,32 @@ import { MarkdownEditor } from "@/components/MarkdownEditor";
 import { handleError } from "@/lib/errorHandler";
 // Import non-lazy components for projects view
 
+/**
+ * Props interface for the TabPanel component
+ */
 interface TabPanelProps {
   tab: Tab;
   isActive: boolean;
 }
 
+/**
+ * TabPanel component for rendering individual tab content
+ *
+ * Renders the content for a specific tab based on its type. Handles different
+ * tab types including projects, chat sessions, agent runs, and various
+ * application views with proper state management and error handling.
+ *
+ * @param tab - The tab configuration object
+ * @param isActive - Whether this tab is currently active
+ *
+ * @example
+ * ```tsx
+ * <TabPanel
+ *   tab={projectTab}
+ *   isActive={activeTabId === projectTab.id}
+ * />
+ * ```
+ */
 const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
   const { t } = useI18n();
   const { updateTab, createChatTab } = useTabState();
@@ -301,6 +322,18 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
   );
 };
 
+/**
+ * TabContent component for managing and displaying tab content
+ *
+ * The main content area that renders active tabs and manages tab switching.
+ * Provides a tabbed interface for the application with support for multiple
+ * concurrent views and smooth transitions between tabs.
+ *
+ * @example
+ * ```tsx
+ * <TabContent />
+ * ```
+ */
 export const TabContent: React.FC = () => {
   const {
     tabs,

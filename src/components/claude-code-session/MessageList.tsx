@@ -6,6 +6,9 @@ import { Terminal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ClaudeStreamMessage } from "../AgentExecution";
 
+/**
+ * Props interface for the MessageList component
+ */
 interface MessageListProps {
   messages: ClaudeStreamMessage[];
   projectPath: string;
@@ -14,6 +17,29 @@ interface MessageListProps {
   className?: string;
 }
 
+/**
+ * MessageList component for displaying Claude Code streaming messages
+ *
+ * A high-performance message list with virtual scrolling, auto-scroll behavior,
+ * and smooth animations. Features intelligent scroll management that maintains
+ * position when user scrolls up but auto-scrolls for new messages when at bottom.
+ *
+ * @param messages - Array of Claude stream messages to display
+ * @param projectPath - Current project path for context
+ * @param isStreaming - Whether Claude is currently streaming responses
+ * @param onLinkDetected - Callback when a URL is detected in message content
+ * @param className - Optional CSS classes for styling
+ *
+ * @example
+ * ```tsx
+ * <MessageList
+ *   messages={streamMessages}
+ *   projectPath="/path/to/project"
+ *   isStreaming={isClaudeStreaming}
+ *   onLinkDetected={(url) => setDetectedUrl(url)}
+ * />
+ * ```
+ */
 export const MessageList: React.FC<MessageListProps> = React.memo(
   ({ messages, projectPath, isStreaming, onLinkDetected, className }) => {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -36,7 +62,12 @@ export const MessageList: React.FC<MessageListProps> = React.memo(
       }
     }, [messages]);
 
-    // Handle scroll events to detect user scrolling
+    /**
+     * Handle scroll events to detect user scrolling
+     *
+     * Determines if user has manually scrolled away from bottom
+     * and adjusts auto-scroll behavior accordingly.
+     */
     const handleScroll = () => {
       if (!scrollContainerRef.current) return;
 

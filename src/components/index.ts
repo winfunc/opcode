@@ -1,3 +1,15 @@
+/**
+ * Components index - Central export point for all application components
+ *
+ * Provides a single import location for all components used throughout
+ * the application, including UI components, business logic components,
+ * and specialized widgets.
+ *
+ * @example
+ * ```tsx
+ * import { Button, Dialog, AgentExecutionDemo } from '@/components';
+ * ```
+ */
 export * from "./AgentExecutionDemo";
 export * from "./AgentRunOutputViewer";
 export * from "./StreamMessage";

@@ -72,6 +72,11 @@ export const MCPServerList: React.FC<MCPServerListProps> = ({
   /**
    * Toggles expanded state for a server
    */
+  /**
+   * Toggle expanded state for a server
+   *
+   * @param serverName - Name of the server to toggle
+   */
   const toggleExpanded = (serverName: string) => {
     setExpandedServers((prev) => {
       const next = new Set(prev);
@@ -131,6 +136,12 @@ export const MCPServerList: React.FC<MCPServerListProps> = ({
   /**
    * Gets icon for transport type
    */
+  /**
+   * Get icon for transport type
+   *
+   * @param transport - Transport type (stdio, sse, etc.)
+   * @returns Lucide icon component
+   */
   const getTransportIcon = (transport: string) => {
     switch (transport) {
       case "stdio":
@@ -144,6 +155,12 @@ export const MCPServerList: React.FC<MCPServerListProps> = ({
 
   /**
    * Gets icon for scope
+   */
+  /**
+   * Get icon for server scope
+   *
+   * @param scope - Server scope (global, user, local)
+   * @returns Lucide icon component
    */
   const getScopeIcon = (scope: string) => {
     switch (scope) {

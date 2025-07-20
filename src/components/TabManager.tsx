@@ -120,11 +120,36 @@ const TabItem: React.FC<TabItemProps> = ({ tab, isActive, onClose, onClick }) =>
   );
 };
 
+/**
+ * Props for the TabManager component
+ */
 interface TabManagerProps {
   className?: string;
 }
 
-export const TabManager: React.FC<TabManagerProps> = ({ className }) => {
+export /**
+ * TabManager component for managing multiple application tabs
+ *
+ * Provides a complete tab interface with drag-and-drop reordering,
+ * tab creation, closing, and content rendering. Supports different
+ * tab types including chat, agent, projects, and settings.
+ *
+ * @param children - Tab content to render
+ * @param className - Optional CSS class name
+ * @param onTabChange - Callback when active tab changes
+ * @param maxTabs - Maximum number of tabs allowed
+ *
+ * @example
+ * ```tsx
+ * <TabManager
+ *   onTabChange={(tabId) => console.log('Active tab:', tabId)}
+ *   maxTabs={10}
+ * >
+ *   <TabContent />
+ * </TabManager>
+ * ```
+ */
+const TabManager: React.FC<TabManagerProps> = ({ className }) => {
   const { tabs, activeTabId, createChatTab, createProjectsTab, closeTab, switchToTab, canAddTab } =
     useTabState();
 

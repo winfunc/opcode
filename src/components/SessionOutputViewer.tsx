@@ -23,6 +23,26 @@ interface SessionOutputViewerProps {
 // Import the ClaudeStreamMessage interface from AgentExecution for consistency
 import type { ClaudeStreamMessage } from "./AgentExecution";
 
+/**
+ * SessionOutputViewer component for displaying agent session output
+ *
+ * Provides a comprehensive view of agent execution output with real-time updates,
+ * fullscreen mode, copy functionality, and auto-scrolling. Supports both live
+ * and historical session viewing.
+ *
+ * @param session - The agent run session to display
+ * @param onClose - Callback function when closing the viewer
+ * @param className - Optional CSS class name for styling
+ *
+ * @example
+ * ```tsx
+ * <SessionOutputViewer
+ *   session={agentRun}
+ *   onClose={() => setShowViewer(false)}
+ *   className="custom-viewer"
+ * />
+ * ```
+ */
 export function SessionOutputViewer({ session, onClose, className }: SessionOutputViewerProps) {
   const [messages, setMessages] = useState<ClaudeStreamMessage[]>([]);
   const [rawJsonlOutput, setRawJsonlOutput] = useState<string[]>([]);
@@ -41,6 +61,11 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
   const { getCachedOutput, setCachedOutput } = useOutputCache();
 
   // Auto-scroll logic similar to AgentExecution
+  /**
+   * Check if the scroll container is at the bottom
+   *
+   * @returns True if the container is scrolled to the bottom
+   */
   const isAtBottom = useCallback(() => {
     const container = isFullscreen ? fullscreenScrollRef.current : scrollAreaRef.current;
     if (container) {
@@ -51,6 +76,9 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
     return true;
   }, [isFullscreen]);
 
+  /**
+   * Scroll the container to the bottom
+   */
   const scrollToBottom = useCallback(() => {
     if (!hasUserScrolled) {
       const endRef = isFullscreen ? fullscreenMessagesEndRef.current : outputEndRef.current;

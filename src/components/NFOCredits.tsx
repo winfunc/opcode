@@ -17,10 +17,17 @@ interface NFOCreditsProps {
 
 /**
  * NFO Credits component - Displays a keygen/crack style credits window
- * with auto-scrolling text, retro fonts, and background music
+ *
+ * A nostalgic NFO-style credits screen with auto-scrolling text, retro fonts,
+ * background music, and classic keygen aesthetics. Features include volume control,
+ * animated text effects, and authentic retro styling reminiscent of 90s software.
+ *
+ * @param onClose - Callback when the NFO window is closed
  *
  * @example
+ * ```tsx
  * <NFOCredits onClose={() => setShowNFO(false)} />
+ * ```
  */
 export const NFOCredits: React.FC<NFOCreditsProps> = ({ onClose }) => {
   const { t } = useI18n();

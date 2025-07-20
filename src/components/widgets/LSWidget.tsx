@@ -86,6 +86,12 @@ export const LSResultWidget: React.FC<LSResultWidgetProps> = ({ content }) => {
   const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set());
 
   // Parse the directory tree structure
+  /**
+   * Parse raw directory listing content into structured tree data
+   *
+   * @param rawContent - Raw text content from directory listing command
+   * @returns Array of directory entry objects with path, name, level, and type
+   */
   const parseDirectoryTree = (rawContent: string) => {
     const lines = rawContent.split("\n");
     const entries: Array<{
@@ -135,6 +141,11 @@ export const LSResultWidget: React.FC<LSResultWidgetProps> = ({ content }) => {
 
   const entries = parseDirectoryTree(content);
 
+  /**
+   * Toggle the expanded state of a directory
+   *
+   * @param path - Path of the directory to toggle
+   */
   const toggleDirectory = (path: string) => {
     setExpandedDirs((prev) => {
       const next = new Set(prev);
@@ -148,6 +159,13 @@ export const LSResultWidget: React.FC<LSResultWidgetProps> = ({ content }) => {
   };
 
   // Group entries by parent for collapsible display
+  /**
+   * Get child entries for a given parent directory
+   *
+   * @param parentPath - Path of the parent directory
+   * @param parentLevel - Nesting level of the parent directory
+   * @returns Array of child directory entries
+   */
   const getChildren = (parentPath: string, parentLevel: number) => {
     return entries.filter((e) => {
       if (e.level !== parentLevel + 1) return false;
@@ -166,12 +184,24 @@ export const LSResultWidget: React.FC<LSResultWidgetProps> = ({ content }) => {
     });
   };
 
+  /**
+   * Render a single directory entry with appropriate icon and styling
+   *
+   * @param entry - Directory entry object to render
+   * @param isRoot - Whether this is a root-level entry
+   * @returns JSX element for the directory entry
+   */
   const renderEntry = (entry: (typeof entries)[0], isRoot = false) => {
     const hasChildren =
       entry.type === "directory" &&
       entries.some((e) => e.path.startsWith(`${entry.path}/`) && e.level === entry.level + 1);
     const isExpanded = expandedDirs.has(entry.path) || isRoot;
 
+    /**
+     * Get appropriate icon for file or directory entry
+     *
+     * @returns Lucide icon component based on entry type and file extension
+     */
     const getIcon = () => {
       if (entry.type === "directory") {
         return isExpanded ? (

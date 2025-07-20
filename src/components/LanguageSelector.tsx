@@ -22,8 +22,23 @@ interface LanguageSelectorProps {
 }
 
 /**
- * 语言选择器组件
- * 允许用户切换应用程序的显示语言
+ * LanguageSelector component for switching application language
+ *
+ * A dropdown component that allows users to switch between supported
+ * languages. Features compact mode for icon-only display and full mode
+ * with language name. Automatically persists language preference.
+ *
+ * @param compact - Whether to show in compact mode (icon only)
+ * @param className - Optional CSS classes for styling
+ *
+ * @example
+ * ```tsx
+ * // Full mode with language name
+ * <LanguageSelector />
+ *
+ * // Compact mode (icon only)
+ * <LanguageSelector compact={true} />
+ * ```
  */
 export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
   compact = false,
@@ -31,6 +46,11 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
 }) => {
   const { language, setLanguage, t } = useI18n();
 
+  /**
+   * Handle language change selection
+   *
+   * @param newLanguage - The selected language code
+   */
   const handleLanguageChange = (newLanguage: Language) => {
     setLanguage(newLanguage);
   };

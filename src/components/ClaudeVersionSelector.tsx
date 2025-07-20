@@ -15,6 +15,9 @@ import { cn } from "@/lib/utils";
 import { CheckCircle, Package, HardDrive, Settings } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { handleError } from "@/lib/errorHandler";
+/**
+ * Props interface for the ClaudeVersionSelector component
+ */
 interface ClaudeVersionSelectorProps {
   /**
    * Currently selected installation path
@@ -52,6 +55,31 @@ interface ClaudeVersionSelectorProps {
  *   onSelect={(installation) => setSelectedInstallation(installation)}
  * />
  */
+/**
+ * ClaudeVersionSelector component for selecting Claude Code installations
+ *
+ * A comprehensive interface for detecting, selecting, and managing Claude Code
+ * binary installations. Features automatic detection, installation validation,
+ * version information display, and configuration management with real-time
+ * status updates and error handling.
+ *
+ * @param selectedPath - Currently selected installation path
+ * @param onSelect - Callback when an installation is selected
+ * @param className - Optional className for styling
+ *
+ * @example
+ * ```tsx
+ * <ClaudeVersionSelector
+ *   selectedPath={currentInstallation?.path}
+ *   onSelect={(installation) => {
+ *     console.log('Selected installation:', installation.version);
+ *     setCurrentInstallation(installation);
+ *     saveToSettings(installation);
+ *   }}
+ *   className="max-w-2xl"
+ * />
+ * ```
+ */
 export const ClaudeVersionSelector: React.FC<ClaudeVersionSelectorProps> = ({
   selectedPath,
   onSelect,
@@ -66,6 +94,9 @@ export const ClaudeVersionSelector: React.FC<ClaudeVersionSelectorProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [selectedInstallation, setSelectedInstallation] = useState<ClaudeInstallation | null>(null);
 
+  /**
+   * Load available Claude installations from the system
+   */
   const loadInstallations = useCallback(async () => {
     try {
       setLoading(true);
@@ -92,6 +123,11 @@ export const ClaudeVersionSelector: React.FC<ClaudeVersionSelectorProps> = ({
     }
   }, [onSelect, selectedPath]);
 
+  /**
+   * Handle installation selection change
+   *
+   * @param installationPath - Path of the selected installation
+   */
   const handleInstallationChange = useCallback(
     (installationPath: string) => {
       const installation = installations.find((i) => i.path === installationPath);
@@ -103,6 +139,12 @@ export const ClaudeVersionSelector: React.FC<ClaudeVersionSelectorProps> = ({
     [installations, onSelect]
   );
 
+  /**
+   * Get appropriate icon for installation type
+   *
+   * @param installation - Installation object to get icon for
+   * @returns Lucide icon component
+   */
   const getInstallationIcon = (installation: ClaudeInstallation) => {
     switch (installation.installation_type) {
       case "Bundled":
@@ -130,6 +172,12 @@ export const ClaudeVersionSelector: React.FC<ClaudeVersionSelectorProps> = ({
     }
   }, [selectedPath, installations]);
 
+  /**
+   * Get color class for installation type badge
+   *
+   * @param installation - Installation object to get color for
+   * @returns CSS color class name
+   */
   const getInstallationTypeColor = (installation: ClaudeInstallation) => {
     switch (installation.installation_type) {
       case "Bundled":

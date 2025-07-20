@@ -30,7 +30,31 @@ interface IconPickerProps {
 
 /**
  * Icon picker component with search and categories
- * Similar to Notion's icon picker interface
+ *
+ * A comprehensive icon selection interface similar to Notion's icon picker.
+ * Features include categorized icons, search functionality, hover previews,
+ * and smooth animations. Supports all Lucide icons organized by category.
+ *
+ * @param value - Currently selected icon name
+ * @param onSelect - Callback when an icon is selected
+ * @param isOpen - Whether the picker dialog is open
+ * @param onClose - Callback to close the picker
+ *
+ * @example
+ * ```tsx
+ * const [selectedIcon, setSelectedIcon] = useState('user');
+ * const [showPicker, setShowPicker] = useState(false);
+ *
+ * <IconPicker
+ *   value={selectedIcon}
+ *   onSelect={(iconName) => {
+ *     setSelectedIcon(iconName);
+ *     console.log('Selected icon:', iconName);
+ *   }}
+ *   isOpen={showPicker}
+ *   onClose={() => setShowPicker(false)}
+ * />
+ * ```
  */
 export const IconPicker: React.FC<IconPickerProps> = ({ value, onSelect, isOpen, onClose }) => {
   const [searchQuery, setSearchQuery] = useState("");

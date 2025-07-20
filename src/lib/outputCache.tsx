@@ -10,10 +10,34 @@ import {
 } from "./outputCacheUtils";
 import { OutputCacheContext } from "./outputCacheHook";
 
+/**
+ * Props for the OutputCacheProvider component
+ */
 interface OutputCacheProviderProps {
   children: React.ReactNode;
 }
 
+/**
+ * Provider component for output caching functionality
+ *
+ * Manages caching of session outputs with automatic polling for running sessions.
+ * Provides context for components to access cached output data and manage cache state.
+ * Includes background polling to keep running session data up-to-date.
+ *
+ * @param children - Child components that will have access to the output cache context
+ *
+ * @example
+ * ```tsx
+ * function App() {
+ *   return (
+ *     <OutputCacheProvider>
+ *       <SessionViewer />
+ *       <AgentRunner />
+ *     </OutputCacheProvider>
+ *   );
+ * }
+ * ```
+ */
 export function OutputCacheProvider({ children }: OutputCacheProviderProps) {
   const [cache, setCache] = useState<Map<number, CachedSessionOutput>>(new Map());
   const [isPolling, setIsPolling] = useState(false);

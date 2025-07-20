@@ -194,7 +194,21 @@ export const APP_ERROR_CONFIGS: Record<string, ErrorConfig> = {
   },
 };
 
-// 环境特定配置
+/**
+ * Get environment-specific error configuration
+ *
+ * Returns different error handling configurations based on the current
+ * environment (development vs production) to optimize debugging and security.
+ *
+ * @returns Environment-specific error configuration overrides
+ *
+ * @example
+ * ```typescript
+ * const envConfig = getEnvironmentErrorConfig();
+ * // Development: shows detailed errors, no reporting
+ * // Production: hides details, enables reporting
+ * ```
+ */
 export const getEnvironmentErrorConfig = (): Partial<Record<ErrorType, Partial<ErrorConfig>>> => {
   const isDevelopment = import.meta.env.DEV;
 
@@ -250,7 +264,22 @@ export const DEFAULT_USER_PREFERENCES: UserErrorPreferences = {
   maxRetryAttempts: 3,
 };
 
-// 获取用户偏好设置
+/**
+ * Get user error handling preferences from local storage
+ *
+ * Retrieves saved user preferences for error handling behavior,
+ * falling back to defaults if no preferences are saved or if loading fails.
+ *
+ * @returns User error preferences with fallback to defaults
+ *
+ * @example
+ * ```typescript
+ * const preferences = getUserErrorPreferences();
+ * if (preferences.showDetailedErrors) {
+ *   // Show detailed error information
+ * }
+ * ```
+ */
 export const getUserErrorPreferences = (): UserErrorPreferences => {
   try {
     const saved = localStorage.getItem("claudia_error_preferences");
@@ -263,7 +292,22 @@ export const getUserErrorPreferences = (): UserErrorPreferences => {
   return DEFAULT_USER_PREFERENCES;
 };
 
-// 保存用户偏好设置
+/**
+ * Save user error handling preferences to local storage
+ *
+ * Persists user preferences for error handling behavior to local storage.
+ * Merges with existing preferences to preserve unmodified settings.
+ *
+ * @param preferences - Partial preferences object to save
+ *
+ * @example
+ * ```typescript
+ * saveUserErrorPreferences({
+ *   showDetailedErrors: false,
+ *   enableErrorReporting: true
+ * });
+ * ```
+ */
 export const saveUserErrorPreferences = (preferences: Partial<UserErrorPreferences>) => {
   try {
     const current = getUserErrorPreferences();
@@ -274,7 +318,23 @@ export const saveUserErrorPreferences = (preferences: Partial<UserErrorPreferenc
   }
 };
 
-// 应用用户偏好到错误配置
+/**
+ * Apply user preferences to error configuration
+ *
+ * Merges user preferences with base error configuration to create
+ * a personalized error handling experience while respecting user choices.
+ *
+ * @param config - Base error configuration
+ * @param preferences - User preferences to apply
+ * @returns Modified error configuration with user preferences applied
+ *
+ * @example
+ * ```typescript
+ * const baseConfig = getErrorConfig(ErrorType.API);
+ * const userPrefs = getUserErrorPreferences();
+ * const finalConfig = applyUserPreferencesToConfig(baseConfig, userPrefs);
+ * ```
+ */
 export const applyUserPreferencesToConfig = (
   config: ErrorConfig,
   preferences: UserErrorPreferences

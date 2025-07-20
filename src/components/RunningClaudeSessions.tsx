@@ -7,6 +7,9 @@ import { api, type ProcessInfo, type Session } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { formatISOTimestamp } from "@/lib/date-utils";
 import { handleError } from "@/lib/errorHandler";
+/**
+ * Props interface for the RunningClaudeSessions component
+ */
 interface RunningClaudeSessionsProps {
   /**
    * Callback when a running session is clicked to resume
@@ -37,6 +40,9 @@ export const RunningClaudeSessions: React.FC<RunningClaudeSessionsProps> = ({
     return () => window.clearInterval(interval);
   }, []);
 
+  /**
+   * Load running Claude sessions from the API
+   */
   const loadRunningSessions = async () => {
     try {
       const sessions = await api.listRunningClaudeSessions();
@@ -50,6 +56,11 @@ export const RunningClaudeSessions: React.FC<RunningClaudeSessionsProps> = ({
     }
   };
 
+  /**
+   * Handle resuming a running Claude session
+   *
+   * @param processInfo - Process information for the session to resume
+   */
   const handleResumeSession = (processInfo: ProcessInfo) => {
     // Extract session ID from process type
     if ("ClaudeSession" in processInfo.process_type) {

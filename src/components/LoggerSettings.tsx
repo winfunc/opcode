@@ -12,10 +12,27 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { logger, LogLevel } from "@/lib/logger";
 
+/**
+ * Props interface for the LoggerSettings component
+ */
 interface LoggerSettingsProps {
   className?: string;
 }
 
+/**
+ * LoggerSettings component for configuring application logging
+ *
+ * A comprehensive settings interface for managing application logging behavior
+ * including log levels, console output, and testing capabilities. Features
+ * real-time configuration updates and detailed level descriptions.
+ *
+ * @param className - Optional className for styling
+ *
+ * @example
+ * ```tsx
+ * <LoggerSettings className="max-w-md" />
+ * ```
+ */
 export const LoggerSettings: React.FC<LoggerSettingsProps> = ({ className }) => {
   const [config, setConfig] = useState(logger.getConfig());
 
@@ -23,12 +40,22 @@ export const LoggerSettings: React.FC<LoggerSettingsProps> = ({ className }) => 
     setConfig(logger.getConfig());
   }, []);
 
+  /**
+   * Handle log level change
+   *
+   * @param level - New log level string
+   */
   const handleLevelChange = (level: string) => {
     const logLevel = LogLevel[level as keyof typeof LogLevel];
     logger.setLevel(logLevel);
     setConfig(logger.getConfig());
   };
 
+  /**
+   * Handle console output toggle
+   *
+   * @param enabled - Whether console output should be enabled
+   */
   const handleConsoleToggle = (enabled: boolean) => {
     logger.setConsoleEnabled(enabled);
     setConfig(logger.getConfig());

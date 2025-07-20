@@ -7,6 +7,9 @@ import { useCallback, useEffect, useRef } from "react";
 import { errorHandler, ErrorType, type ErrorConfig } from "@/lib/errorHandler";
 import { logger } from "@/lib/logger";
 
+/**
+ * Configuration options for the useErrorHandler hook
+ */
 interface UseErrorHandlerOptions {
   // 默认错误配置
   defaultConfig?: Partial<ErrorConfig>;
@@ -18,6 +21,9 @@ interface UseErrorHandlerOptions {
   onRecover?: () => void;
 }
 
+/**
+ * Return type for the useErrorHandler hook
+ */
 interface UseErrorHandlerReturn {
   // 处理错误的主要方法
   handleError: (
@@ -76,6 +82,46 @@ interface UseErrorHandlerReturn {
  *
  * // 使用错误边界包装
  * const safeFetchData = withErrorBoundary(api.getData, []);
+ * ```
+ */
+/**
+ * React hook for unified error handling in components
+ *
+ * Provides a consistent way to handle errors in React components with
+ * automatic error classification, user notification, and recovery mechanisms.
+ * Integrates with the global error handling system while providing component-specific features.
+ *
+ * @param options - Configuration options for error handling behavior
+ * @returns Object containing error handling functions and state
+ *
+ * @example
+ * ```tsx
+ * function MyComponent() {
+ *   const { handleError, handleAsync, isHandling, lastError, clearError } = useErrorHandler({
+ *     defaultConfig: { strategy: ErrorStrategy.TOAST },
+ *     onError: (error) => console.log('Component error:', error),
+ *     onRecover: () => console.log('Component recovered')
+ *   });
+ *
+ *   const fetchData = handleAsync(async () => {
+ *     const data = await api.getData();
+ *     return data;
+ *   });
+ *
+ *   return (
+ *     <div>
+ *       {lastError && (
+ *         <div className="error">
+ *           Error: {lastError.message}
+ *           <button onClick={clearError}>Clear</button>
+ *         </div>
+ *       )}
+ *       <button onClick={fetchData} disabled={isHandling}>
+ *         {isHandling ? 'Loading...' : 'Fetch Data'}
+ *       </button>
+ *     </div>
+ *   );
+ * }
  * ```
  */
 export function useErrorHandler(options: UseErrorHandlerOptions = {}): UseErrorHandlerReturn {

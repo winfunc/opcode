@@ -17,6 +17,9 @@ import { api, type ClaudeVersionStatus } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { handleError } from "@/lib/errorHandler";
+/**
+ * Props interface for the Topbar component
+ */
 interface TopbarProps {
   /**
    * Callback when CLAUDE.md is clicked

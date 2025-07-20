@@ -76,6 +76,12 @@ export function getFirstLine(text: string): string {
 }
 
 // Helper functions
+/**
+ * Format time in 12-hour format with AM/PM
+ *
+ * @param date - Date object to format
+ * @returns Formatted time string (e.g., "2:30 PM")
+ */
 function formatTime(date: Date): string {
   return date.toLocaleTimeString("en-US", {
     hour: "numeric",
@@ -84,23 +90,47 @@ function formatTime(date: Date): string {
   });
 }
 
+/**
+ * Check if a date is today
+ *
+ * @param date - Date to check
+ * @returns True if the date is today
+ */
 function isToday(date: Date): boolean {
   const today = new Date();
   return date.toDateString() === today.toDateString();
 }
 
+/**
+ * Check if a date is yesterday
+ *
+ * @param date - Date to check
+ * @returns True if the date is yesterday
+ */
 function isYesterday(date: Date): boolean {
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
   return date.toDateString() === yesterday.toDateString();
 }
 
+/**
+ * Check if a date is within the last week
+ *
+ * @param date - Date to check
+ * @returns True if the date is within the last 7 days
+ */
 function isWithinWeek(date: Date): boolean {
   const weekAgo = new Date();
   weekAgo.setDate(weekAgo.getDate() - 7);
   return date > weekAgo;
 }
 
+/**
+ * Get the day name for a date
+ *
+ * @param date - Date to get day name for
+ * @returns Day name (e.g., "Monday", "Tuesday")
+ */
 function getDayName(date: Date): string {
   return date.toLocaleDateString("en-US", { weekday: "long" });
 }

@@ -14,6 +14,12 @@ vi.mock("@tauri-apps/plugin-dialog", () => ({
   open: vi.fn(),
 }));
 
+/**
+ * Test suite for ProjectList component
+ *
+ * Tests project listing functionality including rendering, pagination,
+ * project selection, and loading states.
+ */
 describe("ProjectList Component", () => {
   const mockProjects = [
     { id: "1", path: "/path/to/project1", sessions: [], created_at: Date.now() / 1000 },

@@ -17,6 +17,12 @@ vi.mock("@/contexts/hooks", () => ({
   }),
 }));
 
+/**
+ * Test suite for TabManager component
+ *
+ * Tests tab management functionality including tab rendering,
+ * active tab indicators, tab closing, and new tab creation.
+ */
 describe("TabManager Component", () => {
   it("renders tabs correctly", () => {
     render(<TabManager />);

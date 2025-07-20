@@ -1,6 +1,9 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
+/**
+ * Context for managing tabs state
+ */
 const TabsContext = React.createContext<{
   value: string;
   onValueChange: (value: string) => void;
@@ -9,6 +12,9 @@ const TabsContext = React.createContext<{
   onValueChange: () => {},
 });
 
+/**
+ * Props interface for the Tabs component
+ */
 export interface TabsProps {
   /**
    * The controlled value of the tab to activate
@@ -47,6 +53,9 @@ const Tabs: React.FC<TabsProps> = ({ value, onValueChange, children, className }
   );
 };
 
+/**
+ * Props interface for the TabsList component
+ */
 export interface TabsListProps {
   children: React.ReactNode;
   className?: string;
@@ -54,6 +63,11 @@ export interface TabsListProps {
 
 /**
  * Container for tab triggers
+ *
+ * Provides a styled container for tab trigger buttons with proper spacing and background.
+ *
+ * @param className - Additional CSS classes
+ * @param children - TabsTrigger components
  */
 const TabsList = React.forwardRef<HTMLDivElement, TabsListProps>(({ className, ...props }, ref) => (
   <div
@@ -69,6 +83,9 @@ const TabsList = React.forwardRef<HTMLDivElement, TabsListProps>(({ className, .
 
 TabsList.displayName = "TabsList";
 
+/**
+ * Props interface for the TabsTrigger component
+ */
 export interface TabsTriggerProps {
   value: string;
   children: React.ReactNode;
@@ -78,6 +95,14 @@ export interface TabsTriggerProps {
 
 /**
  * Individual tab trigger button
+ *
+ * Clickable button that activates a specific tab when clicked.
+ * Automatically manages active state and accessibility attributes.
+ *
+ * @param value - Unique identifier for this tab
+ * @param className - Additional CSS classes
+ * @param disabled - Whether the tab is disabled
+ * @param children - Button content (usually text)
  */
 const TabsTrigger = React.forwardRef<HTMLButtonElement, TabsTriggerProps>(
   ({ className, value, disabled, ...props }, ref) => {
@@ -110,6 +135,9 @@ const TabsTrigger = React.forwardRef<HTMLButtonElement, TabsTriggerProps>(
 
 TabsTrigger.displayName = "TabsTrigger";
 
+/**
+ * Props interface for the TabsContent component
+ */
 export interface TabsContentProps {
   value: string;
   children: React.ReactNode;
@@ -118,6 +146,13 @@ export interface TabsContentProps {
 
 /**
  * Tab content panel
+ *
+ * Container for tab content that is only visible when its corresponding tab is active.
+ * Automatically handles visibility based on the current tab value.
+ *
+ * @param value - Unique identifier that matches the corresponding TabsTrigger
+ * @param className - Additional CSS classes
+ * @param children - Content to display when this tab is active
  */
 const TabsContent = React.forwardRef<HTMLDivElement, TabsContentProps>(
   ({ className, value, ...props }, ref) => {

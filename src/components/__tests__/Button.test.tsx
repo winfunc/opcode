@@ -2,6 +2,11 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { Button } from "../ui/button";
 
+/**
+ * Test suite for Button component
+ *
+ * Tests button rendering, variants, sizes, states, and accessibility features.
+ */
 describe("Button Component", () => {
   it("renders correctly", () => {
     render(<Button>Test Button</Button>);

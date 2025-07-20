@@ -5,11 +5,17 @@ import { Card, CardContent } from "@/components/ui/card";
 import { logger } from "@/lib/logger";
 import { handleError } from "@/lib/errorHandler";
 
+/**
+ * Props interface for the ErrorBoundary component
+ */
 interface ErrorBoundaryProps {
   children: ReactNode;
   fallback?: (error: Error, reset: () => void) => ReactNode;
 }
 
+/**
+ * State interface for the ErrorBoundary component
+ */
 interface ErrorBoundaryState {
   hasError: boolean;
   error: Error | null;

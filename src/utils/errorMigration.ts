@@ -12,10 +12,29 @@ import {
 } from "@/lib/errorHandler";
 
 /**
- * 迁移现有的try-catch块到统一错误处理
+ * Migration helpers for converting existing error handling to unified system
+ *
+ * Provides utility functions to help migrate existing error handling code
+ * to use the unified error handling system. Each helper function maps
+ * old error handling patterns to new unified handlers.
+ *
+ * @example
+ * ```typescript
+ * // Old code:
+ * console.error('API failed', error);
+ *
+ * // New code:
+ * migrationHelpers.replaceConsoleError(error, 'API failed');
+ * ```
  */
 export const migrationHelpers = {
-  // 替换简单的console.error调用
+  /**
+   * Replace console.error calls with unified error handling
+   *
+   * @param error - Error to handle
+   * @param context - Additional context information
+   * @returns Promise from unified error handler
+   */
   replaceConsoleError: (error: unknown, context?: string) => {
     return handleError(error instanceof Error ? error : String(error), {
       source: "console_migration",
@@ -23,7 +42,14 @@ export const migrationHelpers = {
     });
   },
 
-  // 替换API错误处理
+  /**
+   * Replace API error handling with unified system
+   *
+   * @param error - API error to handle
+   * @param operation - Name of the API operation that failed
+   * @param params - Parameters passed to the API call
+   * @returns Promise from unified error handler
+   */
   replaceApiErrorHandling: (error: unknown, operation: string, params?: unknown) => {
     return handleApiError(error instanceof Error ? error : String(error), {
       operation,
@@ -86,7 +112,27 @@ export const migrationPatterns = [
 ];
 
 /**
- * 自动迁移文件内容
+ * Automatically migrate file content to use unified error handling
+ *
+ * Applies all migration patterns to transform existing error handling
+ * code to use the unified error handling system.
+ *
+ * @param content - Original file content to migrate
+ * @returns Migrated file content with updated error handling
+ *
+ * @example
+ * ```typescript
+ * const originalCode = `
+ *   try {
+ *     await api.call();
+ *   } catch (error) {
+ *     console.error('API failed', error);
+ *   }
+ * `;
+ *
+ * const migratedCode = autoMigrateFileContent(originalCode);
+ * // Returns code with unified error handling
+ * ```
  */
 export const autoMigrateFileContent = (content: string): string => {
   let migratedContent = content;
@@ -99,7 +145,23 @@ export const autoMigrateFileContent = (content: string): string => {
 };
 
 /**
- * 生成迁移报告
+ * Generate migration report showing changes made
+ *
+ * Analyzes the differences between original and migrated content
+ * to provide a detailed report of all changes made during migration.
+ *
+ * @param originalContent - Original file content before migration
+ * @param migratedContent - File content after migration
+ * @returns Detailed migration report with statistics and changes
+ *
+ * @example
+ * ```typescript
+ * const report = generateMigrationReport(originalCode, migratedCode);
+ * console.log(`Made ${report.totalChanges} changes`);
+ * report.changes.forEach(change => {
+ *   console.log(`${change.description}: ${change.matches} matches`);
+ * });
+ * ```
  */
 export const generateMigrationReport = (originalContent: string, migratedContent: string) => {
   const changes: Array<{

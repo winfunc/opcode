@@ -17,6 +17,9 @@ const URL_REGEX =
 const LOCALHOST_REGEX =
   /(?:https?:\/\/)?(?:localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])(?::[0-9]+)?(?:\/[^\s]*)?/gi;
 
+/**
+ * Interface representing a detected URL link in text
+ */
 export interface DetectedLink {
   url: string;
   fullUrl: string; // URL with protocol
@@ -27,8 +30,18 @@ export interface DetectedLink {
 
 /**
  * Detects URLs in the given text
+ *
+ * Scans text for various URL formats including HTTP/HTTPS URLs, localhost addresses,
+ * IP addresses with ports, and URLs with paths and query parameters.
+ *
  * @param text - The text to search for URLs
- * @returns Array of detected links
+ * @returns Array of detected links with metadata
+ *
+ * @example
+ * ```typescript
+ * const links = detectLinks('Visit https://example.com or localhost:3000');
+ * // Returns array with detected URL objects
+ * ```
  */
 export function detectLinks(text: string): DetectedLink[] {
   const links: DetectedLink[] = [];
@@ -75,8 +88,18 @@ export function detectLinks(text: string): DetectedLink[] {
 
 /**
  * Checks if a text contains any URLs
+ *
+ * Quick check to determine if text contains URLs without extracting them.
+ * More efficient than detectLinks when you only need to know if URLs exist.
+ *
  * @param text - The text to check
  * @returns True if URLs are found
+ *
+ * @example
+ * ```typescript
+ * hasLinks('Check out https://example.com') // true
+ * hasLinks('No links here') // false
+ * ```
  */
 export function hasLinks(text: string): boolean {
   URL_REGEX.lastIndex = 0;
@@ -85,8 +108,18 @@ export function hasLinks(text: string): boolean {
 
 /**
  * Extracts the first URL from text
+ *
+ * Finds and returns the first URL detected in the text.
+ * Useful when you only need the primary link from content.
+ *
  * @param text - The text to search
- * @returns The first detected link or null
+ * @returns The first detected link or null if none found
+ *
+ * @example
+ * ```typescript
+ * const firstLink = getFirstLink('Visit https://example.com and https://test.com');
+ * // Returns DetectedLink for https://example.com
+ * ```
  */
 export function getFirstLink(text: string): DetectedLink | null {
   const links = detectLinks(text);
@@ -94,10 +127,23 @@ export function getFirstLink(text: string): DetectedLink | null {
 }
 
 /**
- * Makes URLs in text clickable by wrapping them in a callback
+ * Makes URLs in text clickable by wrapping them in React elements
+ *
+ * Converts plain text containing URLs into React elements with clickable links.
+ * Preserves the original text while making URLs interactive.
+ *
  * @param text - The text containing URLs
- * @param onLinkClick - Callback when a link is clicked
- * @returns React elements with clickable links
+ * @param onLinkClick - Callback function when a link is clicked
+ * @returns Array of React elements with clickable links
+ *
+ * @example
+ * ```tsx
+ * const elements = makeLinksClickable(
+ *   'Visit https://example.com for more info',
+ *   (url) => window.open(url, '_blank')
+ * );
+ * return <div>{elements}</div>;
+ * ```
  */
 export function makeLinksClickable(
   text: string,

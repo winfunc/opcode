@@ -34,6 +34,9 @@ import {
   type TodoItem,
 } from "./ToolWidgets";
 import { handleError } from "@/lib/errorHandler";
+/**
+ * Props interface for the StreamMessage component
+ */
 interface StreamMessageProps {
   message: ClaudeStreamMessage;
   className?: string;
@@ -43,6 +46,24 @@ interface StreamMessageProps {
 
 /**
  * Component to render a single Claude Code stream message
+ *
+ * Renders individual messages from Claude Code streaming sessions with
+ * support for various message types including text, tool calls, and results.
+ * Automatically detects and renders appropriate widgets for different tool types.
+ *
+ * @param message - The stream message to render
+ * @param className - Additional CSS classes for styling
+ * @param streamMessages - All messages in the stream for context
+ * @param onLinkDetected - Callback when a URL is detected in content
+ *
+ * @example
+ * ```tsx
+ * <StreamMessage
+ *   message={streamMessage}
+ *   streamMessages={allMessages}
+ *   onLinkDetected={(url) => window.open(url, '_blank')}
+ * />
+ * ```
  */
 const StreamMessageComponent: React.FC<StreamMessageProps> = ({
   message,

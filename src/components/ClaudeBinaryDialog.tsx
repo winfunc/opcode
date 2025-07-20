@@ -13,6 +13,9 @@ import { ExternalLink, FileQuestion, Terminal, AlertCircle, Loader2 } from "luci
 import { ClaudeVersionSelector } from "./ClaudeVersionSelector";
 import { useI18n } from "@/lib/i18n";
 import { handleError } from "@/lib/errorHandler";
+/**
+ * Props interface for the ClaudeBinaryDialog component
+ */
 interface ClaudeBinaryDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -20,6 +23,34 @@ interface ClaudeBinaryDialogProps {
   onError: (message: string) => void;
 }
 
+/**
+ * ClaudeBinaryDialog component for selecting Claude Code installation
+ *
+ * A dialog interface for detecting, selecting, and configuring Claude Code
+ * binary installations. Features automatic detection across common installation
+ * paths, validation, and installation guidance with external links.
+ *
+ * @param open - Whether the dialog is currently open
+ * @param onOpenChange - Callback when dialog open state changes
+ * @param onSuccess - Callback when installation is successfully configured
+ * @param onError - Callback when an error occurs
+ *
+ * @example
+ * ```tsx
+ * <ClaudeBinaryDialog
+ *   open={showDialog}
+ *   onOpenChange={setShowDialog}
+ *   onSuccess={() => {
+ *     console.log('Claude binary configured successfully');
+ *     refreshSettings();
+ *   }}
+ *   onError={(message) => {
+ *     console.error('Configuration failed:', message);
+ *     showToast(message, 'error');
+ *   }}
+ * />
+ * ```
+ */
 export function ClaudeBinaryDialog({
   open,
   onOpenChange,
@@ -51,6 +82,9 @@ export function ClaudeBinaryDialog({
     }
   };
 
+  /**
+   * Handle saving the selected Claude binary configuration
+   */
   const handleSave = async () => {
     if (!selectedInstallation) {
       onError(t.settings.pleaseSelectInstallation);

@@ -4,6 +4,9 @@ import { StopCircle, Clock, Hash } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+/**
+ * Props interface for the ExecutionControlBar component
+ */
 interface ExecutionControlBarProps {
   isExecuting: boolean;
   onStop: () => void;
@@ -14,7 +17,26 @@ interface ExecutionControlBarProps {
 
 /**
  * Floating control bar shown during agent execution
- * Provides stop functionality and real-time statistics
+ *
+ * A floating control bar that appears at the bottom of the screen during
+ * agent execution, providing real-time statistics and the ability to stop
+ * execution. Features smooth animations and responsive design.
+ *
+ * @param isExecuting - Whether agent execution is currently active
+ * @param onStop - Callback function to stop execution
+ * @param totalTokens - Total tokens consumed during execution (default: 0)
+ * @param elapsedTime - Elapsed time in seconds (default: 0)
+ * @param className - Additional CSS classes for styling
+ *
+ * @example
+ * ```tsx
+ * <ExecutionControlBar
+ *   isExecuting={isRunning}
+ *   onStop={() => stopExecution()}
+ *   totalTokens={1250}
+ *   elapsedTime={45}
+ * />
+ * ```
  */
 export const ExecutionControlBar: React.FC<ExecutionControlBarProps> = ({
   isExecuting,

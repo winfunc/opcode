@@ -4,6 +4,16 @@ import type { ClaudeStreamMessage } from "./AgentExecution";
 
 /**
  * Demo component showing all the different message types and tools
+ *
+ * A comprehensive demonstration component that showcases various Claude Code
+ * message types, tool interactions, and streaming behaviors. Features sample
+ * data for testing UI components and demonstrating different execution scenarios.
+ *
+ * @example
+ * ```tsx
+ * // Add to development routes for testing
+ * <Route path="/agent-demo" component={AgentExecutionDemo} />
+ * ```
  */
 export const AgentExecutionDemo: React.FC = () => {
   // Sample messages based on the provided JSONL session

@@ -29,6 +29,9 @@ const globalSearchCache = new Map<string, FileEntry[]>();
 // 3. Clear caches when the working directory changes
 // 4. Add a maximum cache size limit
 
+/**
+ * Props interface for the FilePicker component
+ */
 interface FilePickerProps {
   /**
    * The base directory path to browse
@@ -53,6 +56,12 @@ interface FilePickerProps {
 }
 
 // File icon mapping based on extension
+/**
+ * Get appropriate icon for file type
+ *
+ * @param entry - File entry to get icon for
+ * @returns React icon component
+ */
 const getFileIcon = (entry: FileEntry) => {
   if (entry.is_directory) return Folder;
 
@@ -78,6 +87,12 @@ const getFileIcon = (entry: FileEntry) => {
 };
 
 // Format file size to human readable
+/**
+ * Format file size in human-readable format
+ *
+ * @param bytes - File size in bytes
+ * @returns Formatted size string (e.g., "1.2 MB", "345 KB")
+ */
 const formatFileSize = (bytes: number): string => {
   if (bytes === 0) return "";
   const k = 1024;
@@ -95,6 +110,38 @@ const formatFileSize = (bytes: number): string => {
  *   onSelect={(entry) => logger.debug('Selected:', entry)}
  *   onClose={() => setShowPicker(false)}
  * />
+ */
+/**
+ * FilePicker component for browsing and selecting files/directories
+ *
+ * A comprehensive file browser with search functionality, directory navigation,
+ * caching for performance, and support for both files and directories.
+ * Features include breadcrumb navigation, file type icons, and size display.
+ *
+ * @param basePath - The base directory path to browse
+ * @param onSelect - Callback when a file/directory is selected
+ * @param onClose - Callback to close the picker
+ * @param initialQuery - Initial search query
+ * @param allowDirectories - Whether to allow directory selection (default: true)
+ * @param fileExtensions - Array of allowed file extensions (optional)
+ *
+ * @example
+ * ```tsx
+ * <FilePicker
+ *   basePath="/home/user/projects"
+ *   onSelect={(entry) => {
+ *     console.log('Selected:', entry.path);
+ *     if (entry.isDirectory) {
+ *       // Handle directory selection
+ *     } else {
+ *       // Handle file selection
+ *     }
+ *   }}
+ *   onClose={() => setShowPicker(false)}
+ *   allowDirectories={false}
+ *   fileExtensions={['.ts', '.tsx', '.js', '.jsx']}
+ * />
+ * ```
  */
 export const FilePicker: React.FC<FilePickerProps> = ({
   basePath,

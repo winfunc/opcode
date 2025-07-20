@@ -53,13 +53,25 @@ interface CCAgentsProps {
   className?: string;
 }
 
+/**
+ * Type for valid agent icon names
+ */
 export type AgentIconName = keyof typeof AGENT_ICONS;
 
 /**
  * CCAgents component for managing Claude Code agents
  *
+ * A comprehensive agent management interface that provides functionality for
+ * creating, editing, deleting, and executing Claude Code agents. Features include
+ * agent browsing from GitHub, import/export capabilities, and execution history.
+ *
+ * @param onBack - Callback to return to the main view
+ * @param className - Additional CSS classes for styling
+ *
  * @example
+ * ```tsx
  * <CCAgents onBack={() => setView('home')} />
+ * ```
  */
 export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
   const { t } = useI18n();
@@ -252,6 +264,12 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
   const startIndex = (currentPage - 1) * AGENTS_PER_PAGE;
   const paginatedAgents = agents.slice(startIndex, startIndex + AGENTS_PER_PAGE);
 
+  /**
+   * Render agent icon component
+   *
+   * @param iconName - Name of the icon to render
+   * @returns React icon component
+   */
   const renderIcon = (iconName: string) => {
     const Icon = AGENT_ICONS[iconName as AgentIconName] || AGENT_ICONS.bot;
     return <Icon className="h-12 w-12" />;

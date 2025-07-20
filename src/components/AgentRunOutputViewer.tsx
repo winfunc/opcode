@@ -45,13 +45,24 @@ interface AgentRunOutputViewerProps {
 }
 
 /**
- * AgentRunOutputViewer - Modal component for viewing agent execution output
+ * AgentRunOutputViewer - Component for viewing agent execution output in real-time
+ *
+ * A comprehensive viewer for agent execution output with real-time streaming,
+ * fullscreen mode, auto-scrolling, copy functionality, and detailed metrics.
+ * Features include live updates, execution control, and comprehensive error handling.
+ *
+ * @param agentRunId - The unique identifier of the agent run to display
+ * @param tabId - Tab identifier for this agent run viewer
+ * @param className - Optional CSS classes for styling
  *
  * @example
+ * ```tsx
  * <AgentRunOutputViewer
- *   run={agentRun}
- *   onClose={() => setSelectedRun(null)}
+ *   agentRunId="run-123"
+ *   tabId="tab-456"
+ *   className="h-full"
  * />
+ * ```
  */
 export function AgentRunOutputViewer({ agentRunId, tabId, className }: AgentRunOutputViewerProps) {
   const { updateTabTitle, updateTabStatus } = useTabState();
@@ -76,7 +87,11 @@ export function AgentRunOutputViewer({ agentRunId, tabId, className }: AgentRunO
   const unlistenRefs = useRef<UnlistenFn[]>([]);
   const { getCachedOutput, setCachedOutput } = useOutputCache();
 
-  // Auto-scroll logic
+  /**
+   * Check if the scroll container is at the bottom
+   *
+   * @returns True if the container is scrolled to the bottom
+   */
   const isAtBottom = useCallback(() => {
     const container = isFullscreen ? fullscreenScrollRef.current : scrollAreaRef.current;
     if (container) {
@@ -87,6 +102,9 @@ export function AgentRunOutputViewer({ agentRunId, tabId, className }: AgentRunO
     return true;
   }, [isFullscreen]);
 
+  /**
+   * Scroll the container to the bottom
+   */
   const scrollToBottom = useCallback(() => {
     if (!hasUserScrolled) {
       const endRef = isFullscreen ? fullscreenMessagesEndRef.current : outputEndRef.current;
@@ -574,6 +592,12 @@ export function AgentRunOutputViewer({ agentRunId, tabId, className }: AgentRunO
     });
   }, [messages]);
 
+  /**
+   * Render agent icon component
+   *
+   * @param iconName - Name of the icon to render
+   * @returns React icon component
+   */
   const renderIcon = (iconName: string) => {
     const Icon = AGENT_ICONS[iconName as keyof typeof AGENT_ICONS] || Bot;
     return <Icon className="h-5 w-5" />;

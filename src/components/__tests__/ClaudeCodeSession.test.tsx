@@ -30,6 +30,12 @@ vi.mock("framer-motion", () => ({
   AnimatePresence: ({ children }: { children: React.ReactNode }) => children,
 }));
 
+/**
+ * Test suite for ClaudeCodeSession component
+ *
+ * Tests Claude Code session functionality including message handling,
+ * streaming behavior, user interactions, and error states.
+ */
 describe("ClaudeCodeSession", () => {
   const mockOnBack = vi.fn();
   const mockOnProjectSettings = vi.fn();

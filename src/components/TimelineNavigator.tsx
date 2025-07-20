@@ -37,6 +37,9 @@ import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { useI18n } from "@/lib/i18n";
 import { handleError } from "@/lib/errorHandler";
+/**
+ * Props interface for the TimelineNavigator component
+ */
 interface TimelineNavigatorProps {
   sessionId: string;
   projectId: string;
@@ -54,6 +57,37 @@ interface TimelineNavigatorProps {
 
 /**
  * Visual timeline navigator for checkpoint management
+ *
+ * A comprehensive timeline interface for managing session checkpoints with
+ * visual branching, diff viewing, and checkpoint operations. Features include
+ * checkpoint creation, restoration, forking, and deletion with a git-like
+ * visual representation.
+ *
+ * @param sessionId - Current session identifier
+ * @param projectId - Project identifier for checkpoint operations
+ * @param projectPath - File system path to the project
+ * @param currentMessageIndex - Current position in message timeline
+ * @param onCheckpointSelect - Callback when a checkpoint is selected
+ * @param onFork - Callback when forking from a checkpoint
+ * @param refreshVersion - Version number to trigger timeline refresh
+ * @param className - Additional CSS classes for styling
+ *
+ * @example
+ * ```tsx
+ * <TimelineNavigator
+ *   sessionId="session-123"
+ *   projectId="project-456"
+ *   projectPath="/path/to/project"
+ *   currentMessageIndex={5}
+ *   onCheckpointSelect={(checkpoint) => {
+ *     console.log('Selected checkpoint:', checkpoint.name);
+ *   }}
+ *   onFork={(checkpointId) => {
+ *     console.log('Forking from:', checkpointId);
+ *   }}
+ *   refreshVersion={refreshCounter}
+ * />
+ * ```
  */
 export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
   sessionId,
@@ -96,6 +130,9 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
     []
   );
 
+  /**
+   * Load timeline data including checkpoints and messages
+   */
   const loadTimeline = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -124,6 +161,9 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
     loadTimeline();
   }, [sessionId, projectId, projectPath, refreshVersion, loadTimeline]);
 
+  /**
+   * Handle creating a new checkpoint
+   */
   const handleCreateCheckpoint = async () => {
     try {
       setIsLoading(true);
@@ -148,6 +188,11 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
     }
   };
 
+  /**
+   * Handle restoring from a checkpoint
+   *
+   * @param checkpoint - Checkpoint object to restore
+   */
   const handleRestoreCheckpoint = async (checkpoint: Checkpoint) => {
     if (
       !confirm(

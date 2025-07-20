@@ -92,7 +92,15 @@ export interface TodoItem {
   dependencies?: string[];
 }
 
-// Helper function to safely extract content from tool results
+/**
+ * Helper function to safely extract content from tool results
+ *
+ * Safely extracts text content from various tool result formats while
+ * handling different data structures and error states.
+ *
+ * @param result - Raw tool result from Claude Code execution
+ * @returns Object containing extracted content and error status
+ */
 const extractResultContent = (result: unknown): { content: string; isError: boolean } => {
   if (!result) {
     return { content: "", isError: false };
@@ -124,6 +132,22 @@ const extractResultContent = (result: unknown): { content: string; isError: bool
 
 /**
  * Widget for TodoWrite tool - displays a beautiful TODO list
+ *
+ * Renders a visually appealing todo list with status indicators, priority badges,
+ * and completion states. Supports different todo statuses and priority levels.
+ *
+ * @param todos - Array of todo items to display
+ * @param result - Optional tool result (currently unused)
+ *
+ * @example
+ * ```tsx
+ * <TodoWidget
+ *   todos={[
+ *     { id: '1', content: 'Complete feature', status: 'in_progress', priority: 'high' },
+ *     { id: '2', content: 'Write tests', status: 'pending', priority: 'medium' }
+ *   ]}
+ * />
+ * ```
  */
 export const TodoWidget: React.FC<{ todos: TodoItem[]; result?: unknown }> = ({
   todos,
@@ -184,6 +208,20 @@ export const TodoWidget: React.FC<{ todos: TodoItem[]; result?: unknown }> = ({
 
 /**
  * Widget for LS (List Directory) tool
+ *
+ * Displays directory listing information with loading states and result content.
+ * Shows the path being listed and renders results using LSResultWidget when available.
+ *
+ * @param path - Directory path being listed
+ * @param result - Tool execution result containing directory contents
+ *
+ * @example
+ * ```tsx
+ * <LSWidget
+ *   path="/home/user/project"
+ *   result={directoryListingResult}
+ * />
+ * ```
  */
 export const LSWidget: React.FC<{ path: string; result?: unknown }> = ({ path, result }) => {
   // If we have a result, show it using the LSResultWidget
@@ -236,11 +274,32 @@ export const LSWidget: React.FC<{ path: string; result?: unknown }> = ({ path, r
 
 /**
  * Widget for LS tool result - displays directory tree structure
+ *
+ * Parses and renders directory listing output as an interactive tree structure
+ * with expandable directories, file type icons, and proper indentation.
+ *
+ * @param content - Raw directory listing content from ls command
+ *
+ * @example
+ * ```tsx
+ * <LSResultWidget content={`
+ *   - src/
+ *     - components/
+ *       - Button.tsx
+ *     - utils/
+ *   - package.json
+ * `} />
+ * ```
  */
 export const LSResultWidget: React.FC<{ content: string }> = ({ content }) => {
   const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set());
 
-  // Parse the directory tree structure
+  /**
+   * Parse raw directory listing content into structured tree data
+   *
+   * @param rawContent - Raw text content from directory listing command
+   * @returns Array of directory entry objects with path, name, level, and type
+   */
   const parseDirectoryTree = (rawContent: string) => {
     const lines = rawContent.split("\n");
     const entries: Array<{
@@ -290,6 +349,11 @@ export const LSResultWidget: React.FC<{ content: string }> = ({ content }) => {
 
   const entries = parseDirectoryTree(content);
 
+  /**
+   * Toggle the expanded state of a directory
+   *
+   * @param path - Path of the directory to toggle
+   */
   const toggleDirectory = (path: string) => {
     setExpandedDirs((prev) => {
       const next = new Set(prev);
@@ -303,6 +367,13 @@ export const LSResultWidget: React.FC<{ content: string }> = ({ content }) => {
   };
 
   // Group entries by parent for collapsible display
+  /**
+   * Get child entries for a given parent directory
+   *
+   * @param parentPath - Path of the parent directory
+   * @param parentLevel - Nesting level of the parent directory
+   * @returns Array of child directory entries
+   */
   const getChildren = (parentPath: string, parentLevel: number) => {
     return entries.filter((e) => {
       if (e.level !== parentLevel + 1) return false;
@@ -321,12 +392,24 @@ export const LSResultWidget: React.FC<{ content: string }> = ({ content }) => {
     });
   };
 
+  /**
+   * Render a single directory entry with appropriate icon and styling
+   *
+   * @param entry - Directory entry object to render
+   * @param isRoot - Whether this is a root-level entry
+   * @returns JSX element for the directory entry
+   */
   const renderEntry = (entry: (typeof entries)[0], isRoot = false) => {
     const hasChildren =
       entry.type === "directory" &&
       entries.some((e) => e.path.startsWith(`${entry.path}/`) && e.level === entry.level + 1);
     const isExpanded = expandedDirs.has(entry.path) || isRoot;
 
+    /**
+     * Get appropriate icon for file or directory entry
+     *
+     * @returns Lucide icon component based on entry type and file extension
+     */
     const getIcon = () => {
       if (entry.type === "directory") {
         return isExpanded ? (

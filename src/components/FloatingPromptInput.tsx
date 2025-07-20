@@ -16,6 +16,9 @@ import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { logger } from "@/lib/logger";
 
 import { handleError } from "@/lib/errorHandler";
+/**
+ * Props interface for the FloatingPromptInput component
+ */
 interface FloatingPromptInputProps {
   /**
    * Callback when prompt is sent
@@ -140,6 +143,41 @@ type Model = {
  *   onSend={(prompt, model) => logger.debug('Send:', prompt, model)}
  *   isLoading={false}
  * />
+ */
+/**
+ * FloatingPromptInput component for advanced prompt input with AI features
+ *
+ * A sophisticated floating input interface for Claude Code with features including
+ * model selection, thinking modes, image attachments, slash commands, file picker,
+ * and resizable text area. Supports various AI thinking levels and provides
+ * a comprehensive prompt composition experience.
+ *
+ * @param onSend - Callback when prompt is submitted
+ * @param isLoading - Whether the input is in loading state
+ * @param disabled - Whether the input is disabled
+ * @param defaultModel - Default Claude model to select
+ * @param projectPath - Project path for file operations
+ * @param className - Additional CSS classes for styling
+ * @param onCancel - Callback when operation is cancelled
+ *
+ * @example
+ * ```tsx
+ * const promptRef = useRef<FloatingPromptInputRef>(null);
+ *
+ * <FloatingPromptInput
+ *   ref={promptRef}
+ *   onSend={(prompt, model) => {
+ *     console.log('Sending prompt:', prompt, 'with model:', model);
+ *   }}
+ *   isLoading={isProcessing}
+ *   defaultModel="claude-3-5-sonnet"
+ *   projectPath="/path/to/project"
+ *   onCancel={() => cancelOperation()}
+ * />
+ *
+ * // Add image programmatically
+ * promptRef.current?.addImage('/path/to/image.png');
+ * ```
  */
 const FloatingPromptInputInner = (
   {
@@ -516,6 +554,11 @@ const FloatingPromptInputInner = (
     setCursorPosition(newCursorPosition);
   };
 
+  /**
+   * Handle file selection from file picker
+   *
+   * @param entry - Selected file entry
+   */
   const handleFileSelect = async (entry: FileEntry) => {
     if (textareaRef.current) {
       // Find the @ position before cursor
@@ -570,6 +613,11 @@ const FloatingPromptInputInner = (
     }, 0);
   };
 
+  /**
+   * Handle selection of a slash command
+   *
+   * @param command - Selected slash command
+   */
   const handleSlashCommandSelect = async (command: SlashCommand) => {
     const textarea = isExpanded ? expandedTextareaRef.current : textareaRef.current;
     if (!textarea) return;
@@ -715,12 +763,22 @@ const FloatingPromptInputInner = (
     // Visual feedback is handled by Tauri events
   };
 
+  /**
+   * Handle drag and drop events for file uploads
+   *
+   * @param e - Drag event
+   */
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     // File processing is handled by Tauri's onDragDropEvent
   };
 
+  /**
+   * Handle removing an image from the prompt
+   *
+   * @param index - Index of the image to remove
+   */
   const handleRemoveImage = (index: number) => {
     // Remove the corresponding @mention from the prompt
     const imagePath = embeddedImages[index];

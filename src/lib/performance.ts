@@ -46,6 +46,20 @@ export function memoize<TArgs extends unknown[], TReturn>(
  * LRU (Least Recently Used) Cache implementation
  * Automatically evicts least recently used items when capacity is exceeded
  */
+/**
+ * LRU (Least Recently Used) Cache implementation
+ * Automatically evicts least recently used items when capacity is exceeded
+ *
+ * @template K - Type of cache keys
+ * @template V - Type of cache values
+ *
+ * @example
+ * ```typescript
+ * const cache = new LRUCache<string, number>(100);
+ * cache.set('key1', 42);
+ * const value = cache.get('key1'); // 42
+ * ```
+ */
 export class LRUCache<K, V> {
   private capacity: number;
   private cache: Map<K, V>;
@@ -114,6 +128,24 @@ export class LRUCache<K, V> {
 /**
  * Batch processor for handling multiple operations efficiently
  * Collects operations and processes them in batches to reduce overhead
+ */
+/**
+ * Batch processor for efficient handling of multiple operations
+ *
+ * Collects items and processes them in batches to improve performance
+ * and reduce the number of individual operations.
+ *
+ * @template T - Type of items to process
+ *
+ * @example
+ * ```typescript
+ * const processor = new BatchProcessor<string>(
+ *   (items) => console.log('Processing:', items),
+ *   { batchSize: 10, flushInterval: 1000 }
+ * );
+ * processor.add('item1');
+ * processor.add('item2');
+ * ```
  */
 export class BatchProcessor<T> {
   private batch: T[] = [];
@@ -184,6 +216,25 @@ export class BatchProcessor<T> {
  * Virtual scrolling utility for large lists
  * Calculates which items should be rendered based on scroll position
  */
+/**
+ * Calculate visible items for virtual scrolling optimization
+ *
+ * Determines which items should be rendered based on scroll position
+ * and container dimensions to improve performance with large lists.
+ *
+ * @param scrollTop - Current scroll position from top
+ * @param containerHeight - Height of the scrollable container
+ * @param itemHeight - Height of each individual item
+ * @param totalItems - Total number of items in the list
+ * @param overscan - Number of extra items to render outside visible area
+ * @returns Object containing start index, end index, and offset for rendering
+ *
+ * @example
+ * ```typescript
+ * const visible = calculateVirtualScrollItems(100, 400, 50, 1000, 5);
+ * // Returns: { startIndex: 0, endIndex: 13, offsetY: 0 }
+ * ```
+ */
 export function calculateVirtualScrollItems(
   scrollTop: number,
   containerHeight: number,
@@ -202,6 +253,23 @@ export function calculateVirtualScrollItems(
 /**
  * Image lazy loading utility
  * Provides intersection observer for lazy loading images
+ */
+/**
+ * Lazy image loader using Intersection Observer API
+ *
+ * Efficiently loads images only when they become visible in the viewport,
+ * improving initial page load performance and reducing bandwidth usage.
+ *
+ * @example
+ * ```typescript
+ * const loader = new LazyImageLoader({
+ *   rootMargin: '50px',
+ *   threshold: 0.1
+ * });
+ *
+ * const img = document.querySelector('img[data-src]');
+ * loader.observe(img);
+ * ```
  */
 export class LazyImageLoader {
   private observer: globalThis.IntersectionObserver;
@@ -264,6 +332,21 @@ export class LazyImageLoader {
 /**
  * Performance monitoring utility
  * Tracks and reports performance metrics
+ */
+/**
+ * Performance monitoring utility for tracking application metrics
+ *
+ * Provides methods to measure and track various performance metrics
+ * including timing, memory usage, and custom performance markers.
+ *
+ * @example
+ * ```typescript
+ * const monitor = new PerformanceMonitor();
+ * monitor.startTiming('api-call');
+ * // ... perform operation
+ * const duration = monitor.endTiming('api-call');
+ * console.log(`Operation took ${duration}ms`);
+ * ```
  */
 export class PerformanceMonitor {
   private metrics: Map<string, number[]> = new Map();
@@ -344,6 +427,26 @@ export const performanceMonitor = new PerformanceMonitor();
 /**
  * Throttle function execution
  * Ensures a function is called at most once per specified interval
+ */
+/**
+ * Throttle function execution to limit call frequency
+ *
+ * Ensures a function is called at most once per specified time period,
+ * useful for performance optimization of frequently triggered events.
+ *
+ * @template T - Type of the function to throttle
+ * @param func - The function to throttle
+ * @param limit - Time limit in milliseconds between function calls
+ * @returns Throttled version of the function
+ *
+ * @example
+ * ```typescript
+ * const throttledScroll = throttle(() => {
+ *   console.log('Scroll event handled');
+ * }, 100);
+ *
+ * window.addEventListener('scroll', throttledScroll);
+ * ```
  */
 export function throttle<T extends (...args: unknown[]) => unknown>(
   func: T,

@@ -10,6 +10,9 @@ import { api, type CheckpointStrategy } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
 import { handleError } from "@/lib/errorHandler";
+/**
+ * Props interface for the CheckpointSettings component
+ */
 interface CheckpointSettingsProps {
   sessionId: string;
   projectId: string;
@@ -21,12 +24,26 @@ interface CheckpointSettingsProps {
 /**
  * CheckpointSettings component for managing checkpoint configuration
  *
+ * A comprehensive settings interface for configuring checkpoint behavior including
+ * automatic checkpoint creation, storage strategies, retention policies, and
+ * performance optimization settings. Features real-time validation and storage
+ * usage monitoring.
+ *
+ * @param sessionId - Current session identifier
+ * @param projectId - Project identifier for checkpoint operations
+ * @param projectPath - File system path to the project
+ * @param onClose - Optional callback when settings are closed
+ * @param className - Optional className for styling
+ *
  * @example
+ * ```tsx
  * <CheckpointSettings
  *   sessionId={session.id}
  *   projectId={session.project_id}
  *   projectPath={projectPath}
+ *   onClose={() => setShowSettings(false)}
  * />
+ * ```
  */
 export const CheckpointSettings: React.FC<CheckpointSettingsProps> = ({
   sessionId,
@@ -52,6 +69,9 @@ export const CheckpointSettings: React.FC<CheckpointSettingsProps> = ({
     { value: "smart", label: t.sessions.smartRecommended },
   ];
 
+  /**
+   * Load checkpoint settings from storage
+   */
   const loadSettings = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -73,6 +93,9 @@ export const CheckpointSettings: React.FC<CheckpointSettingsProps> = ({
     loadSettings();
   }, [sessionId, projectId, projectPath, loadSettings]);
 
+  /**
+   * Handle saving checkpoint settings to storage
+   */
   const handleSaveSettings = async () => {
     try {
       setIsSaving(true);

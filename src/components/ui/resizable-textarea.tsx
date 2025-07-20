@@ -2,6 +2,9 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import { GripHorizontal } from "lucide-react";
 
+/**
+ * Props interface for the ResizableTextarea component
+ */
 export interface ResizableTextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   /**
    * Minimum height in pixels
@@ -21,6 +24,41 @@ export interface ResizableTextareaProps extends React.TextareaHTMLAttributes<HTM
   showResizeHandle?: boolean;
 }
 
+/**
+ * ResizableTextarea component with manual and auto-resize capabilities
+ *
+ * A textarea component that can automatically resize based on content height
+ * and also provides a manual resize handle for user control. Features smooth
+ * animations and configurable height constraints.
+ *
+ * @param minHeight - Minimum height in pixels (default: 44)
+ * @param maxHeight - Maximum height in pixels (default: 300)
+ * @param autoResize - Whether to enable auto-resize based on content (default: true)
+ * @param showResizeHandle - Whether to show the manual resize handle (default: true)
+ * @param className - Additional CSS classes
+ * @param onChange - Change event handler
+ *
+ * @example
+ * ```tsx
+ * <ResizableTextarea
+ *   placeholder="Enter your message..."
+ *   minHeight={60}
+ *   maxHeight={400}
+ *   autoResize={true}
+ *   showResizeHandle={true}
+ *   value={message}
+ *   onChange={(e) => setMessage(e.target.value)}
+ * />
+ *
+ * // Fixed height with manual resize only
+ * <ResizableTextarea
+ *   autoResize={false}
+ *   showResizeHandle={true}
+ *   minHeight={100}
+ *   maxHeight={500}
+ * />
+ * ```
+ */
 const ResizableTextarea = React.forwardRef<HTMLTextAreaElement, ResizableTextareaProps>(
   (
     {

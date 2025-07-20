@@ -32,9 +32,15 @@ const buttonVariants = cva(
   }
 );
 
+/**
+ * Props interface for the Button component
+ *
+ * Extends standard HTML button attributes with additional variant and styling options.
+ */
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
+  /** Render as child element instead of button */
   asChild?: boolean;
 }
 

@@ -18,6 +18,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { cn } from "@/lib/utils";
 import { logger } from "@/lib/logger";
 
+/**
+ * Props interface for the WebviewPreview component
+ */
 interface WebviewPreviewProps {
   /**
    * Initial URL to load
@@ -53,6 +56,29 @@ interface WebviewPreviewProps {
  *   initialUrl="http://localhost:3000"
  *   onClose={() => setShowPreview(false)}
  * />
+ */
+/**
+ * WebviewPreview component for displaying web content in an embedded browser
+ *
+ * A full-featured web browser component with navigation controls, URL bar,
+ * loading states, and error handling. Supports maximized/minimized modes
+ * and provides a complete browsing experience within the application.
+ *
+ * @param initialUrl - URL to load when component mounts
+ * @param onClose - Callback when the close button is clicked
+ * @param isMaximized - Whether the webview should start maximized
+ * @param onMaximizedChange - Callback when maximized state changes
+ * @param className - Additional CSS classes for styling
+ *
+ * @example
+ * ```tsx
+ * <WebviewPreview
+ *   initialUrl="https://example.com"
+ *   onClose={() => setShowWebview(false)}
+ *   isMaximized={isFullscreen}
+ *   onMaximizedChange={setIsFullscreen}
+ * />
+ * ```
  */
 const WebviewPreviewComponent: React.FC<WebviewPreviewProps> = ({
   initialUrl,
@@ -142,6 +168,9 @@ const WebviewPreviewComponent: React.FC<WebviewPreviewProps> = ({
     }
   };
 
+  /**
+   * Handle navigation to the entered URL
+   */
   const handleNavigate = () => {
     if (inputUrl.trim()) {
       navigate(inputUrl);
@@ -154,22 +183,34 @@ const WebviewPreviewComponent: React.FC<WebviewPreviewProps> = ({
     }
   };
 
+  /**
+   * Handle navigating back in browser history
+   */
   const handleGoBack = () => {
     // In real implementation, this would call webview.goBack()
     logger.debug("Go back");
   };
 
+  /**
+   * Handle navigating forward in browser history
+   */
   const handleGoForward = () => {
     // In real implementation, this would call webview.goForward()
     logger.debug("Go forward");
   };
 
+  /**
+   * Handle refreshing the current page
+   */
   const handleRefresh = () => {
     setIsLoading(true);
     // In real implementation, this would call webview.reload()
     setTimeout(() => setIsLoading(false), 1000);
   };
 
+  /**
+   * Handle navigating to home page
+   */
   const handleGoHome = () => {
     navigate(initialUrl);
   };

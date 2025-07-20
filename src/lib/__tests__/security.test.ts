@@ -10,6 +10,13 @@ import {
   createSecureValidator,
 } from "../security";
 
+/**
+ * Test suite for security utilities
+ *
+ * Tests all security-related functions including path validation,
+ * HTML sanitization, input validation, rate limiting, JSON parsing,
+ * and secure validation mechanisms.
+ */
 describe("Security Utilities", () => {
   beforeEach(() => {
     vi.clearAllMocks();

@@ -477,6 +477,12 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     }
   };
 
+  /**
+   * Handle sending a prompt to Claude
+   *
+   * @param prompt - The prompt text to send
+   * @param model - The Claude model to use
+   */
   const handleSendPrompt = async (prompt: string, model: ClaudeModel) => {
     logger.debug("[ClaudeCodeSession] handleSendPrompt called with:", {
       prompt,
@@ -609,6 +615,11 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         });
 
         // Helper to process any JSONL stream message string
+        /**
+         * Handle incoming stream message from Claude Code
+         *
+         * @param payload - Raw JSON payload from the stream
+         */
         async function handleStreamMessage(payload: string) {
           try {
             // Don't process if component unmounted
@@ -864,6 +875,11 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     }
   };
 
+  /**
+   * Handle forking from a checkpoint
+   *
+   * @param checkpointId - ID of the checkpoint to fork from
+   */
   const handleFork = (checkpointId: string) => {
     setForkCheckpointId(checkpointId);
     setForkSessionName(`Fork-${new Date().toISOString().slice(0, 10)}`);
@@ -903,6 +919,16 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   };
 
   // Handle URL detection from terminal output
+  /**
+   * Handle when a URL is detected in message content
+   *
+   * @param url - The detected URL
+   */
+  /**
+   * Handle when a URL is detected in message content
+   *
+   * @param url - The detected URL
+   */
   const handleLinkDetected = (url: string) => {
     if (!showPreview && !showPreviewPrompt) {
       setPreviewUrl(url);
@@ -910,17 +936,28 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     }
   };
 
+  /**
+   * Handle closing the preview pane
+   */
   const handleClosePreview = () => {
     setShowPreview(false);
     setIsPreviewMaximized(false);
     // Keep the previewUrl so it can be restored when reopening
   };
 
+  /**
+   * Handle preview URL change
+   *
+   * @param url - New URL for the preview
+   */
   const handlePreviewUrlChange = (url: string) => {
     logger.debug("[ClaudeCodeSession] Preview URL changed to:", url);
     setPreviewUrl(url);
   };
 
+  /**
+   * Handle toggling preview maximize state
+   */
   const handleTogglePreviewMaximize = () => {
     setIsPreviewMaximized(!isPreviewMaximized);
     // Reset split position when toggling maximize

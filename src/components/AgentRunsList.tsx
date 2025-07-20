@@ -51,11 +51,23 @@ export const AgentRunsList: React.FC<AgentRunsListProps> = ({ runs, onRunClick, 
     setCurrentPage(1);
   }, [runs.length]);
 
+  /**
+   * Render agent icon component
+   *
+   * @param iconName - Name of the icon to render
+   * @returns React icon component
+   */
   const renderIcon = (iconName: string) => {
     const Icon = AGENT_ICONS[iconName as keyof typeof AGENT_ICONS] || Bot;
     return <Icon className="h-4 w-4" />;
   };
 
+  /**
+   * Format duration in milliseconds to human-readable string
+   *
+   * @param ms - Duration in milliseconds
+   * @returns Formatted duration string (e.g., "2m 30s", "45s")
+   */
   const formatDuration = (ms?: number) => {
     if (!ms) return "N/A";
     const seconds = Math.floor(ms / 1000);
@@ -65,6 +77,12 @@ export const AgentRunsList: React.FC<AgentRunsListProps> = ({ runs, onRunClick, 
     return `${minutes}m ${remainingSeconds}s`;
   };
 
+  /**
+   * Format token count to human-readable string
+   *
+   * @param tokens - Number of tokens
+   * @returns Formatted token string (e.g., "1.2k", "500")
+   */
   const formatTokens = (tokens?: number) => {
     if (!tokens) return "0";
     if (tokens >= 1000) {
@@ -73,6 +91,11 @@ export const AgentRunsList: React.FC<AgentRunsListProps> = ({ runs, onRunClick, 
     return tokens.toString();
   };
 
+  /**
+   * Handle clicking on an agent run
+   *
+   * @param run - The agent run that was clicked
+   */
   const handleRunClick = (run: AgentRunWithMetrics) => {
     // If there's a callback, use it (for full-page navigation)
     if (onRunClick) {

@@ -43,6 +43,12 @@ export const ClaudeFileEditor: React.FC<ClaudeFileEditorProps> = ({ file, onBack
 
   const hasChanges = content !== originalContent;
 
+  /**
+   * Load file content from the filesystem
+   *
+   * Asynchronously loads the content of the CLAUDE.md file and handles
+   * loading states and error conditions.
+   */
   const loadFileContent = useCallback(async () => {
     try {
       setLoading(true);
@@ -63,6 +69,12 @@ export const ClaudeFileEditor: React.FC<ClaudeFileEditorProps> = ({ file, onBack
     loadFileContent();
   }, [file.absolute_path, loadFileContent]);
 
+  /**
+   * Handle saving the file content
+   *
+   * Saves the current editor content to the filesystem and provides
+   * user feedback through toast notifications.
+   */
   const handleSave = async () => {
     try {
       setSaving(true);
@@ -80,6 +92,12 @@ export const ClaudeFileEditor: React.FC<ClaudeFileEditorProps> = ({ file, onBack
     }
   };
 
+  /**
+   * Handle back navigation with unsaved changes check
+   *
+   * Prompts user for confirmation if there are unsaved changes
+   * before navigating back to the previous view.
+   */
   const handleBack = () => {
     if (hasChanges) {
       const confirmLeave = window.confirm(t.claudemd.unsavedChanges);

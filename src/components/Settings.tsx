@@ -41,7 +41,22 @@ interface EnvironmentVariable {
 
 /**
  * Comprehensive Settings UI for managing Claude Code settings
- * Provides a no-code interface for editing the settings.json file
+ *
+ * A complete settings management interface providing a no-code way to edit
+ * the settings.json file. Features include tabbed navigation, real-time
+ * validation, binary path management, permission rules, environment variables,
+ * hooks configuration, and slash commands management.
+ *
+ * @param onBack - Callback to go back to the main view
+ * @param className - Optional className for styling
+ *
+ * @example
+ * ```tsx
+ * <Settings
+ *   onBack={() => setView('main')}
+ *   className="max-w-6xl mx-auto"
+ * />
+ * ```
  */
 export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
   const { t } = useI18n();
@@ -207,12 +222,23 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
   /**
    * Updates a simple setting value
    */
+  /**
+   * Update a specific setting value
+   *
+   * @param key - Setting key to update
+   * @param value - New value for the setting
+   */
   const updateSetting = (key: string, value: unknown) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
   };
 
   /**
    * Adds a new permission rule
+   */
+  /**
+   * Add a new permission rule
+   *
+   * @param type - Type of rule to add (allow or deny)
    */
   const addPermissionRule = (type: "allow" | "deny") => {
     const newRule: PermissionRule = {
@@ -230,6 +256,13 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
   /**
    * Updates a permission rule
    */
+  /**
+   * Update an existing permission rule
+   *
+   * @param type - Type of rule (allow or deny)
+   * @param id - ID of the rule to update
+   * @param value - New value for the rule
+   */
   const updatePermissionRule = (type: "allow" | "deny", id: string, value: string) => {
     if (type === "allow") {
       setAllowRules((prev) => prev.map((rule) => (rule.id === id ? { ...rule, value } : rule)));
@@ -241,6 +274,12 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
   /**
    * Removes a permission rule
    */
+  /**
+   * Remove a permission rule
+   *
+   * @param type - Type of rule (allow or deny)
+   * @param id - ID of the rule to remove
+   */
   const removePermissionRule = (type: "allow" | "deny", id: string) => {
     if (type === "allow") {
       setAllowRules((prev) => prev.filter((rule) => rule.id !== id));
@@ -251,6 +290,9 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
 
   /**
    * Adds a new environment variable
+   */
+  /**
+   * Add a new environment variable
    */
   const addEnvVar = () => {
     const newVar: EnvironmentVariable = {
@@ -264,6 +306,13 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
   /**
    * Updates an environment variable
    */
+  /**
+   * Update an environment variable
+   *
+   * @param id - ID of the environment variable
+   * @param field - Field to update (key or value)
+   * @param value - New value for the field
+   */
   const updateEnvVar = (id: string, field: "key" | "value", value: string) => {
     setEnvVars((prev) =>
       prev.map((envVar) => (envVar.id === id ? { ...envVar, [field]: value } : envVar))
@@ -272,6 +321,11 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
 
   /**
    * Removes an environment variable
+   */
+  /**
+   * Remove an environment variable
+   *
+   * @param id - ID of the environment variable to remove
    */
   const removeEnvVar = (id: string) => {
     setEnvVars((prev) => prev.filter((envVar) => envVar.id !== id));

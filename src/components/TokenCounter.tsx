@@ -21,8 +21,25 @@ interface TokenCounterProps {
 /**
  * TokenCounter component - Displays a floating token count
  *
+ * A floating token counter that appears at the bottom-right of the screen
+ * to show the current token usage. Features smooth animations and auto-hide
+ * when token count is zero.
+ *
+ * @param tokens - Total number of tokens to display
+ * @param show - Whether to show the counter (default: true)
+ * @param className - Additional CSS classes for styling
+ *
  * @example
- * <TokenCounter tokens={1234} show={true} />
+ * ```tsx
+ * <TokenCounter tokens={1234} show={isVisible} />
+ *
+ * // With custom styling
+ * <TokenCounter
+ *   tokens={totalTokens}
+ *   show={showTokens}
+ *   className="bottom-32 right-8"
+ * />
+ * ```
  */
 export const TokenCounter: React.FC<TokenCounterProps> = ({ tokens, show = true, className }) => {
   if (!show || tokens === 0) return null;

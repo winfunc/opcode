@@ -15,7 +15,16 @@ vi.mock("@tauri-apps/plugin-dialog", () => ({
   open: vi.fn(),
 }));
 
+/**
+ * Test suite for Settings component
+ *
+ * Tests settings interface functionality including tab navigation,
+ * form rendering, back button handling, and settings management.
+ */
 describe("Settings Component", () => {
+  /**
+   * Mock function for back navigation callback
+   */
   const mockOnBack = vi.fn();
 
   beforeEach(() => {

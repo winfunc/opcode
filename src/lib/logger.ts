@@ -18,6 +18,22 @@ interface LogConfig {
   maxLogSize: number;
 }
 
+/**
+ * Unified logging manager with environment-aware configuration
+ *
+ * Provides structured logging with different levels, automatic environment
+ * detection, and production-safe logging. Removes debug logs in production
+ * builds for performance and security.
+ *
+ * @example
+ * ```typescript
+ * import { logger } from '@/lib/logger';
+ *
+ * logger.info('Application started');
+ * logger.error('Failed to load data', { userId: '123' });
+ * logger.debug('Debug info', { state: currentState });
+ * ```
+ */
 class Logger {
   private config: LogConfig;
   private isDevelopment: boolean;
@@ -183,6 +199,27 @@ class Logger {
 export const logger = new Logger();
 
 // 向后兼容的全局替换函数
+/**
+ * Replace console methods in production to prevent debug output
+ *
+ * Removes debug, log, and info console methods in production builds
+ * while preserving error and warn methods for critical issues.
+ * This improves performance and prevents sensitive information leakage.
+ *
+ * @example
+ * ```typescript
+ * // Call during app initialization
+ * replaceConsole();
+ *
+ * // In production, these will be no-ops:
+ * console.debug('Debug info'); // Silent
+ * console.log('Log message'); // Silent
+ *
+ * // These still work:
+ * console.error('Error message'); // Still logs
+ * console.warn('Warning message'); // Still logs
+ * ```
+ */
 export const replaceConsole = () => {
   if (!import.meta.env.DEV) {
     // 生产环境下替换 console 方法

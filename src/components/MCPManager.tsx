@@ -62,7 +62,7 @@ export const MCPManager: React.FC<MCPManagerProps> = ({ onBack, className }) => 
   }, [loadServers]);
 
   /**
-   * Handles server added event
+   * Handle when a new server is added
    */
   const handleServerAdded = () => {
     loadServers();
@@ -71,7 +71,9 @@ export const MCPManager: React.FC<MCPManagerProps> = ({ onBack, className }) => 
   };
 
   /**
-   * Handles server removed event
+   * Handle when a server is removed
+   *
+   * @param name - Name of the removed server
    */
   const handleServerRemoved = (name: string) => {
     setServers((prev) => prev.filter((s) => s.name !== name));
@@ -79,7 +81,10 @@ export const MCPManager: React.FC<MCPManagerProps> = ({ onBack, className }) => 
   };
 
   /**
-   * Handles import completed event
+   * Handle when import operation is completed
+   *
+   * @param imported - Number of successfully imported servers
+   * @param failed - Number of failed imports
    */
   const handleImportCompleted = (imported: number, failed: number) => {
     loadServers();

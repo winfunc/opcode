@@ -4,6 +4,12 @@ import { api } from "@/lib/api";
 import { handleApiError } from "@/lib/errorHandler";
 import type { AgentRunWithMetrics } from "@/lib/api";
 
+/**
+ * Agent store state interface
+ *
+ * Manages the global state for agent runs, execution status, and real-time updates.
+ * Provides actions for fetching, executing, and monitoring agent operations.
+ */
 interface AgentState {
   // Agent runs data
   agentRuns: AgentRunWithMetrics[];
@@ -38,6 +44,23 @@ interface AgentState {
   pollingInterval: ReturnType<typeof setInterval> | null;
 }
 
+/**
+ * Zustand store for managing agent execution state
+ *
+ * Provides centralized state management for agent runs with real-time updates,
+ * execution monitoring, and comprehensive error handling.
+ *
+ * @example
+ * ```typescript
+ * const { agentRuns, fetchAgentRuns, executeAgent } = useAgentStore();
+ *
+ * // Fetch all agent runs
+ * await fetchAgentRuns();
+ *
+ * // Execute an agent
+ * const runId = await executeAgent(1, '/path/to/project', 'Task description');
+ * ```
+ */
 export const useAgentStore = create<AgentState>()(
   subscribeWithSelector((set, get) => ({
     // Initial state

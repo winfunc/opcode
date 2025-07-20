@@ -21,6 +21,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
+/**
+ * Props interface for the SessionHeader component
+ */
 interface SessionHeaderProps {
   projectPath: string;
   claudeSessionId: string | null;

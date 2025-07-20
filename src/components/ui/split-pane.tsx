@@ -1,6 +1,9 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 
+/**
+ * Props interface for the SplitPane component
+ */
 interface SplitPaneProps {
   /**
    * Content for the left pane
@@ -38,13 +41,37 @@ interface SplitPaneProps {
 /**
  * Resizable split pane component for side-by-side layouts
  *
+ * A flexible split pane component that allows users to resize two panels
+ * horizontally. Features smooth dragging, minimum width constraints, and
+ * customizable split positions with callback support.
+ *
+ * @param left - Content for the left pane
+ * @param right - Content for the right pane
+ * @param initialSplit - Initial split position as percentage (0-100, default: 50)
+ * @param minLeftWidth - Minimum width for left pane in pixels (default: 200)
+ * @param minRightWidth - Minimum width for right pane in pixels (default: 200)
+ * @param onSplitChange - Callback when split position changes
+ * @param className - Additional CSS classes for styling
+ *
  * @example
+ * ```tsx
  * <SplitPane
- *   left={<div>Left content</div>}
- *   right={<div>Right content</div>}
- *   initialSplit={60}
- *   onSplitChange={(pos) => logger.debug('Split at', pos)}
+ *   left={<FileTree />}
+ *   right={<CodeEditor />}
+ *   initialSplit={30}
+ *   minLeftWidth={250}
+ *   minRightWidth={400}
+ *   onSplitChange={(position) => {
+ *     localStorage.setItem('splitPosition', position.toString());
+ *   }}
  * />
+ *
+ * // Simple split with default settings
+ * <SplitPane
+ *   left={<Sidebar />}
+ *   right={<MainContent />}
+ * />
+ * ```
  */
 export const SplitPane: React.FC<SplitPaneProps> = ({
   left,

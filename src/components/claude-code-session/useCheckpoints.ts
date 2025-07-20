@@ -2,7 +2,9 @@ import { useState, useCallback } from "react";
 import { api } from "@/lib/api";
 import { logger } from "@/lib/logger";
 
-// Local checkpoint format for UI display
+/**
+ * Local checkpoint format for UI display
+ */
 interface Checkpoint {
   id: string;
   sessionId: string;
@@ -11,6 +13,9 @@ interface Checkpoint {
   messageCount: number;
 }
 
+/**
+ * Configuration options for the useCheckpoints hook
+ */
 interface UseCheckpointsOptions {
   sessionId: string | null;
   projectId: string;
@@ -18,6 +23,50 @@ interface UseCheckpointsOptions {
   onToast?: (message: string, type: "success" | "error") => void;
 }
 
+/**
+ * React hook for managing Claude Code session checkpoints
+ *
+ * Provides comprehensive checkpoint management functionality including
+ * creating, loading, restoring, deleting, and forking checkpoints.
+ * Integrates with the Claude Code API for persistent checkpoint storage.
+ *
+ * @param options - Configuration options for checkpoint management
+ * @returns Object containing checkpoint state and management functions
+ *
+ * @example
+ * ```tsx
+ * function CheckpointManager() {
+ *   const {
+ *     checkpoints,
+ *     isLoadingCheckpoints,
+ *     createCheckpoint,
+ *     restoreCheckpoint,
+ *     loadCheckpoints
+ *   } = useCheckpoints({
+ *     sessionId: 'session-123',
+ *     projectId: 'project-456',
+ *     projectPath: '/path/to/project',
+ *     onToast: (message, type) => showToast(message, type)
+ *   });
+ *
+ *   return (
+ *     <div>
+ *       <button onClick={() => createCheckpoint('My Checkpoint')}>
+ *         Create Checkpoint
+ *       </button>
+ *       {checkpoints.map(cp => (
+ *         <div key={cp.id}>
+ *           {cp.name}
+ *           <button onClick={() => restoreCheckpoint(cp.id)}>
+ *             Restore
+ *           </button>
+ *         </div>
+ *       ))}
+ *     </div>
+ *   );
+ * }
+ * ```
+ */
 export function useCheckpoints({
   sessionId,
   projectId,

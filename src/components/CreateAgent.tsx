@@ -13,6 +13,9 @@ import { AGENT_ICONS } from "@/constants/agentIcons";
 import { useI18n } from "@/lib/i18n";
 import { getModelPricing, formatPrice } from "@/config/pricing";
 import { handleError } from "@/lib/errorHandler";
+/**
+ * Props interface for the CreateAgent component
+ */
 interface CreateAgentProps {
   /**
    * Optional agent to edit (if provided, component is in edit mode)
@@ -37,6 +40,37 @@ interface CreateAgentProps {
  *
  * @example
  * <CreateAgent onBack={() => setView('list')} onAgentCreated={handleCreated} />
+ */
+/**
+ * CreateAgent component for creating new Claude Code agents
+ *
+ * A comprehensive form interface for creating new agents with support for
+ * name, description, icon selection, prompt configuration, and validation.
+ * Features real-time validation and preview capabilities.
+ *
+ * @param agent - Optional agent to edit (if provided, component is in edit mode)
+ * @param onBack - Callback to return to the previous view
+ * @param onAgentCreated - Callback when an agent is successfully created
+ *
+ * @example
+ * ```tsx
+ * <CreateAgent
+ *   onBack={() => setView('agents')}
+ *   onAgentCreated={(agent) => {
+ *     console.log('Created agent:', agent.name);
+ *     setView('agents');
+ *   }}
+ * />
+ *
+ * // Edit mode
+ * <CreateAgent
+ *   agent={existingAgent}
+ *   onBack={() => setView('agents')}
+ *   onAgentCreated={(agent) => {
+ *     console.log('Updated agent:', agent.name);
+ *   }}
+ * />
+ * ```
  */
 export const CreateAgent: React.FC<CreateAgentProps> = ({
   agent,

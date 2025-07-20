@@ -7,6 +7,9 @@ import { cn } from "@/lib/utils";
 import { api, type ClaudeMdFile } from "@/lib/api";
 import { formatUnixTimestamp } from "@/lib/date-utils";
 import { handleError } from "@/lib/errorHandler";
+/**
+ * Props interface for the ClaudeMemoriesDropdown component
+ */
 interface ClaudeMemoriesDropdownProps {
   /**
    * The project path to search for CLAUDE.md files

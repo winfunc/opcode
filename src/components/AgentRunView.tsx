@@ -24,6 +24,9 @@ import { ErrorBoundary } from "./ErrorBoundary";
 import { logger } from "@/lib/logger";
 
 import { handleError } from "@/lib/errorHandler";
+/**
+ * Props interface for the AgentRunView component
+ */
 interface AgentRunViewProps {
   /**
    * The run ID to view
@@ -223,6 +226,12 @@ export const AgentRunView: React.FC<AgentRunViewProps> = ({ runId, onBack, class
     }
   };
 
+  /**
+   * Render agent icon component
+   *
+   * @param iconName - Name of the icon to render
+   * @returns React icon component
+   */
   const renderIcon = (iconName: string) => {
     const Icon = AGENT_ICONS[iconName as keyof typeof AGENT_ICONS] || Bot;
     return <Icon className="h-5 w-5" />;

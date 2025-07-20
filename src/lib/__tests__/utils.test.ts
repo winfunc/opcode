@@ -1,6 +1,12 @@
 import { describe, it, expect } from "vitest";
 import { cn } from "../utils";
 
+/**
+ * Test suite for utility functions
+ *
+ * Tests general utility functions including class name merging,
+ * conditional class handling, and Tailwind CSS integration.
+ */
 describe("Utils", () => {
   describe("cn function", () => {
     it("merges class names correctly", () => {

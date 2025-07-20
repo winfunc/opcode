@@ -2,7 +2,16 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useApiCall } from "../useApiCall";
 
+/**
+ * Test suite for useApiCall hook
+ *
+ * Tests the API call hook functionality including loading states,
+ * error handling, data management, and state transitions.
+ */
 describe("useApiCall Hook", () => {
+  /**
+   * Mock API function for testing
+   */
   const mockApiFunction = vi.fn();
 
   beforeEach(() => {

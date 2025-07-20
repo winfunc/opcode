@@ -6,6 +6,12 @@ vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(),
 }));
 
+/**
+ * Test suite for API module
+ *
+ * Tests the main API interface including method availability,
+ * function types, and module structure validation.
+ */
 describe("API Module", () => {
   it("should have all required API methods", () => {
     expect(api.listProjects).toBeDefined();

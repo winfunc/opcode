@@ -46,6 +46,26 @@ type View =
 
 /**
  * AppContent component - Contains the main app logic, wrapped by providers
+ *
+ * The main application component that manages global state, routing, and
+ * provides the core user interface. Handles project management, session
+ * navigation, settings, and various application views with comprehensive
+ * error handling and loading states.
+ *
+ * @example
+ * ```tsx
+ * function App() {
+ *   return (
+ *     <ToastProvider>
+ *       <OutputCacheProvider>
+ *         <TabProvider>
+ *           <AppContent />
+ *         </TabProvider>
+ *       </OutputCacheProvider>
+ *     </ToastProvider>
+ *   );
+ * }
+ * ```
  */
 function AppContent() {
   const { t } = useI18n();
@@ -98,6 +118,11 @@ function AppContent() {
   useEffect(() => {
     if (view !== "tabs") return;
 
+    /**
+     * Handle global keyboard shortcuts
+     *
+     * @param e - Keyboard event
+     */
     const handleKeyDown = (e: globalThis.KeyboardEvent) => {
       const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
       const modKey = isMac ? e.metaKey : e.ctrlKey;
@@ -140,6 +165,9 @@ function AppContent() {
 
   // Listen for Claude not found events
   useEffect(() => {
+    /**
+     * Handle Claude binary not found scenario
+     */
     const handleClaudeNotFound = () => {
       setShowClaudeBinaryDialog(true);
     };
@@ -182,6 +210,9 @@ function AppContent() {
   /**
    * Returns to project list view
    */
+  /**
+   * Handle back navigation to main view
+   */
   const handleBack = () => {
     setSelectedProject(null);
     setSessions([]);
@@ -189,6 +220,11 @@ function AppContent() {
 
   /**
    * Handles editing a CLAUDE.md file from a project
+   */
+  /**
+   * Handle editing a CLAUDE.md file
+   *
+   * @param file - Claude markdown file to edit
    */
   const handleEditClaudeFile = (file: ClaudeMdFile) => {
     setEditingClaudeFile(file);
@@ -198,6 +234,9 @@ function AppContent() {
   /**
    * Returns from CLAUDE.md file editor to projects view
    */
+  /**
+   * Handle back navigation from Claude file editor
+   */
   const handleBackFromClaudeFileEditor = () => {
     setEditingClaudeFile(null);
     handleViewChange("projects");
@@ -205,6 +244,11 @@ function AppContent() {
 
   /**
    * Handles view changes with navigation protection
+   */
+  /**
+   * Handle view change navigation
+   *
+   * @param newView - New view to navigate to
    */
   const handleViewChange = (newView: View) => {
     // No need for navigation protection with tabs since sessions stay open
@@ -219,6 +263,11 @@ function AppContent() {
     handleViewChange("project-settings");
   };
 
+  /**
+   * Render the main application content based on current view state
+   *
+   * @returns JSX element for the current view
+   */
   const renderContent = () => {
     switch (view) {
       case "welcome":
@@ -491,6 +540,15 @@ function AppContent() {
 
 /**
  * Main App component - Wraps the app with providers
+ */
+/**
+ * Main App component with all necessary providers
+ *
+ * The root application component that wraps the main app content with
+ * all necessary context providers including toast notifications,
+ * output caching, and tab management.
+ *
+ * @returns The complete application with all providers
  */
 function App() {
   return (

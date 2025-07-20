@@ -128,6 +128,12 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({ agent, onBack, c
   const [runId, setRunId] = useState<number | null>(null);
 
   // Filter out messages that shouldn't be displayed
+  /**
+   * Memoized computation of displayable messages with tool widgets
+   *
+   * Processes raw messages to determine which ones should show tool widgets
+   * and creates a filtered list for display.
+   */
   const displayableMessages = React.useMemo(() => {
     return messages.filter((message, index) => {
       // Skip meta messages that don't have meaningful content
@@ -241,6 +247,11 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({ agent, onBack, c
   }, []);
 
   // Check if user is at the very bottom of the scrollable container
+  /**
+   * Check if the scroll container is at the bottom
+   *
+   * @returns True if the container is scrolled to the bottom
+   */
   const isAtBottom = useCallback(() => {
     const container = isFullscreenModalOpen
       ? fullscreenScrollRef.current
@@ -314,6 +325,9 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({ agent, onBack, c
     setTotalTokens(tokens);
   }, [messages]);
 
+  /**
+   * Handle selecting a project path using file dialog
+   */
   const handleSelectPath = async () => {
     try {
       const selected = await open({
@@ -333,10 +347,16 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({ agent, onBack, c
     }
   };
 
+  /**
+   * Handle opening the hooks configuration dialog
+   */
   const handleOpenHooksDialog = async () => {
     setIsHooksDialogOpen(true);
   };
 
+  /**
+   * Handle executing the agent with current task
+   */
   const handleExecute = async () => {
     try {
       setIsRunning(true);
@@ -436,6 +456,9 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({ agent, onBack, c
     }
   };
 
+  /**
+   * Handle stopping the current agent execution
+   */
   const handleStop = async () => {
     try {
       if (!runId) {
@@ -502,6 +525,9 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({ agent, onBack, c
     }
   };
 
+  /**
+   * Handle back navigation with confirmation if execution is running
+   */
   const handleBackWithConfirmation = () => {
     if (isRunning) {
       // Show confirmation dialog before navigating away during execution
@@ -593,6 +619,11 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({ agent, onBack, c
     setCopyPopoverOpen(false);
   };
 
+  /**
+   * Render agent icon based on agent configuration
+   *
+   * @returns React icon component
+   */
   const renderIcon = () => {
     const Icon =
       agent.icon in AGENT_ICONS ? AGENT_ICONS[agent.icon as keyof typeof AGENT_ICONS] : Terminal;

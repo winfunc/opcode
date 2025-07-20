@@ -46,13 +46,33 @@ const ITEMS_PER_PAGE = 5;
 /**
  * SessionList component - Displays paginated sessions for a specific project
  *
+ * A comprehensive session listing interface with pagination, animations, and
+ * session management features. Shows session metadata including timestamps,
+ * first message previews, and todo indicators with smooth hover effects.
+ *
+ * @param sessions - Array of sessions to display
+ * @param projectPath - The current project path being viewed
+ * @param onBack - Callback to go back to project list
+ * @param onSessionClick - Callback when a session is clicked
+ * @param onEditClaudeFile - Callback when a CLAUDE.md file should be edited
+ * @param className - Optional className for styling
+ *
  * @example
+ * ```tsx
  * <SessionList
- *   sessions={sessions}
+ *   sessions={projectSessions}
  *   projectPath="/Users/example/project"
  *   onBack={() => setSelectedProject(null)}
- *   onSessionClick={(session) => logger.debug('Selected session:', session)}
+ *   onSessionClick={(session) => {
+ *     console.log('Opening session:', session.id);
+ *     openSession(session);
+ *   }}
+ *   onEditClaudeFile={(file) => {
+ *     setEditingFile(file);
+ *     setShowEditor(true);
+ *   }}
  * />
+ * ```
  */
 export const SessionList: React.FC<SessionListProps> = ({
   sessions,

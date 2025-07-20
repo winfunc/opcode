@@ -9,6 +9,9 @@ import { AnimatePresence } from "framer-motion";
 import { generateToastId } from "./toastUtils";
 import { ToastContext, type ToastType, type ToastItem } from "./contexts";
 
+/**
+ * Type definition for toast context value
+ */
 type ToastContextValue = {
   showToast: (message: string, type?: ToastType, duration?: number) => void;
   showSuccess: (message: string, duration?: number) => void;
@@ -18,11 +21,37 @@ type ToastContextValue = {
   clearAllToasts: () => void;
 };
 
+/**
+ * Props for the ToastProvider component
+ */
 interface ToastProviderProps {
   children: ReactNode;
   maxToasts?: number;
 }
 
+/**
+ * Provider component for toast notification functionality
+ *
+ * Manages global toast notifications with automatic dismissal, maximum limits,
+ * and different notification types. Provides context for components to show
+ * success, error, info, and custom toast messages.
+ *
+ * @param children - Child components that will have access to toast functionality
+ * @param maxToasts - Maximum number of toasts to display simultaneously (default: 3)
+ *
+ * @example
+ * ```tsx
+ * function App() {
+ *   return (
+ *     <ToastProvider maxToasts={5}>
+ *       <Header />
+ *       <MainContent />
+ *       <Footer />
+ *     </ToastProvider>
+ *   );
+ * }
+ * ```
+ */
 export const ToastProvider: React.FC<ToastProviderProps> = ({ children, maxToasts = 3 }) => {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 

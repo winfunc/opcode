@@ -2,6 +2,9 @@ import * as React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
+/**
+ * Props interface for the Popover component
+ */
 interface PopoverProps {
   /**
    * The trigger element
@@ -36,12 +39,40 @@ interface PopoverProps {
 /**
  * Popover component for displaying floating content
  *
+ * A floating content container that appears relative to a trigger element.
+ * Supports controlled and uncontrolled modes, keyboard navigation, and
+ * click-outside-to-close behavior. Includes smooth animations and flexible positioning.
+ *
+ * @param trigger - Element that triggers the popover when clicked
+ * @param content - Content to display inside the popover
+ * @param open - Controlled open state (optional)
+ * @param onOpenChange - Callback when open state changes
+ * @param className - Additional CSS classes for the content
+ * @param align - Horizontal alignment relative to trigger
+ * @param side - Vertical position relative to trigger
+ *
  * @example
+ * ```tsx
  * <Popover
- *   trigger={<Button>Click me</Button>}
- *   content={<div>Popover content</div>}
- *   side="top"
+ *   trigger={<Button>Show Menu</Button>}
+ *   content={
+ *     <div className="space-y-2">
+ *       <button>Option 1</button>
+ *       <button>Option 2</button>
+ *     </div>
+ *   }
+ *   side="bottom"
+ *   align="start"
  * />
+ *
+ * // Controlled popover
+ * <Popover
+ *   trigger={<Button>Settings</Button>}
+ *   content={<SettingsPanel />}
+ *   open={isOpen}
+ *   onOpenChange={setIsOpen}
+ * />
+ * ```
  */
 export const Popover: React.FC<PopoverProps> = ({
   trigger,

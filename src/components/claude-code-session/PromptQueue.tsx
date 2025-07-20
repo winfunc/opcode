@@ -6,18 +6,44 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { type ClaudeModel } from "@/types/models";
 
+/**
+ * Interface for queued prompt items
+ */
 interface QueuedPrompt {
   id: string;
   prompt: string;
   model: ClaudeModel;
 }
 
+/**
+ * Props interface for the PromptQueue component
+ */
 interface PromptQueueProps {
   queuedPrompts: QueuedPrompt[];
   onRemove: (id: string) => void;
   className?: string;
 }
 
+/**
+ * PromptQueue component for displaying queued prompts
+ *
+ * Shows a list of prompts waiting to be processed with model indicators,
+ * removal controls, and smooth animations. Automatically hides when empty
+ * and provides visual feedback for different Claude models.
+ *
+ * @param queuedPrompts - Array of prompts waiting to be processed
+ * @param onRemove - Callback to remove a prompt from the queue
+ * @param className - Optional CSS classes for styling
+ *
+ * @example
+ * ```tsx
+ * <PromptQueue
+ *   queuedPrompts={pendingPrompts}
+ *   onRemove={(id) => removeFromQueue(id)}
+ *   className="border-t"
+ * />
+ * ```
+ */
 export const PromptQueue: React.FC<PromptQueueProps> = React.memo(
   ({ queuedPrompts, onRemove, className }) => {
     if (queuedPrompts.length === 0) return null;

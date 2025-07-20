@@ -22,12 +22,35 @@ import { cn } from "@/lib/utils";
 import { Toast, ToastContainer } from "@/components/ui/toast";
 import type { Project } from "@/lib/api";
 import { handleError } from "@/lib/errorHandler";
+/**
+ * Props interface for the ProjectSettings component
+ */
 interface ProjectSettingsProps {
   project: Project;
   onBack: () => void;
   className?: string;
 }
 
+/**
+ * ProjectSettings component for managing project-specific configuration
+ *
+ * A comprehensive settings interface for managing project-specific hooks,
+ * slash commands, and other configuration options. Features tabbed navigation,
+ * validation, and real-time updates with toast notifications.
+ *
+ * @param project - The project to configure settings for
+ * @param onBack - Callback to return to the previous view
+ * @param className - Additional CSS classes for styling
+ *
+ * @example
+ * ```tsx
+ * <ProjectSettings
+ *   project={selectedProject}
+ *   onBack={() => setView('projects')}
+ *   className="max-w-4xl mx-auto"
+ * />
+ * ```
+ */
 export const ProjectSettings: React.FC<ProjectSettingsProps> = ({ project, onBack, className }) => {
   const [activeTab, setActiveTab] = useState("commands");
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);

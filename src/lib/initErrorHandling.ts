@@ -17,8 +17,24 @@ type ModalCallback = (title: string, message: string, details?: string) => void;
 type RedirectCallback = (path: string) => void;
 
 /**
- * 初始化错误处理系统
- * @param callbacks 通知回调函数
+ * Initialize the error handling system
+ *
+ * Sets up global error handling, notification callbacks, and user preferences.
+ * Should be called during application startup to ensure proper error handling.
+ *
+ * @param callbacks - Notification callback functions for different error strategies
+ * @param callbacks.toast - Function to show toast notifications
+ * @param callbacks.modal - Function to show modal dialogs
+ * @param callbacks.redirect - Function to perform page redirects
+ *
+ * @example
+ * ```typescript
+ * initializeErrorHandling({
+ *   toast: (message, type) => showToast(message, type),
+ *   modal: (title, message) => showModal(title, message),
+ *   redirect: (path) => navigate(path)
+ * });
+ * ```
  */
 export const initializeErrorHandling = (callbacks: {
   toast?: ToastCallback;
@@ -63,7 +79,23 @@ export const initializeErrorHandling = (callbacks: {
 };
 
 /**
- * 创建错误处理中间件（用于API调用）
+ * Create error handling middleware for API calls
+ *
+ * Provides before and after request hooks for consistent error handling
+ * across all API operations. Logs requests and handles errors automatically.
+ *
+ * @returns Middleware object with beforeRequest and afterRequest hooks
+ *
+ * @example
+ * ```typescript
+ * const middleware = createErrorMiddleware();
+ *
+ * // Before API call
+ * middleware.beforeRequest('fetchProjects', { userId: '123' });
+ *
+ * // After API call (with error)
+ * await middleware.afterRequest('fetchProjects', error, { userId: '123' });
+ * ```
  */
 export const createErrorMiddleware = () => {
   return {
@@ -86,7 +118,23 @@ export const createErrorMiddleware = () => {
 };
 
 /**
- * 创建React组件错误边界处理器
+ * Create React component error boundary handler
+ *
+ * Creates a specialized error handler for React Error Boundaries that
+ * includes component context and error boundary information.
+ *
+ * @param componentName - Name of the component for error context
+ * @returns Error handler function for React Error Boundaries
+ *
+ * @example
+ * ```typescript
+ * const handleError = createComponentErrorHandler('UserProfile');
+ *
+ * // In Error Boundary componentDidCatch
+ * componentDidCatch(error, errorInfo) {
+ *   handleError(error, errorInfo);
+ * }
+ * ```
  */
 export const createComponentErrorHandler = (componentName: string) => {
   return async (error: Error, errorInfo?: unknown) => {
@@ -99,7 +147,24 @@ export const createComponentErrorHandler = (componentName: string) => {
 };
 
 /**
- * 创建异步操作错误处理器
+ * Create async operation error handler
+ *
+ * Creates a specialized error handler for async operations with
+ * operation context and source tracking.
+ *
+ * @param operationName - Name of the async operation for error context
+ * @returns Error handler function for async operations
+ *
+ * @example
+ * ```typescript
+ * const handleError = createAsyncErrorHandler('uploadFile');
+ *
+ * try {
+ *   await uploadFile(file);
+ * } catch (error) {
+ *   await handleError(error, { fileName: file.name, size: file.size });
+ * }
+ * ```
  */
 export const createAsyncErrorHandler = (operationName: string) => {
   return async (error: unknown, context?: Record<string, unknown>) => {
@@ -112,7 +177,22 @@ export const createAsyncErrorHandler = (operationName: string) => {
 };
 
 /**
- * 错误恢复策略
+ * Error recovery strategies for different failure scenarios
+ *
+ * Provides a collection of recovery actions that can be used to restore
+ * application functionality after errors occur.
+ *
+ * @example
+ * ```typescript
+ * // Reload page on critical error
+ * errorRecoveryStrategies.reloadPage();
+ *
+ * // Clear storage on data corruption
+ * errorRecoveryStrategies.clearLocalStorage();
+ *
+ * // Navigate to home on navigation error
+ * errorRecoveryStrategies.goHome(navigate);
+ * ```
  */
 export const errorRecoveryStrategies = {
   // 重新加载页面
@@ -147,7 +227,22 @@ export const errorRecoveryStrategies = {
 };
 
 /**
- * 错误监控和分析
+ * Error monitoring and analytics utilities
+ *
+ * Provides functions for analyzing error patterns, generating reports,
+ * and monitoring application health based on error frequency and types.
+ *
+ * @example
+ * ```typescript
+ * // Get error statistics
+ * const stats = errorAnalytics.getErrorStats();
+ *
+ * // Check for error spikes
+ * const hasFrequentErrors = errorAnalytics.checkForFrequentErrors();
+ *
+ * // Generate comprehensive error report
+ * const report = errorAnalytics.generateErrorReport();
+ * ```
  */
 export const errorAnalytics = {
   // 获取错误统计

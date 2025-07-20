@@ -4,12 +4,54 @@ import { api } from "@/lib/api";
 import { logger } from "@/lib/logger";
 import type { ClaudeStreamMessage } from "../AgentExecution";
 
+/**
+ * Configuration options for the useClaudeMessages hook
+ */
 interface UseClaudeMessagesOptions {
   onSessionInfo?: (info: { sessionId: string; projectId: string }) => void;
   onTokenUpdate?: (tokens: number) => void;
   onStreamingChange?: (isStreaming: boolean, sessionId: string | null) => void;
 }
 
+/**
+ * React hook for managing Claude Code streaming messages
+ *
+ * Handles real-time streaming of Claude Code messages with automatic
+ * event listening, message parsing, and state management. Provides
+ * functionality for loading historical messages and managing streaming state.
+ *
+ * @param options - Configuration options for message handling
+ * @returns Object containing message state and management functions
+ *
+ * @example
+ * ```tsx
+ * function ClaudeSession() {
+ *   const {
+ *     messages,
+ *     isStreaming,
+ *     currentSessionId,
+ *     clearMessages,
+ *     loadMessages
+ *   } = useClaudeMessages({
+ *     onSessionInfo: (info) => setSessionInfo(info),
+ *     onTokenUpdate: (tokens) => setTotalTokens(tokens),
+ *     onStreamingChange: (streaming, sessionId) => {
+ *       setIsStreaming(streaming);
+ *       setActiveSession(sessionId);
+ *     }
+ *   });
+ *
+ *   return (
+ *     <div>
+ *       <div>Status: {isStreaming ? 'Streaming...' : 'Idle'}</div>
+ *       <div>Session: {currentSessionId}</div>
+ *       <div>Messages: {messages.length}</div>
+ *       <button onClick={clearMessages}>Clear Messages</button>
+ *     </div>
+ *   );
+ * }
+ * ```
+ */
 export function useClaudeMessages(options: UseClaudeMessagesOptions = {}) {
   const [messages, setMessages] = useState<ClaudeStreamMessage[]>([]);
   const [rawJsonlOutput, setRawJsonlOutput] = useState<string[]>([]);

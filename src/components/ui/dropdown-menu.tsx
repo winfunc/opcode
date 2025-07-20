@@ -4,18 +4,61 @@ import { Check, ChevronRight, Circle } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
+/**
+ * DropdownMenu component - Root container for dropdown menus
+ *
+ * A dropdown menu that displays a list of actions or options. Built on top of
+ * Radix UI DropdownMenu primitive with custom styling and animations.
+ *
+ * @example
+ * ```tsx
+ * <DropdownMenu>
+ *   <DropdownMenuTrigger asChild>
+ *     <Button variant="outline">Open Menu</Button>
+ *   </DropdownMenuTrigger>
+ *   <DropdownMenuContent>
+ *     <DropdownMenuItem>Profile</DropdownMenuItem>
+ *     <DropdownMenuItem>Settings</DropdownMenuItem>
+ *     <DropdownMenuSeparator />
+ *     <DropdownMenuItem>Logout</DropdownMenuItem>
+ *   </DropdownMenuContent>
+ * </DropdownMenu>
+ * ```
+ */
 const DropdownMenu = DropdownMenuPrimitive.Root;
 
+/**
+ * DropdownMenuTrigger component - Element that opens the dropdown when clicked
+ */
 const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger;
 
+/**
+ * DropdownMenuGroup component - Groups related menu items together
+ */
 const DropdownMenuGroup = DropdownMenuPrimitive.Group;
 
+/**
+ * DropdownMenuPortal component - Portal for rendering dropdown content outside normal DOM tree
+ */
 const DropdownMenuPortal = DropdownMenuPrimitive.Portal;
 
+/**
+ * DropdownMenuSub component - Container for submenu functionality
+ */
 const DropdownMenuSub = DropdownMenuPrimitive.Sub;
 
+/**
+ * DropdownMenuRadioGroup component - Container for radio button menu items
+ */
 const DropdownMenuRadioGroup = DropdownMenuPrimitive.RadioGroup;
 
+/**
+ * DropdownMenuSubTrigger component - Trigger for opening submenus
+ *
+ * @param inset - Whether to add left padding for alignment
+ * @param className - Additional CSS classes
+ * @param children - Content of the trigger
+ */
 const DropdownMenuSubTrigger = React.forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitive.SubTrigger>,
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.SubTrigger> & {
@@ -37,6 +80,11 @@ const DropdownMenuSubTrigger = React.forwardRef<
 ));
 DropdownMenuSubTrigger.displayName = DropdownMenuPrimitive.SubTrigger.displayName;
 
+/**
+ * DropdownMenuSubContent component - Content container for submenus
+ *
+ * @param className - Additional CSS classes
+ */
 const DropdownMenuSubContent = React.forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitive.SubContent>,
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.SubContent>
@@ -52,6 +100,12 @@ const DropdownMenuSubContent = React.forwardRef<
 ));
 DropdownMenuSubContent.displayName = DropdownMenuPrimitive.SubContent.displayName;
 
+/**
+ * DropdownMenuContent component - Main content container for dropdown menu
+ *
+ * @param className - Additional CSS classes
+ * @param sideOffset - Distance from trigger element
+ */
 const DropdownMenuContent = React.forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Content>
@@ -70,6 +124,12 @@ const DropdownMenuContent = React.forwardRef<
 ));
 DropdownMenuContent.displayName = DropdownMenuPrimitive.Content.displayName;
 
+/**
+ * DropdownMenuItem component - Individual menu item
+ *
+ * @param inset - Whether to add left padding for alignment
+ * @param className - Additional CSS classes
+ */
 const DropdownMenuItem = React.forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitive.Item>,
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Item> & {
@@ -88,6 +148,13 @@ const DropdownMenuItem = React.forwardRef<
 ));
 DropdownMenuItem.displayName = DropdownMenuPrimitive.Item.displayName;
 
+/**
+ * DropdownMenuCheckboxItem component - Menu item with checkbox functionality
+ *
+ * @param className - Additional CSS classes
+ * @param children - Item content
+ * @param checked - Whether the checkbox is checked
+ */
 const DropdownMenuCheckboxItem = React.forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitive.CheckboxItem>,
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.CheckboxItem>
@@ -159,6 +226,11 @@ const DropdownMenuSeparator = React.forwardRef<
 ));
 DropdownMenuSeparator.displayName = DropdownMenuPrimitive.Separator.displayName;
 
+/**
+ * DropdownMenuShortcut component - Displays keyboard shortcuts in menu items
+ *
+ * @param className - Additional CSS classes
+ */
 const DropdownMenuShortcut = ({ className, ...props }: React.HTMLAttributes<HTMLSpanElement>) => {
   return (
     <span className={cn("ml-auto text-xs tracking-widest opacity-60", className)} {...props} />

@@ -11,10 +11,26 @@ import {
   HookCommand,
 } from "@/types/hooks";
 
+/**
+ * Hooks configuration manager for Claude Code hooks
+ *
+ * Provides utilities for managing, validating, and merging hook configurations
+ * across different scopes (user, project, local) with proper priority handling.
+ */
 export class HooksManager {
   /**
    * Merge hooks configurations with proper priority
    * Priority: local > project > user
+   *
+   * @param user - User-level hooks configuration
+   * @param project - Project-level hooks configuration
+   * @param local - Local-level hooks configuration
+   * @returns Merged hooks configuration with proper priority
+   *
+   * @example
+   * ```typescript
+   * const merged = HooksManager.mergeConfigs(userHooks, projectHooks, localHooks);
+   * ```
    */
   static mergeConfigs(
     user: HooksConfiguration,
@@ -79,6 +95,10 @@ export class HooksManager {
 
   /**
    * Merge matcher arrays, with later items taking precedence
+   *
+   * @param base - Base array of hook matchers
+   * @param override - Override array of hook matchers that take precedence
+   * @returns Merged array with override matchers replacing base matchers by pattern
    */
   private static mergeMatchers(base: HookMatcher[], override: HookMatcher[]): HookMatcher[] {
     const result = [...base];
@@ -99,7 +119,18 @@ export class HooksManager {
   }
 
   /**
-   * Validate hooks configuration
+   * Validate hooks configuration for syntax errors and security issues
+   *
+   * @param hooks - The hooks configuration to validate
+   * @returns Promise resolving to validation result with errors and warnings
+   *
+   * @example
+   * ```typescript
+   * const result = await HooksManager.validateConfig(hooksConfig);
+   * if (!result.valid) {
+   *   console.error('Validation errors:', result.errors);
+   * }
+   * ```
    */
   static async validateConfig(hooks: HooksConfiguration): Promise<HookValidationResult> {
     const errors: HookValidationError[] = [];
@@ -190,7 +221,16 @@ export class HooksManager {
   }
 
   /**
-   * Check for potentially dangerous command patterns
+   * Check for potentially dangerous command patterns in shell commands
+   *
+   * @param command - The shell command to analyze for security risks
+   * @returns Array of warning messages for detected dangerous patterns
+   *
+   * @example
+   * ```typescript
+   * const warnings = HooksManager.checkDangerousPatterns('rm -rf /');
+   * // Returns: ['Destructive command on root directory']
+   * ```
    */
   public static checkDangerousPatterns(command: string): string[] {
     const warnings: string[] = [];
@@ -229,6 +269,15 @@ export class HooksManager {
 
   /**
    * Escape a command for safe shell execution
+   *
+   * @param command - The command string to escape
+   * @returns Escaped command string safe for shell execution
+   *
+   * @example
+   * ```typescript
+   * const safe = HooksManager.escapeCommand('echo "hello $USER"');
+   * // Returns: 'echo "hello \\$USER"'
+   * ```
    */
   static escapeCommand(command: string): string {
     // Basic shell escaping - in production, use a proper shell escaping library
@@ -241,6 +290,14 @@ export class HooksManager {
 
   /**
    * Generate a unique ID for hooks/matchers/commands
+   *
+   * @returns Unique identifier string combining timestamp and random characters
+   *
+   * @example
+   * ```typescript
+   * const id = HooksManager.generateId();
+   * // Returns: '1703123456789-abc123def'
+   * ```
    */
   static generateId(): string {
     return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;

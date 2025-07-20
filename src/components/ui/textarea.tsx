@@ -1,8 +1,42 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
+/**
+ * Props interface for the Textarea component
+ *
+ * Extends standard HTML textarea attributes for multi-line text input.
+ */
 export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {}
 
+/**
+ * Textarea component for multi-line text input
+ *
+ * A styled textarea component that provides consistent appearance across
+ * the application with support for focus states, disabled states, and
+ * placeholder text. Automatically resizes based on content.
+ *
+ * @param className - Additional CSS classes to apply
+ * @param placeholder - Placeholder text
+ * @param disabled - Whether the textarea is disabled
+ * @param value - Controlled value
+ * @param onChange - Change event handler
+ * @param rows - Number of visible text lines
+ *
+ * @example
+ * ```tsx
+ * <Textarea
+ *   placeholder="Enter your message..."
+ *   value={message}
+ *   onChange={(e) => setMessage(e.target.value)}
+ *   rows={4}
+ * />
+ *
+ * <Textarea
+ *   placeholder="Comments (optional)"
+ *   disabled={isSubmitting}
+ * />
+ * ```
+ */
 const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   ({ className, ...props }, ref) => {
     return (

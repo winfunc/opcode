@@ -141,6 +141,12 @@ import {
   Wrench,
 } from "lucide-react";
 
+/**
+ * Categorized collection of available icons
+ *
+ * Icons are organized by category to make selection easier in the UI.
+ * Each category contains icons with their names and Lucide components.
+ */
 export const ICON_CATEGORIES = {
   "Interface & Navigation": [
     { name: "home", icon: Home },
@@ -292,11 +298,26 @@ export const ICON_CATEGORIES = {
 } as const;
 
 // Export all available icon names for type safety
+/**
+ * Flat array of all available icon names
+ *
+ * Extracted from all categories for easy iteration and validation.
+ */
 export const AVAILABLE_ICONS = Object.values(ICON_CATEGORIES)
   .flat()
   .map(({ name }) => name);
 
-// Export icon map for easy access
+/**
+ * Map of icon names to their Lucide components
+ *
+ * Provides direct access to icon components by name for rendering.
+ *
+ * @example
+ * ```tsx
+ * const IconComponent = ICON_MAP['user'];
+ * return <IconComponent size={24} />;
+ * ```
+ */
 export const ICON_MAP = Object.values(ICON_CATEGORIES)
   .flat()
   .reduce((acc, { name, icon }) => ({ ...acc, [name]: icon }), {} as Record<string, LucideIcon>);

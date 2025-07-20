@@ -58,6 +58,9 @@ import {
   HOOK_TEMPLATES,
 } from "@/types/hooks";
 
+/**
+ * Props interface for the HooksEditor component
+ */
 interface HooksEditorProps {
   projectPath?: string;
   scope: "project" | "local" | "user";
@@ -77,6 +80,33 @@ interface EditableHookMatcher extends Omit<HookMatcher, "hooks"> {
   expanded?: boolean;
 }
 
+/**
+ * HooksEditor component for managing Claude Code hooks configuration
+ *
+ * A comprehensive editor interface for creating, editing, and managing hooks
+ * that can be triggered during Claude Code operations. Features include syntax
+ * validation, template selection, security warnings, and real-time preview.
+ *
+ * @param projectPath - Path to the project for project-scoped hooks
+ * @param scope - Scope of the hooks configuration (project, local, or user)
+ * @param onClose - Callback to close the editor
+ * @param className - Additional CSS classes for styling
+ *
+ * @example
+ * ```tsx
+ * <HooksEditor
+ *   projectPath="/path/to/project"
+ *   scope="project"
+ *   onClose={() => setShowEditor(false)}
+ * />
+ *
+ * // User-level hooks
+ * <HooksEditor
+ *   scope="user"
+ *   onClose={() => setShowEditor(false)}
+ * />
+ * ```
+ */
 export const HooksEditor: React.FC<HooksEditorProps> = ({
   projectPath,
   scope,
@@ -423,6 +453,11 @@ export const HooksEditor: React.FC<HooksEditorProps> = ({
     }));
   };
 
+  /**
+   * Apply a hook template to the editor
+   *
+   * @param template - Template to apply
+   */
   const applyTemplate = (template: HookTemplate) => {
     if (matcherEvents.includes(template.event as "PreToolUse" | "PostToolUse")) {
       // For events with matchers
@@ -467,6 +502,9 @@ export const HooksEditor: React.FC<HooksEditorProps> = ({
     setShowTemplateDialog(false);
   };
 
+  /**
+   * Validate the current hooks configuration
+   */
   const validateHooks = React.useCallback(async () => {
     if (!hooks) {
       setValidationErrors([]);

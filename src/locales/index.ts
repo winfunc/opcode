@@ -12,7 +12,12 @@ import { it } from "./it";
 import { ar } from "./ar";
 import { hi } from "./hi";
 
-// 导入所有翻译
+/**
+ * Complete translations mapping for all supported languages
+ *
+ * Contains translation objects for all supported languages in the application.
+ * Used by the i18n system to provide localized content.
+ */
 export const translations: Record<Language, Translations> = {
   en,
   zh,
@@ -28,7 +33,22 @@ export const translations: Record<Language, Translations> = {
   hi,
 };
 
-// 获取翻译
+/**
+ * Get translations for a specific language
+ *
+ * Retrieves the translation object for the specified language.
+ * Falls back to English if the requested language is not available.
+ *
+ * @param language - Language code to get translations for
+ * @returns Translation object for the specified language
+ *
+ * @example
+ * ```typescript
+ * const zhTranslations = getTranslations('zh');
+ * const fallbackTranslations = getTranslations('unsupported' as Language);
+ * // Returns English translations as fallback
+ * ```
+ */
 export const getTranslations = (language: Language): Translations => {
   return translations[language] || translations.en;
 };

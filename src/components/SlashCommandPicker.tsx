@@ -43,7 +43,12 @@ interface SlashCommandPickerProps {
   className?: string;
 }
 
-// Get icon for command based on its properties
+/**
+ * Get icon for command based on its properties
+ *
+ * @param command - Slash command to get icon for
+ * @returns Lucide icon component
+ */
 const getCommandIcon = (command: SlashCommand) => {
   // If it has bash commands, show terminal icon
   if (command.has_bash_commands) return Terminal;
@@ -71,6 +76,32 @@ const getCommandIcon = (command: SlashCommand) => {
  *   onSelect={(command) => logger.debug('Selected:', command)}
  *   onClose={() => setShowPicker(false)}
  * />
+ */
+/**
+ * SlashCommandPicker component for selecting slash commands
+ *
+ * A comprehensive command picker interface with search functionality, categorized
+ * commands, keyboard navigation, and scope filtering. Features include real-time
+ * search, command previews, and smooth animations.
+ *
+ * @param projectPath - The project path for loading project-specific commands
+ * @param onSelect - Callback when a command is selected
+ * @param onClose - Callback to close the picker
+ * @param initialQuery - Initial search query (text after /)
+ * @param className - Optional className for styling
+ *
+ * @example
+ * ```tsx
+ * <SlashCommandPicker
+ *   projectPath="/path/to/project"
+ *   onSelect={(command) => {
+ *     console.log('Selected command:', command.name);
+ *     insertCommand(command);
+ *   }}
+ *   onClose={() => setShowPicker(false)}
+ *   initialQuery="rev"
+ * />
+ * ```
  */
 export const SlashCommandPicker: React.FC<SlashCommandPickerProps> = ({
   projectPath,

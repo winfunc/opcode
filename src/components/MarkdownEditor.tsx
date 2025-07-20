@@ -22,8 +22,20 @@ interface MarkdownEditorProps {
 /**
  * MarkdownEditor component for editing the CLAUDE.md system prompt
  *
+ * A full-featured markdown editor for editing Claude Code system prompts with
+ * real-time preview, auto-save detection, error handling, and internationalization
+ * support. Features include syntax highlighting, change detection, and toast notifications.
+ *
+ * @param onBack - Callback to return to the previous view
+ * @param className - Additional CSS classes for styling
+ *
  * @example
- * <MarkdownEditor onBack={() => setView('main')} />
+ * ```tsx
+ * <MarkdownEditor
+ *   onBack={() => setView('main')}
+ *   className="custom-editor"
+ * />
+ * ```
  */
 export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({ onBack, className }) => {
   const { t } = useI18n();

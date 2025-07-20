@@ -71,6 +71,21 @@ export function isValidFilePath(path: string, allowedExtensions?: string[]): boo
  * // Returns: '&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;'
  * ```
  */
+/**
+ * Sanitize HTML input to prevent XSS attacks
+ *
+ * Removes potentially dangerous HTML tags and attributes while preserving
+ * safe content for display. Uses a whitelist approach for security.
+ *
+ * @param input - The HTML string to sanitize
+ * @returns Sanitized HTML string safe for rendering
+ *
+ * @example
+ * ```typescript
+ * const safe = sanitizeHtml('<script>alert("xss")</script><p>Safe content</p>');
+ * // Returns: '<p>Safe content</p>'
+ * ```
+ */
 export function sanitizeHtml(input: string): string {
   if (!input || typeof input !== "string") {
     return "";
@@ -99,6 +114,21 @@ export function sanitizeHtml(input: string): string {
  * isValidCommandArg('$(rm -rf /)') // false
  * ```
  */
+/**
+ * Validate command line arguments for security
+ *
+ * Checks if a command argument is safe to use in shell commands,
+ * preventing command injection and other security vulnerabilities.
+ *
+ * @param arg - The command argument to validate
+ * @returns True if the argument is safe to use
+ *
+ * @example
+ * ```typescript
+ * isValidCommandArg('--help') // true
+ * isValidCommandArg('; rm -rf /') // false
+ * ```
+ */
 export function isValidCommandArg(arg: string): boolean {
   if (!arg || typeof arg !== "string") {
     return false;
@@ -125,6 +155,21 @@ export function isValidCommandArg(arg: string): boolean {
  * @param email - The email address to validate
  * @returns True if the email format is valid, false otherwise
  */
+/**
+ * Validate email address format
+ *
+ * Checks if an email address follows a valid format using regex validation.
+ * Provides basic email format validation for user input.
+ *
+ * @param email - The email address to validate
+ * @returns True if the email format is valid
+ *
+ * @example
+ * ```typescript
+ * isValidEmail('user@example.com') // true
+ * isValidEmail('invalid-email') // false
+ * ```
+ */
 export function isValidEmail(email: string): boolean {
   if (!email || typeof email !== "string") {
     return false;
@@ -141,6 +186,21 @@ export function isValidEmail(email: string): boolean {
  * @param name - The project name to validate
  * @returns True if the name is safe, false otherwise
  */
+/**
+ * Validate project name for security and filesystem compatibility
+ *
+ * Ensures project names are safe for use as directory names and
+ * don't contain characters that could cause security issues.
+ *
+ * @param name - The project name to validate
+ * @returns True if the project name is valid and safe
+ *
+ * @example
+ * ```typescript
+ * isValidProjectName('my-project') // true
+ * isValidProjectName('../../../etc') // false
+ * ```
+ */
 export function isValidProjectName(name: string): boolean {
   if (!name || typeof name !== "string") {
     return false;
@@ -154,6 +214,22 @@ export function isValidProjectName(name: string): boolean {
 /**
  * Rate limiting utility to prevent abuse
  * Tracks function calls and enforces rate limits
+ */
+/**
+ * Rate limiter for preventing abuse and controlling request frequency
+ *
+ * Implements token bucket algorithm to limit the rate of operations
+ * per identifier (e.g., user ID, IP address) to prevent abuse.
+ *
+ * @example
+ * ```typescript
+ * const limiter = new RateLimiter(10, 60000); // 10 requests per minute
+ * if (limiter.isAllowed('user123')) {
+ *   // Process request
+ * } else {
+ *   // Rate limit exceeded
+ * }
+ * ```
  */
 class RateLimiter {
   private calls: Map<string, number[]> = new Map();
@@ -206,6 +282,25 @@ export const rateLimiter = new RateLimiter();
  * @param jsonString - The JSON string to validate
  * @param maxSize - Maximum allowed size in bytes
  * @returns Parsed JSON object or null if invalid
+ */
+/**
+ * Safely parse JSON with size limits to prevent DoS attacks
+ *
+ * Parses JSON strings with built-in protection against oversized payloads
+ * that could cause memory exhaustion or denial of service.
+ *
+ * @param jsonString - The JSON string to parse
+ * @param maxSize - Maximum allowed size in bytes (default: 1MB)
+ * @returns Parsed JSON object or null if parsing fails
+ *
+ * @example
+ * ```typescript
+ * const data = safeJsonParse('{"key": "value"}', 1000);
+ * // Returns: { key: "value" }
+ *
+ * const tooBig = safeJsonParse(hugJsonString, 100);
+ * // Throws: "JSON input too large"
+ * ```
  */
 export function safeJsonParse(jsonString: string, maxSize: number = 1024 * 1024): unknown {
   if (!jsonString || typeof jsonString !== "string") {

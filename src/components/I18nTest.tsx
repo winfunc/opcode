@@ -5,7 +5,17 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
 /**
- * 测试组件，用于验证多语言功能
+ * I18nTest component for testing internationalization functionality
+ *
+ * A comprehensive test interface for verifying translation functionality,
+ * language switching, RTL support, and time formatting across all supported
+ * languages. Useful for development and QA testing.
+ *
+ * @example
+ * ```tsx
+ * // Add to development routes for testing
+ * <Route path="/i18n-test" component={I18nTest} />
+ * ```
  */
 export const I18nTest: React.FC = () => {
   const { t, language, isRTL } = useI18n();

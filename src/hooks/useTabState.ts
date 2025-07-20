@@ -2,6 +2,9 @@ import { useCallback, useMemo } from "react";
 import { useTabContext } from "@/contexts/hooks";
 import { Tab } from "@/contexts/contexts";
 
+/**
+ * Return type for the useTabState hook
+ */
 interface UseTabStateReturn {
   // State
   tabs: Tab[];
@@ -77,6 +80,50 @@ interface UseTabStateReturn {
  *           onClick={() => setActiveTab(tab.id)}
  *         />
  *       ))}
+ *     </div>
+ *   );
+ * }
+ * ```
+ */
+/**
+ * React hook for managing tab state and operations
+ *
+ * Provides a comprehensive interface for tab management including creation,
+ * navigation, closing, and state management. Integrates with the TabContext
+ * to provide consistent tab behavior across the application.
+ *
+ * @returns Object containing tab state and management functions
+ *
+ * @example
+ * ```tsx
+ * function TabBar() {
+ *   const {
+ *     tabs,
+ *     activeTabId,
+ *     createChatTab,
+ *     createProjectsTab,
+ *     closeTab,
+ *     switchToTab,
+ *     canAddTab
+ *   } = useTabState();
+ *
+ *   return (
+ *     <div className="tab-bar">
+ *       {tabs.map(tab => (
+ *         <div
+ *           key={tab.id}
+ *           className={`tab ${tab.id === activeTabId ? 'active' : ''}`}
+ *           onClick={() => switchToTab(tab.id)}
+ *         >
+ *           {tab.title}
+ *           <button onClick={() => closeTab(tab.id)}>×</button>
+ *         </div>
+ *       ))}
+ *       {canAddTab && (
+ *         <button onClick={() => createChatTab('New Chat')}>
+ *           Add Tab
+ *         </button>
+ *       )}
  *     </div>
  *   );
  * }

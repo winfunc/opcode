@@ -33,13 +33,27 @@ interface PreviewPromptDialogProps {
 /**
  * Dialog component that prompts the user to open a detected URL in the preview pane
  *
+ * A confirmation dialog that appears when URLs are detected in terminal output,
+ * allowing users to open them in the integrated preview pane. Features URL
+ * validation, domain extraction, and special handling for localhost URLs.
+ *
+ * @param isOpen - Whether the dialog is currently open
+ * @param url - The detected URL to preview
+ * @param onConfirm - Callback when user confirms opening the preview
+ * @param onCancel - Callback when user cancels or closes the dialog
+ *
  * @example
+ * ```tsx
  * <PreviewPromptDialog
  *   isOpen={showPrompt}
  *   url="http://localhost:3000"
- *   onConfirm={() => openPreview(url)}
+ *   onConfirm={() => {
+ *     openPreview(url);
+ *     setShowPrompt(false);
+ *   }}
  *   onCancel={() => setShowPrompt(false)}
  * />
+ * ```
  */
 export const PreviewPromptDialog: React.FC<PreviewPromptDialogProps> = ({
   isOpen,
@@ -47,7 +61,12 @@ export const PreviewPromptDialog: React.FC<PreviewPromptDialogProps> = ({
   onConfirm,
   onCancel,
 }) => {
-  // Extract domain for display
+  /**
+   * Extract domain from URL for display purposes
+   *
+   * @param urlString - URL to extract domain from
+   * @returns Domain name or original string if invalid
+   */
   const getDomain = (urlString: string) => {
     try {
       const urlObj = new window.URL(urlString);

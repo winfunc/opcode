@@ -43,6 +43,9 @@ const ITEMS_PER_PAGE = 12;
 
 /**
  * Extracts the project name from the full path
+ *
+ * @param path - Full file system path to the project
+ * @returns Project name (last segment of the path)
  */
 const getProjectName = (path: string): string => {
   const parts = path.split("/").filter(Boolean);
@@ -52,11 +55,31 @@ const getProjectName = (path: string): string => {
 /**
  * ProjectList component - Displays a paginated list of projects with hover animations
  *
+ * A comprehensive project listing interface with pagination, hover effects, and
+ * project management features. Shows project metadata including creation date,
+ * session count, and provides access to project settings.
+ *
+ * @param projects - Array of projects to display
+ * @param onProjectClick - Callback when a project card is clicked
+ * @param onProjectSettings - Optional callback for project settings access
+ * @param loading - Whether the list is in loading state
+ * @param className - Additional CSS classes for styling
+ *
  * @example
+ * ```tsx
  * <ProjectList
- *   projects={projects}
- *   onProjectClick={(project) => logger.debug('Selected:', project)}
+ *   projects={projectList}
+ *   onProjectClick={(project) => {
+ *     console.log('Opening project:', project.path);
+ *     navigateToProject(project);
+ *   }}
+ *   onProjectSettings={(project) => {
+ *     setSelectedProject(project);
+ *     setShowSettings(true);
+ *   }}
+ *   loading={isLoading}
  * />
+ * ```
  */
 export const ProjectList: React.FC<ProjectListProps> = ({
   projects,

@@ -89,6 +89,12 @@ const EXAMPLE_COMMANDS = [
 ];
 
 // Get icon for command based on its properties
+/**
+ * Get icon for command based on its properties
+ *
+ * @param command - Slash command to get icon for
+ * @returns Lucide icon component
+ */
 const getCommandIcon = (command: SlashCommand) => {
   if (command.has_bash_commands) return Terminal;
   if (command.has_file_references) return FileCode;
@@ -101,6 +107,31 @@ const getCommandIcon = (command: SlashCommand) => {
 /**
  * SlashCommandsManager component for managing custom slash commands
  * Provides a no-code interface for creating, editing, and deleting commands
+ */
+/**
+ * SlashCommandsManager component for managing slash commands
+ *
+ * A comprehensive management interface for creating, editing, and organizing
+ * slash commands. Features include command templates, scope management,
+ * tool restrictions, validation, and import/export capabilities.
+ *
+ * @param projectPath - Optional project path for project-scoped commands
+ * @param className - Optional className for styling
+ * @param scopeFilter - Filter commands by scope (project, user, or all)
+ *
+ * @example
+ * ```tsx
+ * <SlashCommandsManager
+ *   projectPath="/path/to/project"
+ *   scopeFilter="project"
+ *   className="max-w-4xl mx-auto"
+ * />
+ *
+ * // User-level commands only
+ * <SlashCommandsManager
+ *   scopeFilter="user"
+ * />
+ * ```
  */
 export const SlashCommandsManager: React.FC<SlashCommandsManagerProps> = ({
   projectPath,
@@ -140,6 +171,9 @@ export const SlashCommandsManager: React.FC<SlashCommandsManagerProps> = ({
     loadCommands();
   }, [projectPath]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  /**
+   * Load slash commands from storage
+   */
   const loadCommands = useCallback(async () => {
     try {
       setLoading(true);
@@ -154,6 +188,9 @@ export const SlashCommandsManager: React.FC<SlashCommandsManagerProps> = ({
     }
   }, [projectPath, t.messages.saveError]);
 
+  /**
+   * Handle creating a new slash command
+   */
   const handleCreateNew = () => {
     setEditingCommand(null);
     setCommandForm({
@@ -167,6 +204,11 @@ export const SlashCommandsManager: React.FC<SlashCommandsManagerProps> = ({
     setEditDialogOpen(true);
   };
 
+  /**
+   * Handle editing an existing slash command
+   *
+   * @param command - Command to edit
+   */
   const handleEdit = (command: SlashCommand) => {
     setEditingCommand(command);
     setCommandForm({
@@ -205,6 +247,11 @@ export const SlashCommandsManager: React.FC<SlashCommandsManagerProps> = ({
     }
   };
 
+  /**
+   * Handle delete button click for a slash command
+   *
+   * @param command - Command to delete
+   */
   const handleDeleteClick = (command: SlashCommand) => {
     setCommandToDelete(command);
     setDeleteDialogOpen(true);

@@ -90,6 +90,18 @@ export function getModelDisplayName(model: ClaudeModel): string {
 
 /**
  * Check if model is legacy (Claude 4)
+ *
+ * Determines if a given model is from the legacy Claude 4 generation.
+ * Legacy models may have different capabilities or pricing structures.
+ *
+ * @param model - The Claude model to check
+ * @returns True if the model is from Claude 4 generation
+ *
+ * @example
+ * ```typescript
+ * isLegacyModel('sonnet') // true (Claude 4 Sonnet)
+ * isLegacyModel('sonnet-3-5') // false (Claude 3.5 Sonnet)
+ * ```
  */
 export function isLegacyModel(model: ClaudeModel): boolean {
   return model === "sonnet" || model === "opus";
@@ -112,6 +124,19 @@ export const MODEL_API_MAPPING: Record<ClaudeModel, string> = {
 
 /**
  * Get API model identifier from shorthand
+ *
+ * Converts shorthand model names to their full API identifiers
+ * required for making requests to the Claude API.
+ *
+ * @param model - Shorthand or full model identifier
+ * @returns Full API model identifier
+ *
+ * @example
+ * ```typescript
+ * getApiModel('sonnet-3-5') // 'claude-3-5-sonnet-20241022'
+ * getApiModel('haiku') // 'claude-3-5-haiku-20241022'
+ * getApiModel('claude-3-5-sonnet-20241022') // 'claude-3-5-sonnet-20241022'
+ * ```
  */
 export function getApiModel(model: ClaudeModel): string {
   return MODEL_API_MAPPING[model] || model;

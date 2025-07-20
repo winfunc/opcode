@@ -10,6 +10,9 @@ import { api, type GitHubAgentFile, type AgentExport, type Agent } from "@/lib/a
 import { AGENT_ICONS } from "@/constants/agentIcons";
 import { open } from "@tauri-apps/plugin-shell";
 import { handleError } from "@/lib/errorHandler";
+/**
+ * Props interface for the GitHubAgentBrowser component
+ */
 interface GitHubAgentBrowserProps {
   isOpen: boolean;
   onClose: () => void;
@@ -23,6 +26,28 @@ interface AgentPreview {
   error: string | null;
 }
 
+/**
+ * GitHubAgentBrowser component for browsing and importing agents from GitHub
+ *
+ * A comprehensive browser interface for discovering and importing Claude Code
+ * agents from GitHub repositories. Features include search, filtering, preview,
+ * and one-click import functionality with validation and error handling.
+ *
+ * @param onBack - Callback to return to the previous view
+ * @param onAgentImported - Callback when an agent is successfully imported
+ * @param className - Additional CSS classes for styling
+ *
+ * @example
+ * ```tsx
+ * <GitHubAgentBrowser
+ *   onBack={() => setView('agents')}
+ *   onAgentImported={(agent) => {
+ *     console.log('Imported agent:', agent.name);
+ *     showToast('Agent imported successfully!', 'success');
+ *   }}
+ * />
+ * ```
+ */
 export const GitHubAgentBrowser: React.FC<GitHubAgentBrowserProps> = ({
   isOpen,
   onClose,
@@ -136,6 +161,12 @@ export const GitHubAgentBrowser: React.FC<GitHubAgentBrowserProps> = ({
       .join(" ");
   };
 
+  /**
+   * Render agent icon component
+   *
+   * @param iconName - Name of the icon to render
+   * @returns React icon component
+   */
   const renderIcon = (iconName: string) => {
     const Icon = AGENT_ICONS[iconName] || AGENT_ICONS.Bot;
     return <Icon className="h-8 w-8" />;
