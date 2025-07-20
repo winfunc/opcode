@@ -3,11 +3,37 @@ import { CheckCircle2, Circle, Clock, FileEdit } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
+/**
+ * Props interface for the TodoWidget component
+ */
 interface TodoWidgetProps {
+  /** Array of todo items to display */
   todos: any[];
+  /** Optional result object (currently unused) */
   result?: any;
 }
 
+/**
+ * TodoWidget component for displaying a list of todo items
+ * 
+ * A task management widget that displays todo items with status indicators,
+ * priority badges, and completion states. Supports different status types
+ * (completed, in_progress, pending) and priority levels (high, medium, low).
+ * 
+ * @param todos - Array of todo objects with id, content, status, and priority
+ * @param result - Optional result object (currently unused)
+ * 
+ * @example
+ * ```tsx
+ * <TodoWidget 
+ *   todos={[
+ *     { id: 1, content: "Complete project", status: "in_progress", priority: "high" },
+ *     { id: 2, content: "Review code", status: "pending", priority: "medium" },
+ *     { id: 3, content: "Update docs", status: "completed", priority: "low" }
+ *   ]}
+ * />
+ * ```
+ */
 export const TodoWidget: React.FC<TodoWidgetProps> = ({ todos, result: _result }) => {
   const statusIcons = {
     completed: <CheckCircle2 className="h-4 w-4 text-green-500" />,

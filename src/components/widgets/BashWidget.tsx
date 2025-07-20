@@ -2,12 +2,42 @@ import React from "react";
 import { Terminal, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+/**
+ * Props interface for the BashWidget component
+ */
 interface BashWidgetProps {
+  /** The bash command to display */
   command: string;
+  /** Optional description of what the command does */
   description?: string;
+  /** Result object containing command output and status */
   result?: any;
 }
 
+/**
+ * BashWidget component for displaying bash commands and their results
+ * 
+ * A terminal-styled widget that shows bash commands with optional descriptions
+ * and results. Supports both success and error states with appropriate styling.
+ * 
+ * @param command - The bash command to display
+ * @param description - Optional description of the command
+ * @param result - Result object with content and error status
+ * 
+ * @example
+ * ```tsx
+ * <BashWidget 
+ *   command="ls -la" 
+ *   description="List directory contents"
+ *   result={{ content: "file1.txt\nfile2.txt", is_error: false }}
+ * />
+ * 
+ * <BashWidget 
+ *   command="npm install" 
+ *   description="Installing dependencies"
+ * />
+ * ```
+ */
 export const BashWidget: React.FC<BashWidgetProps> = ({ command, description, result }) => {
   // Extract result content if available
   let resultContent = '';

@@ -2,11 +2,33 @@ import React, { useState } from "react";
 import { FolderOpen, Folder, FileCode, FileText, Terminal, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+/**
+ * Props interface for the LSWidget component
+ */
 interface LSWidgetProps {
+  /** The file system path to list */
   path: string;
+  /** Optional result object containing directory listing data */
   result?: any;
 }
 
+/**
+ * LSWidget component for displaying directory listings
+ * 
+ * A file explorer widget that shows directory contents with file/folder icons
+ * and interactive features. Can display both the command and its results.
+ * 
+ * @param path - The file system path to display
+ * @param result - Result object containing directory listing data
+ * 
+ * @example
+ * ```tsx
+ * <LSWidget 
+ *   path="/home/user/projects" 
+ *   result={{ content: "folder1/\nfile1.txt\nfile2.js" }}
+ * />
+ * ```
+ */
 export const LSWidget: React.FC<LSWidgetProps> = ({ path, result }) => {
   // If we have a result, show it using the LSResultWidget
   if (result) {
