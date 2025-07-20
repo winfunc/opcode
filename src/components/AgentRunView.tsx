@@ -23,6 +23,7 @@ import type { ClaudeStreamMessage } from "./AgentExecution";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { logger } from "@/lib/logger";
 
+import { handleError } from '@/lib/errorHandler';
 interface AgentRunViewProps {
   /**
    * The run ID to view
@@ -94,14 +95,14 @@ export const AgentRunView: React.FC<AgentRunViewProps> = ({
             const msg = JSON.parse(line) as ClaudeStreamMessage;
             parsedMessages.push(msg);
           } catch (err) {
-            logger.error("Failed to parse line:", line, err);
+            await handleError("Failed to parse line:", { context: line, err });
           }
         }
         
         setMessages(parsedMessages);
       }
     } catch (err) {
-      logger.error("Failed to load run:", err);
+      await handleError("Failed to load run:", { context: err });
       setError("Failed to load execution details");
     } finally {
       setLoading(false);
@@ -176,7 +177,7 @@ export const AgentRunView: React.FC<AgentRunViewProps> = ({
 
   const handleStop = async () => {
     if (!runId) {
-      logger.error('[AgentRunView] No run ID available to stop');
+      await handleError("[AgentRunView] No run ID available to stop", { context: { runId, component: 'AgentRunView' } });
       return;
     }
 
@@ -214,7 +215,7 @@ export const AgentRunView: React.FC<AgentRunViewProps> = ({
         logger.warn(`[AgentRunView] Failed to stop agent session ${runId} - it may have already finished`);
       }
     } catch (err) {
-      logger.error('[AgentRunView] Failed to stop agent:', err);
+      await handleError("[AgentRunView] Failed to stop agent:", { context: err });
     }
   };
 

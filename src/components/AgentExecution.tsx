@@ -38,6 +38,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { AGENT_ICONS } from "./CCAgents";
 import { HooksEditor } from "./HooksEditor";
 import { logger } from "@/lib/logger";
+import { handleError } from "@/lib/errorHandler";
 
 interface AgentExecutionProps {
   /**
@@ -276,10 +277,9 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
         setError(null); // Clear any previous errors
       }
     } catch (err) {
-      logger.error("Failed to select directory:", err);
-      // More detailed error logging
-      const errorMessage = err instanceof Error ? err.message : String(err);
-      setError(`Failed to select directory: ${errorMessage}`);
+      const error = err instanceof Error ? err : new Error(String(err));
+      await handleError(error, { operation: 'selectDirectory', component: 'AgentExecution' });
+      setError(`Failed to select directory: ${error.message}`);
     }
   };
 
@@ -305,7 +305,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
       setRunId(executionRunId);
       
       // Set up event listeners with run ID isolation
-      const outputUnlisten = await listen<string>(`agent-output:${executionRunId}`, (event) => {
+      const outputUnlisten = await listen<string>(`agent-output:${executionRunId}`, async (event) => {
         try {
           // Store raw JSONL
           setRawJsonlOutput(prev => [...prev, event.payload]);
@@ -314,26 +314,29 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
           const message = JSON.parse(event.payload) as ClaudeStreamMessage;
           setMessages(prev => [...prev, message]);
         } catch (err) {
-          logger.error("Failed to parse message:", err, event.payload);
+          const error = err instanceof Error ? err : new Error(String(err));
+          await handleError(error, { operation: 'parseAgentMessage', payload: event.payload, component: 'AgentExecution' });
         }
       });
 
-      const errorUnlisten = await listen<string>(`agent-error:${executionRunId}`, (event) => {
-        logger.error("Agent error:", event.payload);
+      const errorUnlisten = await listen<string>(`agent-error:${executionRunId}`, async (event) => {
+        await handleError(new Error(event.payload), { operation: 'agentError', component: 'AgentExecution' });
         setError(event.payload);
       });
 
-      const completeUnlisten = await listen<boolean>(`agent-complete:${executionRunId}`, (event) => {
+      const completeUnlisten = await listen<boolean>(`agent-complete:${executionRunId}`, async (event) => {
         setIsRunning(false);
         setExecutionStartTime(null);
         if (!event.payload) {
+          await handleError(new Error("Agent execution failed"), { operation: 'agentExecutionFailed', component: 'AgentExecution' });
           setError("Agent execution failed");
         }
       });
 
-      const cancelUnlisten = await listen<boolean>(`agent-cancelled:${executionRunId}`, () => {
+      const cancelUnlisten = await listen<boolean>(`agent-cancelled:${executionRunId}`, async () => {
         setIsRunning(false);
         setExecutionStartTime(null);
+        await handleError(new Error("Agent execution was cancelled"), { operation: 'agentExecutionCancelled', component: 'AgentExecution' });
         setError("Agent execution was cancelled");
       });
 
@@ -361,7 +364,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
   const handleStop = async () => {
     try {
       if (!runId) {
-        logger.error("No run ID available to stop");
+        await handleError("No run ID available to stop", { operation: 'stopAgent', component: 'AgentExecution' });
         return;
       }
 

@@ -18,8 +18,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
-import { logger } from '@/lib/logger';
-
+import { handleError } from '@/lib/errorHandler';
 interface UsageDashboardProps {
   /**
    * Callback when back button is clicked
@@ -84,7 +83,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
       setStats(statsData);
       setSessionStats(sessionData);
     } catch (err) {
-      logger.error("Failed to load usage stats:", err);
+      await handleError("Failed to load usage stats:", { context: err });
       setError(t.usage.failedToLoadUsageStats);
     } finally {
       setLoading(false);

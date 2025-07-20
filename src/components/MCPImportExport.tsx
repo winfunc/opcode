@@ -6,8 +6,7 @@ import { Label } from "@/components/ui/label";
 import { SelectComponent } from "@/components/ui/select";
 import { api } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
-import { logger } from '@/lib/logger';
-
+import { handleError } from '@/lib/errorHandler';
 interface MCPImportExportProps {
   /**
    * Callback when import is completed
@@ -64,7 +63,7 @@ export const MCPImportExport: React.FC<MCPImportExportProps> = ({
         onImportCompleted(result.imported_count, result.failed_count);
       }
     } catch (error: any) {
-      logger.error("Failed to import from Claude Desktop:", error);
+      await handleError("Failed to import from Claude Desktop:", { context: error });
       onError(error.toString() || t.mcp.failedToImportFromClaudeDesktop);
     } finally {
       setImportingDesktop(false);
@@ -133,7 +132,7 @@ export const MCPImportExport: React.FC<MCPImportExportProps> = ({
         onError(t.mcp.unrecognizedJsonFormat);
       }
     } catch (error) {
-      logger.error("Failed to import JSON:", error);
+      await handleError("Failed to import JSON:", { context: error });
       onError(t.mcp.failedToImportJson);
     } finally {
       setImportingJson(false);
@@ -158,7 +157,7 @@ export const MCPImportExport: React.FC<MCPImportExportProps> = ({
       await api.mcpServe();
       onError(t.mcp.claudeCodeMcpServerStarted);
     } catch (error) {
-      logger.error("Failed to start MCP server:", error);
+      await handleError("Failed to start MCP server:", { context: error });
       onError(t.mcp.failedToStartMcpServer);
     }
   };

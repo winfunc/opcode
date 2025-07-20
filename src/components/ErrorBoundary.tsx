@@ -3,6 +3,7 @@ import { AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { logger } from "@/lib/logger";
+import { handleError } from "@/lib/errorHandler";
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -29,7 +30,13 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    // Log the error to console
+    // Use unified error handling
+    handleError(error, { 
+      source: 'ErrorBoundary',
+      componentStack: errorInfo.componentStack,
+      errorBoundary: true
+    });
+    // Also log to console for debugging
     logger.error("Error caught by boundary:", error, errorInfo);
   }
 

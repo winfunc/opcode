@@ -17,6 +17,7 @@ import type { FileEntry } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { logger } from "@/lib/logger";
 
+import { handleError } from '@/lib/errorHandler';
 // Global caches that persist across component instances
 const globalDirectoryCache = new Map<string, FileEntry[]>();
 const globalSearchCache = new Map<string, FileEntry[]>();
@@ -274,8 +275,8 @@ export const FilePicker: React.FC<FilePickerProps> = ({
       setIsShowingCached(false);
       setError(null);
     } catch (err) {
-      logger.error('[FilePicker] Failed to load directory:', path, err);
-      logger.error('[FilePicker] Error details:', err);
+      await handleError("[FilePicker] Failed to load directory:", { context: path, err });
+      await handleError("[FilePicker] Error details:", { context: err });
       // Only set error if we don't have cached data to show
       if (!globalDirectoryCache.has(path)) {
         setError(err instanceof Error ? err.message : 'Failed to load directory');
@@ -315,7 +316,7 @@ export const FilePicker: React.FC<FilePickerProps> = ({
       setIsShowingCached(false);
       setError(null);
     } catch (err) {
-      logger.error('[FilePicker] Search failed:', query, err);
+      await handleError("[FilePicker] Search failed:", { context: query, err });
       // Only set error if we don't have cached data to show
       const cacheKey = `${basePath}:${query}`;
       if (!globalSearchCache.has(cacheKey)) {

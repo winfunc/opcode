@@ -7,8 +7,7 @@ import { LanguageSelector } from "@/components/LanguageSelector";
 import { api, type ClaudeVersionStatus } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
-import { logger } from "@/lib/logger";
-
+import { handleError } from '@/lib/errorHandler';
 interface TopbarProps {
   /**
    * Callback when CLAUDE.md is clicked
@@ -81,7 +80,7 @@ export const Topbar: React.FC<TopbarProps> = ({
         window.dispatchEvent(new CustomEvent('claude-not-found'));
       }
     } catch (err) {
-      logger.error("Failed to check Claude version:", err);
+      await handleError("Failed to check Claude version:", { context: err });
       setVersionStatus({
         is_installed: false,
         output: "Failed to check version",

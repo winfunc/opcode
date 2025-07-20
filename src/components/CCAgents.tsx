@@ -41,8 +41,7 @@ import { AgentExecution } from "./AgentExecution";
 import { AgentRunsList } from "./AgentRunsList";
 import { GitHubAgentBrowser } from "./GitHubAgentBrowser";
 import { ICON_MAP } from "./IconPicker";
-import { logger } from "@/lib/logger";
-
+import { handleError } from '@/lib/errorHandler';
 interface CCAgentsProps {
   /**
    * Callback to go back to the main view
@@ -96,7 +95,7 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
       const agentsList = await api.listAgents();
       setAgents(agentsList);
     } catch (err) {
-      logger.error("Failed to load agents:", err);
+      await handleError("Failed to load agents:", { context: err });
       setError(t.agents.failedToLoadAgents);
       setToast({ message: t.agents.failedToLoadAgents, type: "error" });
     } finally {
@@ -110,7 +109,7 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
       const runsList = await api.listAgentRuns();
       setRuns(runsList);
     } catch (err) {
-      logger.error("Failed to load runs:", err);
+      await handleError("Failed to load runs:", { context: err });
     } finally {
       setRunsLoading(false);
     }
@@ -139,7 +138,7 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
       await loadAgents();
       await loadRuns(); // Reload runs as they might be affected
     } catch (err) {
-      logger.error("Failed to delete agent:", err);
+      await handleError("Failed to delete agent:", { context: err });
       setToast({ message: t.agents.failedToDeleteAgent, type: "error" });
     } finally {
       setIsDeleting(false);
@@ -214,7 +213,7 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
       
       setToast({ message: t.agents.agentExportedSuccessfully, type: "success" });
     } catch (err) {
-      logger.error("Failed to export agent:", err);
+      await handleError("Failed to export agent:", { context: err });
       setToast({ message: t.agents.failedToExportAgent, type: "error" });
     }
   };
@@ -241,7 +240,7 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
       setToast({ message: t.agents.agentImportedSuccessfully, type: "success" });
       await loadAgents();
     } catch (err) {
-      logger.error("Failed to import agent:", err);
+      await handleError("Failed to import agent:", { context: err });
       const errorMessage = err instanceof Error ? err.message : t.agents.failedToImportAgent;
       setToast({ message: errorMessage, type: "error" });
     }

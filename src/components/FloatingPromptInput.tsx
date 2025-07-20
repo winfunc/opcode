@@ -24,6 +24,7 @@ import { type ClaudeModel } from "@/types/models";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { logger } from "@/lib/logger";
 
+import { handleError } from '@/lib/errorHandler';
 interface FloatingPromptInputProps {
   /**
    * Callback when prompt is sent
@@ -382,7 +383,7 @@ const FloatingPromptInputInner = (
           }
         });
       } catch (error) {
-        logger.error('Failed to set up Tauri drag-drop listener:', error);
+        await handleError("Failed to set up Tauri drag-drop listener:", { context: error });
       }
     };
 
@@ -502,7 +503,7 @@ const FloatingPromptInputInner = (
     setCursorPosition(newCursorPosition);
   };
 
-  const handleFileSelect = (entry: FileEntry) => {
+  const handleFileSelect = async (entry: FileEntry) => {
     if (textareaRef.current) {
       // Find the @ position before cursor
       let atPosition = -1;
@@ -519,7 +520,7 @@ const FloatingPromptInputInner = (
 
       if (atPosition === -1) {
         // @ not found, this shouldn't happen but handle gracefully
-        logger.error('[FloatingPromptInput] @ position not found');
+        await handleError("[FloatingPromptInput] @ position not found", { context: { prompt, cursorPosition, component: 'FloatingPromptInput' } });
         return;
       }
 
@@ -554,7 +555,7 @@ const FloatingPromptInputInner = (
     }, 0);
   };
 
-  const handleSlashCommandSelect = (command: SlashCommand) => {
+  const handleSlashCommandSelect = async (command: SlashCommand) => {
     const textarea = isExpanded ? expandedTextareaRef.current : textareaRef.current;
     if (!textarea) return;
 
@@ -572,7 +573,7 @@ const FloatingPromptInputInner = (
     }
 
     if (slashPosition === -1) {
-      logger.error('[FloatingPromptInput] / position not found');
+      await handleError("[FloatingPromptInput] / position not found", { context: { prompt, cursorPosition, component: 'FloatingPromptInput' } });
       return;
     }
 
@@ -677,7 +678,7 @@ const FloatingPromptInputInner = (
           
           reader.readAsDataURL(blob);
         } catch (error) {
-          logger.error('Failed to paste image:', error);
+          await handleError("Failed to paste image:", { context: error });
         }
       }
     }

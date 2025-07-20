@@ -7,8 +7,7 @@ import { Toast, ToastContainer } from "@/components/ui/toast";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
-import { logger } from '@/lib/logger';
-
+import { handleError } from '@/lib/errorHandler';
 interface MarkdownEditorProps {
   /**
    * Callback to go back to the main view
@@ -53,7 +52,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
       setContent(prompt);
       setOriginalContent(prompt);
     } catch (err) {
-      logger.error("Failed to load system prompt:", err);
+      await handleError("Failed to load system prompt:", { context: err });
       setError(t.claudemd.failedToLoad);
     } finally {
       setLoading(false);
@@ -69,7 +68,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
       setOriginalContent(content);
       setToast({ message: t.claudemd.savedSuccessfully, type: "success" });
     } catch (err) {
-      logger.error("Failed to save system prompt:", err);
+      await handleError("Failed to save system prompt:", { context: err });
       setError(t.claudemd.failedToSave);
       setToast({ message: t.claudemd.failedToSave, type: "error" });
     } finally {

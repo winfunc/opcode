@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect } fr
 import { api } from './api';
 import { logger } from '@/lib/logger';
 
+import { handleError } from '@/lib/errorHandler';
 // Use the same message interface as AgentExecution for consistency
 export interface ClaudeStreamMessage {
   type: "system" | "assistant" | "user" | "result";
@@ -88,7 +89,7 @@ export function OutputCacheProvider({ children }: OutputCacheProviderProps) {
     }
   }, []);
 
-  const parseOutput = useCallback((rawOutput: string): ClaudeStreamMessage[] => {
+  const parseOutput = useCallback(async (rawOutput: string): Promise<ClaudeStreamMessage[]> => {
     if (!rawOutput) return [];
 
     const lines = rawOutput.split('\n').filter(line => line.trim());
@@ -99,7 +100,7 @@ export function OutputCacheProvider({ children }: OutputCacheProviderProps) {
         const message = JSON.parse(line) as ClaudeStreamMessage;
         parsedMessages.push(message);
       } catch (err) {
-        logger.error("Failed to parse message:", err, line);
+        await handleError("Failed to parse message:", { context: err, line });
         // Add a fallback message for unparseable content
         parsedMessages.push({
           type: 'result',
@@ -116,7 +117,9 @@ export function OutputCacheProvider({ children }: OutputCacheProviderProps) {
   const updateSessionCache = useCallback(async (sessionId: number, status: string) => {
     try {
       const rawOutput = await api.getSessionOutput(sessionId);
-      const messages = parseOutput(rawOutput);
+      
+      // 使用 Promise.resolve 包装以避免阻塞
+      const messages = await Promise.resolve(parseOutput(rawOutput));
       
       setCachedOutput(sessionId, {
         output: rawOutput,

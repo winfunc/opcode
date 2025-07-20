@@ -12,6 +12,7 @@ import { MCPImportExport } from "./MCPImportExport";
 import { useI18n } from "@/lib/i18n";
 import { logger } from '@/lib/logger';
 
+import { handleError } from '@/lib/errorHandler';
 interface MCPManagerProps {
   /**
    * Callback to go back to the main view
@@ -56,7 +57,7 @@ export const MCPManager: React.FC<MCPManagerProps> = ({
       logger.debug("MCPManager: Server count:", serverList.length);
       setServers(serverList);
     } catch (err) {
-      logger.error("MCPManager: Failed to load MCP servers:", err);
+      await handleError("MCPManager: Failed to load MCP servers:", { context: err });
       setError(t.mcp.failedToLoadServers);
     } finally {
       setLoading(false);

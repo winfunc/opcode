@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { api } from '@/lib/api';
+import { handleApiError } from '@/lib/errorHandler';
 import type { AgentRunWithMetrics } from '@/lib/api';
 
 interface AgentState {
@@ -70,6 +71,7 @@ export const useAgentStore = create<AgentState>()(
           lastFetchTime: now
         });
       } catch (error) {
+        await handleApiError(error as Error, { operation: 'fetchAgentRuns' });
         set({
           error: error instanceof Error ? error.message : 'Failed to fetch agent runs',
           isLoadingRuns: false
@@ -91,6 +93,7 @@ export const useAgentStore = create<AgentState>()(
           isLoadingOutput: false
         }));
       } catch (error) {
+        await handleApiError(error as Error, { operation: 'fetchSessionOutput', runId });
         set({
           error: error instanceof Error ? error.message : 'Failed to fetch session output',
           isLoadingOutput: false
@@ -114,6 +117,7 @@ export const useAgentStore = create<AgentState>()(
         
         return run;
       } catch (error) {
+        await handleApiError(error as Error, { operation: 'createAgentRun', data });
         set({
           error: error instanceof Error ? error.message : 'Failed to create agent run'
         });
@@ -136,6 +140,7 @@ export const useAgentStore = create<AgentState>()(
           )
         }));
       } catch (error) {
+        await handleApiError(error as Error, { operation: 'cancelAgentRun', runId });
         set({
           error: error instanceof Error ? error.message : 'Failed to cancel agent run'
         });
@@ -166,6 +171,7 @@ export const useAgentStore = create<AgentState>()(
           )
         }));
       } catch (error) {
+        await handleApiError(error as Error, { operation: 'deleteAgentRun', runId });
         set({
           error: error instanceof Error ? error.message : 'Failed to delete agent run'
         });

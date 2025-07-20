@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { logger } from '@/lib/logger';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { api } from '@/lib/api';
+import { handleApiError } from '@/lib/errorHandler';
 import type { Session, Project } from '@/lib/api';
 
 /**
@@ -74,6 +75,7 @@ export const useSessionStore = create<SessionState>()(
         const projects = await api.listProjects();
         set({ projects, isLoadingProjects: false });
       } catch (error) {
+        await handleApiError(error as Error, { operation: 'fetchProjects' });
         set({ 
           error: error instanceof Error ? error.message : 'Failed to fetch projects',
           isLoadingProjects: false 
@@ -94,6 +96,7 @@ export const useSessionStore = create<SessionState>()(
           isLoadingSessions: false
         }));
       } catch (error) {
+        await handleApiError(error as Error, { operation: 'fetchProjectSessions', projectId });
         set({ 
           error: error instanceof Error ? error.message : 'Failed to fetch sessions',
           isLoadingSessions: false 

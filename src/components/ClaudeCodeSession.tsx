@@ -36,6 +36,7 @@ import type { ClaudeStreamMessage } from "./AgentExecution";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useI18n } from "@/lib/i18n";
 import { logger } from "@/lib/logger";
+import { handleError, handleApiError, handleValidationError } from "@/lib/errorHandler";
 
 interface ClaudeCodeSessionProps {
   /**
@@ -301,7 +302,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       // After loading history, we're continuing a conversation
       setIsFirstPrompt(false);
     } catch (err) {
-      logger.error("Failed to load session history:", err);
+      await handleApiError(err as Error, { operation: 'loadSessionHistory', sessionId: effectiveSession?.id });
       setError("Failed to load session history");
     } finally {
       setIsLoading(false);
@@ -333,7 +334,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
           reconnectToSession(session.id);
         }
       } catch (err) {
-        logger.error('Failed to check for active sessions:', err);
+        await handleApiError(err as Error, { operation: 'listRunningClaudeSessions' });
       }
     }
   };
@@ -371,7 +372,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         const message = JSON.parse(event.payload) as ClaudeStreamMessage;
         setMessages(prev => [...prev, message]);
       } catch (err) {
-        logger.error("Failed to parse message:", err, event.payload);
+        await handleError(err as Error, { operation: 'parseClaudeMessage', payload: event.payload });
       }
     });
 
@@ -412,7 +413,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         setError(null);
       }
     } catch (err) {
-      logger.error("Failed to select directory:", err);
+      await handleError(err as Error, { operation: 'selectDirectory' });
       const errorMessage = err instanceof Error ? err.message : String(err);
       setError(`Failed to select directory: ${errorMessage}`);
     }
@@ -422,6 +423,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     logger.debug('[ClaudeCodeSession] handleSendPrompt called with:', { prompt, model, projectPath, claudeSessionId, effectiveSession });
     
     if (!projectPath) {
+      await handleValidationError("Please select a project directory first", { operation: 'validateProjectPath' });
       setError("Please select a project directory first");
       return;
     }
@@ -477,12 +479,12 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         const attachSessionSpecificListeners = async (sid: string) => {
           logger.debug('[ClaudeCodeSession] Attaching session-specific listeners for', sid);
 
-          const specificOutputUnlisten = await listen<string>(`claude-output:${sid}`, (evt) => {
-            handleStreamMessage(evt.payload);
+          const specificOutputUnlisten = await listen<string>(`claude-output:${sid}`, async (evt) => {
+            await handleStreamMessage(evt.payload);
           });
 
-          const specificErrorUnlisten = await listen<string>(`claude-error:${sid}`, (evt) => {
-            logger.error('Claude error (scoped):', evt.payload);
+          const specificErrorUnlisten = await listen<string>(`claude-error:${sid}`, async (evt) => {
+            await handleError(evt.payload, { operation: 'claudeErrorScoped', source: 'claude_session' });
             setError(evt.payload);
           });
 
@@ -498,7 +500,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
 
         // Generic listeners (catch-all)
         const genericOutputUnlisten = await listen<string>('claude-output', async (event) => {
-          handleStreamMessage(event.payload);
+          await handleStreamMessage(event.payload);
 
           // Attempt to extract session_id on the fly (for the very first init)
           try {
@@ -525,7 +527,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         });
 
         // Helper to process any JSONL stream message string
-        function handleStreamMessage(payload: string) {
+        async function handleStreamMessage(payload: string) {
           try {
             // Don't process if component unmounted
             if (!isMountedRef.current) return;
@@ -536,7 +538,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
             const message = JSON.parse(payload) as ClaudeStreamMessage;
             setMessages((prev) => [...prev, message]);
           } catch (err) {
-            logger.error('Failed to parse message:', err, payload);
+            await handleError(err as Error, { operation: 'parseClaudeMessage', payload });
           }
         }
 
@@ -565,7 +567,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                 setTimelineVersion((v) => v + 1);
               }
             } catch (err) {
-              logger.error('Failed to check auto checkpoint:', err);
+              await handleError(err as Error, { operation: 'checkAutoCheckpoint', sessionId: effectiveSession.id });
             }
           }
 
@@ -581,8 +583,8 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
           }
         };
 
-        const genericErrorUnlisten = await listen<string>('claude-error', (evt) => {
-          logger.error('Claude error:', evt.payload);
+        const genericErrorUnlisten = await listen<string>('claude-error', async (evt) => {
+          await handleError(evt.payload, { operation: 'claudeError', source: 'claude_session' });
           setError(evt.payload);
         });
 

@@ -3,8 +3,7 @@
  * Provides functions and utilities to improve application performance
  */
 
-import { logger } from '@/lib/logger';
-
+import { handleError } from '@/lib/errorHandler';
 /**
  * Memoization utility for expensive function calls
  * Caches function results based on arguments to avoid repeated calculations
@@ -166,7 +165,7 @@ export class BatchProcessor<T> {
     try {
       await this.processor(items);
     } catch (error) {
-      logger.error('Batch processing error:', error);
+      await handleError("Batch processing error:", { context: error });
     }
   }
 

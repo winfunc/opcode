@@ -6,8 +6,7 @@ import { Button } from "@/components/ui/button";
 import { api, type ProcessInfo, type Session } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { formatISOTimestamp } from "@/lib/date-utils";
-import { logger } from '@/lib/logger';
-
+import { handleError } from '@/lib/errorHandler';
 interface RunningClaudeSessionsProps {
   /**
    * Callback when a running session is clicked to resume
@@ -44,7 +43,7 @@ export const RunningClaudeSessions: React.FC<RunningClaudeSessionsProps> = ({
       setRunningSessions(sessions);
       setError(null);
     } catch (err) {
-      logger.error("Failed to load running sessions:", err);
+      await handleError("Failed to load running sessions:", { context: err });
       setError("Failed to load running sessions");
     } finally {
       setLoading(false);

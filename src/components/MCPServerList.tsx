@@ -22,6 +22,7 @@ import { api, type MCPServer } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import { logger } from '@/lib/logger';
 
+import { handleError } from '@/lib/errorHandler';
 interface MCPServerListProps {
   /**
    * List of MCP servers to display
@@ -89,7 +90,7 @@ export const MCPServerList: React.FC<MCPServerListProps> = ({
       setCopiedServer(serverName);
       setTimeout(() => setCopiedServer(null), 2000);
     } catch (error) {
-      logger.error("Failed to copy command:", error);
+      await handleError("Failed to copy command:", { context: error });
     }
   };
 
@@ -102,7 +103,7 @@ export const MCPServerList: React.FC<MCPServerListProps> = ({
       await api.mcpRemove(name);
       onServerRemoved(name);
     } catch (error) {
-      logger.error("Failed to remove server:", error);
+      await handleError("Failed to remove server:", { context: error });
     } finally {
       setRemovingServer(null);
     }
@@ -118,7 +119,7 @@ export const MCPServerList: React.FC<MCPServerListProps> = ({
       // TODO: Show result in a toast or modal
       logger.debug("Test result:", result);
     } catch (error) {
-      logger.error("Failed to test connection:", error);
+      await handleError("Failed to test connection:", { context: error });
     } finally {
       setTestingServer(null);
     }

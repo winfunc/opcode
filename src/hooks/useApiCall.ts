@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { logger } from '@/lib/logger';
+import { handleError, handleApiError, handleNetworkError, handleValidationError } from '@/lib/errorHandler';
 
 /**
  * Toast notification function
@@ -61,7 +62,9 @@ export function useApiCall<T>(
       try {
         // Input validation
         if (!apiFunction) {
-          throw new Error('API function is required');
+          const validationError = new Error('API function is required');
+          await handleValidationError(validationError, { source: 'useApiCall', operation: 'call' });
+          throw validationError;
         }
 
         // Cancel any pending request
@@ -126,9 +129,13 @@ export function useApiCall<T>(
           error = new Error('An unexpected error occurred');
         }
 
-        // Add additional context to network errors
-        if (error.message.includes('fetch')) {
-          error = new Error(`Network error: ${error.message}`);
+        // Use unified error handling based on error type
+        if (error.message.includes('fetch') || error.message.includes('network') || error.message.includes('connection')) {
+          await handleNetworkError(error, { source: 'useApiCall', operation: 'apiCall' });
+        } else if (error.message.includes('timeout') || error.name === 'TimeoutError') {
+          await handleError(error, { source: 'useApiCall', operation: 'apiCall', type: 'timeout' });
+        } else {
+          await handleApiError(error, { source: 'useApiCall', operation: 'apiCall' });
         }
 
         setError(error);

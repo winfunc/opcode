@@ -19,8 +19,7 @@ import { api, type GitHubAgentFile, type AgentExport, type Agent } from "@/lib/a
 import { type AgentIconName } from "./CCAgents";
 import { ICON_MAP } from "./IconPicker";
 import { open } from "@tauri-apps/plugin-shell";
-import { logger } from '@/lib/logger';
-
+import { handleError } from '@/lib/errorHandler';
 interface GitHubAgentBrowserProps {
   isOpen: boolean;
   onClose: () => void;
@@ -59,7 +58,7 @@ export const GitHubAgentBrowser: React.FC<GitHubAgentBrowserProps> = ({
       const agents = await api.listAgents();
       setExistingAgents(agents);
     } catch (err) {
-      logger.error("Failed to fetch existing agents:", err);
+      await handleError("Failed to fetch existing agents:", { context: err });
     }
   };
 
@@ -70,7 +69,7 @@ export const GitHubAgentBrowser: React.FC<GitHubAgentBrowserProps> = ({
       const agentFiles = await api.fetchGitHubAgents();
       setAgents(agentFiles);
     } catch (err) {
-      logger.error("Failed to fetch GitHub agents:", err);
+      await handleError("Failed to fetch GitHub agents:", { context: err });
       setError("Failed to fetch agents from GitHub. Please check your internet connection.");
     } finally {
       setLoading(false);
@@ -94,7 +93,7 @@ export const GitHubAgentBrowser: React.FC<GitHubAgentBrowserProps> = ({
         error: null,
       });
     } catch (err) {
-      logger.error("Failed to fetch agent content:", err);
+      await handleError("Failed to fetch agent content:", { context: err });
       setSelectedAgent({
         file,
         data: null,
@@ -127,7 +126,7 @@ export const GitHubAgentBrowser: React.FC<GitHubAgentBrowserProps> = ({
       // Notify parent
       onImportSuccess();
     } catch (err) {
-      logger.error("Failed to import agent:", err);
+      await handleError("Failed to import agent:", { context: err });
       alert(`Failed to import agent: ${err instanceof Error ? err.message : "Unknown error"}`);
     } finally {
       setImporting(false);
@@ -155,7 +154,7 @@ export const GitHubAgentBrowser: React.FC<GitHubAgentBrowserProps> = ({
     try {
       await open("https://github.com/getAsterisk/claudia/tree/main/cc_agents");
     } catch (error) {
-      logger.error('Failed to open GitHub link:', error);
+      await handleError("Failed to open GitHub link:", { context: error });
     }
   };
 

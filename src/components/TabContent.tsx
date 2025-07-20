@@ -19,6 +19,7 @@ import { MCPManager } from '@/components/MCPManager';
 import { Settings } from '@/components/Settings';
 import { MarkdownEditor } from '@/components/MarkdownEditor';
 
+import { handleError } from '@/lib/errorHandler';
 // Import non-lazy components for projects view
 
 interface TabPanelProps {
@@ -49,7 +50,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
       const projectList = await api.listProjects();
       setProjects(projectList);
     } catch (err) {
-      logger.error("Failed to load projects:", err);
+      await handleError("Failed to load projects:", { context: err });
       setError("Failed to load projects. Please ensure ~/.claude directory exists.");
     } finally {
       setLoading(false);
@@ -64,7 +65,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
       setSessions(sessionList);
       setSelectedProject(project);
     } catch (err) {
-      logger.error("Failed to load sessions:", err);
+      await handleError("Failed to load sessions:", { context: err });
       setError("Failed to load sessions for this project.");
     } finally {
       setLoading(false);

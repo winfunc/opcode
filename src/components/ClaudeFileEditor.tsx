@@ -7,8 +7,7 @@ import { Toast, ToastContainer } from "@/components/ui/toast";
 import { api, type ClaudeMdFile } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
-import { logger } from '@/lib/logger';
-
+import { handleError } from '@/lib/errorHandler';
 interface ClaudeFileEditorProps {
   /**
    * The CLAUDE.md file to edit
@@ -61,7 +60,7 @@ export const ClaudeFileEditor: React.FC<ClaudeFileEditorProps> = ({
       setContent(fileContent);
       setOriginalContent(fileContent);
     } catch (err) {
-      logger.error("Failed to load file:", err);
+      await handleError("Failed to load file:", { context: err });
       setError(t.claudemd.failedToLoad);
     } finally {
       setLoading(false);
@@ -77,7 +76,7 @@ export const ClaudeFileEditor: React.FC<ClaudeFileEditorProps> = ({
       setOriginalContent(content);
       setToast({ message: t.claudemd.savedSuccessfully, type: "success" });
     } catch (err) {
-      logger.error("Failed to save file:", err);
+      await handleError("Failed to save file:", { context: err });
       setError(t.claudemd.failedToSave);
       setToast({ message: t.claudemd.failedToSave, type: "error" });
     } finally {

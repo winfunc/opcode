@@ -26,8 +26,8 @@ import { open as openDialog, save } from '@tauri-apps/plugin-dialog';
 import { invoke } from '@tauri-apps/api/core';
 import { GitHubAgentBrowser } from '@/components/GitHubAgentBrowser';
 import { useI18n } from '@/lib/i18n';
-import { logger } from '@/lib/logger';
 
+import { handleError } from '@/lib/errorHandler';
 interface AgentsModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -70,7 +70,7 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
       const agentList = await api.listAgents();
       setAgents(agentList);
     } catch (error) {
-      logger.error('Failed to load agents:', error);
+      await handleError("Failed to load agents:", { context: error });
     } finally {
       setLoading(false);
     }
@@ -92,7 +92,7 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
       
       setRunningAgents(agentRuns);
     } catch (error) {
-      logger.error('Failed to load running agents:', error);
+      await handleError("Failed to load running agents:", { context: error });
     }
   };
 
@@ -122,7 +122,7 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
       setShowDeleteDialog(false);
       setAgentToDelete(null);
     } catch (error) {
-      logger.error('Failed to delete agent:', error);
+      await handleError("Failed to delete agent:", { context: error });
     }
   };
 
@@ -154,7 +154,7 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
         setToast({ message: `Agent "${agent.name}" imported successfully`, type: "success" });
       }
     } catch (error) {
-      logger.error('Failed to import agent:', error);
+      await handleError("Failed to import agent:", { context: error });
       setToast({ message: "Failed to import agent", type: "error" });
     }
   };
@@ -179,7 +179,7 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
         setToast({ message: "Agent exported successfully", type: "success" });
       }
     } catch (error) {
-      logger.error('Failed to export agent:', error);
+      await handleError("Failed to export agent:", { context: error });
       setToast({ message: "Failed to export agent", type: "error" });
     }
   };

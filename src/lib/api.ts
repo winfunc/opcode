@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { logger } from "@/lib/logger";
+import { handleApiError } from "@/lib/errorHandler";
 
 /**
  * @fileoverview API layer for communicating with the Tauri backend
@@ -461,7 +462,7 @@ export const api = {
     try {
       return await invoke<Project[]>("list_projects");
     } catch (error) {
-      logger.error("Failed to list projects:", error);
+      await handleApiError(error as Error, { operation: 'listProjects' });
       throw error;
     }
   },
@@ -475,7 +476,7 @@ export const api = {
     try {
       return await invoke<Session[]>('get_project_sessions', { projectId });
     } catch (error) {
-      logger.error("Failed to get project sessions:", error);
+      await handleApiError(error as Error, { operation: 'getProjectSessions', projectId });
       throw error;
     }
   },

@@ -39,8 +39,7 @@ import {
   WebSearchWidget,
   WebFetchWidget
 } from "./ToolWidgets";
-import { logger } from "@/lib/logger";
-
+import { handleError } from '@/lib/errorHandler';
 interface StreamMessageProps {
   message: ClaudeStreamMessage;
   className?: string;
@@ -713,7 +712,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
     return null;
   } catch (error) {
     // If any error occurs during rendering, show a safe error message
-    logger.error("Error rendering stream message:", error, message);
+    handleError("Error rendering stream message:", { context: error, message }).catch(console.error);
     return (
       <Card className={cn("border-destructive/20 bg-destructive/5", className)}>
         <CardContent className="p-4">

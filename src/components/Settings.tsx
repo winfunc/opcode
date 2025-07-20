@@ -27,7 +27,7 @@ import { StorageTab } from "./StorageTab";
 import { HooksEditor } from "./HooksEditor";
 import { SlashCommandsManager } from "./SlashCommandsManager";
 import { logger } from "@/lib/logger";
-
+import { handleError, handleApiError } from '@/lib/errorHandler';
 interface SettingsProps {
   /**
    * Callback to go back to the main view
@@ -94,7 +94,7 @@ export const Settings: React.FC<SettingsProps> = ({
       const path = await api.getClaudeBinaryPath();
       setCurrentBinaryPath(path);
     } catch (err) {
-      logger.error("Failed to load Claude binary path:", err);
+      await handleApiError(err as Error, { operation: 'loadClaudeBinaryPath', component: 'Settings' });
     }
   };
 
@@ -147,7 +147,7 @@ export const Settings: React.FC<SettingsProps> = ({
         );
       }
     } catch (err) {
-      logger.error("Failed to load settings:", err);
+      await handleError("Failed to load settings:", { context: err });
       setError(t.settings.failedToLoadSettings);
       setSettings({});
     } finally {
@@ -198,7 +198,7 @@ export const Settings: React.FC<SettingsProps> = ({
 
       setToast({ message: t.settings.settingsSavedSuccessfully, type: "success" });
     } catch (err) {
-      logger.error("Failed to save settings:", err);
+      await handleError("Failed to save settings:", { context: err });
       setError("Failed to save settings.");
       setToast({ message: t.settings.failedToSaveSettings, type: "error" });
     } finally {

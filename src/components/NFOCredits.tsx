@@ -5,10 +5,9 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useI18n } from "@/lib/i18n";
-import { logger } from '@/lib/logger';
 import asteriskLogo from "@/assets/nfo/asterisk-logo.png";
 import keygennMusic from "@/assets/nfo/claudia-nfo.ogg";
-
+import { handleError } from '@/lib/errorHandler';
 interface NFOCreditsProps {
   /**
    * Callback when the NFO window is closed
@@ -42,8 +41,8 @@ export const NFOCredits: React.FC<NFOCreditsProps> = ({ onClose }) => {
     audio.play().then(() => {
       // Unmute after autoplay
       audio.muted = false;
-    }).catch(err => {
-      logger.error("Audio autoplay failed:", err);
+    }).catch(async err => {
+      await handleError("Audio autoplay failed:", { context: err });
     });
     return () => {
       if (audioRef.current) {

@@ -19,10 +19,9 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
-import { logger } from '@/lib/logger';
 import { Toast, ToastContainer } from '@/components/ui/toast';
 import type { Project } from '@/lib/api';
-
+import { handleError } from '@/lib/errorHandler';
 interface ProjectSettingsProps {
   project: Project;
   onBack: () => void;
@@ -74,7 +73,7 @@ export const ProjectSettings: React.FC<ProjectSettingsProps> = ({
         setToast({ message: 'Added to .gitignore', type: 'success' });
       }
     } catch (err) {
-      logger.error('Failed to update .gitignore:', err);
+      await handleError("Failed to update .gitignore:", { context: err });
       setToast({ message: 'Failed to update .gitignore', type: 'error' });
     }
   };
