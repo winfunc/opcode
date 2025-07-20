@@ -3,39 +3,39 @@
  * Provides functions and utilities to improve application performance
  */
 
-import { handleError } from '@/lib/errorHandler';
+import { handleError } from "@/lib/errorHandler";
 /**
  * Memoization utility for expensive function calls
  * Caches function results based on arguments to avoid repeated calculations
- * 
+ *
  * @param fn - The function to memoize
  * @param keyGenerator - Optional custom key generator for cache keys
  * @returns Memoized version of the function
- * 
+ *
  * @example
  * ```typescript
  * const expensiveCalculation = memoize((a: number, b: number) => {
  *   logger.debug('Calculating...');
  *   return a * b * Math.random();
  * });
- * 
+ *
  * expensiveCalculation(5, 10); // Logs "Calculating..." and returns result
  * expensiveCalculation(5, 10); // Returns cached result, no log
  * ```
  */
-export function memoize<TArgs extends any[], TReturn>(
+export function memoize<TArgs extends unknown[], TReturn>(
   fn: (...args: TArgs) => TReturn,
   keyGenerator?: (...args: TArgs) => string
 ): (...args: TArgs) => TReturn {
   const cache = new Map<string, TReturn>();
-  
+
   return (...args: TArgs): TReturn => {
     const key = keyGenerator ? keyGenerator(...args) : JSON.stringify(args);
-    
+
     if (cache.has(key)) {
-      return cache.get(key)!;
+      return cache.get(key) as TReturn;
     }
-    
+
     const result = fn(...args);
     cache.set(key, result);
     return result;
@@ -61,7 +61,7 @@ export class LRUCache<K, V> {
    */
   get(key: K): V | undefined {
     if (this.cache.has(key)) {
-      const value = this.cache.get(key)!;
+      const value = this.cache.get(key) as V;
       // Move to end (most recently used)
       this.cache.delete(key);
       this.cache.set(key, value);
@@ -85,7 +85,7 @@ export class LRUCache<K, V> {
         this.cache.delete(firstKey);
       }
     }
-    
+
     this.cache.set(key, value);
   }
 
@@ -117,7 +117,7 @@ export class LRUCache<K, V> {
  */
 export class BatchProcessor<T> {
   private batch: T[] = [];
-  private timeoutId: NodeJS.Timeout | null = null;
+  private timeoutId: ReturnType<typeof setTimeout> | null = null;
   private processor: (items: T[]) => Promise<void>;
   private batchSize: number;
   private delay: number;
@@ -204,27 +204,30 @@ export function calculateVirtualScrollItems(
  * Provides intersection observer for lazy loading images
  */
 export class LazyImageLoader {
-  private observer: IntersectionObserver;
-  private images: Set<HTMLImageElement> = new Set();
+  private observer: globalThis.IntersectionObserver;
+  private images: Set<globalThis.HTMLImageElement> = new Set();
 
-  constructor(options: IntersectionObserverInit = {}) {
-    this.observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          const img = entry.target as HTMLImageElement;
-          this.loadImage(img);
-        }
-      });
-    }, {
-      rootMargin: '50px',
-      ...options
-    });
+  constructor(options: globalThis.IntersectionObserverInit = {}) {
+    this.observer = new globalThis.IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const img = entry.target as globalThis.HTMLImageElement;
+            this.loadImage(img);
+          }
+        });
+      },
+      {
+        rootMargin: "50px",
+        ...options,
+      }
+    );
   }
 
   /**
    * Observe an image element for lazy loading
    */
-  observe(img: HTMLImageElement): void {
+  observe(img: globalThis.HTMLImageElement): void {
     this.images.add(img);
     this.observer.observe(img);
   }
@@ -232,7 +235,7 @@ export class LazyImageLoader {
   /**
    * Stop observing an image element
    */
-  unobserve(img: HTMLImageElement): void {
+  unobserve(img: globalThis.HTMLImageElement): void {
     this.images.delete(img);
     this.observer.unobserve(img);
   }
@@ -240,11 +243,11 @@ export class LazyImageLoader {
   /**
    * Load an image and stop observing it
    */
-  private loadImage(img: HTMLImageElement): void {
+  private loadImage(img: globalThis.HTMLImageElement): void {
     const src = img.dataset.src;
     if (src) {
       img.src = src;
-      img.removeAttribute('data-src');
+      img.removeAttribute("data-src");
       this.unobserve(img);
     }
   }
@@ -269,10 +272,10 @@ export class PerformanceMonitor {
    * Start timing an operation
    */
   startTiming(name: string): () => void {
-    const startTime = performance.now();
-    
+    const startTime = globalThis.performance.now();
+
     return () => {
-      const endTime = performance.now();
+      const endTime = globalThis.performance.now();
       const duration = endTime - startTime;
       this.recordMetric(name, duration);
     };
@@ -285,10 +288,10 @@ export class PerformanceMonitor {
     if (!this.metrics.has(name)) {
       this.metrics.set(name, []);
     }
-    
-    const values = this.metrics.get(name)!;
+
+    const values = this.metrics.get(name) as number[];
     values.push(value);
-    
+
     // Keep only last 100 measurements
     if (values.length > 100) {
       values.shift();
@@ -316,15 +319,15 @@ export class PerformanceMonitor {
    * Get all recorded metrics
    */
   getAllStats(): Record<string, { avg: number; min: number; max: number; count: number }> {
-    const result: Record<string, any> = {};
-    
+    const result: Record<string, { avg: number; min: number; max: number; count: number }> = {};
+
     for (const [name] of this.metrics) {
       const stats = this.getStats(name);
       if (stats) {
         result[name] = stats;
       }
     }
-    
+
     return result;
   }
 
@@ -342,17 +345,17 @@ export const performanceMonitor = new PerformanceMonitor();
  * Throttle function execution
  * Ensures a function is called at most once per specified interval
  */
-export function throttle<T extends (...args: any[]) => any>(
+export function throttle<T extends (...args: unknown[]) => unknown>(
   func: T,
   limit: number
 ): (...args: Parameters<T>) => void {
   let inThrottle: boolean;
-  
-  return function(this: any, ...args: Parameters<T>) {
+
+  return function (this: unknown, ...args: Parameters<T>) {
     if (!inThrottle) {
       func.apply(this, args);
       inThrottle = true;
-      setTimeout(() => inThrottle = false, limit);
+      setTimeout(() => (inThrottle = false), limit);
     }
   };
 }

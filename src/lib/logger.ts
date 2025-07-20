@@ -8,7 +8,7 @@ export enum LogLevel {
   INFO = 1,
   WARN = 2,
   ERROR = 3,
-  NONE = 4
+  NONE = 4,
 }
 
 interface LogConfig {
@@ -24,14 +24,14 @@ class Logger {
 
   constructor() {
     // 检测环境：开发环境或生产环境
-    this.isDevelopment = import.meta.env.DEV || import.meta.env.MODE === 'development';
-    
+    this.isDevelopment = import.meta.env.DEV || import.meta.env.MODE === "development";
+
     // 根据环境设置默认配置
     this.config = {
       level: this.isDevelopment ? LogLevel.DEBUG : LogLevel.WARN,
       enableConsole: this.isDevelopment,
       enablePersistence: false, // 可以根据需要启用
-      maxLogSize: 1024 * 1024 // 1MB
+      maxLogSize: 1024 * 1024, // 1MB
     };
 
     // 从环境变量或本地存储读取配置
@@ -41,7 +41,7 @@ class Logger {
   private loadConfig(): void {
     try {
       // 尝试从本地存储读取日志配置
-      const savedConfig = localStorage.getItem('claudia_log_config');
+      const savedConfig = localStorage.getItem("claudia_log_config");
       if (savedConfig) {
         const parsed = JSON.parse(savedConfig);
         this.config = { ...this.config, ...parsed };
@@ -56,19 +56,26 @@ class Logger {
       // 配置加载失败时使用默认配置
       // 在日志模块内部使用原生 console，避免循环引用
       if (this.isDevelopment) {
-        console.warn('Failed to load log config, using defaults:', error);
+        // eslint-disable-next-line no-console
+        console.warn("Failed to load log config, using defaults:", error);
       }
     }
   }
 
   private parseLogLevel(level: string): LogLevel {
     switch (level.toUpperCase()) {
-      case 'DEBUG': return LogLevel.DEBUG;
-      case 'INFO': return LogLevel.INFO;
-      case 'WARN': return LogLevel.WARN;
-      case 'ERROR': return LogLevel.ERROR;
-      case 'NONE': return LogLevel.NONE;
-      default: return LogLevel.INFO;
+      case "DEBUG":
+        return LogLevel.DEBUG;
+      case "INFO":
+        return LogLevel.INFO;
+      case "WARN":
+        return LogLevel.WARN;
+      case "ERROR":
+        return LogLevel.ERROR;
+      case "NONE":
+        return LogLevel.NONE;
+      default:
+        return LogLevel.INFO;
     }
   }
 
@@ -82,31 +89,35 @@ class Logger {
     return `${prefix} ${message}`;
   }
 
-  debug(message: string, ...args: any[]): void {
+  debug(message: string, ...args: unknown[]): void {
     if (this.shouldLog(LogLevel.DEBUG)) {
       // 日志模块内部直接使用原生 console，避免循环引用
-      console.debug(this.formatMessage('DEBUG', message), ...args);
+      // eslint-disable-next-line no-console
+      console.debug(this.formatMessage("DEBUG", message), ...args);
     }
   }
 
-  info(message: string, ...args: any[]): void {
+  info(message: string, ...args: unknown[]): void {
     if (this.shouldLog(LogLevel.INFO)) {
       // 日志模块内部直接使用原生 console，避免循环引用
-      console.info(this.formatMessage('INFO', message), ...args);
+      // eslint-disable-next-line no-console
+      console.info(this.formatMessage("INFO", message), ...args);
     }
   }
 
-  warn(message: string, ...args: any[]): void {
+  warn(message: string, ...args: unknown[]): void {
     if (this.shouldLog(LogLevel.WARN)) {
       // 日志模块内部直接使用原生 console，避免循环引用
-      console.warn(this.formatMessage('WARN', message), ...args);
+      // eslint-disable-next-line no-console
+      console.warn(this.formatMessage("WARN", message), ...args);
     }
   }
 
-  error(message: string, ...args: any[]): void {
+  error(message: string, ...args: unknown[]): void {
     if (this.shouldLog(LogLevel.ERROR)) {
       // 日志模块内部直接使用原生 console，避免循环引用
-      console.error(this.formatMessage('ERROR', message), ...args);
+      // eslint-disable-next-line no-console
+      console.error(this.formatMessage("ERROR", message), ...args);
     }
   }
 
@@ -127,11 +138,12 @@ class Logger {
 
   private saveConfig(): void {
     try {
-      localStorage.setItem('claudia_log_config', JSON.stringify(this.config));
+      localStorage.setItem("claudia_log_config", JSON.stringify(this.config));
     } catch (error) {
       // 在日志模块内部使用原生 console，避免循环引用
       if (this.isDevelopment) {
-        console.warn('Failed to save log config:', error);
+        // eslint-disable-next-line no-console
+        console.warn("Failed to save log config:", error);
       }
     }
   }
@@ -139,12 +151,14 @@ class Logger {
   // 性能日志（仅开发环境）
   time(label: string): void {
     if (this.isDevelopment && this.shouldLog(LogLevel.DEBUG)) {
+      // eslint-disable-next-line no-console
       console.time(label);
     }
   }
 
   timeEnd(label: string): void {
     if (this.isDevelopment && this.shouldLog(LogLevel.DEBUG)) {
+      // eslint-disable-next-line no-console
       console.timeEnd(label);
     }
   }
@@ -152,12 +166,14 @@ class Logger {
   // 组日志（仅开发环境）
   group(label: string): void {
     if (this.isDevelopment && this.shouldLog(LogLevel.DEBUG)) {
+      // eslint-disable-next-line no-console
       console.group(label);
     }
   }
 
   groupEnd(): void {
     if (this.isDevelopment && this.shouldLog(LogLevel.DEBUG)) {
+      // eslint-disable-next-line no-console
       console.groupEnd();
     }
   }
@@ -171,10 +187,13 @@ export const replaceConsole = () => {
   if (!import.meta.env.DEV) {
     // 生产环境下替换 console 方法
     const noop = () => {};
-    
+
     // 保留 error 和 warn，移除 debug, log, info
+    // eslint-disable-next-line no-console
     console.debug = noop;
+    // eslint-disable-next-line no-console
     console.log = noop;
+    // eslint-disable-next-line no-console
     console.info = noop;
     // console.warn 和 console.error 保留
   }

@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { 
-  ArrowLeft, 
-  Copy, 
-  ChevronDown, 
+import {
+  ArrowLeft,
+  Copy,
+  ChevronDown,
   Clock,
   Hash,
   DollarSign,
   Bot,
-  StopCircle
+  StopCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,12 +18,12 @@ import { api, type AgentRunWithMetrics } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { formatISOTimestamp } from "@/lib/date-utils";
 import { StreamMessage } from "./StreamMessage";
-import { AGENT_ICONS } from "./CCAgents";
+import { AGENT_ICONS } from "@/constants/agentIcons";
 import type { ClaudeStreamMessage } from "./AgentExecution";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { logger } from "@/lib/logger";
 
-import { handleError } from '@/lib/errorHandler';
+import { handleError } from "@/lib/errorHandler";
 interface AgentRunViewProps {
   /**
    * The run ID to view
@@ -41,55 +41,47 @@ interface AgentRunViewProps {
 
 /**
  * AgentRunView component for viewing past agent execution details
- * 
+ *
  * @example
  * <AgentRunView runId={123} onBack={() => setView('list')} />
  */
-export const AgentRunView: React.FC<AgentRunViewProps> = ({
-  runId,
-  onBack,
-  className,
-}) => {
+export const AgentRunView: React.FC<AgentRunViewProps> = ({ runId, onBack, className }) => {
   const [run, setRun] = useState<AgentRunWithMetrics | null>(null);
   const [messages, setMessages] = useState<ClaudeStreamMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copyPopoverOpen, setCopyPopoverOpen] = useState(false);
 
-  useEffect(() => {
-    loadRun();
-  }, [runId]);
-
-  const loadRun = async () => {
+  const loadRun = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       const runData = await api.getAgentRunWithRealTimeMetrics(runId);
       setRun(runData);
-      
+
       // If we have a session_id, try to load from JSONL file first
-      if (runData.session_id && runData.session_id !== '') {
+      if (runData.session_id && runData.session_id !== "") {
         try {
           const history = await api.loadAgentSessionHistory(runData.session_id);
-          
+
           // Convert history to messages format
-          const loadedMessages: ClaudeStreamMessage[] = history.map(entry => ({
-            ...entry,
-            type: entry.type || "assistant"
+          const loadedMessages: ClaudeStreamMessage[] = history.map((entry) => ({
+            ...(entry as object),
+            type: ((entry as { type?: string }).type || "assistant") as "system" | "user" | "assistant" | "result",
           }));
-          
+
           setMessages(loadedMessages);
           return;
         } catch (err) {
-          logger.warn('Failed to load from JSONL, falling back to output field:', err);
+          logger.warn("Failed to load from JSONL, falling back to output field:", err);
         }
       }
-      
+
       // Fallback: Parse JSONL output from the output field
       if (runData.output) {
         const parsedMessages: ClaudeStreamMessage[] = [];
-        const lines = runData.output.split('\n').filter(line => line.trim());
-        
+        const lines = runData.output.split("\n").filter((line) => line.trim());
+
         for (const line of lines) {
           try {
             const msg = JSON.parse(line) as ClaudeStreamMessage;
@@ -98,7 +90,7 @@ export const AgentRunView: React.FC<AgentRunViewProps> = ({
             await handleError("Failed to parse line:", { context: line, err });
           }
         }
-        
+
         setMessages(parsedMessages);
       }
     } catch (err) {
@@ -107,7 +99,11 @@ export const AgentRunView: React.FC<AgentRunViewProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [runId]);
+
+  useEffect(() => {
+    loadRun();
+  }, [runId, loadRun]);
 
   const handleCopyAsJsonl = async () => {
     if (!run?.output) return;
@@ -117,14 +113,14 @@ export const AgentRunView: React.FC<AgentRunViewProps> = ({
 
   const handleCopyAsMarkdown = async () => {
     if (!run) return;
-    
+
     let markdown = `# Agent Run: ${run.agent_name}\n\n`;
     markdown += `**Task:** ${run.task}\n`;
     markdown += `**Model:** ${run.model}\n`;
     markdown += `**Status:** ${run.status}\n`;
     if (run.metrics) {
-      markdown += `**Tokens:** ${run.metrics.total_tokens || 'N/A'}\n`;
-      markdown += `**Cost:** $${run.metrics.cost_usd?.toFixed(4) || 'N/A'}\n`;
+      markdown += `**Tokens:** ${run.metrics.total_tokens || "N/A"}\n`;
+      markdown += `**Cost:** $${run.metrics.cost_usd?.toFixed(4) || "N/A"}\n`;
     }
     markdown += `**Date:** ${new Date(run.created_at).toISOString()}\n\n`;
     markdown += `---\n\n`;
@@ -132,10 +128,10 @@ export const AgentRunView: React.FC<AgentRunViewProps> = ({
     for (const msg of messages) {
       if (msg.type === "system" && msg.subtype === "init") {
         markdown += `## System Initialization\n\n`;
-        markdown += `- Session ID: \`${msg.session_id || 'N/A'}\`\n`;
-        markdown += `- Model: \`${msg.model || 'default'}\`\n`;
+        markdown += `- Session ID: \`${msg.session_id || "N/A"}\`\n`;
+        markdown += `- Model: \`${msg.model || "default"}\`\n`;
         if (msg.cwd) markdown += `- Working Directory: \`${msg.cwd}\`\n`;
-        if (msg.tools?.length) markdown += `- Tools: ${msg.tools.join(', ')}\n`;
+        if (msg.tools?.length) markdown += `- Tools: ${msg.tools.join(", ")}\n`;
         markdown += `\n`;
       } else if (msg.type === "assistant" && msg.message) {
         markdown += `## Assistant\n\n`;
@@ -177,22 +173,24 @@ export const AgentRunView: React.FC<AgentRunViewProps> = ({
 
   const handleStop = async () => {
     if (!runId) {
-      await handleError("[AgentRunView] No run ID available to stop", { context: { runId, component: 'AgentRunView' } });
+      await handleError("[AgentRunView] No run ID available to stop", {
+        context: { runId, component: "AgentRunView" },
+      });
       return;
     }
 
     try {
       // Call the API to kill the agent session
       const success = await api.killAgentSession(runId);
-      
+
       if (success) {
         logger.debug(`[AgentRunView] Successfully stopped agent session ${runId}`);
-        
+
         // Update the run status locally
         if (run) {
-          setRun({ ...run, status: 'cancelled' });
+          setRun({ ...run, status: "cancelled" });
         }
-        
+
         // Add a message indicating execution was stopped
         const stopMessage: ClaudeStreamMessage = {
           type: "result",
@@ -202,17 +200,19 @@ export const AgentRunView: React.FC<AgentRunViewProps> = ({
           duration_ms: 0,
           usage: {
             input_tokens: 0,
-            output_tokens: 0
-          }
+            output_tokens: 0,
+          },
         };
-        setMessages(prev => [...prev, stopMessage]);
-        
+        setMessages((prev) => [...prev, stopMessage]);
+
         // Reload the run data after a short delay
-        setTimeout(() => {
+        globalThis.setTimeout(() => {
           loadRun();
         }, 1000);
       } else {
-        logger.warn(`[AgentRunView] Failed to stop agent session ${runId} - it may have already finished`);
+        logger.warn(
+          `[AgentRunView] Failed to stop agent session ${runId} - it may have already finished`
+        );
       }
     } catch (err) {
       await handleError("[AgentRunView] Failed to stop agent:", { context: err });
@@ -252,12 +252,7 @@ export const AgentRunView: React.FC<AgentRunViewProps> = ({
           className="flex items-center justify-between p-4 border-b border-border"
         >
           <div className="flex items-center space-x-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onBack}
-              className="h-8 w-8"
-            >
+            <Button variant="ghost" size="icon" onClick={onBack} className="h-8 w-8">
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div className="flex items-center gap-2">
@@ -268,9 +263,9 @@ export const AgentRunView: React.FC<AgentRunViewProps> = ({
               </div>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-2">
-            {run?.status === 'running' && (
+            {run?.status === "running" && (
               <Button
                 size="sm"
                 variant="ghost"
@@ -281,14 +276,10 @@ export const AgentRunView: React.FC<AgentRunViewProps> = ({
                 Stop
               </Button>
             )}
-            
+
             <Popover
               trigger={
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="flex items-center gap-2"
-                >
+                <Button variant="ghost" size="sm" className="flex items-center gap-2">
                   <Copy className="h-4 w-4" />
                   Copy Output
                   <ChevronDown className="h-3 w-3" />
@@ -320,7 +311,7 @@ export const AgentRunView: React.FC<AgentRunViewProps> = ({
             />
           </div>
         </motion.div>
-        
+
         {/* Run Details */}
         <Card className="m-4">
           <CardContent className="p-4">
@@ -329,30 +320,30 @@ export const AgentRunView: React.FC<AgentRunViewProps> = ({
                 <h3 className="text-sm font-medium">Task:</h3>
                 <p className="text-sm text-muted-foreground flex-1">{run.task}</p>
                 <Badge variant="outline" className="text-xs">
-                  {run.model === 'opus' ? 'Claude 4 Opus' : 'Claude 4 Sonnet'}
+                  {run.model === "opus" ? "Claude 4 Opus" : "Claude 4 Sonnet"}
                 </Badge>
               </div>
-              
+
               <div className="flex items-center gap-4 text-xs text-muted-foreground">
                 <div className="flex items-center gap-1">
                   <Clock className="h-3 w-3" />
                   <span>{formatISOTimestamp(run.created_at)}</span>
                 </div>
-                
+
                 {run.metrics?.duration_ms && (
                   <div className="flex items-center gap-1">
                     <Clock className="h-3 w-3" />
                     <span>{(run.metrics.duration_ms / 1000).toFixed(2)}s</span>
                   </div>
                 )}
-                
+
                 {run.metrics?.total_tokens && (
                   <div className="flex items-center gap-1">
                     <Hash className="h-3 w-3" />
                     <span>{run.metrics.total_tokens} tokens</span>
                   </div>
                 )}
-                
+
                 {run.metrics?.cost_usd && (
                   <div className="flex items-center gap-1">
                     <DollarSign className="h-3 w-3" />
@@ -384,4 +375,4 @@ export const AgentRunView: React.FC<AgentRunViewProps> = ({
       </div>
     </div>
   );
-}; 
+};

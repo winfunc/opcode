@@ -21,17 +21,13 @@
       "csp": "default-src 'self'; img-src 'self' asset: https://asset.localhost blob: data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-eval'; connect-src 'self' ipc: https://ipc.localhost",
       "assetProtocol": {
         "enable": true,
-        "scope": [
-          "**"
-        ]
+        "scope": ["**"]
       }
     }
   },
   "plugins": {
     "fs": {
-      "scope": [
-        "$HOME/**"
-      ],
+      "scope": ["$HOME/**"],
       "allow": [
         "readFile",
         "writeFile",
@@ -59,9 +55,7 @@
       "icons/icon.icns",
       "icons/icon.png"
     ],
-    "externalBin": [
-      "binaries/claude-code"
-    ],
+    "externalBin": ["binaries/claude-code"],
     "windows": {
       "certificateThumbprint": null,
       "digestAlgorithm": "sha256",

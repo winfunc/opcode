@@ -6,7 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
 import { ClaudeMemoriesDropdown } from "@/components/ClaudeMemoriesDropdown";
 import { cn } from "@/lib/utils";
-import { formatUnixTimestamp, formatISOTimestamp, truncateText, getFirstLine } from "@/lib/date-utils";
+import {
+  formatUnixTimestamp,
+  formatISOTimestamp,
+  truncateText,
+  getFirstLine,
+} from "@/lib/date-utils";
 import type { Session, ClaudeMdFile } from "@/lib/api";
 
 interface SessionListProps {
@@ -40,7 +45,7 @@ const ITEMS_PER_PAGE = 5;
 
 /**
  * SessionList component - Displays paginated sessions for a specific project
- * 
+ *
  * @example
  * <SessionList
  *   sessions={sessions}
@@ -58,18 +63,18 @@ export const SessionList: React.FC<SessionListProps> = ({
   className,
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
-  
+
   // Calculate pagination
   const totalPages = Math.ceil(sessions.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIndex = startIndex + ITEMS_PER_PAGE;
   const currentSessions = sessions.slice(startIndex, endIndex);
-  
+
   // Reset to page 1 if sessions change
   React.useEffect(() => {
     setCurrentPage(1);
   }, [sessions.length]);
-  
+
   return (
     <div className={cn("space-y-4", className)}>
       <motion.div
@@ -78,18 +83,13 @@ export const SessionList: React.FC<SessionListProps> = ({
         transition={{ duration: 0.3 }}
         className="flex items-center space-x-3"
       >
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onBack}
-          className="h-8 w-8"
-        >
+        <Button variant="ghost" size="icon" onClick={onBack} className="h-8 w-8">
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1 min-w-0">
           <h2 className="text-base font-medium truncate">{projectPath}</h2>
           <p className="text-xs text-muted-foreground">
-            {sessions.length} session{sessions.length !== 1 ? 's' : ''}
+            {sessions.length} session{sessions.length !== 1 ? "s" : ""}
           </p>
         </div>
       </motion.div>
@@ -101,10 +101,7 @@ export const SessionList: React.FC<SessionListProps> = ({
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.1 }}
         >
-          <ClaudeMemoriesDropdown
-            projectPath={projectPath}
-            onEditFile={onEditClaudeFile}
-          />
+          <ClaudeMemoriesDropdown projectPath={projectPath} onEditFile={onEditClaudeFile} />
         </motion.div>
       )}
 
@@ -125,12 +122,12 @@ export const SessionList: React.FC<SessionListProps> = ({
               <Card
                 className={cn(
                   "transition-all hover:shadow-md hover:scale-[1.01] active:scale-[0.99] cursor-pointer",
-                  session.todo_data && "border-l-4 border-l-primary"
+                  session.todo_data ? "border-l-4 border-l-primary" : ""
                 )}
                 onClick={() => {
                   // Emit a special event for Claude Code session navigation
-                  const event = new CustomEvent('claude-session-selected', { 
-                    detail: { session, projectPath } 
+                  const event = new window.CustomEvent("claude-session-selected", {
+                    detail: { session, projectPath },
                   });
                   window.dispatchEvent(event);
                   onSessionClick?.(session);
@@ -143,7 +140,7 @@ export const SessionList: React.FC<SessionListProps> = ({
                         <FileText className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                         <div className="space-y-1 flex-1 min-w-0">
                           <p className="font-mono text-xs text-muted-foreground">{session.id}</p>
-                          
+
                           {/* First message preview */}
                           {session.first_message && (
                             <div className="space-y-1">
@@ -156,26 +153,25 @@ export const SessionList: React.FC<SessionListProps> = ({
                               </p>
                             </div>
                           )}
-                          
+
                           {/* Metadata */}
                           <div className="flex items-center space-x-3 text-xs text-muted-foreground">
                             {/* Message timestamp if available, otherwise file creation time */}
                             <div className="flex items-center space-x-1">
                               <Clock className="h-3 w-3" />
                               <span>
-                                {session.message_timestamp 
+                                {session.message_timestamp
                                   ? formatISOTimestamp(session.message_timestamp)
-                                  : formatUnixTimestamp(session.created_at)
-                                }
+                                  : formatUnixTimestamp(session.created_at)}
                               </span>
                             </div>
-                            
-                            {session.todo_data && (
+
+                            {session.todo_data ? (
                               <div className="flex items-center space-x-1">
                                 <Calendar className="h-3 w-3" />
                                 <span>Has todo</span>
                               </div>
-                            )}
+                            ) : null}
                           </div>
                         </div>
                       </div>
@@ -187,12 +183,8 @@ export const SessionList: React.FC<SessionListProps> = ({
           ))}
         </div>
       </AnimatePresence>
-      
-      <Pagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={setCurrentPage}
-      />
+
+      <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
     </div>
   );
-}; 
+};

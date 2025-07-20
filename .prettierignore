@@ -1,0 +1,45 @@
+# Build outputs
+dist/
+build/
+coverage/
+
+# Tauri build artifacts
+src-tauri/target/
+src-tauri/Cargo.lock
+
+# Node modules
+node_modules/
+
+# Generated files
+*.generated.*
+*.min.js
+*.min.css
+
+# Lock files
+package-lock.json
+yarn.lock
+bun.lockb
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Temporary files
+*.tmp
+*.temp

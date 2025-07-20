@@ -1,15 +1,6 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Send,
-  Maximize2,
-  Minimize2,
-  ChevronUp,
-  Sparkles,
-  Zap,
-  Square,
-  Brain
-} from "lucide-react";
+import { Send, Maximize2, Minimize2, ChevronUp, Sparkles, Zap, Square, Brain } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Popover } from "@/components/ui/popover";
@@ -24,7 +15,7 @@ import { type ClaudeModel } from "@/types/models";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { logger } from "@/lib/logger";
 
-import { handleError } from '@/lib/errorHandler';
+import { handleError } from "@/lib/errorHandler";
 interface FloatingPromptInputProps {
   /**
    * Callback when prompt is sent
@@ -81,36 +72,36 @@ const THINKING_MODES: ThinkingModeConfig[] = [
     id: "auto",
     name: "Auto",
     description: "Let Claude decide",
-    level: 0
+    level: 0,
   },
   {
     id: "think",
     name: "Think",
     description: "Basic reasoning",
     level: 1,
-    phrase: "think"
+    phrase: "think",
   },
   {
     id: "think_hard",
     name: "Think Hard",
     description: "Deeper analysis",
     level: 2,
-    phrase: "think hard"
+    phrase: "think hard",
   },
   {
     id: "think_harder",
     name: "Think Harder",
     description: "Extensive reasoning",
     level: 3,
-    phrase: "think harder"
+    phrase: "think harder",
   },
   {
     id: "ultrathink",
     name: "Ultrathink",
     description: "Maximum computation",
     level: 4,
-    phrase: "ultrathink"
-  }
+    phrase: "ultrathink",
+  },
 ];
 
 /**
@@ -141,7 +132,7 @@ type Model = {
 
 /**
  * FloatingPromptInput component - Fixed position prompt input with model picker
- * 
+ *
  * @example
  * const promptRef = useRef<FloatingPromptInputRef>(null);
  * <FloatingPromptInput
@@ -160,41 +151,41 @@ const FloatingPromptInputInner = (
     className,
     onCancel,
   }: FloatingPromptInputProps,
-  ref: React.Ref<FloatingPromptInputRef>,
+  ref: React.Ref<FloatingPromptInputRef>
 ) => {
   const { t } = useI18n();
-  
+
   const MODELS: Model[] = [
     {
       id: "haiku",
       name: t.agents.claude35Haiku,
       description: t.agents.fastAffordable,
-      icon: <Zap className="h-4 w-4" />
+      icon: <Zap className="h-4 w-4" />,
     },
     {
       id: "sonnet-3-5",
       name: t.agents.claude35Sonnet,
       description: t.agents.balancedPerformance,
-      icon: <Sparkles className="h-4 w-4" />
+      icon: <Sparkles className="h-4 w-4" />,
     },
     {
       id: "sonnet-3-7",
       name: t.agents.claude37Sonnet,
       description: t.agents.advancedReasoning,
-      icon: <Brain className="h-4 w-4" />
+      icon: <Brain className="h-4 w-4" />,
     },
     {
       id: "sonnet",
       name: t.agents.claude4Sonnet,
       description: t.agents.fasterEfficient,
-      icon: <Zap className="h-4 w-4" />
+      icon: <Zap className="h-4 w-4" />,
     },
     {
       id: "opus",
       name: t.agents.claude4Opus,
       description: t.agents.moreCapable,
-      icon: <Sparkles className="h-4 w-4" />
-    }
+      icon: <Sparkles className="h-4 w-4" />,
+    },
   ];
 
   const [prompt, setPrompt] = useState("");
@@ -211,8 +202,8 @@ const FloatingPromptInputInner = (
   const [embeddedImages, setEmbeddedImages] = useState<string[]>([]);
   const [dragActive, setDragActive] = useState(false);
 
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const expandedTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const textareaRef = useRef<globalThis.HTMLTextAreaElement>(null);
+  const expandedTextareaRef = useRef<globalThis.HTMLTextAreaElement>(null);
   const unlistenDragDropRef = useRef<(() => void) | null>(null);
 
   // Expose a method to add images programmatically
@@ -220,18 +211,18 @@ const FloatingPromptInputInner = (
     ref,
     () => ({
       addImage: (imagePath: string) => {
-        setPrompt(currentPrompt => {
+        setPrompt((currentPrompt) => {
           const existingPaths = extractImagePaths(currentPrompt);
           if (existingPaths.includes(imagePath)) {
             return currentPrompt; // Image already added
           }
 
           // Wrap path in quotes if it contains spaces
-          const mention = imagePath.includes(' ') ? `@"${imagePath}"` : `@${imagePath}`;
-          const newPrompt = currentPrompt + (currentPrompt.endsWith(' ') || currentPrompt === '' ? '' : ' ') + mention + ' ';
+          const mention = imagePath.includes(" ") ? `@"${imagePath}"` : `@${imagePath}`;
+          const newPrompt = `${currentPrompt}${currentPrompt.endsWith(" ") || currentPrompt === "" ? "" : " "}${mention} `;
 
           // Focus the textarea
-          setTimeout(() => {
+          globalThis.setTimeout(() => {
             const target = isExpanded ? expandedTextareaRef.current : textareaRef.current;
             target?.focus();
             target?.setSelectionRange(newPrompt.length, newPrompt.length);
@@ -239,86 +230,101 @@ const FloatingPromptInputInner = (
 
           return newPrompt;
         });
-      }
+      },
     }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [isExpanded]
   );
 
   // Helper function to check if a file is an image
   const isImageFile = (path: string): boolean => {
     // Check if it's a data URL
-    if (path.startsWith('data:image/')) {
+    if (path.startsWith("data:image/")) {
       return true;
     }
     // Otherwise check file extension
-    const ext = path.split('.').pop()?.toLowerCase();
-    return ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'ico', 'bmp'].includes(ext || '');
+    const ext = path.split(".").pop()?.toLowerCase();
+    return ["png", "jpg", "jpeg", "gif", "svg", "webp", "ico", "bmp"].includes(ext || "");
   };
 
   // Extract image paths from prompt text
-  const extractImagePaths = (text: string): string[] => {
-    logger.debug('[extractImagePaths] Input text length:', text.length);
-    
-    // Updated regex to handle both quoted and unquoted paths
-    // Pattern 1: @"path with spaces or data URLs" - quoted paths
-    // Pattern 2: @path - unquoted paths (continues until @ or end)
-    const quotedRegex = /@"([^"]+)"/g;
-    const unquotedRegex = /@([^@\n\s]+)/g;
-    
-    const pathsSet = new Set<string>(); // Use Set to ensure uniqueness
-    
-    // First, extract quoted paths (including data URLs)
-    let matches = Array.from(text.matchAll(quotedRegex));
-    logger.debug('[extractImagePaths] Quoted matches:', matches.length);
-    
-    for (const match of matches) {
-      const path = match[1]; // No need to trim, quotes preserve exact path
-      logger.debug('[extractImagePaths] Processing quoted path:', path.startsWith('data:') ? 'data URL' : path);
-      
-      // For data URLs, use as-is; for file paths, convert to absolute
-      const fullPath = path.startsWith('data:') 
-        ? path 
-        : (path.startsWith('/') ? path : (projectPath ? `${projectPath}/${path}` : path));
-      
-      if (isImageFile(fullPath)) {
-        pathsSet.add(fullPath);
-      }
-    }
-    
-    // Remove quoted mentions from text to avoid double-matching
-    let textWithoutQuoted = text.replace(quotedRegex, '');
-    
-    // Then extract unquoted paths (typically file paths)
-    matches = Array.from(textWithoutQuoted.matchAll(unquotedRegex));
-    logger.debug('[extractImagePaths] Unquoted matches:', matches.length);
-    
-    for (const match of matches) {
-      const path = match[1].trim();
-      // Skip if it looks like a data URL fragment (shouldn't happen with proper quoting)
-      if (path.includes('data:')) continue;
-      
-      logger.debug('[extractImagePaths] Processing unquoted path:', path);
-      
-      // Convert relative path to absolute if needed
-      const fullPath = path.startsWith('/') ? path : (projectPath ? `${projectPath}/${path}` : path);
-      
-      if (isImageFile(fullPath)) {
-        pathsSet.add(fullPath);
-      }
-    }
+  const extractImagePaths = useCallback(
+    (text: string): string[] => {
+      logger.debug("[extractImagePaths] Input text length:", text.length);
 
-    const uniquePaths = Array.from(pathsSet);
-    logger.debug('[extractImagePaths] Final extracted paths (unique):', uniquePaths.length);
-    return uniquePaths;
-  };
+      // Updated regex to handle both quoted and unquoted paths
+      // Pattern 1: @"path with spaces or data URLs" - quoted paths
+      // Pattern 2: @path - unquoted paths (continues until @ or end)
+      const quotedRegex = /@"([^"]+)"/g;
+      const unquotedRegex = /@([^@\n\s]+)/g;
+
+      const pathsSet = new Set<string>(); // Use Set to ensure uniqueness
+
+      // First, extract quoted paths (including data URLs)
+      let matches = Array.from(text.matchAll(quotedRegex));
+      logger.debug("[extractImagePaths] Quoted matches:", matches.length);
+
+      for (const match of matches) {
+        const path = match[1]; // No need to trim, quotes preserve exact path
+        logger.debug(
+          "[extractImagePaths] Processing quoted path:",
+          path.startsWith("data:") ? "data URL" : path
+        );
+
+        // For data URLs, use as-is; for file paths, convert to absolute
+        const fullPath = path.startsWith("data:")
+          ? path
+          : path.startsWith("/")
+            ? path
+            : projectPath
+              ? `${projectPath}/${path}`
+              : path;
+
+        if (isImageFile(fullPath)) {
+          pathsSet.add(fullPath);
+        }
+      }
+
+      // Remove quoted mentions from text to avoid double-matching
+      const textWithoutQuoted = text.replace(quotedRegex, "");
+
+      // Then extract unquoted paths (typically file paths)
+      matches = Array.from(textWithoutQuoted.matchAll(unquotedRegex));
+      logger.debug("[extractImagePaths] Unquoted matches:", matches.length);
+
+      for (const match of matches) {
+        const path = match[1].trim();
+        // Skip if it looks like a data URL fragment (shouldn't happen with proper quoting)
+        if (path.includes("data:")) continue;
+
+        logger.debug("[extractImagePaths] Processing unquoted path:", path);
+
+        // Convert relative path to absolute if needed
+        const fullPath = path.startsWith("/")
+          ? path
+          : projectPath
+            ? `${projectPath}/${path}`
+            : path;
+
+        if (isImageFile(fullPath)) {
+          pathsSet.add(fullPath);
+        }
+      }
+
+      const uniquePaths = Array.from(pathsSet);
+      logger.debug("[extractImagePaths] Final extracted paths (unique):", uniquePaths.length);
+      return uniquePaths;
+    },
+    [projectPath]
+  );
 
   // Update embedded images when prompt changes
   useEffect(() => {
-    logger.debug('[useEffect] Prompt changed:', prompt);
+    logger.debug("[useEffect] Prompt changed:", prompt);
     const imagePaths = extractImagePaths(prompt);
-    logger.debug('[useEffect] Setting embeddedImages to:', imagePaths);
+    logger.debug("[useEffect] Setting embeddedImages to:", imagePaths);
     setEmbeddedImages(imagePaths);
-  }, [prompt, projectPath]);
+  }, [prompt, projectPath, extractImagePaths]);
 
   // Set up Tauri drag-drop event listener
   useEffect(() => {
@@ -334,11 +340,11 @@ const FloatingPromptInputInner = (
 
         const webview = getCurrentWebviewWindow();
         unlistenDragDropRef.current = await webview.onDragDropEvent((event) => {
-          if (event.payload.type === 'enter' || event.payload.type === 'over') {
+          if (event.payload.type === "enter" || event.payload.type === "over") {
             setDragActive(true);
-          } else if (event.payload.type === 'leave') {
+          } else if (event.payload.type === "leave") {
             setDragActive(false);
-          } else if (event.payload.type === 'drop' && event.payload.paths) {
+          } else if (event.payload.type === "drop" && event.payload.paths) {
             setDragActive(false);
 
             const currentTime = Date.now();
@@ -353,25 +359,27 @@ const FloatingPromptInputInner = (
             const imagePaths = droppedPaths.filter(isImageFile);
 
             if (imagePaths.length > 0) {
-              setPrompt(currentPrompt => {
+              setPrompt((currentPrompt) => {
                 const existingPaths = extractImagePaths(currentPrompt);
-                const newPaths = imagePaths.filter(p => !existingPaths.includes(p));
+                const newPaths = imagePaths.filter((p) => !existingPaths.includes(p));
 
                 if (newPaths.length === 0) {
                   return currentPrompt; // All dropped images are already in the prompt
                 }
 
                 // Wrap paths with spaces in quotes for clarity
-                const mentionsToAdd = newPaths.map(p => {
-                  // If path contains spaces, wrap in quotes
-                  if (p.includes(' ')) {
-                    return `@"${p}"`;
-                  }
-                  return `@${p}`;
-                }).join(' ');
-                const newPrompt = currentPrompt + (currentPrompt.endsWith(' ') || currentPrompt === '' ? '' : ' ') + mentionsToAdd + ' ';
+                const mentionsToAdd = newPaths
+                  .map((p) => {
+                    // If path contains spaces, wrap in quotes
+                    if (p.includes(" ")) {
+                      return `@"${p}"`;
+                    }
+                    return `@${p}`;
+                  })
+                  .join(" ");
+                const newPrompt = `${currentPrompt}${currentPrompt.endsWith(" ") || currentPrompt === "" ? "" : " "}${mentionsToAdd} `;
 
-                setTimeout(() => {
+                globalThis.setTimeout(() => {
                   const target = isExpanded ? expandedTextareaRef.current : textareaRef.current;
                   target?.focus();
                   target?.setSelectionRange(newPrompt.length, newPrompt.length);
@@ -396,7 +404,7 @@ const FloatingPromptInputInner = (
         unlistenDragDropRef.current = null;
       }
     };
-  }, []); // Empty dependency array ensures this runs only on mount/unmount.
+  }, [extractImagePaths, isExpanded]); // Empty dependency array ensures this runs only on mount/unmount.
 
   useEffect(() => {
     // Focus the appropriate textarea when expanded state changes
@@ -410,31 +418,32 @@ const FloatingPromptInputInner = (
   const handleSend = () => {
     if (prompt.trim() && !disabled) {
       let finalPrompt = prompt.trim();
-      
+
       // Append thinking phrase if not auto mode
-      const thinkingMode = THINKING_MODES.find(m => m.id === selectedThinkingMode);
+      const thinkingMode = THINKING_MODES.find((m) => m.id === selectedThinkingMode);
       if (thinkingMode && thinkingMode.phrase) {
         finalPrompt = `${finalPrompt}.\n\n${thinkingMode.phrase}.`;
       }
-      
+
       onSend(finalPrompt, selectedModel);
       setPrompt("");
       setEmbeddedImages([]);
     }
   };
 
-  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const handleTextChange = (e: React.ChangeEvent<globalThis.HTMLTextAreaElement>) => {
     const newValue = e.target.value;
     const newCursorPosition = e.target.selectionStart || 0;
 
     // Check if / was just typed at the beginning of input or after whitespace
-    if (newValue.length > prompt.length && newValue[newCursorPosition - 1] === '/') {
+    if (newValue.length > prompt.length && newValue[newCursorPosition - 1] === "/") {
       // Check if it's at the start or after whitespace
-      const isStartOfCommand = newCursorPosition === 1 || 
+      const isStartOfCommand =
+        newCursorPosition === 1 ||
         (newCursorPosition > 1 && /\s/.test(newValue[newCursorPosition - 2]));
-      
+
       if (isStartOfCommand) {
-        logger.debug('[FloatingPromptInput] / detected for slash command');
+        logger.debug("[FloatingPromptInput] / detected for slash command");
         setShowSlashCommandPicker(true);
         setSlashCommandQuery("");
         setCursorPosition(newCursorPosition);
@@ -442,8 +451,12 @@ const FloatingPromptInputInner = (
     }
 
     // Check if @ was just typed
-    if (projectPath?.trim() && newValue.length > prompt.length && newValue[newCursorPosition - 1] === '@') {
-      logger.debug('[FloatingPromptInput] @ detected, projectPath:', projectPath);
+    if (
+      projectPath?.trim() &&
+      newValue.length > prompt.length &&
+      newValue[newCursorPosition - 1] === "@"
+    ) {
+      logger.debug("[FloatingPromptInput] @ detected, projectPath:", projectPath);
       setShowFilePicker(true);
       setFilePickerQuery("");
       setCursorPosition(newCursorPosition);
@@ -454,12 +467,12 @@ const FloatingPromptInputInner = (
       // Find the / position before cursor
       let slashPosition = -1;
       for (let i = newCursorPosition - 1; i >= 0; i--) {
-        if (newValue[i] === '/') {
+        if (newValue[i] === "/") {
           slashPosition = i;
           break;
         }
         // Stop if we hit whitespace (new word)
-        if (newValue[i] === ' ' || newValue[i] === '\n') {
+        if (newValue[i] === " " || newValue[i] === "\n") {
           break;
         }
       }
@@ -479,12 +492,12 @@ const FloatingPromptInputInner = (
       // Find the @ position before cursor
       let atPosition = -1;
       for (let i = newCursorPosition - 1; i >= 0; i--) {
-        if (newValue[i] === '@') {
+        if (newValue[i] === "@") {
           atPosition = i;
           break;
         }
         // Stop if we hit whitespace (new word)
-        if (newValue[i] === ' ' || newValue[i] === '\n') {
+        if (newValue[i] === " " || newValue[i] === "\n") {
           break;
         }
       }
@@ -508,19 +521,21 @@ const FloatingPromptInputInner = (
       // Find the @ position before cursor
       let atPosition = -1;
       for (let i = cursorPosition - 1; i >= 0; i--) {
-        if (prompt[i] === '@') {
+        if (prompt[i] === "@") {
           atPosition = i;
           break;
         }
         // Stop if we hit whitespace (new word)
-        if (prompt[i] === ' ' || prompt[i] === '\n') {
+        if (prompt[i] === " " || prompt[i] === "\n") {
           break;
         }
       }
 
       if (atPosition === -1) {
         // @ not found, this shouldn't happen but handle gracefully
-        await handleError("[FloatingPromptInput] @ position not found", { context: { prompt, cursorPosition, component: 'FloatingPromptInput' } });
+        await handleError("[FloatingPromptInput] @ position not found", {
+          context: { prompt, cursorPosition, component: "FloatingPromptInput" },
+        });
         return;
       }
 
@@ -528,8 +543,8 @@ const FloatingPromptInputInner = (
       const textarea = textareaRef.current;
       const beforeAt = prompt.substring(0, atPosition);
       const afterCursor = prompt.substring(cursorPosition);
-      const relativePath = entry.path.startsWith(projectPath || '')
-        ? entry.path.slice((projectPath || '').length + 1)
+      const relativePath = entry.path.startsWith(projectPath || "")
+        ? entry.path.slice((projectPath || "").length + 1)
         : entry.path;
 
       const newPrompt = `${beforeAt}@${relativePath} ${afterCursor}`;
@@ -538,7 +553,7 @@ const FloatingPromptInputInner = (
       setFilePickerQuery("");
 
       // Focus back on textarea and set cursor position after the inserted path
-      setTimeout(() => {
+      globalThis.setTimeout(() => {
         textarea.focus();
         const newCursorPos = beforeAt.length + relativePath.length + 2; // +2 for @ and space
         textarea.setSelectionRange(newCursorPos, newCursorPos);
@@ -550,7 +565,7 @@ const FloatingPromptInputInner = (
     setShowFilePicker(false);
     setFilePickerQuery("");
     // Return focus to textarea
-    setTimeout(() => {
+    globalThis.setTimeout(() => {
       textareaRef.current?.focus();
     }, 0);
   };
@@ -562,25 +577,27 @@ const FloatingPromptInputInner = (
     // Find the / position before cursor
     let slashPosition = -1;
     for (let i = cursorPosition - 1; i >= 0; i--) {
-      if (prompt[i] === '/') {
+      if (prompt[i] === "/") {
         slashPosition = i;
         break;
       }
       // Stop if we hit whitespace (new word)
-      if (prompt[i] === ' ' || prompt[i] === '\n') {
+      if (prompt[i] === " " || prompt[i] === "\n") {
         break;
       }
     }
 
     if (slashPosition === -1) {
-      await handleError("[FloatingPromptInput] / position not found", { context: { prompt, cursorPosition, component: 'FloatingPromptInput' } });
+      await handleError("[FloatingPromptInput] / position not found", {
+        context: { prompt, cursorPosition, component: "FloatingPromptInput" },
+      });
       return;
     }
 
     // Simply insert the command syntax
     const beforeSlash = prompt.substring(0, slashPosition);
     const afterCursor = prompt.substring(cursorPosition);
-    
+
     if (command.accepts_arguments) {
       // Insert command with placeholder for arguments
       const newPrompt = `${beforeSlash}${command.full_command} `;
@@ -589,7 +606,7 @@ const FloatingPromptInputInner = (
       setSlashCommandQuery("");
 
       // Focus and position cursor after the command
-      setTimeout(() => {
+      globalThis.setTimeout(() => {
         textarea.focus();
         const newCursorPos = beforeSlash.length + command.full_command.length + 1;
         textarea.setSelectionRange(newCursorPos, newCursorPos);
@@ -602,7 +619,7 @@ const FloatingPromptInputInner = (
       setSlashCommandQuery("");
 
       // Focus and position cursor after the command
-      setTimeout(() => {
+      globalThis.setTimeout(() => {
         textarea.focus();
         const newCursorPos = beforeSlash.length + command.full_command.length + 1;
         textarea.setSelectionRange(newCursorPos, newCursorPos);
@@ -614,28 +631,34 @@ const FloatingPromptInputInner = (
     setShowSlashCommandPicker(false);
     setSlashCommandQuery("");
     // Return focus to textarea
-    setTimeout(() => {
+    globalThis.setTimeout(() => {
       const textarea = isExpanded ? expandedTextareaRef.current : textareaRef.current;
       textarea?.focus();
     }, 0);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (showFilePicker && e.key === 'Escape') {
+  const handleKeyDown = (e: React.KeyboardEvent<globalThis.HTMLTextAreaElement>) => {
+    if (showFilePicker && e.key === "Escape") {
       e.preventDefault();
       setShowFilePicker(false);
       setFilePickerQuery("");
       return;
     }
 
-    if (showSlashCommandPicker && e.key === 'Escape') {
+    if (showSlashCommandPicker && e.key === "Escape") {
       e.preventDefault();
       setShowSlashCommandPicker(false);
       setSlashCommandQuery("");
       return;
     }
 
-    if (e.key === "Enter" && !e.shiftKey && !isExpanded && !showFilePicker && !showSlashCommandPicker) {
+    if (
+      e.key === "Enter" &&
+      !e.shiftKey &&
+      !isExpanded &&
+      !showFilePicker &&
+      !showSlashCommandPicker
+    ) {
       e.preventDefault();
       handleSend();
     }
@@ -646,27 +669,27 @@ const FloatingPromptInputInner = (
     if (!items) return;
 
     for (const item of items) {
-      if (item.type.startsWith('image/')) {
+      if (item.type.startsWith("image/")) {
         e.preventDefault();
-        
+
         // Get the image blob
         const blob = item.getAsFile();
         if (!blob) continue;
 
         try {
           // Convert blob to base64
-          const reader = new FileReader();
+          const reader = new globalThis.FileReader();
           reader.onload = () => {
             const base64Data = reader.result as string;
-            
+
             // Add the base64 data URL directly to the prompt
-            setPrompt(currentPrompt => {
+            setPrompt((currentPrompt) => {
               // Use the data URL directly as the image reference
               const mention = `@"${base64Data}"`;
-              const newPrompt = currentPrompt + (currentPrompt.endsWith(' ') || currentPrompt === '' ? '' : ' ') + mention + ' ';
-              
+              const newPrompt = `${currentPrompt}${currentPrompt.endsWith(" ") || currentPrompt === "" ? "" : " "}${mention} `;
+
               // Focus the textarea and move cursor to end
-              setTimeout(() => {
+              globalThis.setTimeout(() => {
                 const target = isExpanded ? expandedTextareaRef.current : textareaRef.current;
                 target?.focus();
                 target?.setSelectionRange(newPrompt.length, newPrompt.length);
@@ -675,7 +698,7 @@ const FloatingPromptInputInner = (
               return newPrompt;
             });
           };
-          
+
           reader.readAsDataURL(blob);
         } catch (error) {
           await handleError("Failed to paste image:", { context: error });
@@ -701,41 +724,43 @@ const FloatingPromptInputInner = (
   const handleRemoveImage = (index: number) => {
     // Remove the corresponding @mention from the prompt
     const imagePath = embeddedImages[index];
-    
+
     // For data URLs, we need to handle them specially since they're always quoted
-    if (imagePath.startsWith('data:')) {
+    if (imagePath.startsWith("data:")) {
       // Simply remove the exact quoted data URL
       const quotedPath = `@"${imagePath}"`;
-      const newPrompt = prompt.replace(quotedPath, '').trim();
+      const newPrompt = prompt.replace(quotedPath, "").trim();
       setPrompt(newPrompt);
       return;
     }
-    
+
     // For file paths, use the original logic
-    const escapedPath = imagePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const escapedRelativePath = imagePath.replace(projectPath + '/', '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    
+    const escapedPath = imagePath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const escapedRelativePath = imagePath
+      .replace(`${projectPath}/`, "")
+      .replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
     // Create patterns for both quoted and unquoted mentions
     const patterns = [
       // Quoted full path
-      new RegExp(`@"${escapedPath}"\\s?`, 'g'),
+      new RegExp(`@"${escapedPath}"\\s?`, "g"),
       // Unquoted full path
-      new RegExp(`@${escapedPath}\\s?`, 'g'),
+      new RegExp(`@${escapedPath}\\s?`, "g"),
       // Quoted relative path
-      new RegExp(`@"${escapedRelativePath}"\\s?`, 'g'),
+      new RegExp(`@"${escapedRelativePath}"\\s?`, "g"),
       // Unquoted relative path
-      new RegExp(`@${escapedRelativePath}\\s?`, 'g')
+      new RegExp(`@${escapedRelativePath}\\s?`, "g"),
     ];
 
     let newPrompt = prompt;
     for (const pattern of patterns) {
-      newPrompt = newPrompt.replace(pattern, '');
+      newPrompt = newPrompt.replace(pattern, "");
     }
 
     setPrompt(newPrompt.trim());
   };
 
-  const selectedModelData = MODELS.find(m => m.id === selectedModel) || MODELS[0];
+  const selectedModelData = MODELS.find((m) => m.id === selectedModel) || MODELS[0];
 
   return (
     <>
@@ -824,14 +849,25 @@ const FloatingPromptInputInner = (
                                 className="gap-2"
                               >
                                 <Brain className="h-4 w-4" />
-                                <ThinkingModeIndicator 
-                                  level={THINKING_MODES.find(m => m.id === selectedThinkingMode)?.level || 0} 
+                                <ThinkingModeIndicator
+                                  level={
+                                    THINKING_MODES.find((m) => m.id === selectedThinkingMode)
+                                      ?.level || 0
+                                  }
                                 />
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p className="font-medium">{THINKING_MODES.find(m => m.id === selectedThinkingMode)?.name || "Auto"}</p>
-                              <p className="text-xs text-muted-foreground">{THINKING_MODES.find(m => m.id === selectedThinkingMode)?.description}</p>
+                              <p className="font-medium">
+                                {THINKING_MODES.find((m) => m.id === selectedThinkingMode)?.name ||
+                                  "Auto"}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {
+                                  THINKING_MODES.find((m) => m.id === selectedThinkingMode)
+                                    ?.description
+                                }
+                              </p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
@@ -853,9 +889,7 @@ const FloatingPromptInputInner = (
                             >
                               <Brain className="h-4 w-4 mt-0.5" />
                               <div className="flex-1 space-y-1">
-                                <div className="font-medium text-sm">
-                                  {mode.name}
-                                </div>
+                                <div className="font-medium text-sm">{mode.name}</div>
                                 <div className="text-xs text-muted-foreground">
                                   {mode.description}
                                 </div>
@@ -947,9 +981,7 @@ const FloatingPromptInputInner = (
                         <div className="mt-0.5">{model.icon}</div>
                         <div className="flex-1 space-y-1">
                           <div className="font-medium text-sm">{model.name}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {model.description}
-                          </div>
+                          <div className="text-xs text-muted-foreground">{model.description}</div>
                         </div>
                       </button>
                     ))}
@@ -974,14 +1006,21 @@ const FloatingPromptInputInner = (
                           className="gap-2"
                         >
                           <Brain className="h-4 w-4" />
-                          <ThinkingModeIndicator 
-                            level={THINKING_MODES.find(m => m.id === selectedThinkingMode)?.level || 0} 
+                          <ThinkingModeIndicator
+                            level={
+                              THINKING_MODES.find((m) => m.id === selectedThinkingMode)?.level || 0
+                            }
                           />
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p className="font-medium">{THINKING_MODES.find(m => m.id === selectedThinkingMode)?.name || "Auto"}</p>
-                        <p className="text-xs text-muted-foreground">{THINKING_MODES.find(m => m.id === selectedThinkingMode)?.description}</p>
+                        <p className="font-medium">
+                          {THINKING_MODES.find((m) => m.id === selectedThinkingMode)?.name ||
+                            "Auto"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {THINKING_MODES.find((m) => m.id === selectedThinkingMode)?.description}
+                        </p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -1003,12 +1042,8 @@ const FloatingPromptInputInner = (
                       >
                         <Brain className="h-4 w-4 mt-0.5" />
                         <div className="flex-1 space-y-1">
-                          <div className="font-medium text-sm">
-                            {mode.name}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {mode.description}
-                          </div>
+                          <div className="font-medium text-sm">{mode.name}</div>
+                          <div className="text-xs text-muted-foreground">{mode.description}</div>
                         </div>
                         <ThinkingModeIndicator level={mode.level} />
                       </button>
@@ -1031,10 +1066,7 @@ const FloatingPromptInputInner = (
                   onPaste={handlePaste}
                   placeholder={dragActive ? "Drop images here..." : "Ask Claude anything..."}
                   disabled={disabled}
-                  className={cn(
-                    "pr-10",
-                    dragActive && "border-primary"
-                  )}
+                  className={cn("pr-10", dragActive && "border-primary")}
                   minHeight={44}
                   maxHeight={200}
                   autoResize={true}
@@ -1080,7 +1112,7 @@ const FloatingPromptInputInner = (
               {/* Send/Stop Button */}
               <Button
                 onClick={isLoading ? onCancel : handleSend}
-                disabled={isLoading ? false : (!prompt.trim() || disabled)}
+                disabled={isLoading ? false : !prompt.trim() || disabled}
                 variant={isLoading ? "destructive" : "default"}
                 size="default"
                 className="min-w-[60px]"
@@ -1097,7 +1129,9 @@ const FloatingPromptInputInner = (
             </div>
 
             <div className="mt-2 text-xs text-muted-foreground">
-              Press Enter to send, Shift+Enter for new line{projectPath?.trim() && ", @ to mention files, / for commands, drag & drop or paste images"}
+              Press Enter to send, Shift+Enter for new line
+              {projectPath?.trim() &&
+                ", @ to mention files, / for commands, drag & drop or paste images"}
             </div>
           </div>
         </div>
@@ -1111,4 +1145,4 @@ export const FloatingPromptInput = React.forwardRef<
   FloatingPromptInputProps
 >(FloatingPromptInputInner);
 
-FloatingPromptInput.displayName = 'FloatingPromptInput';
+FloatingPromptInput.displayName = "FloatingPromptInput";

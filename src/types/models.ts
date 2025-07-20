@@ -1,26 +1,58 @@
+import type { ReactNode } from "react";
+
 /**
  * Supported Claude model types
+ *
+ * Represents all available Claude AI models that can be used in the application.
+ * Includes both full model identifiers and shorthand aliases for convenience.
+ *
+ * @example
+ * ```tsx
+ * const model: ClaudeModel = "claude-3-5-sonnet-20241022";
+ * const shorthand: ClaudeModel = "sonnet-3-5"; // Same model, shorthand
+ * ```
  */
-export type ClaudeModel = 
-  | "claude-3-5-haiku-20241022"
-  | "claude-3-5-sonnet-20241022" 
-  | "claude-3-7-sonnet-20250219"
-  | "sonnet"  // Legacy Claude 4 Sonnet
-  | "opus"    // Legacy Claude 4 Opus
-  | "haiku"   // Claude 3.5 Haiku shorthand
+export type ClaudeModel =
+  | "claude-3-5-haiku-20241022" // Fast, cost-effective model for simple tasks
+  | "claude-3-5-sonnet-20241022" // Balanced performance and capability
+  | "claude-3-7-sonnet-20250219" // Latest model with enhanced capabilities
+  | "sonnet" // Legacy Claude 4 Sonnet alias
+  | "opus" // Legacy Claude 4 Opus alias
+  | "haiku" // Claude 3.5 Haiku shorthand
   | "sonnet-3-5" // Claude 3.5 Sonnet shorthand
   | "sonnet-3-7"; // Claude 3.7 Sonnet shorthand
 
 /**
  * Model configuration interface
+ *
+ * Comprehensive configuration object for Claude models containing
+ * display information, categorization, and performance characteristics.
+ *
+ * @example
+ * ```tsx
+ * const config: ModelConfig = {
+ *   id: "claude-3-5-sonnet-20241022",
+ *   name: "Claude 3.5 Sonnet",
+ *   description: "Balanced model for general use",
+ *   icon: <SonnetIcon />,
+ *   category: "current",
+ *   performance: "balanced"
+ * };
+ * ```
  */
 export interface ModelConfig {
+  /** Unique model identifier */
   id: ClaudeModel;
+  /** Human-readable display name */
   name: string;
+  /** Brief description of model capabilities and use cases */
   description: string;
-  icon: React.ReactNode;
-  category: 'legacy' | 'current';
-  performance: 'fast' | 'balanced' | 'powerful';
+  /** React component or icon to display for this model */
+  icon: ReactNode;
+  /** Whether this is a legacy or current generation model */
+  category: "legacy" | "current";
+  /** Performance characteristics of the model */
+  performance: "fast" | "balanced" | "powerful";
 }
 
 /**
@@ -29,16 +61,28 @@ export interface ModelConfig {
 export const MODEL_DISPLAY_NAMES: Record<ClaudeModel, string> = {
   "claude-3-5-haiku-20241022": "Claude 3.5 Haiku",
   "claude-3-5-sonnet-20241022": "Claude 3.5 Sonnet",
-  "claude-3-7-sonnet-20250219": "Claude 3.7 Sonnet", 
-  "sonnet": "Claude 4 Sonnet",
-  "opus": "Claude 4 Opus",
-  "haiku": "Claude 3.5 Haiku",
+  "claude-3-7-sonnet-20250219": "Claude 3.7 Sonnet",
+  sonnet: "Claude 4 Sonnet",
+  opus: "Claude 4 Opus",
+  haiku: "Claude 3.5 Haiku",
   "sonnet-3-5": "Claude 3.5 Sonnet",
-  "sonnet-3-7": "Claude 3.7 Sonnet"
+  "sonnet-3-7": "Claude 3.7 Sonnet",
 };
 
 /**
  * Get display name for a model
+ *
+ * Converts a model identifier to its human-readable display name.
+ * Falls back to the original model string if no mapping exists.
+ *
+ * @param model - The Claude model identifier
+ * @returns Human-readable display name
+ *
+ * @example
+ * ```tsx
+ * getModelDisplayName("sonnet-3-5") // Returns: "Claude 3.5 Sonnet"
+ * getModelDisplayName("claude-3-5-haiku-20241022") // Returns: "Claude 3.5 Haiku"
+ * ```
  */
 export function getModelDisplayName(model: ClaudeModel): string {
   return MODEL_DISPLAY_NAMES[model] || model;
@@ -59,11 +103,11 @@ export const MODEL_API_MAPPING: Record<ClaudeModel, string> = {
   "claude-3-5-haiku-20241022": "claude-3-5-haiku-20241022",
   "claude-3-5-sonnet-20241022": "claude-3-5-sonnet-20241022",
   "claude-3-7-sonnet-20250219": "claude-3-7-sonnet-20250219",
-  "sonnet": "claude-3-5-sonnet-20241022", // Legacy mapping to current Sonnet
-  "opus": "claude-3-opus-20240229", // Legacy mapping to Opus
-  "haiku": "claude-3-5-haiku-20241022",
+  sonnet: "claude-3-5-sonnet-20241022", // Legacy mapping to current Sonnet
+  opus: "claude-3-opus-20240229", // Legacy mapping to Opus
+  haiku: "claude-3-5-haiku-20241022",
   "sonnet-3-5": "claude-3-5-sonnet-20241022",
-  "sonnet-3-7": "claude-3-7-sonnet-20250219"
+  "sonnet-3-7": "claude-3-7-sonnet-20250219",
 };
 
 /**

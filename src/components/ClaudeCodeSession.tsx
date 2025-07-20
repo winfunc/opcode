@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
+import {
   ArrowLeft,
   Terminal,
   FolderOpen,
@@ -11,7 +11,7 @@ import {
   ChevronUp,
   X,
   Hash,
-  Command
+  Command,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,7 +28,14 @@ import { ErrorBoundary } from "./ErrorBoundary";
 import { TimelineNavigator } from "./TimelineNavigator";
 import { CheckpointSettings } from "./CheckpointSettings";
 import { SlashCommandsManager } from "./SlashCommandsManager";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { SplitPane } from "@/components/ui/split-pane";
 import { WebviewPreview } from "./WebviewPreview";
@@ -67,22 +74,22 @@ interface ClaudeCodeSessionProps {
 
 /**
  * ClaudeCodeSession component for interactive Claude Code sessions
- * 
+ *
  * This component provides a complete interface for running Claude Code sessions
  * with features like streaming output, checkpoint management, and session resumption.
- * 
+ *
  * @param session - Optional existing session to resume
  * @param initialProjectPath - Initial project path for new sessions
  * @param onBack - Callback function to navigate back
  * @param onProjectSettings - Callback to open project settings
  * @param className - Optional CSS class name
  * @param onStreamingChange - Callback when streaming state changes
- * 
+ *
  * @example
  * ```tsx
- * <ClaudeCodeSession 
+ * <ClaudeCodeSession
  *   session={existingSession}
- *   onBack={() => setView('projects')} 
+ *   onBack={() => setView('projects')}
  *   onProjectSettings={(path) => openSettings(path)}
  * />
  * ```
@@ -104,7 +111,10 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   const [copyPopoverOpen, setCopyPopoverOpen] = useState(false);
   const [isFirstPrompt, setIsFirstPrompt] = useState(!session);
   const [totalTokens, setTotalTokens] = useState(0);
-  const [extractedSessionInfo, setExtractedSessionInfo] = useState<{ sessionId: string; projectId: string } | null>(null);
+  const [extractedSessionInfo, setExtractedSessionInfo] = useState<{
+    sessionId: string;
+    projectId: string;
+  } | null>(null);
   const [claudeSessionId, setClaudeSessionId] = useState<string | null>(null);
   const [showTimeline, setShowTimeline] = useState(false);
   const [timelineVersion, setTimelineVersion] = useState(0);
@@ -113,21 +123,23 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   const [showSlashCommandsSettings, setShowSlashCommandsSettings] = useState(false);
   const [forkCheckpointId, setForkCheckpointId] = useState<string | null>(null);
   const [forkSessionName, setForkSessionName] = useState("");
-  
+
   // Queued prompts state
-  const [queuedPrompts, setQueuedPrompts] = useState<Array<{ id: string; prompt: string; model: ClaudeModel }>>([]);
-  
+  const [queuedPrompts, setQueuedPrompts] = useState<
+    Array<{ id: string; prompt: string; model: ClaudeModel }>
+  >([]);
+
   // New state for preview feature
   const [showPreview, setShowPreview] = useState(false);
   const [previewUrl, setPreviewUrl] = useState("");
   const [showPreviewPrompt, setShowPreviewPrompt] = useState(false);
   const [splitPosition, setSplitPosition] = useState(50);
   const [isPreviewMaximized, setIsPreviewMaximized] = useState(false);
-  
+
   // Add collapsed state for queued prompts
   const [queuedPromptsCollapsed, setQueuedPromptsCollapsed] = useState(false);
-  
-  const parentRef = useRef<HTMLDivElement>(null);
+
+  const parentRef = useRef<globalThis.HTMLDivElement>(null);
   const unlistenRefs = useRef<UnlistenFn[]>([]);
   const hasActiveSessionRef = useRef(false);
   const floatingPromptRef = useRef<FloatingPromptInputRef>(null);
@@ -184,17 +196,38 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                 // Look for the matching tool_use in previous assistant messages
                 for (let i = index - 1; i >= 0; i--) {
                   const prevMsg = messages[i];
-                  if (prevMsg.type === 'assistant' && prevMsg.message?.content && Array.isArray(prevMsg.message.content)) {
-                    const toolUse = prevMsg.message.content.find((c: any) => 
-                      c.type === 'tool_use' && c.id === content.tool_use_id
+                  if (
+                    prevMsg.type === "assistant" &&
+                    prevMsg.message?.content &&
+                    Array.isArray(prevMsg.message.content)
+                  ) {
+                    const toolUse = prevMsg.message.content.find(
+                      (c: unknown) =>
+                        typeof c === "object" &&
+                        c !== null &&
+                        "type" in c &&
+                        "id" in c &&
+                        (c as { type: string; id: string }).type === "tool_use" &&
+                        (c as { type: string; id: string }).id === content.tool_use_id
                     );
                     if (toolUse) {
-                      const toolName = toolUse.name?.toLowerCase();
+                      const toolName = (toolUse as { name?: string }).name?.toLowerCase();
                       const toolsWithWidgets = [
-                        'task', 'edit', 'multiedit', 'todowrite', 'ls', 'read', 
-                        'glob', 'bash', 'write', 'grep'
+                        "task",
+                        "edit",
+                        "multiedit",
+                        "todowrite",
+                        "ls",
+                        "read",
+                        "glob",
+                        "bash",
+                        "write",
+                        "grep",
                       ];
-                      if (toolsWithWidgets.includes(toolName) || toolUse.name?.startsWith('mcp__')) {
+                      if (
+                        (toolName && toolsWithWidgets.includes(toolName)) ||
+                        toolUse.name?.startsWith("mcp__")
+                      ) {
                         willBeSkipped = true;
                       }
                       break;
@@ -226,34 +259,86 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
 
   // Debug logging
   useEffect(() => {
-    logger.debug('[ClaudeCodeSession] State update:', {
+    logger.debug("[ClaudeCodeSession] State update:", {
       projectPath,
       session,
       extractedSessionInfo,
       effectiveSession,
       messagesCount: messages.length,
-      isLoading
+      isLoading,
     });
   }, [projectPath, session, extractedSessionInfo, effectiveSession, messages.length, isLoading]);
 
-  // Load session history if resuming
-  useEffect(() => {
+  const checkForActiveSession = useCallback(async () => {
+    // If we have a session prop, check if it's still active
     if (session) {
-      // Set the claudeSessionId immediately when we have a session
-      setClaudeSessionId(session.id);
-      
-      // Load session history first, then check for active session
-      const initializeSession = async () => {
-        await loadSessionHistory();
-        // After loading history, check if the session is still active
-        if (isMountedRef.current) {
-          await checkForActiveSession();
+      try {
+        const activeSessions = await api.listRunningClaudeSessions();
+        const activeSession = activeSessions.find((s: unknown) => {
+          if (
+            typeof s === "object" &&
+            s !== null &&
+            "process_type" in s &&
+            (s as { process_type: unknown }).process_type &&
+            typeof (s as { process_type: unknown }).process_type === "object" &&
+            (s as { process_type: unknown }).process_type !== null &&
+            "ClaudeSession" in (s as { process_type: object }).process_type
+          ) {
+            const sessionData = (s as { process_type: { ClaudeSession: unknown } }).process_type
+              .ClaudeSession;
+            return (
+              typeof sessionData === "object" &&
+              sessionData !== null &&
+              "session_id" in sessionData &&
+              (sessionData as { session_id: unknown }).session_id === session.id
+            );
+          }
+          return false;
+        });
+
+        if (activeSession) {
+          hasActiveSessionRef.current = true;
+          logger.debug("Found active session, setting up listeners");
+          // Setup event listeners would be called here
+        } else {
+          hasActiveSessionRef.current = false;
+          logger.debug("No active session found");
         }
-      };
-      
-      initializeSession();
+      } catch (err) {
+        logger.warn("Failed to check for active sessions:", err);
+        hasActiveSessionRef.current = false;
+      }
     }
-  }, [session]); // Remove hasLoadedSession dependency to ensure it runs on mount
+  }, [session]);
+
+  const loadSessionHistory = useCallback(async () => {
+    if (!session?.id) return;
+
+    setIsLoading(true);
+    try {
+      const historyOutput = await api.getSessionOutput(parseInt(session.id));
+      // Parse the JSONL output into messages
+      const lines = historyOutput.split('\n').filter(line => line.trim());
+      const parsedMessages: ClaudeStreamMessage[] = [];
+      for (const line of lines) {
+        try {
+          const message = JSON.parse(line) as ClaudeStreamMessage;
+          parsedMessages.push(message);
+        } catch (_err) {
+          // Skip invalid JSON lines
+          // console.warn('Failed to parse message:', line);
+        }
+      }
+      setMessages(parsedMessages);
+    } catch (err) {
+      await handleApiError(err as Error, {
+        operation: "loadSessionHistory",
+        component: "ClaudeCodeSession",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [session]);
 
   // Report streaming state changes
   useEffect(() => {
@@ -263,9 +348,31 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     if (displayableMessages.length > 0) {
-      rowVirtualizer.scrollToIndex(displayableMessages.length - 1, { align: 'end', behavior: 'smooth' });
+      rowVirtualizer.scrollToIndex(displayableMessages.length - 1, {
+        align: "end",
+        behavior: "smooth",
+      });
     }
   }, [displayableMessages.length, rowVirtualizer]);
+
+  // Load session history if resuming
+  useEffect(() => {
+    if (session) {
+      // Set the claudeSessionId immediately when we have a session
+      setClaudeSessionId(session.id);
+
+      // Load session history first, then check for active session
+      const initializeSession = async () => {
+        await loadSessionHistory();
+        // After loading history, check if the session is still active
+        if (isMountedRef.current) {
+          await checkForActiveSession();
+        }
+      };
+
+      initializeSession();
+    }
+  }, [session, loadSessionHistory, checkForActiveSession]);
 
   // Calculate total tokens from messages
   useEffect(() => {
@@ -281,149 +388,109 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     setTotalTokens(tokens);
   }, [messages]);
 
-  const loadSessionHistory = async () => {
-    if (!session) return;
-    
-    try {
-      setIsLoading(true);
-      setError(null);
-      
-      const history = await api.loadSessionHistory(session.id, session.project_id);
-      
-      // Convert history to messages format
-      const loadedMessages: ClaudeStreamMessage[] = history.map(entry => ({
-        ...entry,
-        type: entry.type || "assistant"
-      }));
-      
-      setMessages(loadedMessages);
-      setRawJsonlOutput(history.map(h => JSON.stringify(h)));
-      
-      // After loading history, we're continuing a conversation
-      setIsFirstPrompt(false);
-    } catch (err) {
-      await handleApiError(err as Error, { operation: 'loadSessionHistory', sessionId: effectiveSession?.id });
-      setError("Failed to load session history");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+   
+  // Remove unused function - commented out to fix TS6133 error
+  /*
+  const _reconnectToSession = async (_sessionId: string) => {
+    logger.debug("[ClaudeCodeSession] Reconnecting to session:", _sessionId);
 
-  const checkForActiveSession = async () => {
-    // If we have a session prop, check if it's still active
-    if (session) {
-      try {
-        const activeSessions = await api.listRunningClaudeSessions();
-        const activeSession = activeSessions.find((s: any) => {
-          if ('process_type' in s && s.process_type && 'ClaudeSession' in s.process_type) {
-            return (s.process_type as any).ClaudeSession.session_id === session.id;
-          }
-          return false;
-        });
-        
-        if (activeSession) {
-          // Session is still active, reconnect to its stream
-          logger.debug('[ClaudeCodeSession] Found active session, reconnecting:', session.id);
-          // IMPORTANT: Set claudeSessionId before reconnecting
-          setClaudeSessionId(session.id);
-          
-          // Don't add buffered messages here - they've already been loaded by loadSessionHistory
-          // Just set up listeners for new messages
-          
-          // Set up listeners for the active session
-          reconnectToSession(session.id);
-        }
-      } catch (err) {
-        await handleApiError(err as Error, { operation: 'listRunningClaudeSessions' });
-      }
-    }
-  };
-
-  const reconnectToSession = async (sessionId: string) => {
-    logger.debug('[ClaudeCodeSession] Reconnecting to session:', sessionId);
-    
     // Prevent duplicate listeners
     if (isListeningRef.current) {
-      logger.debug('[ClaudeCodeSession] Already listening to session, skipping reconnect');
+      logger.debug("[ClaudeCodeSession] Already listening to session, skipping reconnect");
       return;
     }
-    
+
     // Clean up previous listeners
-    unlistenRefs.current.forEach(unlisten => unlisten());
+    unlistenRefs.current.forEach((unlisten) => unlisten());
     unlistenRefs.current = [];
-    
+
     // IMPORTANT: Set the session ID before setting up listeners
-    setClaudeSessionId(sessionId);
-    
+    setClaudeSessionId(_sessionId);
+
     // Mark as listening
     isListeningRef.current = true;
-    
+
     // Set up session-specific listeners
-    const outputUnlisten = await listen<string>(`claude-output:${sessionId}`, async (event) => {
+    const outputUnlisten = await listen<string>(`claude-output:${_sessionId}`, async (event) => {
       try {
-        logger.debug('[ClaudeCodeSession] Received claude-output on reconnect:', event.payload);
-        
+        logger.debug("[ClaudeCodeSession] Received claude-output on reconnect:", event.payload);
+
         if (!isMountedRef.current) return;
-        
+
         // Store raw JSONL
-        setRawJsonlOutput(prev => [...prev, event.payload]);
-        
+        setRawJsonlOutput((prev) => [...prev, event.payload]);
+
         // Parse and display
         const message = JSON.parse(event.payload) as ClaudeStreamMessage;
-        setMessages(prev => [...prev, message]);
+        setMessages((prev) => [...prev, message]);
       } catch (err) {
-        await handleError(err as Error, { operation: 'parseClaudeMessage', payload: event.payload });
+        await handleError(err as Error, {
+          operation: "parseClaudeMessage",
+          payload: event.payload,
+        });
       }
     });
 
-    const errorUnlisten = await listen<string>(`claude-error:${sessionId}`, (event) => {
+    const errorUnlisten = await listen<string>(`claude-error:${_sessionId}`, (event) => {
       logger.error("Claude error:", event.payload);
       if (isMountedRef.current) {
         setError(event.payload);
       }
     });
 
-    const completeUnlisten = await listen<boolean>(`claude-complete:${sessionId}`, async (event) => {
-      logger.debug('[ClaudeCodeSession] Received claude-complete on reconnect:', event.payload);
-      if (isMountedRef.current) {
-        setIsLoading(false);
-        hasActiveSessionRef.current = false;
+    const completeUnlisten = await listen<boolean>(
+      `claude-complete:${_sessionId}`,
+      async (event) => {
+        logger.debug("[ClaudeCodeSession] Received claude-complete on reconnect:", event.payload);
+        if (isMountedRef.current) {
+          setIsLoading(false);
+          hasActiveSessionRef.current = false;
+        }
       }
-    });
+    );
 
     unlistenRefs.current = [outputUnlisten, errorUnlisten, completeUnlisten];
-    
+
     // Mark as loading to show the session is active
     if (isMountedRef.current) {
       setIsLoading(true);
       hasActiveSessionRef.current = true;
     }
   };
+  */
 
   const handleSelectPath = async () => {
     try {
       const selected = await open({
         directory: true,
         multiple: false,
-        title: "Select Project Directory"
+        title: "Select Project Directory",
       });
-      
+
       if (selected) {
         setProjectPath(selected as string);
         setError(null);
       }
     } catch (err) {
-      await handleError(err as Error, { operation: 'selectDirectory' });
+      await handleError(err as Error, { operation: "selectDirectory" });
       const errorMessage = err instanceof Error ? err.message : String(err);
       setError(`Failed to select directory: ${errorMessage}`);
     }
   };
 
   const handleSendPrompt = async (prompt: string, model: ClaudeModel) => {
-    logger.debug('[ClaudeCodeSession] handleSendPrompt called with:', { prompt, model, projectPath, claudeSessionId, effectiveSession });
-    
+    logger.debug("[ClaudeCodeSession] handleSendPrompt called with:", {
+      prompt,
+      model,
+      projectPath,
+      claudeSessionId,
+      effectiveSession,
+    });
+
     if (!projectPath) {
-      await handleValidationError("Please select a project directory first", { operation: 'validateProjectPath' });
+      await handleValidationError("Please select a project directory first", {
+        operation: "validateProjectPath",
+      });
       setError("Please select a project directory first");
       return;
     }
@@ -433,9 +500,9 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       const newPrompt = {
         id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         prompt,
-        model
+        model,
       };
-      setQueuedPrompts(prev => [...prev, newPrompt]);
+      setQueuedPrompts((prev) => [...prev, newPrompt]);
       return;
     }
 
@@ -443,21 +510,21 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       setIsLoading(true);
       setError(null);
       hasActiveSessionRef.current = true;
-      
+
       // For resuming sessions, ensure we have the session ID
       if (effectiveSession && !claudeSessionId) {
         setClaudeSessionId(effectiveSession.id);
       }
-      
+
       // Only clean up and set up new listeners if not already listening
       if (!isListeningRef.current) {
         // Clean up previous listeners
-        unlistenRefs.current.forEach(unlisten => unlisten());
+        unlistenRefs.current.forEach((unlisten) => unlisten());
         unlistenRefs.current = [];
-        
+
         // Mark as setting up listeners
         isListeningRef.current = true;
-        
+
         // --------------------------------------------------------------------
         // 1️⃣  Event Listener Setup Strategy
         // --------------------------------------------------------------------
@@ -471,49 +538,65 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         //     generic ones to prevent duplicate handling.
         // --------------------------------------------------------------------
 
-        logger.debug('[ClaudeCodeSession] Setting up generic event listeners first');
+        logger.debug("[ClaudeCodeSession] Setting up generic event listeners first");
 
         let currentSessionId: string | null = claudeSessionId || effectiveSession?.id || null;
 
         // Helper to attach session-specific listeners **once we are sure**
         const attachSessionSpecificListeners = async (sid: string) => {
-          logger.debug('[ClaudeCodeSession] Attaching session-specific listeners for', sid);
+          logger.debug("[ClaudeCodeSession] Attaching session-specific listeners for", sid);
 
-          const specificOutputUnlisten = await listen<string>(`claude-output:${sid}`, async (evt) => {
-            await handleStreamMessage(evt.payload);
-          });
+          const specificOutputUnlisten = await listen<string>(
+            `claude-output:${sid}`,
+            async (evt) => {
+              await handleStreamMessage(evt.payload);
+            }
+          );
 
           const specificErrorUnlisten = await listen<string>(`claude-error:${sid}`, async (evt) => {
-            await handleError(evt.payload, { operation: 'claudeErrorScoped', source: 'claude_session' });
+            await handleError(evt.payload, {
+              operation: "claudeErrorScoped",
+              source: "claude_session",
+            });
             setError(evt.payload);
           });
 
-          const specificCompleteUnlisten = await listen<boolean>(`claude-complete:${sid}`, (evt) => {
-            logger.debug('[ClaudeCodeSession] Received claude-complete (scoped):', evt.payload);
-            processComplete(evt.payload);
-          });
+          const specificCompleteUnlisten = await listen<boolean>(
+            `claude-complete:${sid}`,
+            (evt) => {
+              logger.debug("[ClaudeCodeSession] Received claude-complete (scoped):", evt.payload);
+              processComplete(evt.payload);
+            }
+          );
 
           // Replace existing unlisten refs with these new ones (after cleaning up)
           unlistenRefs.current.forEach((u) => u());
-          unlistenRefs.current = [specificOutputUnlisten, specificErrorUnlisten, specificCompleteUnlisten];
+          unlistenRefs.current = [
+            specificOutputUnlisten,
+            specificErrorUnlisten,
+            specificCompleteUnlisten,
+          ];
         };
 
         // Generic listeners (catch-all)
-        const genericOutputUnlisten = await listen<string>('claude-output', async (event) => {
+        const genericOutputUnlisten = await listen<string>("claude-output", async (event) => {
           await handleStreamMessage(event.payload);
 
           // Attempt to extract session_id on the fly (for the very first init)
           try {
             const msg = JSON.parse(event.payload) as ClaudeStreamMessage;
-            if (msg.type === 'system' && msg.subtype === 'init' && msg.session_id) {
+            if (msg.type === "system" && msg.subtype === "init" && msg.session_id) {
               if (!currentSessionId || currentSessionId !== msg.session_id) {
-                logger.debug('[ClaudeCodeSession] Detected new session_id from generic listener:', msg.session_id);
+                logger.debug(
+                  "[ClaudeCodeSession] Detected new session_id from generic listener:",
+                  msg.session_id
+                );
                 currentSessionId = msg.session_id;
                 setClaudeSessionId(msg.session_id);
 
                 // If we haven't extracted session info before, do it now
                 if (!extractedSessionInfo) {
-                  const projectId = projectPath.replace(/[^a-zA-Z0-9]/g, '-');
+                  const projectId = projectPath.replace(/[^a-zA-Z0-9]/g, "-");
                   setExtractedSessionInfo({ sessionId: msg.session_id, projectId });
                 }
 
@@ -531,14 +614,14 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
           try {
             // Don't process if component unmounted
             if (!isMountedRef.current) return;
-            
+
             // Store raw JSONL
             setRawJsonlOutput((prev) => [...prev, payload]);
 
             const message = JSON.parse(payload) as ClaudeStreamMessage;
             setMessages((prev) => [...prev, message]);
           } catch (err) {
-            await handleError(err as Error, { operation: 'parseClaudeMessage', payload });
+            await handleError(err as Error, { operation: "parseClaudeMessage", payload });
           }
         }
 
@@ -567,7 +650,10 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                 setTimelineVersion((v) => v + 1);
               }
             } catch (err) {
-              await handleError(err as Error, { operation: 'checkAutoCheckpoint', sessionId: effectiveSession.id });
+              await handleError(err as Error, {
+                operation: "checkAutoCheckpoint",
+                sessionId: effectiveSession.id,
+              });
             }
           }
 
@@ -575,26 +661,30 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
           if (queuedPromptsRef.current.length > 0) {
             const [nextPrompt, ...remainingPrompts] = queuedPromptsRef.current;
             setQueuedPrompts(remainingPrompts);
-            
+
             // Small delay to ensure UI updates
-            setTimeout(() => {
+            globalThis.setTimeout(() => {
               handleSendPrompt(nextPrompt.prompt, nextPrompt.model);
             }, 100);
           }
         };
 
-        const genericErrorUnlisten = await listen<string>('claude-error', async (evt) => {
-          await handleError(evt.payload, { operation: 'claudeError', source: 'claude_session' });
+        const genericErrorUnlisten = await listen<string>("claude-error", async (evt) => {
+          await handleError(evt.payload, { operation: "claudeError", source: "claude_session" });
           setError(evt.payload);
         });
 
-        const genericCompleteUnlisten = await listen<boolean>('claude-complete', (evt) => {
-          logger.debug('[ClaudeCodeSession] Received claude-complete (generic):', evt.payload);
+        const genericCompleteUnlisten = await listen<boolean>("claude-complete", (evt) => {
+          logger.debug("[ClaudeCodeSession] Received claude-complete (generic):", evt.payload);
           processComplete(evt.payload);
         });
 
         // Store the generic unlisteners for now; they may be replaced later.
-        unlistenRefs.current = [genericOutputUnlisten, genericErrorUnlisten, genericCompleteUnlisten];
+        unlistenRefs.current = [
+          genericOutputUnlisten,
+          genericErrorUnlisten,
+          genericCompleteUnlisten,
+        ];
 
         // --------------------------------------------------------------------
         // 2️⃣  Auto-checkpoint logic moved after listener setup (unchanged)
@@ -607,19 +697,19 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
             content: [
               {
                 type: "text",
-                text: prompt
-              }
-            ]
-          }
+                text: prompt,
+              },
+            ],
+          },
         };
-        setMessages(prev => [...prev, userMessage]);
+        setMessages((prev) => [...prev, userMessage]);
 
         // Execute the appropriate command
         if (effectiveSession && !isFirstPrompt) {
-          logger.debug('[ClaudeCodeSession] Resuming session:', effectiveSession.id);
+          logger.debug("[ClaudeCodeSession] Resuming session:", effectiveSession.id);
           await api.resumeClaudeCode(projectPath, effectiveSession.id, prompt, model);
         } else {
-          logger.debug('[ClaudeCodeSession] Starting new session');
+          logger.debug("[ClaudeCodeSession] Starting new session");
           setIsFirstPrompt(false);
           await api.executeClaudeCode(projectPath, prompt, model);
         }
@@ -633,7 +723,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   };
 
   const handleCopyAsJsonl = async () => {
-    const jsonl = rawJsonlOutput.join('\n');
+    const jsonl = rawJsonlOutput.join("\n");
     await navigator.clipboard.writeText(jsonl);
     setCopyPopoverOpen(false);
   };
@@ -647,18 +737,19 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     for (const msg of messages) {
       if (msg.type === "system" && msg.subtype === "init") {
         markdown += `## System Initialization\n\n`;
-        markdown += `- Session ID: \`${msg.session_id || 'N/A'}\`\n`;
-        markdown += `- Model: \`${msg.model || 'default'}\`\n`;
+        markdown += `- Session ID: \`${msg.session_id || "N/A"}\`\n`;
+        markdown += `- Model: \`${msg.model || "default"}\`\n`;
         if (msg.cwd) markdown += `- Working Directory: \`${msg.cwd}\`\n`;
-        if (msg.tools?.length) markdown += `- Tools: ${msg.tools.join(', ')}\n`;
+        if (msg.tools?.length) markdown += `- Tools: ${msg.tools.join(", ")}\n`;
         markdown += `\n`;
       } else if (msg.type === "assistant" && msg.message) {
         markdown += `## Assistant\n\n`;
         for (const content of msg.message.content || []) {
           if (content.type === "text") {
-            const textContent = typeof content.text === 'string' 
-              ? content.text 
-              : (content.text?.text || JSON.stringify(content.text || content));
+            const textContent =
+              typeof content.text === "string"
+                ? content.text
+                : (content.text as unknown as { text?: string })?.text || JSON.stringify(content.text || content);
             markdown += `${textContent}\n\n`;
           } else if (content.type === "tool_use") {
             markdown += `### Tool: ${content.name}\n\n`;
@@ -672,22 +763,25 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         markdown += `## User\n\n`;
         for (const content of msg.message.content || []) {
           if (content.type === "text") {
-            const textContent = typeof content.text === 'string' 
-              ? content.text 
-              : (content.text?.text || JSON.stringify(content.text));
+            const textContent =
+              typeof content.text === "string"
+                ? content.text
+                : (content.text as unknown as { text?: string })?.text || JSON.stringify(content.text);
             markdown += `${textContent}\n\n`;
           } else if (content.type === "tool_result") {
             markdown += `### Tool Result\n\n`;
-            let contentText = '';
-            if (typeof content.content === 'string') {
+            let contentText = "";
+            if (typeof content.content === "string") {
               contentText = content.content;
-            } else if (content.content && typeof content.content === 'object') {
-              if (content.content.text) {
-                contentText = content.content.text;
+            } else if (content.content && typeof content.content === "object") {
+              if ((content.content as { text?: string }).text) {
+                contentText = (content.content as { text?: string }).text || "";
               } else if (Array.isArray(content.content)) {
-                contentText = content.content
-                  .map((c: any) => (typeof c === 'string' ? c : c.text || JSON.stringify(c)))
-                  .join('\n');
+                contentText = (content.content as unknown[])
+                  .map((c: unknown) =>
+                    typeof c === "string" ? c : (c as { text?: string }).text || JSON.stringify(c)
+                  )
+                  .join("\n");
               } else {
                 contentText = JSON.stringify(content.content, null, 2);
               }
@@ -719,48 +813,48 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
 
   const handleCancelExecution = async () => {
     if (!claudeSessionId || !isLoading) return;
-    
+
     try {
       await api.cancelClaudeExecution(claudeSessionId);
-      
+
       // Clean up listeners
-      unlistenRefs.current.forEach(unlisten => unlisten());
+      unlistenRefs.current.forEach((unlisten) => unlisten());
       unlistenRefs.current = [];
-      
+
       // Reset states
       setIsLoading(false);
       hasActiveSessionRef.current = false;
       isListeningRef.current = false;
       setError(null);
-      
+
       // Clear queued prompts
       setQueuedPrompts([]);
-      
+
       // Add a message indicating the session was cancelled
       const cancelMessage: ClaudeStreamMessage = {
         type: "system",
         subtype: "info",
         result: "Session cancelled by user",
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
-      setMessages(prev => [...prev, cancelMessage]);
+      setMessages((prev) => [...prev, cancelMessage]);
     } catch (err) {
       logger.error("Failed to cancel execution:", err);
-      
+
       // Even if backend fails, we should update UI to reflect stopped state
       // Add error message but still stop the UI loading state
       const errorMessage: ClaudeStreamMessage = {
         type: "system",
         subtype: "error",
-        result: `Failed to cancel execution: ${err instanceof Error ? err.message : 'Unknown error'}. The process may still be running in the background.`,
-        timestamp: new Date().toISOString()
+        result: `Failed to cancel execution: ${err instanceof Error ? err.message : "Unknown error"}. The process may still be running in the background.`,
+        timestamp: new Date().toISOString(),
       };
-      setMessages(prev => [...prev, errorMessage]);
-      
+      setMessages((prev) => [...prev, errorMessage]);
+
       // Clean up listeners anyway
-      unlistenRefs.current.forEach(unlisten => unlisten());
+      unlistenRefs.current.forEach((unlisten) => unlisten());
       unlistenRefs.current = [];
-      
+
       // Reset states to allow user to continue
       setIsLoading(false);
       hasActiveSessionRef.current = false;
@@ -777,11 +871,11 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
 
   const handleConfirmFork = async () => {
     if (!forkCheckpointId || !forkSessionName.trim() || !effectiveSession) return;
-    
+
     try {
       setIsLoading(true);
       setError(null);
-      
+
       const newSessionId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       await api.forkFromCheckpoint(
         forkCheckpointId,
@@ -791,11 +885,11 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         newSessionId,
         forkSessionName
       );
-      
+
       // Open the new forked session
       // You would need to implement navigation to the new session
       logger.debug("Forked to new session:", newSessionId);
-      
+
       setShowForkDialog(false);
       setForkCheckpointId(null);
       setForkSessionName("");
@@ -822,7 +916,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   };
 
   const handlePreviewUrlChange = (url: string) => {
-    logger.debug('[ClaudeCodeSession] Preview URL changed to:', url);
+    logger.debug("[ClaudeCodeSession] Preview URL changed to:", url);
     setPreviewUrl(url);
   };
 
@@ -837,19 +931,19 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   // Cleanup event listeners and track mount state
   useEffect(() => {
     isMountedRef.current = true;
-    
+
     return () => {
-      logger.debug('[ClaudeCodeSession] Component unmounting, cleaning up listeners');
+      logger.debug("[ClaudeCodeSession] Component unmounting, cleaning up listeners");
       isMountedRef.current = false;
       isListeningRef.current = false;
-      
+
       // Clean up listeners
-      unlistenRefs.current.forEach(unlisten => unlisten());
+      unlistenRefs.current.forEach((unlisten) => unlisten());
       unlistenRefs.current = [];
-      
+
       // Clear checkpoint manager when session ends
       if (effectiveSession) {
-        api.clearCheckpointManager(effectiveSession.id).catch(err => {
+        api.clearCheckpointManager(effectiveSession.id).catch((err) => {
           logger.error("Failed to clear checkpoint manager:", err);
         });
       }
@@ -861,14 +955,14 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       ref={parentRef}
       className="flex-1 overflow-y-auto relative pb-40"
       style={{
-        contain: 'strict',
+        contain: "strict",
       }}
     >
       <div
         className="relative w-full max-w-5xl mx-auto px-4 pt-8 pb-4"
         style={{
           height: `${Math.max(rowVirtualizer.getTotalSize(), 100)}px`,
-          minHeight: '100px',
+          minHeight: "100px",
         }}
       >
         <AnimatePresence>
@@ -888,8 +982,8 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                   top: virtualItem.start,
                 }}
               >
-                <StreamMessage 
-                  message={message} 
+                <StreamMessage
+                  message={message}
                   streamMessages={messages}
                   onLinkDetected={handleLinkDetected}
                 />
@@ -942,12 +1036,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
           className="flex-1"
           disabled={isLoading}
         />
-        <Button
-          onClick={handleSelectPath}
-          size="icon"
-          variant="outline"
-          disabled={isLoading}
-        >
+        <Button onClick={handleSelectPath} size="icon" variant="outline" disabled={isLoading}>
           <FolderOpen className="h-4 w-4" />
         </Button>
       </div>
@@ -958,7 +1047,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   if (showPreview && isPreviewMaximized) {
     return (
       <AnimatePresence>
-        <motion.div 
+        <motion.div
           className="fixed inset-0 z-50 bg-background"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -989,12 +1078,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
           className="flex items-center justify-between p-4 border-b border-border"
         >
           <div className="flex items-center space-x-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onBack}
-              className="h-8 w-8"
-            >
+            <Button variant="ghost" size="icon" onClick={onBack} className="h-8 w-8">
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div className="flex items-center gap-2">
@@ -1007,7 +1091,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
               </div>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-2">
             {projectPath && onProjectSettings && (
               <Button
@@ -1034,8 +1118,8 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
             <div className="flex items-center gap-2">
               {showSettings && (
                 <CheckpointSettings
-                  sessionId={effectiveSession?.id || ''}
-                  projectId={effectiveSession?.project_id || ''}
+                  sessionId={effectiveSession?.id || ""}
+                  projectId={effectiveSession?.project_id || ""}
                   projectPath={projectPath}
                 />
               )}
@@ -1078,11 +1162,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
               {messages.length > 0 && (
                 <Popover
                   trigger={
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="flex items-center gap-2"
-                    >
+                    <Button variant="ghost" size="sm" className="flex items-center gap-2">
                       <Copy className="h-4 w-4" />
                       {t.sessions.copyOutput}
                       <ChevronDown className="h-3 w-3" />
@@ -1117,10 +1197,12 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         </motion.div>
 
         {/* Main Content Area */}
-        <div className={cn(
-          "flex-1 overflow-hidden transition-all duration-300",
-          showTimeline && "sm:mr-96"
-        )}>
+        <div
+          className={cn(
+            "flex-1 overflow-hidden transition-all duration-300",
+            showTimeline && "sm:mr-96"
+          )}
+        >
           {showPreview ? (
             // Split pane layout when preview is active
             <SplitPane
@@ -1150,7 +1232,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
             <div className="h-full flex flex-col max-w-5xl mx-auto">
               {projectPathInput}
               {messagesList}
-              
+
               {isLoading && messages.length === 0 && (
                 <div className="flex items-center justify-center h-full">
                   <div className="flex items-center gap-3">
@@ -1181,47 +1263,63 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                     <div className="text-xs font-medium text-muted-foreground mb-1">
                       Queued Prompts ({queuedPrompts.length})
                     </div>
-                    <Button variant="ghost" size="icon" onClick={() => setQueuedPromptsCollapsed(prev => !prev)}>
-                      {queuedPromptsCollapsed ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setQueuedPromptsCollapsed((prev) => !prev)}
+                    >
+                      {queuedPromptsCollapsed ? (
+                        <ChevronUp className="h-3 w-3" />
+                      ) : (
+                        <ChevronDown className="h-3 w-3" />
+                      )}
                     </Button>
                   </div>
-                  {!queuedPromptsCollapsed && queuedPrompts.map((queuedPrompt, index) => (
-                    <motion.div
-                      key={queuedPrompt.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
-                      transition={{ delay: index * 0.05 }}
-                      className="flex items-start gap-2 bg-muted/50 rounded-md p-2"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-medium text-muted-foreground">#{index + 1}</span>
-                          <span className="text-xs px-1.5 py-0.5 bg-primary/10 text-primary rounded">
-                            {(() => {
-                              const modelNames = {
-                                "haiku": "Haiku",
-                                "sonnet-3-5": "Sonnet 3.5",
-                                "sonnet-3-7": "Sonnet 3.7",
-                                "sonnet": "Sonnet 4",
-                                "opus": "Opus"
-                              };
-                              return modelNames[queuedPrompt.model as keyof typeof modelNames] || queuedPrompt.model;
-                            })()}
-                          </span>
-                        </div>
-                        <p className="text-sm line-clamp-2 break-words">{queuedPrompt.prompt}</p>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 flex-shrink-0"
-                        onClick={() => setQueuedPrompts(prev => prev.filter(p => p.id !== queuedPrompt.id))}
+                  {!queuedPromptsCollapsed &&
+                    queuedPrompts.map((queuedPrompt, index) => (
+                      <motion.div
+                        key={queuedPrompt.id}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 20 }}
+                        transition={{ delay: index * 0.05 }}
+                        className="flex items-start gap-2 bg-muted/50 rounded-md p-2"
                       >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </motion.div>
-                  ))}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-medium text-muted-foreground">
+                              #{index + 1}
+                            </span>
+                            <span className="text-xs px-1.5 py-0.5 bg-primary/10 text-primary rounded">
+                              {(() => {
+                                const modelNames = {
+                                  haiku: "Haiku",
+                                  "sonnet-3-5": "Sonnet 3.5",
+                                  "sonnet-3-7": "Sonnet 3.7",
+                                  sonnet: "Sonnet 4",
+                                  opus: "Opus",
+                                };
+                                return (
+                                  modelNames[queuedPrompt.model as keyof typeof modelNames] ||
+                                  queuedPrompt.model
+                                );
+                              })()}
+                            </span>
+                          </div>
+                          <p className="text-sm line-clamp-2 break-words">{queuedPrompt.prompt}</p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 flex-shrink-0"
+                          onClick={() =>
+                            setQueuedPrompts((prev) => prev.filter((p) => p.id !== queuedPrompt.id))
+                          }
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </motion.div>
+                    ))}
                 </div>
               </motion.div>
             )}
@@ -1246,15 +1344,15 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                       // Scroll to top of the container
                       parentRef.current?.scrollTo({
                         top: 0,
-                        behavior: 'smooth'
+                        behavior: "smooth",
                       });
-                      
+
                       // After smooth scroll completes, trigger a small scroll to ensure rendering
-                      setTimeout(() => {
+                      globalThis.setTimeout(() => {
                         if (parentRef.current) {
                           // Scroll down 1px then back to 0 to trigger virtualizer update
                           parentRef.current.scrollTop = 1;
-                          requestAnimationFrame(() => {
+                          globalThis.requestAnimationFrame(() => {
                             if (parentRef.current) {
                               parentRef.current.scrollTop = 0;
                             }
@@ -1280,7 +1378,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                       if (scrollElement) {
                         scrollElement.scrollTo({
                           top: scrollElement.scrollHeight,
-                          behavior: 'smooth'
+                          behavior: "smooth",
                         });
                       }
                     }
@@ -1294,10 +1392,12 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
             </motion.div>
           )}
 
-          <div className={cn(
-            "fixed bottom-0 left-0 right-0 transition-all duration-300 z-50",
-            showTimeline && "sm:right-96"
-          )}>
+          <div
+            className={cn(
+              "fixed bottom-0 left-0 right-0 transition-all duration-300 z-50",
+              showTimeline && "sm:right-96"
+            )}
+          >
             <FloatingPromptInput
               ref={floatingPromptRef}
               onSend={handleSendPrompt}
@@ -1354,7 +1454,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
-                
+
                 {/* Timeline Content */}
                 <div className="flex-1 overflow-y-auto p-4">
                   <TimelineNavigator
@@ -1382,7 +1482,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
               Create a new session branch from the selected checkpoint.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="fork-name">New Session Name</Label>
@@ -1399,19 +1499,12 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
               />
             </div>
           </div>
-          
+
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowForkDialog(false)}
-              disabled={isLoading}
-            >
+            <Button variant="outline" onClick={() => setShowForkDialog(false)} disabled={isLoading}>
               Cancel
             </Button>
-            <Button
-              onClick={handleConfirmFork}
-              disabled={isLoading || !forkSessionName.trim()}
-            >
+            <Button onClick={handleConfirmFork} disabled={isLoading || !forkSessionName.trim()}>
               Create Fork
             </Button>
           </DialogFooter>

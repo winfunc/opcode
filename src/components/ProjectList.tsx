@@ -1,13 +1,6 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { 
-  FolderOpen, 
-  Calendar, 
-  FileText, 
-  ChevronRight, 
-  Settings,
-  MoreVertical
-} from "lucide-react";
+import { FolderOpen, Calendar, FileText, ChevronRight, Settings, MoreVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -52,13 +45,13 @@ const ITEMS_PER_PAGE = 12;
  * Extracts the project name from the full path
  */
 const getProjectName = (path: string): string => {
-  const parts = path.split('/').filter(Boolean);
+  const parts = path.split("/").filter(Boolean);
   return parts[parts.length - 1] || path;
 };
 
 /**
  * ProjectList component - Displays a paginated list of projects with hover animations
- * 
+ *
  * @example
  * <ProjectList
  *   projects={projects}
@@ -73,18 +66,18 @@ export const ProjectList: React.FC<ProjectListProps> = ({
 }) => {
   const { t } = useI18n();
   const [currentPage, setCurrentPage] = useState(1);
-  
+
   // Calculate pagination
   const totalPages = Math.ceil(projects.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIndex = startIndex + ITEMS_PER_PAGE;
   const currentProjects = projects.slice(startIndex, endIndex);
-  
+
   // Reset to page 1 if projects change
   React.useEffect(() => {
     setCurrentPage(1);
   }, [projects.length]);
-  
+
   return (
     <div className={cn("space-y-4", className)}>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -118,12 +111,12 @@ export const ProjectList: React.FC<ProjectListProps> = ({
                       </Badge>
                     )}
                   </div>
-                  
+
                   <p className="text-sm text-muted-foreground mb-3 font-mono truncate">
                     {project.path}
                   </p>
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3 text-xs text-muted-foreground">
                     <div className="flex items-center gap-1">
@@ -135,7 +128,7 @@ export const ProjectList: React.FC<ProjectListProps> = ({
                       <span>{project.sessions.length}</span>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     {onProjectSettings && (
                       <DropdownMenu>
@@ -165,12 +158,8 @@ export const ProjectList: React.FC<ProjectListProps> = ({
           </motion.div>
         ))}
       </div>
-      
-      <Pagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={setCurrentPage}
-      />
+
+      <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
     </div>
   );
-}; 
+};

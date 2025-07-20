@@ -37,15 +37,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { api } from "@/lib/api";
 import { Toast, ToastContainer } from "./ui/toast";
-import { handleError } from '@/lib/errorHandler';
+import { handleError } from "@/lib/errorHandler";
 interface TableInfo {
   name: string;
   row_count: number;
@@ -64,7 +59,7 @@ interface ColumnInfo {
 interface TableData {
   table_name: string;
   columns: ColumnInfo[];
-  rows: Record<string, any>[];
+  rows: Record<string, unknown>[];
   total_rows: number;
   page: number;
   page_size: number;
@@ -73,7 +68,7 @@ interface TableData {
 
 interface QueryResult {
   columns: string[];
-  rows: any[][];
+  rows: unknown[][];
   rows_affected?: number;
   last_insert_rowid?: number;
 }
@@ -93,9 +88,9 @@ export const StorageTab: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   // Dialog states
-  const [editingRow, setEditingRow] = useState<Record<string, any> | null>(null);
-  const [newRow, setNewRow] = useState<Record<string, any> | null>(null);
-  const [deletingRow, setDeletingRow] = useState<Record<string, any> | null>(null);
+  const [editingRow, setEditingRow] = useState<Record<string, unknown> | null>(null);
+  const [newRow, setNewRow] = useState<Record<string, unknown> | null>(null);
+  const [deletingRow, setDeletingRow] = useState<Record<string, unknown> | null>(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showSqlEditor, setShowSqlEditor] = useState(false);
   const [sqlQuery, setSqlQuery] = useState("");
@@ -108,7 +103,7 @@ export const StorageTab: React.FC = () => {
    */
   useEffect(() => {
     loadTables();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   /**
    * Load table data when selected table changes
@@ -117,19 +112,19 @@ export const StorageTab: React.FC = () => {
     if (selectedTable) {
       loadTableData(1);
     }
-  }, [selectedTable]);
+  }, [selectedTable]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /**
    * Load all tables from the database
    */
-  const loadTables = async () => {
+  const loadTables = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       const result = await api.storageListTables();
-      setTables(result);
+      setTables(result as TableInfo[]);
       if (result.length > 0 && !selectedTable) {
-        setSelectedTable(result[0].name);
+        setSelectedTable((result as TableInfo[])[0].name);
       }
     } catch (err) {
       await handleError("Failed to load tables:", { context: err });
@@ -137,32 +132,35 @@ export const StorageTab: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedTable, t.storage.failedToLoadTables]);
 
   /**
    * Load data for the selected table
    */
-  const loadTableData = async (page: number, search?: string) => {
-    if (!selectedTable) return;
+  const loadTableData = useCallback(
+    async (page: number, search?: string) => {
+      if (!selectedTable) return;
 
-    try {
-      setLoading(true);
-      setError(null);
-      const result = await api.storageReadTable(
-        selectedTable,
-        page,
-        pageSize,
-        search || searchQuery || undefined
-      );
-      setTableData(result);
-      setCurrentPage(page);
-    } catch (err) {
-      await handleError("Failed to load table data:", { context: err });
-      setError(t.storage.failedToLoadTableData);
-    } finally {
-      setLoading(false);
-    }
-  };
+      try {
+        setLoading(true);
+        setError(null);
+        const result = await api.storageReadTable(
+          selectedTable,
+          page,
+          pageSize,
+          search || searchQuery || undefined
+        );
+        setTableData(result as TableData);
+        setCurrentPage(page);
+      } catch (err) {
+        await handleError("Failed to load table data:", { context: err });
+        setError(t.storage.failedToLoadTableData);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [selectedTable, pageSize, searchQuery, t.storage.failedToLoadTableData]
+  );
 
   /**
    * Handle search
@@ -172,19 +170,19 @@ export const StorageTab: React.FC = () => {
       setSearchQuery(value);
       loadTableData(1, value);
     },
-    [selectedTable]
+    [loadTableData]
   );
 
   /**
    * Get primary key values for a row
    */
-  const getPrimaryKeyValues = (row: Record<string, any>): Record<string, any> => {
+  const getPrimaryKeyValues = (row: Record<string, unknown>): Record<string, unknown> => {
     if (!tableData) return {};
 
-    const pkColumns = tableData.columns.filter(col => col.pk);
-    const pkValues: Record<string, any> = {};
+    const pkColumns = tableData.columns.filter((col) => col.pk);
+    const pkValues: Record<string, unknown> = {};
 
-    pkColumns.forEach(col => {
+    pkColumns.forEach((col) => {
       pkValues[col.name] = row[col.name];
     });
 
@@ -194,7 +192,7 @@ export const StorageTab: React.FC = () => {
   /**
    * Handle row update
    */
-  const handleUpdateRow = async (updates: Record<string, any>) => {
+  const handleUpdateRow = async (updates: Record<string, unknown>) => {
     if (!editingRow || !selectedTable) return;
 
     try {
@@ -234,7 +232,7 @@ export const StorageTab: React.FC = () => {
   /**
    * Handle new row insertion
    */
-  const handleInsertRow = async (values: Record<string, any>) => {
+  const handleInsertRow = async (values: Record<string, unknown>) => {
     if (!selectedTable) return;
 
     try {
@@ -258,10 +256,10 @@ export const StorageTab: React.FC = () => {
       setLoading(true);
       setSqlError(null);
       const result = await api.storageExecuteSql(sqlQuery);
-      setSqlResult(result);
+      setSqlResult(result as QueryResult);
 
       // Refresh tables and data if it was a non-SELECT query
-      if (result.rows_affected !== undefined) {
+      if ((result as QueryResult).rows_affected !== undefined) {
         await loadTables();
         if (selectedTable) {
           await loadTableData(currentPage);
@@ -305,7 +303,7 @@ export const StorageTab: React.FC = () => {
   /**
    * Format cell value for display
    */
-  const formatCellValue = (value: any, maxLength: number = 100): string => {
+  const formatCellValue = (value: unknown, maxLength: number = 100): string => {
     if (value === null) return t.storage.nullValue;
     if (value === undefined) return "";
     if (typeof value === "boolean") return value ? t.storage.trueValue : t.storage.falseValue;
@@ -313,7 +311,7 @@ export const StorageTab: React.FC = () => {
 
     const stringValue = String(value);
     if (stringValue.length > maxLength) {
-      return stringValue.substring(0, maxLength) + "...";
+      return `${stringValue.substring(0, maxLength)}...`;
     }
     return stringValue;
   };
@@ -427,13 +425,9 @@ export const StorageTab: React.FC = () => {
                     >
                       <div className="flex items-center gap-1">
                         {column.name}
-                        {column.pk && (
-                          <span className="text-[10px] text-primary">PK</span>
-                        )}
+                        {column.pk && <span className="text-[10px] text-primary">PK</span>}
                       </div>
-                      <div className="text-[10px] font-normal">
-                        {column.type_name}
-                      </div>
+                      <div className="text-[10px] font-normal">{column.type_name}</div>
                     </th>
                   ))}
                   <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground">
@@ -454,17 +448,18 @@ export const StorageTab: React.FC = () => {
                       {tableData.columns.map((column) => {
                         const value = row[column.name];
                         const formattedValue = formatCellValue(value, 50);
-                        const fullValue = value === null ? "NULL" :
-                          value === undefined ? "" :
-                            typeof value === "object" ? JSON.stringify(value, null, 2) :
-                              String(value);
+                        const fullValue =
+                          value === null
+                            ? "NULL"
+                            : value === undefined
+                              ? ""
+                              : typeof value === "object"
+                                ? JSON.stringify(value, null, 2)
+                                : String(value);
                         const isTruncated = fullValue.length > 50;
 
                         return (
-                          <td
-                            key={column.name}
-                            className="px-3 py-2 text-xs font-mono"
-                          >
+                          <td key={column.name} className="px-3 py-2 text-xs font-mono">
                             {isTruncated ? (
                               <TooltipProvider>
                                 <Tooltip>
@@ -482,9 +477,7 @@ export const StorageTab: React.FC = () => {
                                 </Tooltip>
                               </TooltipProvider>
                             ) : (
-                              <span className="block truncate max-w-[200px]">
-                                {formattedValue}
-                              </span>
+                              <span className="block truncate max-w-[200px]">{formattedValue}</span>
                             )}
                           </td>
                         );
@@ -521,9 +514,9 @@ export const StorageTab: React.FC = () => {
             <div className="flex items-center justify-between p-3 border-t">
               <div className="text-xs text-muted-foreground">
                 {t.storage.showingRows
-                  .replace('{start}', String((currentPage - 1) * pageSize + 1))
-                  .replace('{end}', String(Math.min(currentPage * pageSize, tableData.total_rows)))
-                  .replace('{total}', String(tableData.total_rows))}
+                  .replace("{start}", String((currentPage - 1) * pageSize + 1))
+                  .replace("{end}", String(Math.min(currentPage * pageSize, tableData.total_rows)))
+                  .replace("{total}", String(tableData.total_rows))}
               </div>
               <div className="flex items-center gap-2">
                 <Button
@@ -538,8 +531,8 @@ export const StorageTab: React.FC = () => {
                 </Button>
                 <div className="text-xs">
                   {t.storage.page
-                    .replace('{current}', String(currentPage))
-                    .replace('{total}', String(tableData.total_pages))}
+                    .replace("{current}", String(currentPage))
+                    .replace("{total}", String(tableData.total_pages))}
                 </div>
                 <Button
                   variant="outline"
@@ -580,7 +573,7 @@ export const StorageTab: React.FC = () => {
           <DialogHeader>
             <DialogTitle>{t.storage.editRow}</DialogTitle>
             <DialogDescription>
-              {t.storage.updateRowDesc.replace('{table}', selectedTable)}
+              {t.storage.updateRowDesc.replace("{table}", selectedTable)}
             </DialogDescription>
           </DialogHeader>
           {editingRow && tableData && (
@@ -613,7 +606,7 @@ export const StorageTab: React.FC = () => {
                     <Input
                       id={`edit-${column.name}`}
                       type={getInputType(column)}
-                      value={editingRow[column.name] ?? ""}
+                      value={String(editingRow[column.name] ?? "")}
                       onChange={(e) =>
                         setEditingRow({
                           ...editingRow,
@@ -637,15 +630,8 @@ export const StorageTab: React.FC = () => {
             <Button variant="outline" onClick={() => setEditingRow(null)}>
               {t.storage.cancel}
             </Button>
-            <Button
-              onClick={() => handleUpdateRow(editingRow!)}
-              disabled={loading}
-            >
-              {loading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                t.storage.update
-              )}
+            <Button onClick={() => handleUpdateRow(editingRow || {})} disabled={loading}>
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : t.storage.update}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -657,7 +643,7 @@ export const StorageTab: React.FC = () => {
           <DialogHeader>
             <DialogTitle>{t.storage.newRowTitle}</DialogTitle>
             <DialogDescription>
-              {t.storage.addNewRowDesc.replace('{table}', selectedTable)}
+              {t.storage.addNewRowDesc.replace("{table}", selectedTable)}
             </DialogDescription>
           </DialogHeader>
           {newRow && tableData && (
@@ -667,16 +653,14 @@ export const StorageTab: React.FC = () => {
                   <Label htmlFor={`new-${column.name}`}>
                     {column.name}
                     {column.notnull && (
-                      <span className="text-xs text-destructive ml-2">
-                        ({t.storage.required})
-                      </span>
+                      <span className="text-xs text-destructive ml-2">({t.storage.required})</span>
                     )}
                   </Label>
                   {getInputType(column) === "checkbox" ? (
                     <input
                       type="checkbox"
                       id={`new-${column.name}`}
-                      checked={newRow[column.name] || false}
+                      checked={Boolean(newRow[column.name])}
                       onChange={(e) =>
                         setNewRow({
                           ...newRow,
@@ -689,7 +673,7 @@ export const StorageTab: React.FC = () => {
                     <Input
                       id={`new-${column.name}`}
                       type={getInputType(column)}
-                      value={newRow[column.name] ?? ""}
+                      value={String(newRow[column.name] ?? "")}
                       onChange={(e) =>
                         setNewRow({
                           ...newRow,
@@ -711,15 +695,8 @@ export const StorageTab: React.FC = () => {
             <Button variant="outline" onClick={() => setNewRow(null)}>
               {t.storage.cancel}
             </Button>
-            <Button
-              onClick={() => handleInsertRow(newRow!)}
-              disabled={loading}
-            >
-              {loading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                t.storage.insert
-              )}
+            <Button onClick={() => handleInsertRow(newRow || {})} disabled={loading}>
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : t.storage.insert}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -730,9 +707,7 @@ export const StorageTab: React.FC = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t.storage.deleteRow}</DialogTitle>
-            <DialogDescription>
-              {t.storage.deleteRowConfirm}
-            </DialogDescription>
+            <DialogDescription>{t.storage.deleteRowConfirm}</DialogDescription>
           </DialogHeader>
           {deletingRow && (
             <div className="rounded-md bg-muted p-4">
@@ -742,8 +717,8 @@ export const StorageTab: React.FC = () => {
                     Object.entries(deletingRow).map(([key, value]) => [
                       key,
                       typeof value === "string" && value.length > 100
-                        ? value.substring(0, 100) + "..."
-                        : value
+                        ? `${value.substring(0, 100)}...`
+                        : value,
                     ])
                   ),
                   null,
@@ -756,16 +731,8 @@ export const StorageTab: React.FC = () => {
             <Button variant="outline" onClick={() => setDeletingRow(null)}>
               {t.storage.cancel}
             </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDeleteRow}
-              disabled={loading}
-            >
-              {loading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                t.storage.delete
-              )}
+            <Button variant="destructive" onClick={handleDeleteRow} disabled={loading}>
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : t.storage.delete}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -776,33 +743,18 @@ export const StorageTab: React.FC = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t.storage.resetDatabase}</DialogTitle>
-            <DialogDescription>
-              {t.storage.resetDatabaseDesc}
-            </DialogDescription>
+            <DialogDescription>{t.storage.resetDatabaseDesc}</DialogDescription>
           </DialogHeader>
           <div className="flex items-center gap-3 p-4 rounded-md bg-destructive/10 text-destructive">
             <AlertTriangle className="h-5 w-5" />
-            <span className="text-sm font-medium">
-              {t.storage.resetWarning}
-            </span>
+            <span className="text-sm font-medium">{t.storage.resetWarning}</span>
           </div>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowResetConfirm(false)}
-            >
+            <Button variant="outline" onClick={() => setShowResetConfirm(false)}>
               {t.storage.cancel}
             </Button>
-            <Button
-              variant="destructive"
-              onClick={handleResetDatabase}
-              disabled={loading}
-            >
-              {loading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                t.storage.resetDatabase
-              )}
+            <Button variant="destructive" onClick={handleResetDatabase} disabled={loading}>
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : t.storage.resetDatabase}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -813,9 +765,7 @@ export const StorageTab: React.FC = () => {
         <DialogContent className="max-w-4xl max-h-[80vh]">
           <DialogHeader>
             <DialogTitle>{t.storage.sqlQueryEditor}</DialogTitle>
-            <DialogDescription>
-              {t.storage.sqlQueryEditorDesc}
-            </DialogDescription>
+            <DialogDescription>{t.storage.sqlQueryEditorDesc}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
@@ -844,10 +794,13 @@ export const StorageTab: React.FC = () => {
                   <div className="p-3 rounded-md bg-green-500/10 text-green-600 dark:text-green-400 text-sm">
                     <div className="flex items-center gap-2">
                       <Check className="h-4 w-4" />
-                      {t.storage.queryExecutedSuccess.replace('{count}', String(sqlResult.rows_affected))}
+                      {t.storage.queryExecutedSuccess.replace(
+                        "{count}",
+                        String(sqlResult.rows_affected)
+                      )}
                       {sqlResult.last_insert_rowid && (
                         <span>
-                          {' ' + t.storage.lastInsertId.replace('{id}', String(sqlResult.last_insert_rowid))}
+                          {` ${t.storage.lastInsertId.replace("{id}", String(sqlResult.last_insert_rowid))}`}
                         </span>
                       )}
                     </div>
@@ -859,10 +812,7 @@ export const StorageTab: React.FC = () => {
                         <thead>
                           <tr className="border-b bg-muted/50">
                             {sqlResult.columns.map((col, i) => (
-                              <th
-                                key={i}
-                                className="px-2 py-1 text-left font-medium"
-                              >
+                              <th key={i} className="px-2 py-1 text-left font-medium">
                                 {col}
                               </th>
                             ))}
@@ -873,10 +823,14 @@ export const StorageTab: React.FC = () => {
                             <tr key={i} className="border-b">
                               {row.map((cell, j) => {
                                 const formattedValue = formatCellValue(cell, 50);
-                                const fullValue = cell === null ? "NULL" :
-                                  cell === undefined ? "" :
-                                    typeof cell === "object" ? JSON.stringify(cell, null, 2) :
-                                      String(cell);
+                                const fullValue =
+                                  cell === null
+                                    ? "NULL"
+                                    : cell === undefined
+                                      ? ""
+                                      : typeof cell === "object"
+                                        ? JSON.stringify(cell, null, 2)
+                                        : String(cell);
                                 const isTruncated = fullValue.length > 50;
 
                                 return (
@@ -893,7 +847,9 @@ export const StorageTab: React.FC = () => {
                                             side="bottom"
                                             className="max-w-[500px] max-h-[300px] overflow-auto"
                                           >
-                                            <pre className="text-xs whitespace-pre-wrap">{fullValue}</pre>
+                                            <pre className="text-xs whitespace-pre-wrap">
+                                              {fullValue}
+                                            </pre>
                                           </TooltipContent>
                                         </Tooltip>
                                       </TooltipProvider>
@@ -927,15 +883,8 @@ export const StorageTab: React.FC = () => {
             >
               Close
             </Button>
-            <Button
-              onClick={handleExecuteSql}
-              disabled={loading || !sqlQuery.trim()}
-            >
-              {loading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                "Execute"
-              )}
+            <Button onClick={handleExecuteSql} disabled={loading || !sqlQuery.trim()}>
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Execute"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -944,13 +893,9 @@ export const StorageTab: React.FC = () => {
       {/* Toast Notification */}
       <ToastContainer>
         {toast && (
-          <Toast
-            message={toast.message}
-            type={toast.type}
-            onDismiss={() => setToast(null)}
-          />
+          <Toast message={toast.message} type={toast.type} onDismiss={() => setToast(null)} />
         )}
       </ToastContainer>
     </div>
   );
-}; 
+};

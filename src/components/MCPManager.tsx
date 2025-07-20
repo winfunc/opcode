@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Network, Plus, Download, AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,9 +10,9 @@ import { MCPServerList } from "./MCPServerList";
 import { MCPAddServer } from "./MCPAddServer";
 import { MCPImportExport } from "./MCPImportExport";
 import { useI18n } from "@/lib/i18n";
-import { logger } from '@/lib/logger';
+import { logger } from "@/lib/logger";
 
-import { handleError } from '@/lib/errorHandler';
+import { handleError } from "@/lib/errorHandler";
 interface MCPManagerProps {
   /**
    * Callback to go back to the main view
@@ -28,10 +28,7 @@ interface MCPManagerProps {
  * Main component for managing MCP (Model Context Protocol) servers
  * Provides a comprehensive UI for adding, configuring, and managing MCP servers
  */
-export const MCPManager: React.FC<MCPManagerProps> = ({
-  onBack,
-  className,
-}) => {
+export const MCPManager: React.FC<MCPManagerProps> = ({ onBack, className }) => {
   const { t } = useI18n();
   const [activeTab, setActiveTab] = useState("servers");
   const [servers, setServers] = useState<MCPServer[]>([]);
@@ -39,15 +36,10 @@ export const MCPManager: React.FC<MCPManagerProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
-  // Load servers on mount
-  useEffect(() => {
-    loadServers();
-  }, []);
-
   /**
    * Loads all MCP servers
    */
-  const loadServers = async () => {
+  const loadServers = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -62,7 +54,12 @@ export const MCPManager: React.FC<MCPManagerProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [t.mcp.failedToLoadServers]);
+
+  // Load servers on mount
+  useEffect(() => {
+    loadServers();
+  }, [loadServers]);
 
   /**
    * Handles server added event
@@ -77,8 +74,8 @@ export const MCPManager: React.FC<MCPManagerProps> = ({
    * Handles server removed event
    */
   const handleServerRemoved = (name: string) => {
-    setServers(prev => prev.filter(s => s.name !== name));
-    setToast({ message: t.mcp.serverRemovedSuccessfully.replace('{name}', name), type: "success" });
+    setServers((prev) => prev.filter((s) => s.name !== name));
+    setToast({ message: t.mcp.serverRemovedSuccessfully.replace("{name}", name), type: "success" });
   };
 
   /**
@@ -87,14 +84,16 @@ export const MCPManager: React.FC<MCPManagerProps> = ({
   const handleImportCompleted = (imported: number, failed: number) => {
     loadServers();
     if (failed === 0) {
-      setToast({ 
-        message: t.mcp.importedServersSuccess.replace('{count}', imported.toString()), 
-        type: "success" 
+      setToast({
+        message: t.mcp.importedServersSuccess.replace("{count}", imported.toString()),
+        type: "success",
       });
     } else {
-      setToast({ 
-        message: t.mcp.importedServersPartial.replace('{imported}', imported.toString()).replace('{failed}', failed.toString()), 
-        type: "error" 
+      setToast({
+        message: t.mcp.importedServersPartial
+          .replace("{imported}", imported.toString())
+          .replace("{failed}", failed.toString()),
+        type: "error",
       });
     }
   };
@@ -110,12 +109,7 @@ export const MCPManager: React.FC<MCPManagerProps> = ({
           className="flex items-center justify-between p-4 border-b border-border"
         >
           <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onBack}
-              className="h-8 w-8"
-            >
+            <Button variant="ghost" size="icon" onClick={onBack} className="h-8 w-8">
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div>
@@ -123,9 +117,7 @@ export const MCPManager: React.FC<MCPManagerProps> = ({
                 <Network className="h-5 w-5 text-blue-500" />
                 {t.mcp.mcpManagerTitle}
               </h2>
-              <p className="text-xs text-muted-foreground">
-                {t.mcp.mcpManagerSubtitle}
-              </p>
+              <p className="text-xs text-muted-foreground">{t.mcp.mcpManagerSubtitle}</p>
             </div>
           </div>
         </motion.div>
@@ -207,13 +199,9 @@ export const MCPManager: React.FC<MCPManagerProps> = ({
       {/* Toast Notifications */}
       <ToastContainer>
         {toast && (
-          <Toast
-            message={toast.message}
-            type={toast.type}
-            onDismiss={() => setToast(null)}
-          />
+          <Toast message={toast.message} type={toast.type} onDismiss={() => setToast(null)} />
         )}
       </ToastContainer>
     </div>
   );
-}; 
+};

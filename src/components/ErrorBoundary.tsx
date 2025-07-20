@@ -31,10 +31,10 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     // Use unified error handling
-    handleError(error, { 
-      source: 'ErrorBoundary',
+    handleError(error, {
+      source: "ErrorBoundary",
       componentStack: errorInfo.componentStack,
-      errorBoundary: true
+      errorBoundary: true,
     });
     // Also log to console for debugging
     logger.error("Error caught by boundary:", error, errorInfo);
@@ -73,11 +73,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                       </pre>
                     </details>
                   )}
-                  <Button
-                    onClick={this.reset}
-                    size="sm"
-                    className="mt-4"
-                  >
+                  <Button onClick={this.reset} size="sm" className="mt-4">
                     Try again
                   </Button>
                 </div>
@@ -90,4 +86,4 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
     return this.props.children;
   }
-} 
+}

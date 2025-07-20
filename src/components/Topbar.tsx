@@ -1,13 +1,22 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Circle, FileText, Settings, ExternalLink, BarChart3, Network, Info, Bot } from "lucide-react";
+import {
+  Circle,
+  FileText,
+  Settings,
+  ExternalLink,
+  BarChart3,
+  Network,
+  Info,
+  Bot,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover } from "@/components/ui/popover";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import { api, type ClaudeVersionStatus } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
-import { handleError } from '@/lib/errorHandler';
+import { handleError } from "@/lib/errorHandler";
 interface TopbarProps {
   /**
    * Callback when CLAUDE.md is clicked
@@ -41,7 +50,7 @@ interface TopbarProps {
 
 /**
  * Topbar component with status indicator and navigation buttons
- * 
+ *
  * @example
  * <Topbar
  *   onClaudeClick={() => setView('editor')}
@@ -62,22 +71,22 @@ export const Topbar: React.FC<TopbarProps> = ({
   const { t } = useI18n();
   const [versionStatus, setVersionStatus] = useState<ClaudeVersionStatus | null>(null);
   const [checking, setChecking] = useState(true);
-  
+
   // Check Claude version on mount
   useEffect(() => {
     checkVersion();
   }, []);
-  
+
   const checkVersion = async () => {
     try {
       setChecking(true);
       const status = await api.checkClaudeVersion();
       setVersionStatus(status);
-      
+
       // If Claude is not installed and the error indicates it wasn't found
       if (!status.is_installed && status.output.includes("No such file or directory")) {
         // Emit an event that can be caught by the parent
-        window.dispatchEvent(new CustomEvent('claude-not-found'));
+        window.dispatchEvent(new CustomEvent("claude-not-found"));
       }
     } catch (err) {
       await handleError("Failed to check Claude version:", { context: err });
@@ -89,7 +98,7 @@ export const Topbar: React.FC<TopbarProps> = ({
       setChecking(false);
     }
   };
-  
+
   const StatusIndicator = () => {
     if (checking) {
       return (
@@ -99,9 +108,9 @@ export const Topbar: React.FC<TopbarProps> = ({
         </div>
       );
     }
-    
+
     if (!versionStatus) return null;
-    
+
     const statusContent = (
       <Button
         variant="ghost"
@@ -113,20 +122,20 @@ export const Topbar: React.FC<TopbarProps> = ({
           <Circle
             className={cn(
               "h-3 w-3",
-              versionStatus.is_installed 
-                ? "fill-green-500 text-green-500" 
+              versionStatus.is_installed
+                ? "fill-green-500 text-green-500"
                 : "fill-red-500 text-red-500"
             )}
           />
           <span>
             {versionStatus.is_installed && versionStatus.version
-              ? t.claude.claudeVersion.replace('{version}', versionStatus.version)
+              ? t.claude.claudeVersion.replace("{version}", versionStatus.version)
               : t.claude.claudeCode}
           </span>
         </div>
       </Button>
     );
-    
+
     if (!versionStatus.is_installed) {
       return (
         <Popover
@@ -135,17 +144,10 @@ export const Topbar: React.FC<TopbarProps> = ({
             <div className="space-y-3 max-w-xs">
               <p className="text-sm font-medium">{t.claude.claudeNotFound}</p>
               <div className="rounded-md bg-muted p-3">
-                <pre className="text-xs font-mono whitespace-pre-wrap">
-                  {versionStatus.output}
-                </pre>
+                <pre className="text-xs font-mono whitespace-pre-wrap">{versionStatus.output}</pre>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full"
-                onClick={onSettingsClick}
-              >
-{t.claude.selectClaudeInstallation}
+              <Button variant="outline" size="sm" className="w-full" onClick={onSettingsClick}>
+                {t.claude.selectClaudeInstallation}
               </Button>
               <a
                 href="https://www.anthropic.com/claude-code"
@@ -162,10 +164,10 @@ export const Topbar: React.FC<TopbarProps> = ({
         />
       );
     }
-    
+
     return statusContent;
   };
-  
+
   return (
     <motion.div
       initial={{ opacity: 0, y: -20 }}
@@ -178,63 +180,38 @@ export const Topbar: React.FC<TopbarProps> = ({
     >
       {/* Status Indicator */}
       <StatusIndicator />
-      
+
       {/* Action Buttons */}
       <div className="flex items-center space-x-2">
         {onAgentsClick && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onAgentsClick}
-            className="text-xs"
-          >
+          <Button variant="ghost" size="sm" onClick={onAgentsClick} className="text-xs">
             <Bot className="mr-2 h-3 w-3" />
             Agents
           </Button>
         )}
-        
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onUsageClick}
-          className="text-xs"
-        >
+
+        <Button variant="ghost" size="sm" onClick={onUsageClick} className="text-xs">
           <BarChart3 className="mr-2 h-3 w-3" />
-{t.app.usageDashboard}
+          {t.app.usageDashboard}
         </Button>
-        
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onClaudeClick}
-          className="text-xs"
-        >
+
+        <Button variant="ghost" size="sm" onClick={onClaudeClick} className="text-xs">
           <FileText className="mr-2 h-3 w-3" />
           {t.app.claudeMd}
         </Button>
-        
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onMCPClick}
-          className="text-xs"
-        >
+
+        <Button variant="ghost" size="sm" onClick={onMCPClick} className="text-xs">
           <Network className="mr-2 h-3 w-3" />
           MCP
         </Button>
-        
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onSettingsClick}
-          className="text-xs"
-        >
+
+        <Button variant="ghost" size="sm" onClick={onSettingsClick} className="text-xs">
           <Settings className="mr-2 h-3 w-3" />
           {t.common.settings}
         </Button>
-        
+
         <LanguageSelector compact />
-        
+
         <Button
           variant="ghost"
           size="icon"
@@ -247,4 +224,4 @@ export const Topbar: React.FC<TopbarProps> = ({
       </div>
     </motion.div>
   );
-}; 
+};

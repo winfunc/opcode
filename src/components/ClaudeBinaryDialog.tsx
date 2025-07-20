@@ -1,11 +1,18 @@
 import { useState, useEffect } from "react";
 import { api, type ClaudeInstallation } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { ExternalLink, FileQuestion, Terminal, AlertCircle, Loader2 } from "lucide-react";
 import { ClaudeVersionSelector } from "./ClaudeVersionSelector";
 import { useI18n } from "@/lib/i18n";
-import { handleError } from '@/lib/errorHandler';
+import { handleError } from "@/lib/errorHandler";
 interface ClaudeBinaryDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -13,7 +20,12 @@ interface ClaudeBinaryDialogProps {
   onError: (message: string) => void;
 }
 
-export function ClaudeBinaryDialog({ open, onOpenChange, onSuccess, onError }: ClaudeBinaryDialogProps) {
+export function ClaudeBinaryDialog({
+  open,
+  onOpenChange,
+  onSuccess,
+  onError,
+}: ClaudeBinaryDialogProps) {
   const { t } = useI18n();
   const [selectedInstallation, setSelectedInstallation] = useState<ClaudeInstallation | null>(null);
   const [isValidating, setIsValidating] = useState(false);
@@ -31,7 +43,7 @@ export function ClaudeBinaryDialog({ open, onOpenChange, onSuccess, onError }: C
       setCheckingInstallations(true);
       const installations = await api.listClaudeInstallations();
       setHasInstallations(installations.length > 0);
-    } catch (error) {
+    } catch (_error) {
       // If the API call fails, it means no installations found
       setHasInstallations(false);
     } finally {
@@ -70,21 +82,19 @@ export function ClaudeBinaryDialog({ open, onOpenChange, onSuccess, onError }: C
             {checkingInstallations ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                <span className="ml-2 text-sm text-muted-foreground">{t.settings.searchingForInstallations}</span>
+                <span className="ml-2 text-sm text-muted-foreground">
+                  {t.settings.searchingForInstallations}
+                </span>
               </div>
             ) : hasInstallations ? (
-              <p>
-                {t.settings.multipleInstallationsFound}
-              </p>
+              <p>{t.settings.multipleInstallationsFound}</p>
             ) : (
               <>
-                <p>
-                  {t.settings.claudeNotFoundInLocations}
-                </p>
+                <p>{t.settings.claudeNotFoundInLocations}</p>
                 <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
                   <AlertCircle className="w-4 h-4 text-muted-foreground" />
                   <p className="text-sm text-muted-foreground">
-                    <span className="font-medium">Searched locations:</span> PATH, /usr/local/bin, 
+                    <span className="font-medium">Searched locations:</span> PATH, /usr/local/bin,
                     /opt/homebrew/bin, ~/.nvm/versions/node/*/bin, ~/.claude/local, ~/.local/bin
                   </p>
                 </div>
@@ -95,7 +105,9 @@ export function ClaudeBinaryDialog({ open, onOpenChange, onSuccess, onError }: C
                 <Terminal className="w-4 h-4 text-muted-foreground" />
                 <p className="text-sm text-muted-foreground">
                   <span className="font-medium">Tip:</span> You can install Claude Code using{" "}
-                  <code className="px-1 py-0.5 bg-black/10 dark:bg-white/10 rounded">npm install -g @claude</code>
+                  <code className="px-1 py-0.5 bg-black/10 dark:bg-white/10 rounded">
+                    npm install -g @claude
+                  </code>
                 </p>
               </div>
             )}
@@ -120,21 +132,21 @@ export function ClaudeBinaryDialog({ open, onOpenChange, onSuccess, onError }: C
             <ExternalLink className="w-4 h-4 mr-2" />
             {t.settings.installationGuide}
           </Button>
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={isValidating}
-          >
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isValidating}>
             Cancel
           </Button>
-          <Button 
-            onClick={handleSave} 
+          <Button
+            onClick={handleSave}
             disabled={isValidating || !selectedInstallation || !hasInstallations}
           >
-            {isValidating ? t.settings.validating : hasInstallations ? t.settings.saveSelection : t.settings.noInstallationsFound}
+            {isValidating
+              ? t.settings.validating
+              : hasInstallations
+                ? t.settings.saveSelection
+                : t.settings.noInstallationsFound}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
-} 
+}

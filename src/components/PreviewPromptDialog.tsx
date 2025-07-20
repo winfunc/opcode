@@ -32,7 +32,7 @@ interface PreviewPromptDialogProps {
 
 /**
  * Dialog component that prompts the user to open a detected URL in the preview pane
- * 
+ *
  * @example
  * <PreviewPromptDialog
  *   isOpen={showPrompt}
@@ -50,7 +50,7 @@ export const PreviewPromptDialog: React.FC<PreviewPromptDialogProps> = ({
   // Extract domain for display
   const getDomain = (urlString: string) => {
     try {
-      const urlObj = new URL(urlString);
+      const urlObj = new window.URL(urlString);
       return urlObj.hostname;
     } catch {
       return urlString;
@@ -58,7 +58,7 @@ export const PreviewPromptDialog: React.FC<PreviewPromptDialogProps> = ({
   };
 
   const domain = getDomain(url);
-  const isLocalhost = domain.includes('localhost') || domain.includes('127.0.0.1');
+  const isLocalhost = domain.includes("localhost") || domain.includes("127.0.0.1");
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onCancel()}>
@@ -69,25 +69,26 @@ export const PreviewPromptDialog: React.FC<PreviewPromptDialogProps> = ({
             Open Preview?
           </DialogTitle>
           <DialogDescription>
-            A URL was detected in the terminal output. Would you like to open it in the preview pane?
+            A URL was detected in the terminal output. Would you like to open it in the preview
+            pane?
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="py-4">
           <div className="rounded-lg border bg-muted/50 p-4">
             <div className="flex items-start gap-3">
-              <ExternalLink className={`h-4 w-4 mt-0.5 ${isLocalhost ? 'text-green-500' : 'text-blue-500'}`} />
+              <ExternalLink
+                className={`h-4 w-4 mt-0.5 ${isLocalhost ? "text-green-500" : "text-blue-500"}`}
+              />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium">
-                  {isLocalhost ? 'Local Development Server' : 'External URL'}
+                  {isLocalhost ? "Local Development Server" : "External URL"}
                 </p>
-                <p className="text-xs text-muted-foreground mt-1 break-all">
-                  {url}
-                </p>
+                <p className="text-xs text-muted-foreground mt-1 break-all">{url}</p>
               </div>
             </div>
           </div>
-          
+
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -97,7 +98,7 @@ export const PreviewPromptDialog: React.FC<PreviewPromptDialogProps> = ({
             The preview will open in a split view on the right side of the screen.
           </motion.div>
         </div>
-        
+
         <DialogFooter>
           <Button variant="outline" onClick={onCancel}>
             Cancel
@@ -110,4 +111,4 @@ export const PreviewPromptDialog: React.FC<PreviewPromptDialogProps> = ({
       </DialogContent>
     </Dialog>
   );
-}; 
+};

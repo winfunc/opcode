@@ -8,11 +8,11 @@ import { Toast, ToastContainer } from "@/components/ui/toast";
 import { api, type Agent } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import MDEditor from "@uiw/react-md-editor";
-import { type AgentIconName } from "./CCAgents";
-import { IconPicker, ICON_MAP } from "./IconPicker";
+import { IconPicker } from "./IconPicker";
+import { AGENT_ICONS } from "@/constants/agentIcons";
 import { useI18n } from "@/lib/i18n";
 import { getModelPricing, formatPrice } from "@/config/pricing";
-import { handleError } from '@/lib/errorHandler';
+import { handleError } from "@/lib/errorHandler";
 interface CreateAgentProps {
   /**
    * Optional agent to edit (if provided, component is in edit mode)
@@ -34,7 +34,7 @@ interface CreateAgentProps {
 
 /**
  * CreateAgent component for creating or editing a CC agent
- * 
+ *
  * @example
  * <CreateAgent onBack={() => setView('list')} onAgentCreated={handleCreated} />
  */
@@ -46,7 +46,9 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
 }) => {
   const { t } = useI18n();
   const [name, setName] = useState(agent?.name || "");
-  const [selectedIcon, setSelectedIcon] = useState<AgentIconName>((agent?.icon as AgentIconName) || "bot");
+  const [selectedIcon, setSelectedIcon] = useState<string>(
+    agent?.icon || "Bot"
+  );
   const [systemPrompt, setSystemPrompt] = useState(agent?.system_prompt || "");
   const [defaultTask, setDefaultTask] = useState(agent?.default_task || "");
   const [model, setModel] = useState(agent?.model || "sonnet-3-5");
@@ -82,13 +84,7 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
           model
         );
       } else {
-        await api.createAgent(
-          name,
-          selectedIcon,
-          systemPrompt,
-          defaultTask || undefined,
-          model
-        );
+        await api.createAgent(name, selectedIcon, systemPrompt, defaultTask || undefined, model);
       }
 
       onAgentCreated();
@@ -97,7 +93,7 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
       setError(isEditMode ? t.agents.failedToUpdateAgent : t.agents.failedToCreateAgent);
       setToast({
         message: isEditMode ? t.agents.failedToUpdateAgent : t.agents.failedToCreateAgent,
-        type: "error"
+        type: "error",
       });
     } finally {
       setSaving(false);
@@ -105,12 +101,14 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
   };
 
   const handleBack = () => {
-    if ((name !== (agent?.name || "") ||
-      selectedIcon !== (agent?.icon || "bot") ||
-      systemPrompt !== (agent?.system_prompt || "") ||
-      defaultTask !== (agent?.default_task || "") ||
-      model !== (agent?.model || "sonnet-3-5")) &&
-      !confirm(t.agents.unsavedChanges)) {
+    if (
+      (name !== (agent?.name || "") ||
+        selectedIcon !== (agent?.icon || "bot") ||
+        systemPrompt !== (agent?.system_prompt || "") ||
+        defaultTask !== (agent?.default_task || "") ||
+        model !== (agent?.model || "sonnet-3-5")) &&
+      !globalThis.confirm(t.agents.unsavedChanges)
+    ) {
       return;
     }
     onBack();
@@ -127,12 +125,7 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
           className="flex items-center justify-between p-4 border-b border-border"
         >
           <div className="flex items-center space-x-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleBack}
-              className="h-8 w-8"
-            >
+            <Button variant="ghost" size="icon" onClick={handleBack} className="h-8 w-8">
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div>
@@ -205,7 +198,7 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
                   >
                     <div className="flex items-center gap-2">
                       {(() => {
-                        const Icon = ICON_MAP[selectedIcon] || ICON_MAP.bot;
+                        const Icon = AGENT_ICONS[selectedIcon] || AGENT_ICONS.Bot;
                         return (
                           <>
                             <Icon className="h-4 w-4" />
@@ -236,10 +229,12 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
                     )}
                   >
                     <div className="flex items-start gap-3">
-                      <div className={cn(
-                        "w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5",
-                        model === "haiku" ? "border-primary-foreground" : "border-current"
-                      )}>
+                      <div
+                        className={cn(
+                          "w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5",
+                          model === "haiku" ? "border-primary-foreground" : "border-current"
+                        )}
+                      >
                         {model === "haiku" && (
                           <div className="w-2 h-2 rounded-full bg-primary-foreground" />
                         )}
@@ -248,7 +243,10 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
                         <div className="text-sm font-semibold">{t.agents.claude35Haiku}</div>
                         <div className="text-xs opacity-80">{t.agents.fastAffordable}</div>
                         <div className="text-xs opacity-60 mt-1">
-                          {t.agents.inputTokens}: {formatPrice(getModelPricing("haiku")?.inputPrice || 0)}/M • {t.agents.outputTokens}: {formatPrice(getModelPricing("haiku")?.outputPrice || 0)}/M
+                          {t.agents.inputTokens}:{" "}
+                          {formatPrice(getModelPricing("haiku")?.inputPrice || 0)}/M •{" "}
+                          {t.agents.outputTokens}:{" "}
+                          {formatPrice(getModelPricing("haiku")?.outputPrice || 0)}/M
                         </div>
                       </div>
                     </div>
@@ -267,10 +265,12 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
                     )}
                   >
                     <div className="flex items-start gap-3">
-                      <div className={cn(
-                        "w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5",
-                        model === "sonnet-3-5" ? "border-primary-foreground" : "border-current"
-                      )}>
+                      <div
+                        className={cn(
+                          "w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5",
+                          model === "sonnet-3-5" ? "border-primary-foreground" : "border-current"
+                        )}
+                      >
                         {model === "sonnet-3-5" && (
                           <div className="w-2 h-2 rounded-full bg-primary-foreground" />
                         )}
@@ -279,7 +279,10 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
                         <div className="text-sm font-semibold">{t.agents.claude35Sonnet}</div>
                         <div className="text-xs opacity-80">{t.agents.balancedPerformance}</div>
                         <div className="text-xs opacity-60 mt-1">
-                          {t.agents.inputTokens}: {formatPrice(getModelPricing("sonnet-3-5")?.inputPrice || 0)}/M • {t.agents.outputTokens}: {formatPrice(getModelPricing("sonnet-3-5")?.outputPrice || 0)}/M
+                          {t.agents.inputTokens}:{" "}
+                          {formatPrice(getModelPricing("sonnet-3-5")?.inputPrice || 0)}/M •{" "}
+                          {t.agents.outputTokens}:{" "}
+                          {formatPrice(getModelPricing("sonnet-3-5")?.outputPrice || 0)}/M
                         </div>
                       </div>
                     </div>
@@ -298,10 +301,12 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
                     )}
                   >
                     <div className="flex items-start gap-3">
-                      <div className={cn(
-                        "w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5",
-                        model === "sonnet-3-7" ? "border-primary-foreground" : "border-current"
-                      )}>
+                      <div
+                        className={cn(
+                          "w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5",
+                          model === "sonnet-3-7" ? "border-primary-foreground" : "border-current"
+                        )}
+                      >
                         {model === "sonnet-3-7" && (
                           <div className="w-2 h-2 rounded-full bg-primary-foreground" />
                         )}
@@ -310,7 +315,10 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
                         <div className="text-sm font-semibold">{t.agents.claude37Sonnet}</div>
                         <div className="text-xs opacity-80">{t.agents.advancedReasoning}</div>
                         <div className="text-xs opacity-60 mt-1">
-                          {t.agents.inputTokens}: {formatPrice(getModelPricing("sonnet-3-7")?.inputPrice || 0)}/M • {t.agents.outputTokens}: {formatPrice(getModelPricing("sonnet-3-7")?.outputPrice || 0)}/M
+                          {t.agents.inputTokens}:{" "}
+                          {formatPrice(getModelPricing("sonnet-3-7")?.inputPrice || 0)}/M •{" "}
+                          {t.agents.outputTokens}:{" "}
+                          {formatPrice(getModelPricing("sonnet-3-7")?.outputPrice || 0)}/M
                         </div>
                       </div>
                     </div>
@@ -329,10 +337,12 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
                     )}
                   >
                     <div className="flex items-start gap-3">
-                      <div className={cn(
-                        "w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5",
-                        model === "sonnet" ? "border-primary-foreground" : "border-current"
-                      )}>
+                      <div
+                        className={cn(
+                          "w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5",
+                          model === "sonnet" ? "border-primary-foreground" : "border-current"
+                        )}
+                      >
                         {model === "sonnet" && (
                           <div className="w-2 h-2 rounded-full bg-primary-foreground" />
                         )}
@@ -341,7 +351,10 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
                         <div className="text-sm font-semibold">{t.agents.claude4Sonnet}</div>
                         <div className="text-xs opacity-80">{t.agents.fasterEfficient}</div>
                         <div className="text-xs opacity-60 mt-1">
-                          {t.agents.inputTokens}: {formatPrice(getModelPricing("sonnet")?.inputPrice || 0)}/M • {t.agents.outputTokens}: {formatPrice(getModelPricing("sonnet")?.outputPrice || 0)}/M
+                          {t.agents.inputTokens}:{" "}
+                          {formatPrice(getModelPricing("sonnet")?.inputPrice || 0)}/M •{" "}
+                          {t.agents.outputTokens}:{" "}
+                          {formatPrice(getModelPricing("sonnet")?.outputPrice || 0)}/M
                         </div>
                       </div>
                     </div>
@@ -360,10 +373,12 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
                     )}
                   >
                     <div className="flex items-start gap-3">
-                      <div className={cn(
-                        "w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5",
-                        model === "opus" ? "border-primary-foreground" : "border-current"
-                      )}>
+                      <div
+                        className={cn(
+                          "w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5",
+                          model === "opus" ? "border-primary-foreground" : "border-current"
+                        )}
+                      >
                         {model === "opus" && (
                           <div className="w-2 h-2 rounded-full bg-primary-foreground" />
                         )}
@@ -372,7 +387,10 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
                         <div className="text-sm font-semibold">{t.agents.claude4Opus}</div>
                         <div className="text-xs opacity-80">{t.agents.moreCapable}</div>
                         <div className="text-xs opacity-60 mt-1">
-                          {t.agents.inputTokens}: {formatPrice(getModelPricing("opus")?.inputPrice || 0)}/M • {t.agents.outputTokens}: {formatPrice(getModelPricing("opus")?.outputPrice || 0)}/M
+                          {t.agents.inputTokens}:{" "}
+                          {formatPrice(getModelPricing("opus")?.inputPrice || 0)}/M •{" "}
+                          {t.agents.outputTokens}:{" "}
+                          {formatPrice(getModelPricing("opus")?.outputPrice || 0)}/M
                         </div>
                       </div>
                     </div>
@@ -391,18 +409,17 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
                   onChange={(e) => setDefaultTask(e.target.value)}
                   className="max-w-md"
                 />
-                <p className="text-xs text-muted-foreground">
-                  {t.agents.defaultTaskDesc}
-                </p>
+                <p className="text-xs text-muted-foreground">{t.agents.defaultTaskDesc}</p>
               </div>
 
               {/* System Prompt Editor */}
               <div className="space-y-2">
                 <Label>{t.agents.systemPrompt}</Label>
-                <p className="text-xs text-muted-foreground mb-2">
-                  {t.agents.systemPromptDesc}
-                </p>
-                <div className="rounded-lg border border-border overflow-hidden shadow-sm" data-color-mode="dark">
+                <p className="text-xs text-muted-foreground mb-2">{t.agents.systemPromptDesc}</p>
+                <div
+                  className="rounded-lg border border-border overflow-hidden shadow-sm"
+                  data-color-mode="dark"
+                >
                   <MDEditor
                     value={systemPrompt}
                     onChange={(val) => setSystemPrompt(val || "")}
@@ -420,11 +437,7 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
       {/* Toast Notification */}
       <ToastContainer>
         {toast && (
-          <Toast
-            message={toast.message}
-            type={toast.type}
-            onDismiss={() => setToast(null)}
-          />
+          <Toast message={toast.message} type={toast.type} onDismiss={() => setToast(null)} />
         )}
       </ToastContainer>
 
@@ -432,7 +445,7 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
       <IconPicker
         value={selectedIcon}
         onSelect={(iconName) => {
-          setSelectedIcon(iconName as AgentIconName);
+          setSelectedIcon(iconName as string);
           setShowIconPicker(false);
         }}
         isOpen={showIconPicker}
@@ -440,4 +453,4 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
       />
     </div>
   );
-}; 
+};

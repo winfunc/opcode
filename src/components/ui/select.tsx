@@ -5,10 +5,10 @@ import { cn } from "@/lib/utils";
 
 /**
  * Select component - Root container for select dropdown
- * 
+ *
  * A dropdown select component built on top of Radix UI Select primitive.
  * Provides accessible keyboard navigation and customizable styling.
- * 
+ *
  * @example
  * ```tsx
  * <Select value={value} onValueChange={setValue}>
@@ -36,7 +36,7 @@ const SelectValue = SelectPrimitive.Value;
 
 /**
  * SelectTrigger component - Button that opens the select dropdown
- * 
+ *
  * @param className - Additional CSS classes
  * @param children - Trigger content (usually SelectValue)
  */
@@ -66,10 +66,7 @@ const SelectScrollUpButton = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <SelectPrimitive.ScrollUpButton
     ref={ref}
-    className={cn(
-      "flex cursor-default items-center justify-center py-1",
-      className
-    )}
+    className={cn("flex cursor-default items-center justify-center py-1", className)}
     {...props}
   >
     <ChevronUp className="h-4 w-4" />
@@ -83,10 +80,7 @@ const SelectScrollDownButton = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <SelectPrimitive.ScrollDownButton
     ref={ref}
-    className={cn(
-      "flex cursor-default items-center justify-center py-1",
-      className
-    )}
+    className={cn("flex cursor-default items-center justify-center py-1", className)}
     {...props}
   >
     <ChevronDown className="h-4 w-4" />
@@ -207,7 +201,7 @@ export interface SelectProps {
 
 /**
  * Simple select dropdown component
- * 
+ *
  * @example
  * <Select
  *   value={selected}
@@ -254,4 +248,4 @@ export {
   SelectScrollUpButton,
   SelectScrollDownButton,
   SimpleSelect as SelectComponent,
-}; 
+};

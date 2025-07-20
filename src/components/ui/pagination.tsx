@@ -24,7 +24,7 @@ interface PaginationProps {
 
 /**
  * Pagination component for navigating through paginated content
- * 
+ *
  * @example
  * <Pagination
  *   currentPage={1}
@@ -53,11 +53,11 @@ export const Pagination: React.FC<PaginationProps> = ({
       >
         <ChevronLeft className="h-4 w-4" />
       </Button>
-      
+
       <span className="text-sm text-muted-foreground">
         Page {currentPage} of {totalPages}
       </span>
-      
+
       <Button
         variant="outline"
         size="icon"
@@ -69,4 +69,4 @@ export const Pagination: React.FC<PaginationProps> = ({
       </Button>
     </div>
   );
-}; 
+};

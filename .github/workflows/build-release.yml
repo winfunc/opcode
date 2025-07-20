@@ -3,11 +3,11 @@ name: Build and Release
 on:
   push:
     tags:
-      - 'v*.*.*'  # 触发条件：推送版本标签，如 v1.0.0
-  workflow_dispatch:  # 允许手动触发
+      - "v*.*.*" # 触发条件：推送版本标签，如 v1.0.0
+  workflow_dispatch: # 允许手动触发
     inputs:
       tag:
-        description: 'Release tag (e.g., v1.0.0)'
+        description: "Release tag (e.g., v1.0.0)"
         required: true
         type: string
 
@@ -18,7 +18,7 @@ env:
 jobs:
   build-release:
     name: Build Release (${{ matrix.platform.name }})
-    
+
     strategy:
       fail-fast: false
       matrix:
@@ -28,46 +28,46 @@ jobs:
             rust-target: x86_64-unknown-linux-gnu
             artifact-name: linux-x86_64-appimage
             bundle-type: appimage
-            bundle-pattern: '*.AppImage'
+            bundle-pattern: "*.AppImage"
             file-suffix: appimage
           - name: Linux DEB
             os: ubuntu-latest
             rust-target: x86_64-unknown-linux-gnu
             artifact-name: linux-x86_64-deb
             bundle-type: deb
-            bundle-pattern: '*.deb'
+            bundle-pattern: "*.deb"
             file-suffix: deb
           - name: Windows MSI
             os: windows-latest
             rust-target: x86_64-pc-windows-msvc
             artifact-name: windows-x86_64-msi
             bundle-type: msi
-            bundle-pattern: '*.msi'
+            bundle-pattern: "*.msi"
             file-suffix: msi
           - name: Windows EXE
             os: windows-latest
             rust-target: x86_64-pc-windows-msvc
             artifact-name: windows-x86_64-exe
             bundle-type: nsis
-            bundle-pattern: '*.exe'
+            bundle-pattern: "*.exe"
             file-suffix: exe
           - name: macOS Intel
             os: macos-latest
             rust-target: x86_64-apple-darwin
             artifact-name: macos-x86_64
             bundle-type: dmg
-            bundle-pattern: '*.dmg'
+            bundle-pattern: "*.dmg"
             file-suffix: dmg
           - name: macOS Apple Silicon
             os: macos-latest
             rust-target: aarch64-apple-darwin
             artifact-name: macos-aarch64
             bundle-type: dmg
-            bundle-pattern: '*.dmg'
+            bundle-pattern: "*.dmg"
             file-suffix: dmg
-    
+
     runs-on: ${{ matrix.platform.os }}
-    
+
     steps:
       # 检出代码
       - name: Checkout repository
@@ -103,7 +103,7 @@ jobs:
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: './src-tauri -> target'
+          workspaces: "./src-tauri -> target"
           key: ${{ matrix.platform.os }}-${{ matrix.platform.rust-target }}-rust-${{ hashFiles('**/Cargo.lock') }}
 
       # 设置Bun
@@ -169,11 +169,11 @@ jobs:
           echo "🔍 查找构建产物..."
           echo "Bundle type: ${{ matrix.platform.bundle-type }}"
           echo "Rust target: ${{ matrix.platform.rust-target }}"
-          
+
           # 显示构建目录结构
           echo "📁 构建目录结构:"
           find src-tauri/target -type f -name "*.${{ matrix.platform.bundle-pattern }}" 2>/dev/null || true
-          
+
           if [ "${{ matrix.platform.bundle-type }}" = "appimage" ]; then
             BUNDLE_PATH=$(find src-tauri/target/release/bundle/appimage -name "*.AppImage" | head -1)
           elif [ "${{ matrix.platform.bundle-type }}" = "deb" ]; then
@@ -189,7 +189,7 @@ jobs:
               BUNDLE_PATH=$(find src-tauri/target/release/bundle/dmg -name "*.dmg" | head -1)
             fi
           fi
-          
+
           if [ -z "$BUNDLE_PATH" ] || [ ! -f "$BUNDLE_PATH" ]; then
             echo "❌ 未找到构建产物!"
             echo "查找路径:"
@@ -197,7 +197,7 @@ jobs:
             find src-tauri/target -type f \( -name "*.AppImage" -o -name "*.deb" -o -name "*.msi" -o -name "*.exe" -o -name "*.dmg" \) 2>/dev/null || true
             exit 1
           fi
-          
+
           echo "✅ 找到构建产物: $BUNDLE_PATH"
           echo "bundle_path=$BUNDLE_PATH" >> $GITHUB_OUTPUT
           echo "bundle_name=$(basename "$BUNDLE_PATH")" >> $GITHUB_OUTPUT
@@ -208,7 +208,7 @@ jobs:
         run: |
           ORIGINAL_NAME="${{ steps.find-artifacts.outputs.bundle_name }}"
           EXTENSION="${ORIGINAL_NAME##*.}"
-          
+
           # 根据平台和架构生成文件名，不包含文件类型后缀
           if [ "${{ matrix.platform.bundle-type }}" = "appimage" ]; then
             NEW_NAME="claudia-linux-x86_64.${EXTENSION}"
@@ -225,7 +225,7 @@ jobs:
               NEW_NAME="claudia-macos-x86_64.${EXTENSION}"
             fi
           fi
-          
+
           cp "${{ steps.find-artifacts.outputs.bundle_path }}" "$NEW_NAME"
           echo "ARTIFACT_PATH=$NEW_NAME" >> $GITHUB_ENV
           echo "ARTIFACT_NAME=$NEW_NAME" >> $GITHUB_ENV
@@ -246,7 +246,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build-release]
     if: always() && needs.build-release.result == 'success'
-    
+
     steps:
       # 检出代码
       - name: Checkout repository
@@ -268,7 +268,7 @@ jobs:
           find ./artifacts -type f \( -name "*.AppImage" -o -name "*.deb" -o -name "*.msi" -o -name "*.exe" -o -name "*.dmg" \) -exec cp {} ./release-files/ \;
           echo "📦 发布文件列表:"
           ls -la ./release-files/
-          
+
           # 检查是否有文件被复制
           if [ -z "$(ls -A ./release-files/)" ]; then
             echo "❌ 没有找到任何构建产物!"
@@ -294,11 +294,11 @@ jobs:
           VERSION="${{ steps.get-version.outputs.version }}"
           echo "## 🚀 Claudia ${VERSION}" > CHANGELOG.md
           echo "" >> CHANGELOG.md
-          
+
           # 中文版本
           echo "### 📦 安装包下载 / Download Packages" >> CHANGELOG.md
           echo "" >> CHANGELOG.md
-          
+
           for file in ./release-files/*; do
             if [ -f "$file" ]; then
               filename=$(basename "$file")
@@ -317,7 +317,7 @@ jobs:
               fi
             fi
           done
-          
+
           echo "" >> CHANGELOG.md
           echo "### 📋 系统要求 / System Requirements" >> CHANGELOG.md
           echo "- **Linux**: Ubuntu 18.04+ 或其他现代Linux发行版 / Ubuntu 18.04+ or other modern Linux distributions" >> CHANGELOG.md

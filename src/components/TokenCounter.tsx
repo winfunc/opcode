@@ -20,15 +20,11 @@ interface TokenCounterProps {
 
 /**
  * TokenCounter component - Displays a floating token count
- * 
+ *
  * @example
  * <TokenCounter tokens={1234} show={true} />
  */
-export const TokenCounter: React.FC<TokenCounterProps> = ({
-  tokens,
-  show = true,
-  className,
-}) => {
+export const TokenCounter: React.FC<TokenCounterProps> = ({ tokens, show = true, className }) => {
   if (!show || tokens === 0) return null;
 
   return (
@@ -51,4 +47,4 @@ export const TokenCounter: React.FC<TokenCounterProps> = ({
       </div>
     </motion.div>
   );
-}; 
+};

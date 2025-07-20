@@ -1,8 +1,8 @@
 <div align="center">
   <img src="https://github.com/user-attachments/assets/92fd93ed-e71b-4b94-b270-50684323dd00" alt="Claudia Logo" width="120" height="120">
 
-  <a href="https://claudiacode.com"><h1>Claudia</h1></a>
-  
+<a href="https://claudiacode.com"><h1>Claudia</h1></a>
+
   <p>
     <a href="README.md">🇺🇸 English</a> | 
     <a href="README_zh.md">🇨🇳 中文</a>
@@ -27,14 +27,17 @@
 
 https://github.com/user-attachments/assets/bf0bdf9d-ba91-45af-9ac4-7274f57075cf
 
-> [!TIP]
-> **⭐ 给仓库点星并关注 [@getAsterisk](https://x.com/getAsterisk) 获取 `asteria-swe-v0` 的早期访问权限**。
+> [!TIP] **⭐ 给仓库点星并关注 [@getAsterisk](https://x.com/getAsterisk) 获取
+> `asteria-swe-v0` 的早期访问权限**。
 
 ## 🌟 概述
 
-**Claudia** 是一个强大的桌面应用程序，改变了您与 Claude Code 的交互方式。基于 Tauri 2 构建，它为管理 Claude Code 会话、创建自定义代理、跟踪使用情况等提供了美观的 GUI。
+**Claudia** 是一个强大的桌面应用程序，改变了您与 Claude
+Code 的交互方式。基于 Tauri 2 构建，它为管理 Claude
+Code 会话、创建自定义代理、跟踪使用情况等提供了美观的 GUI。
 
-将 Claudia 视为您的 Claude Code 指挥中心 - 在命令行工具和可视化体验之间架起桥梁，使 AI 辅助开发更加直观和高效。
+将 Claudia 视为您的 Claude
+Code 指挥中心 - 在命令行工具和可视化体验之间架起桥梁，使 AI 辅助开发更加直观和高效。
 
 ## 📋 目录
 
@@ -63,30 +66,35 @@ https://github.com/user-attachments/assets/bf0bdf9d-ba91-45af-9ac4-7274f57075cf
 ## ✨ 功能特性
 
 ### 🗂️ **项目和会话管理**
+
 - **可视化项目浏览器**：在 `~/.claude/projects/` 中浏览所有 Claude Code 项目
 - **会话历史**：查看并恢复带有完整上下文的过往编码会话
 - **智能搜索**：通过内置搜索快速查找项目和会话
 - **会话洞察**：一目了然地查看首条消息、时间戳和会话元数据
 
 ### 🤖 **CC 代理**
+
 - **自定义 AI 代理**：创建具有自定义系统提示和行为的专业代理
 - **代理库**：为不同任务构建专用代理集合
 - **后台执行**：在独立进程中运行代理，实现非阻塞操作
 - **执行历史**：跟踪所有代理运行，包含详细日志和性能指标
 
 ### 📊 **使用分析仪表板**
+
 - **成本跟踪**：实时监控您的 Claude API 使用情况和成本
 - **令牌分析**：按模型、项目和时间段详细分解
 - **可视化图表**：显示使用趋势和模式的美观图表
 - **数据导出**：导出使用数据用于会计和分析
 
 ### 🔌 **MCP 服务器管理**
+
 - **服务器注册表**：从中央 UI 管理模型上下文协议服务器
 - **简易配置**：通过 UI 添加服务器或从现有配置导入
 - **连接测试**：在使用前验证服务器连接性
 - **Claude Desktop 导入**：从 Claude Desktop 导入服务器配置
 
 ### ⏰ **时间线和检查点**
+
 - **会话版本控制**：在编码会话的任何时点创建检查点
 - **可视化时间线**：通过分支时间线导航会话历史
 - **即时恢复**：一键跳转到任何检查点
@@ -94,6 +102,7 @@ https://github.com/user-attachments/assets/bf0bdf9d-ba91-45af-9ac4-7274f57075cf
 - **差异查看器**：查看检查点之间的确切变化
 
 ### 📝 **CLAUDE.md 管理**
+
 - **内置编辑器**：直接在应用内编辑 CLAUDE.md 文件
 - **实时预览**：实时查看 markdown 渲染效果
 - **项目扫描器**：查找项目中的所有 CLAUDE.md 文件
@@ -171,18 +180,21 @@ CC 代理 → 创建代理 → 配置 → 执行
 #### 必需工具
 
 1. **Rust**（1.70.0 或更高版本）
+
    ```bash
    # 通过 rustup 安装
    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
    ```
 
 2. **Bun**（最新版本）
+
    ```bash
    # 安装 bun
    curl -fsSL https://bun.sh/install | bash
    ```
 
 3. **Git**
+
    ```bash
    # 通常预装，如果没有：
    # Ubuntu/Debian: sudo apt install git
@@ -197,6 +209,7 @@ CC 代理 → 创建代理 → 配置 → 执行
 #### 平台特定依赖
 
 **Linux（Ubuntu/Debian）**
+
 ```bash
 # 安装系统依赖
 sudo apt update
@@ -217,6 +230,7 @@ sudo apt install -y \
 ```
 
 **macOS**
+
 ```bash
 # 安装 Xcode 命令行工具
 xcode-select --install
@@ -226,34 +240,42 @@ brew install pkg-config
 ```
 
 **Windows**
-- 安装 [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
-- 安装 [WebView2](https://developer.microsoft.com/microsoft-edge/webview2/)（Windows 11 通常预装）
+
+- 安装
+  [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
+- 安装
+  [WebView2](https://developer.microsoft.com/microsoft-edge/webview2/)（Windows
+  11 通常预装）
 
 ### 构建步骤
 
 1. **克隆仓库**
+
    ```bash
    git clone https://github.com/getAsterisk/claudia.git
    cd claudia
    ```
 
 2. **安装前端依赖**
+
    ```bash
    bun install
    ```
 
 3. **构建应用程序**
-   
+
    **开发版本（带热重载）**
+
    ```bash
    bun run tauri dev
    ```
-   
+
    **生产版本构建**
+
    ```bash
    # 构建应用程序
    bun run tauri build
-   
+
    # 构建的可执行文件将位于：
    # - Linux: src-tauri/target/release/bundle/
    # - macOS: src-tauri/target/release/bundle/
@@ -261,18 +283,21 @@ brew install pkg-config
    ```
 
 4. **平台特定构建选项**
-   
+
    **调试构建（编译更快，二进制文件更大）**
+
    ```bash
    bun run tauri build --debug
    ```
-   
+
    **不打包构建（仅创建可执行文件）**
+
    ```bash
    bun run tauri build --no-bundle
    ```
-   
+
    **macOS 通用二进制文件（Intel + Apple Silicon）**
+
    ```bash
    bun run tauri build --target universal-apple-darwin
    ```
@@ -418,7 +443,6 @@ Claudia 优先考虑您的隐私和安全：
     <a href="https://github.com/getAsterisk/claudia/issues">请求功能</a>
   </p>
 </div>
-
 
 ## 星标历史
 

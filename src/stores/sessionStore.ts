@@ -1,13 +1,13 @@
-import { create } from 'zustand';
-import { logger } from '@/lib/logger';
-import { subscribeWithSelector } from 'zustand/middleware';
-import { api } from '@/lib/api';
-import { handleApiError } from '@/lib/errorHandler';
-import type { Session, Project } from '@/lib/api';
+import { create } from "zustand";
+import { logger } from "@/lib/logger";
+import { subscribeWithSelector } from "zustand/middleware";
+import { api } from "@/lib/api";
+import { handleApiError } from "@/lib/errorHandler";
+import type { Session, Project } from "@/lib/api";
 
 /**
  * Session store state interface
- * 
+ *
  * Manages the global state for projects, sessions, and their outputs.
  * Provides actions for fetching, updating, and managing session data.
  */
@@ -23,7 +23,7 @@ interface SessionState {
   currentSession: Session | null;
   /** Session outputs cached by session ID */
   sessionOutputs: Record<string, string>; // Keyed by sessionId
-  
+
   // UI state
   /** Whether projects are currently being loaded */
   isLoadingProjects: boolean;
@@ -33,7 +33,7 @@ interface SessionState {
   isLoadingOutputs: boolean;
   /** Current error message, if any */
   error: string | null;
-  
+
   // Actions
   /** Fetch all available projects */
   fetchProjects: () => Promise<void>;
@@ -47,7 +47,7 @@ interface SessionState {
   deleteSession: (sessionId: string, projectId: string) => Promise<void>;
   /** Clear any current error */
   clearError: () => void;
-  
+
   // Real-time updates
   /** Handle real-time session updates */
   handleSessionUpdate: (session: Session) => void;
@@ -67,7 +67,7 @@ export const useSessionStore = create<SessionState>()(
     isLoadingSessions: false,
     isLoadingOutputs: false,
     error: null,
-    
+
     // Fetch all projects
     fetchProjects: async () => {
       set({ isLoadingProjects: true, error: null });
@@ -75,14 +75,14 @@ export const useSessionStore = create<SessionState>()(
         const projects = await api.listProjects();
         set({ projects, isLoadingProjects: false });
       } catch (error) {
-        await handleApiError(error as Error, { operation: 'fetchProjects' });
-        set({ 
-          error: error instanceof Error ? error.message : 'Failed to fetch projects',
-          isLoadingProjects: false 
+        await handleApiError(error as Error, { operation: "fetchProjects" });
+        set({
+          error: error instanceof Error ? error.message : "Failed to fetch projects",
+          isLoadingProjects: false,
         });
       }
     },
-    
+
     // Fetch sessions for a specific project
     fetchProjectSessions: async (projectId: string) => {
       set({ isLoadingSessions: true, error: null });
@@ -91,24 +91,24 @@ export const useSessionStore = create<SessionState>()(
         set((state: SessionState) => ({
           sessions: {
             ...state.sessions,
-            [projectId]: projectSessions
+            [projectId]: projectSessions,
           },
-          isLoadingSessions: false
+          isLoadingSessions: false,
         }));
       } catch (error) {
-        await handleApiError(error as Error, { operation: 'fetchProjectSessions', projectId });
-        set({ 
-          error: error instanceof Error ? error.message : 'Failed to fetch sessions',
-          isLoadingSessions: false 
+        await handleApiError(error as Error, { operation: "fetchProjectSessions", projectId });
+        set({
+          error: error instanceof Error ? error.message : "Failed to fetch sessions",
+          isLoadingSessions: false,
         });
       }
     },
-    
+
     // Set current session
     setCurrentSession: (sessionId: string | null) => {
       const { sessions } = get();
       let currentSession: Session | null = null;
-      
+
       if (sessionId) {
         // Find session across all projects
         for (const projectSessions of Object.values(sessions)) {
@@ -119,10 +119,10 @@ export const useSessionStore = create<SessionState>()(
           }
         }
       }
-      
+
       set({ currentSessionId: sessionId, currentSession });
     },
-    
+
     // Fetch session output
     fetchSessionOutput: async (sessionId: string) => {
       set({ isLoadingOutputs: true, error: null });
@@ -131,54 +131,55 @@ export const useSessionStore = create<SessionState>()(
         set((state: SessionState) => ({
           sessionOutputs: {
             ...state.sessionOutputs,
-            [sessionId]: output
+            [sessionId]: output,
           },
-          isLoadingOutputs: false
+          isLoadingOutputs: false,
         }));
       } catch (error) {
-        set({ 
-          error: error instanceof Error ? error.message : 'Failed to fetch session output',
-          isLoadingOutputs: false 
+        set({
+          error: error instanceof Error ? error.message : "Failed to fetch session output",
+          isLoadingOutputs: false,
         });
       }
     },
-    
+
     // Delete session
     deleteSession: async (sessionId: string, projectId: string) => {
       try {
         // Note: API doesn't have a deleteSession method, so this is a placeholder
-        logger.warn('deleteSession not implemented in API');
-        
+        logger.warn("deleteSession not implemented in API");
+
         // Update local state
         set((state: SessionState) => ({
           sessions: {
             ...state.sessions,
-            [projectId]: state.sessions[projectId]?.filter((s: Session) => s.id !== sessionId) || []
+            [projectId]:
+              state.sessions[projectId]?.filter((s: Session) => s.id !== sessionId) || [],
           },
           currentSessionId: state.currentSessionId === sessionId ? null : state.currentSessionId,
           currentSession: state.currentSession?.id === sessionId ? null : state.currentSession,
           sessionOutputs: Object.fromEntries(
             Object.entries(state.sessionOutputs).filter(([id]) => id !== sessionId)
-          )
+          ),
         }));
       } catch (error) {
-        set({ 
-          error: error instanceof Error ? error.message : 'Failed to delete session'
+        set({
+          error: error instanceof Error ? error.message : "Failed to delete session",
         });
         throw error;
       }
     },
-    
+
     // Clear error
     clearError: () => set({ error: null }),
-    
+
     // Handle session update
     handleSessionUpdate: (session: Session) => {
       set((state: SessionState) => {
         const projectId = session.project_id;
         const projectSessions = state.sessions[projectId] || [];
         const existingIndex = projectSessions.findIndex((s: Session) => s.id === session.id);
-        
+
         let updatedSessions;
         if (existingIndex >= 0) {
           updatedSessions = [...projectSessions];
@@ -186,25 +187,25 @@ export const useSessionStore = create<SessionState>()(
         } else {
           updatedSessions = [session, ...projectSessions];
         }
-        
+
         return {
           sessions: {
             ...state.sessions,
-            [projectId]: updatedSessions
+            [projectId]: updatedSessions,
           },
-          currentSession: state.currentSessionId === session.id ? session : state.currentSession
+          currentSession: state.currentSessionId === session.id ? session : state.currentSession,
         };
       });
     },
-    
+
     // Handle output update
     handleOutputUpdate: (sessionId: string, output: string) => {
       set((state: SessionState) => ({
         sessionOutputs: {
           ...state.sessionOutputs,
-          [sessionId]: output
-        }
+          [sessionId]: output,
+        },
       }));
-    }
+    },
   }))
 );

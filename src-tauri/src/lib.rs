@@ -11,8 +11,13 @@ pub mod process;
 // No need to re-export them manually
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
-pub fn run() {
+pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     tauri::Builder::default()
         .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .map_err(|e| {
+            log::error!("Failed to run Tauri application: {}", e);
+            e
+        })?;
+    
+    Ok(())
 }

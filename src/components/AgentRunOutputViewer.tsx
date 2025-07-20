@@ -1,33 +1,33 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Maximize2, 
-  Minimize2, 
-  Copy, 
-  RefreshCw, 
-  RotateCcw, 
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Maximize2,
+  Minimize2,
+  Copy,
+  RefreshCw,
+  RotateCcw,
   ChevronDown,
   Bot,
   Clock,
   Hash,
   DollarSign,
-  StopCircle
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Toast, ToastContainer } from '@/components/ui/toast';
-import { Popover } from '@/components/ui/popover';
-import { api, type AgentRunWithMetrics } from '@/lib/api';
-import { useOutputCache } from '@/lib/outputCache';
-import { listen, type UnlistenFn } from '@tauri-apps/api/event';
-import { StreamMessage } from './StreamMessage';
-import { ErrorBoundary } from './ErrorBoundary';
-import { formatISOTimestamp } from '@/lib/date-utils';
-import { AGENT_ICONS } from './CCAgents';
-import type { ClaudeStreamMessage } from './AgentExecution';
-import { useTabState } from '@/hooks/useTabState';
-import { logger } from '@/lib/logger';
+  StopCircle,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Toast, ToastContainer } from "@/components/ui/toast";
+import { Popover } from "@/components/ui/popover";
+import { api, type AgentRunWithMetrics } from "@/lib/api";
+import { useOutputCache } from "@/lib/outputCacheHook";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { StreamMessage } from "./StreamMessage";
+import { ErrorBoundary } from "./ErrorBoundary";
+import { formatISOTimestamp } from "@/lib/date-utils";
+import { AGENT_ICONS } from "@/constants/agentIcons";
+import type { ClaudeStreamMessage } from "./AgentExecution";
+import { useTabState } from "@/hooks/useTabState";
+import { logger } from "@/lib/logger";
 
 interface AgentRunOutputViewerProps {
   /**
@@ -46,18 +46,14 @@ interface AgentRunOutputViewerProps {
 
 /**
  * AgentRunOutputViewer - Modal component for viewing agent execution output
- * 
+ *
  * @example
  * <AgentRunOutputViewer
  *   run={agentRun}
  *   onClose={() => setSelectedRun(null)}
  * />
  */
-export function AgentRunOutputViewer({ 
-  agentRunId, 
-  tabId,
-  className 
-}: AgentRunOutputViewerProps) {
+export function AgentRunOutputViewer({ agentRunId, tabId, className }: AgentRunOutputViewerProps) {
   const { updateTabTitle, updateTabStatus } = useTabState();
   const [run, setRun] = useState<AgentRunWithMetrics | null>(null);
   const [messages, setMessages] = useState<ClaudeStreamMessage[]>([]);
@@ -68,20 +64,20 @@ export function AgentRunOutputViewer({
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [copyPopoverOpen, setCopyPopoverOpen] = useState(false);
   const [hasUserScrolled, setHasUserScrolled] = useState(false);
-  
+
   // Track whether we're in the initial load phase
   const isInitialLoadRef = useRef(true);
   const hasSetupListenersRef = useRef(false);
-  
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const outputEndRef = useRef<HTMLDivElement>(null);
-  const fullscreenScrollRef = useRef<HTMLDivElement>(null);
-  const fullscreenMessagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollAreaRef = useRef<globalThis.HTMLDivElement>(null);
+  const outputEndRef = useRef<globalThis.HTMLDivElement>(null);
+  const fullscreenScrollRef = useRef<globalThis.HTMLDivElement>(null);
+  const fullscreenMessagesEndRef = useRef<globalThis.HTMLDivElement>(null);
   const unlistenRefs = useRef<UnlistenFn[]>([]);
   const { getCachedOutput, setCachedOutput } = useOutputCache();
 
   // Auto-scroll logic
-  const isAtBottom = () => {
+  const isAtBottom = useCallback(() => {
     const container = isFullscreen ? fullscreenScrollRef.current : scrollAreaRef.current;
     if (container) {
       const { scrollTop, scrollHeight, clientHeight } = container;
@@ -89,16 +85,16 @@ export function AgentRunOutputViewer({
       return distanceFromBottom < 1;
     }
     return true;
-  };
+  }, [isFullscreen]);
 
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     if (!hasUserScrolled) {
       const endRef = isFullscreen ? fullscreenMessagesEndRef.current : outputEndRef.current;
       if (endRef) {
-        endRef.scrollIntoView({ behavior: 'smooth' });
+        endRef.scrollIntoView({ behavior: "smooth" });
       }
     }
-  };
+  }, [isFullscreen, hasUserScrolled]);
 
   // Load agent run on mount
   useEffect(() => {
@@ -107,16 +103,23 @@ export function AgentRunOutputViewer({
         setLoading(true);
         const agentRun = await api.getAgentRun(parseInt(agentRunId));
         setRun(agentRun);
-        updateTabTitle(tabId, `Agent: ${agentRun.agent_name || 'Unknown'}`);
-        updateTabStatus(tabId, agentRun.status === 'running' ? 'running' : agentRun.status === 'failed' ? 'error' : 'complete');
+        updateTabTitle(tabId, `Agent: ${agentRun.agent_name || "Unknown"}`);
+        updateTabStatus(
+          tabId,
+          agentRun.status === "running"
+            ? "running"
+            : agentRun.status === "failed"
+              ? "error"
+              : "complete"
+        );
       } catch (error) {
-        logger.error('Failed to load agent run:', error);
-        updateTabStatus(tabId, 'error');
+        logger.error("Failed to load agent run:", error);
+        updateTabStatus(tabId, "error");
       } finally {
         setLoading(false);
       }
     };
-    
+
     if (agentRunId) {
       loadAgentRun();
     }
@@ -125,7 +128,7 @@ export function AgentRunOutputViewer({
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      unlistenRefs.current.forEach(unlisten => unlisten());
+      unlistenRefs.current.forEach((unlisten) => unlisten());
       unlistenRefs.current = [];
       hasSetupListenersRef.current = false;
     };
@@ -137,203 +140,233 @@ export function AgentRunOutputViewer({
     if (shouldAutoScroll) {
       scrollToBottom();
     }
-  }, [messages, hasUserScrolled, isFullscreen]);
+  }, [messages, hasUserScrolled, isFullscreen, isAtBottom, scrollToBottom]);
 
-  const loadOutput = async (skipCache = false) => {
-    if (!run?.id) return;
+  const loadOutput = useCallback(
+    async (skipCache = false) => {
+      if (!run?.id) return;
 
-    logger.debug('[AgentRunOutputViewer] Loading output for run:', {
-      runId: run.id,
-      status: run.status,
-      sessionId: run.session_id,
-      skipCache
-    });
+      logger.debug("[AgentRunOutputViewer] Loading output for run:", {
+        runId: run.id,
+        status: run.status,
+        sessionId: run.session_id,
+        skipCache,
+      });
 
-    try {
-      // Check cache first if not skipping cache
-      if (!skipCache) {
-        const cached = getCachedOutput(run.id);
-        if (cached) {
-          logger.debug('[AgentRunOutputViewer] Found cached output');
-          const cachedJsonlLines = cached.output.split('\n').filter(line => line.trim());
-          setRawJsonlOutput(cachedJsonlLines);
-          setMessages(cached.messages);
-          // If cache is recent (less than 5 seconds old) and session isn't running, use cache only
-          if (Date.now() - cached.lastUpdated < 5000 && run.status !== 'running') {
-            logger.debug('[AgentRunOutputViewer] Using recent cache, skipping refresh');
-            return;
-          }
-        }
-      }
-
-      setLoading(true);
-
-      // If we have a session_id, try to load from JSONL file first
-      if (run.session_id && run.session_id !== '') {
-        logger.debug('[AgentRunOutputViewer] Attempting to load from JSONL with session_id:', run.session_id);
-        try {
-          const history = await api.loadAgentSessionHistory(run.session_id);
-          logger.debug('[AgentRunOutputViewer] Successfully loaded JSONL history:', history.length, 'messages');
-          
-          // Convert history to messages format
-          const loadedMessages: ClaudeStreamMessage[] = history.map(entry => ({
-            ...entry,
-            type: entry.type || "assistant"
-          }));
-          
-          setMessages(loadedMessages);
-          setRawJsonlOutput(history.map(h => JSON.stringify(h)));
-          
-          // Update cache
-          setCachedOutput(run.id, {
-            output: history.map(h => JSON.stringify(h)).join('\n'),
-            messages: loadedMessages,
-            lastUpdated: Date.now(),
-            status: run.status
-          });
-          
-          // Set up live event listeners for running sessions
-          if (run.status === 'running') {
-            logger.debug('[AgentRunOutputViewer] Setting up live listeners for running session');
-            setupLiveEventListeners();
-            
-            try {
-              await api.streamSessionOutput(run.id);
-            } catch (streamError) {
-              logger.warn('[AgentRunOutputViewer] Failed to start streaming, will poll instead:', streamError);
+      try {
+        // Check cache first if not skipping cache
+        if (!skipCache) {
+          const cached = getCachedOutput(run.id);
+          if (cached) {
+            logger.debug("[AgentRunOutputViewer] Found cached output");
+            const cachedJsonlLines = cached.output.split("\n").filter((line) => line.trim());
+            setRawJsonlOutput(cachedJsonlLines);
+            setMessages(cached.messages);
+            // If cache is recent (less than 5 seconds old) and session isn't running, use cache only
+            if (Date.now() - cached.lastUpdated < 5000 && run.status !== "running") {
+              logger.debug("[AgentRunOutputViewer] Using recent cache, skipping refresh");
+              return;
             }
           }
-          
-          return;
-        } catch (err) {
-          logger.warn('[AgentRunOutputViewer] Failed to load from JSONL:', err);
-          logger.warn('[AgentRunOutputViewer] Falling back to regular output method');
         }
-      } else {
-        logger.debug('[AgentRunOutputViewer] No session_id available, using fallback method');
-      }
 
-      // Fallback to the original method if JSONL loading fails or no session_id
-      logger.debug('[AgentRunOutputViewer] Using getSessionOutput fallback');
-      const rawOutput = await api.getSessionOutput(run.id);
-      logger.debug('[AgentRunOutputViewer] Received raw output:', rawOutput.length, 'characters');
-      
-      // Parse JSONL output into messages
-      const jsonlLines = rawOutput.split('\n').filter(line => line.trim());
-      setRawJsonlOutput(jsonlLines);
-      
-      const parsedMessages: ClaudeStreamMessage[] = [];
-      for (const line of jsonlLines) {
-        try {
-          const message = JSON.parse(line) as ClaudeStreamMessage;
-          parsedMessages.push(message);
-        } catch (err) {
-          logger.error("[AgentRunOutputViewer] Failed to parse message:", err, line);
+        setLoading(true);
+
+        // If we have a session_id, try to load from JSONL file first
+        if (run.session_id && run.session_id !== "") {
+          logger.debug(
+            "[AgentRunOutputViewer] Attempting to load from JSONL with session_id:",
+            run.session_id
+          );
+          try {
+            const history = await api.loadAgentSessionHistory(run.session_id);
+            logger.debug(
+              "[AgentRunOutputViewer] Successfully loaded JSONL history:",
+              history.length,
+              "messages"
+            );
+
+            // Convert history to messages format
+            const loadedMessages: ClaudeStreamMessage[] = history.map((entry) => ({
+              ...(entry as object),
+              type: ((entry as { type?: string }).type || "assistant") as "system" | "user" | "assistant" | "result",
+            }));
+
+            setMessages(loadedMessages);
+            setRawJsonlOutput(history.map((h) => JSON.stringify(h)));
+
+            // Update cache
+            setCachedOutput(run.id, {
+              output: history.map((h) => JSON.stringify(h)).join("\n"),
+              messages: loadedMessages,
+              lastUpdated: Date.now(),
+              status: run.status,
+            });
+
+            // Set up live event listeners for running sessions
+            if (run.status === "running") {
+              logger.debug("[AgentRunOutputViewer] Setting up live listeners for running session");
+              setupLiveEventListeners();
+
+              try {
+                await api.streamSessionOutput(run.id);
+              } catch (streamError) {
+                logger.warn(
+                  "[AgentRunOutputViewer] Failed to start streaming, will poll instead:",
+                  streamError
+                );
+              }
+            }
+
+            return;
+          } catch (err) {
+            logger.warn("[AgentRunOutputViewer] Failed to load from JSONL:", err);
+            logger.warn("[AgentRunOutputViewer] Falling back to regular output method");
+          }
+        } else {
+          logger.debug("[AgentRunOutputViewer] No session_id available, using fallback method");
         }
-      }
-      logger.debug('[AgentRunOutputViewer] Parsed', parsedMessages.length, 'messages from output');
-      setMessages(parsedMessages);
-      
-      // Update cache
-      setCachedOutput(run.id, {
-        output: rawOutput,
-        messages: parsedMessages,
-        lastUpdated: Date.now(),
-        status: run.status
-      });
-      
-      // Set up live event listeners for running sessions
-      if (run.status === 'running') {
-        logger.debug('[AgentRunOutputViewer] Setting up live listeners for running session (fallback)');
-        setupLiveEventListeners();
-        
-        try {
-          await api.streamSessionOutput(run.id);
-        } catch (streamError) {
-          logger.warn('[AgentRunOutputViewer] Failed to start streaming (fallback), will poll instead:', streamError);
+
+        // Fallback to the original method if JSONL loading fails or no session_id
+        logger.debug("[AgentRunOutputViewer] Using getSessionOutput fallback");
+        const rawOutput = await api.getSessionOutput(run.id);
+        logger.debug("[AgentRunOutputViewer] Received raw output:", rawOutput.length, "characters");
+
+        // Parse JSONL output into messages
+        const jsonlLines = rawOutput.split("\n").filter((line) => line.trim());
+        setRawJsonlOutput(jsonlLines);
+
+        const parsedMessages: ClaudeStreamMessage[] = [];
+        for (const line of jsonlLines) {
+          try {
+            const message = JSON.parse(line) as ClaudeStreamMessage;
+            parsedMessages.push(message);
+          } catch (err) {
+            logger.error("[AgentRunOutputViewer] Failed to parse message:", err, line);
+          }
         }
+        logger.debug(
+          "[AgentRunOutputViewer] Parsed",
+          parsedMessages.length,
+          "messages from output"
+        );
+        setMessages(parsedMessages);
+
+        // Update cache
+        setCachedOutput(run.id, {
+          output: rawOutput,
+          messages: parsedMessages,
+          lastUpdated: Date.now(),
+          status: run.status,
+        });
+
+        // Set up live event listeners for running sessions
+        if (run.status === "running") {
+          logger.debug(
+            "[AgentRunOutputViewer] Setting up live listeners for running session (fallback)"
+          );
+          setupLiveEventListeners();
+
+          try {
+            await api.streamSessionOutput(run.id);
+          } catch (streamError) {
+            logger.warn(
+              "[AgentRunOutputViewer] Failed to start streaming (fallback), will poll instead:",
+              streamError
+            );
+          }
+        }
+      } catch (error) {
+        logger.error("Failed to load agent output:", error);
+        setToast({ message: "Failed to load agent output", type: "error" });
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      logger.error('Failed to load agent output:', error);
-      setToast({ message: 'Failed to load agent output', type: 'error' });
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [
+      run?.id,
+      getCachedOutput,
+      run?.session_id,
+      run?.status,
+      setCachedOutput,
+    ]
+  );
 
   // Set up live event listeners for running sessions
-  const setupLiveEventListeners = async () => {
+  const setupLiveEventListeners = useCallback(async () => {
     if (!run?.id || hasSetupListenersRef.current) return;
-    
+
     try {
       // Clean up existing listeners
-      unlistenRefs.current.forEach(unlisten => unlisten());
+      unlistenRefs.current.forEach((unlisten) => unlisten());
       unlistenRefs.current = [];
 
       // Mark that we've set up listeners
       hasSetupListenersRef.current = true;
-      
+
       // After setup, we're no longer in initial load
       // Small delay to ensure any pending messages are processed
-      setTimeout(() => {
+      globalThis.setTimeout(() => {
         isInitialLoadRef.current = false;
       }, 100);
 
       // Set up live event listeners with run ID isolation
-      const outputUnlisten = await listen<string>(`agent-output:${run!.id}`, (event) => {
+      const outputUnlisten = await listen<string>(`agent-output:${run?.id ?? ""}`, (event) => {
         try {
           // Skip messages during initial load phase
           if (isInitialLoadRef.current) {
-            logger.debug('[AgentRunOutputViewer] Skipping message during initial load');
+            logger.debug("[AgentRunOutputViewer] Skipping message during initial load");
             return;
           }
-          
+
           // Store raw JSONL
-          setRawJsonlOutput(prev => [...prev, event.payload]);
-          
+          setRawJsonlOutput((prev) => [...prev, event.payload]);
+
           // Parse and display
           const message = JSON.parse(event.payload) as ClaudeStreamMessage;
-          setMessages(prev => [...prev, message]);
+          setMessages((prev) => [...prev, message]);
         } catch (err) {
           logger.error("[AgentRunOutputViewer] Failed to parse message:", err, event.payload);
         }
       });
 
-      const errorUnlisten = await listen<string>(`agent-error:${run!.id}`, (event) => {
+      const errorUnlisten = await listen<string>(`agent-error:${run?.id ?? ""}`, (event) => {
         logger.error("[AgentRunOutputViewer] Agent error:", event.payload);
-        setToast({ message: event.payload, type: 'error' });
+        setToast({ message: event.payload, type: "error" });
       });
 
-      const completeUnlisten = await listen<boolean>(`agent-complete:${run!.id}`, () => {
-        setToast({ message: 'Agent execution completed', type: 'success' });
+      const completeUnlisten = await listen<boolean>(`agent-complete:${run?.id ?? ""}`, () => {
+        setToast({ message: "Agent execution completed", type: "success" });
         // Don't set status here as the parent component should handle it
       });
 
-      const cancelUnlisten = await listen<boolean>(`agent-cancelled:${run!.id}`, () => {
-        setToast({ message: 'Agent execution was cancelled', type: 'error' });
+      const cancelUnlisten = await listen<boolean>(`agent-cancelled:${run?.id ?? ""}`, () => {
+        setToast({ message: "Agent execution was cancelled", type: "error" });
       });
 
       unlistenRefs.current = [outputUnlisten, errorUnlisten, completeUnlisten, cancelUnlisten];
     } catch (error) {
-      logger.error('[AgentRunOutputViewer] Failed to set up live event listeners:', error);
+      logger.error("[AgentRunOutputViewer] Failed to set up live event listeners:", error);
     }
-  };
+  }, [run?.id]);
 
   // Copy functionality
   const handleCopyAsJsonl = async () => {
-    const jsonl = rawJsonlOutput.join('\n');
+    const jsonl = rawJsonlOutput.join("\n");
     await navigator.clipboard.writeText(jsonl);
     setCopyPopoverOpen(false);
-    setToast({ message: 'Output copied as JSONL', type: 'success' });
+    setToast({ message: "Output copied as JSONL", type: "success" });
   };
 
   const handleCopyAsMarkdown = async () => {
     if (!run) return;
     let markdown = `# Agent Execution: ${run.agent_name}\n\n`;
     markdown += `**Task:** ${run.task}\n`;
-    markdown += `**Model:** ${run.model === 'opus' ? 'Claude 4 Opus' : 'Claude 4 Sonnet'}\n`;
+    markdown += `**Model:** ${run.model === "opus" ? "Claude 4 Opus" : "Claude 4 Sonnet"}\n`;
     markdown += `**Date:** ${formatISOTimestamp(run.created_at)}\n`;
-    if (run.metrics?.duration_ms) markdown += `**Duration:** ${(run.metrics.duration_ms / 1000).toFixed(2)}s\n`;
+    if (run.metrics?.duration_ms)
+      markdown += `**Duration:** ${(run.metrics.duration_ms / 1000).toFixed(2)}s\n`;
     if (run.metrics?.total_tokens) markdown += `**Total Tokens:** ${run.metrics.total_tokens}\n`;
     if (run.metrics?.cost_usd) markdown += `**Cost:** $${run.metrics.cost_usd.toFixed(4)} USD\n`;
     markdown += `\n---\n\n`;
@@ -341,10 +374,10 @@ export function AgentRunOutputViewer({
     for (const msg of messages) {
       if (msg.type === "system" && msg.subtype === "init") {
         markdown += `## System Initialization\n\n`;
-        markdown += `- Session ID: \`${msg.session_id || 'N/A'}\`\n`;
-        markdown += `- Model: \`${msg.model || 'default'}\`\n`;
+        markdown += `- Session ID: \`${msg.session_id || "N/A"}\`\n`;
+        markdown += `- Model: \`${msg.model || "default"}\`\n`;
         if (msg.cwd) markdown += `- Working Directory: \`${msg.cwd}\`\n`;
-        if (msg.tools?.length) markdown += `- Tools: ${msg.tools.join(', ')}\n`;
+        if (msg.tools?.length) markdown += `- Tools: ${msg.tools.join(", ")}\n`;
         markdown += `\n`;
       } else if (msg.type === "assistant" && msg.message) {
         markdown += `## Assistant\n\n`;
@@ -382,7 +415,7 @@ export function AgentRunOutputViewer({
 
     await navigator.clipboard.writeText(markdown);
     setCopyPopoverOpen(false);
-    setToast({ message: 'Output copied as Markdown', type: 'success' });
+    setToast({ message: "Output copied as Markdown", type: "success" });
   };
 
   const handleRefresh = async () => {
@@ -393,23 +426,23 @@ export function AgentRunOutputViewer({
 
   const handleStop = async () => {
     if (!run?.id) {
-      logger.error('[AgentRunOutputViewer] No run ID available to stop');
+      logger.error("[AgentRunOutputViewer] No run ID available to stop");
       return;
     }
 
     try {
       // Call the API to kill the agent session
       const success = await api.killAgentSession(run.id);
-      
+
       if (success) {
         logger.debug(`[AgentRunOutputViewer] Successfully stopped agent session ${run.id}`);
-        setToast({ message: 'Agent execution stopped', type: 'success' });
-        
+        setToast({ message: "Agent execution stopped", type: "success" });
+
         // Clean up listeners
-        unlistenRefs.current.forEach(unlisten => unlisten());
+        unlistenRefs.current.forEach((unlisten) => unlisten());
         unlistenRefs.current = [];
         hasSetupListenersRef.current = false;
-        
+
         // Add a message indicating execution was stopped
         const stopMessage: ClaudeStreamMessage = {
           type: "result",
@@ -419,30 +452,32 @@ export function AgentRunOutputViewer({
           duration_ms: 0,
           usage: {
             input_tokens: 0,
-            output_tokens: 0
-          }
+            output_tokens: 0,
+          },
         };
-        setMessages(prev => [...prev, stopMessage]);
-        
+        setMessages((prev) => [...prev, stopMessage]);
+
         // Update the tab status
-        updateTabStatus(tabId, 'idle');
-        
+        updateTabStatus(tabId, "idle");
+
         // Refresh the output to get updated status
         await loadOutput(true);
       } else {
-        logger.warn(`[AgentRunOutputViewer] Failed to stop agent session ${run.id} - it may have already finished`);
-        setToast({ message: 'Failed to stop agent - it may have already finished', type: 'error' });
+        logger.warn(
+          `[AgentRunOutputViewer] Failed to stop agent session ${run.id} - it may have already finished`
+        );
+        setToast({ message: "Failed to stop agent - it may have already finished", type: "error" });
       }
     } catch (err) {
-      logger.error('[AgentRunOutputViewer] Failed to stop agent:', err);
-      setToast({ 
-        message: `Failed to stop execution: ${err instanceof Error ? err.message : 'Unknown error'}`, 
-        type: 'error' 
+      logger.error("[AgentRunOutputViewer] Failed to stop agent:", err);
+      setToast({
+        message: `Failed to stop execution: ${err instanceof Error ? err.message : "Unknown error"}`,
+        type: "error",
       });
     }
   };
 
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+  const handleScroll = (e: React.UIEvent<globalThis.HTMLDivElement>) => {
     const target = e.currentTarget;
     const { scrollTop, scrollHeight, clientHeight } = target;
     const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
@@ -452,18 +487,18 @@ export function AgentRunOutputViewer({
   // Load output on mount
   useEffect(() => {
     if (!run?.id) return;
-    
+
     // Check cache immediately for instant display
-    const cached = getCachedOutput(run!.id);
+    const cached = getCachedOutput(run.id);
     if (cached) {
-      const cachedJsonlLines = cached.output.split('\n').filter(line => line.trim());
+      const cachedJsonlLines = cached.output.split("\n").filter((line) => line.trim());
       setRawJsonlOutput(cachedJsonlLines);
       setMessages(cached.messages);
     }
-    
+
     // Then load fresh data
     loadOutput();
-  }, [run?.id]);
+  }, [run?.id, getCachedOutput, loadOutput]);
 
   const displayableMessages = useMemo(() => {
     return messages.filter((message) => {
@@ -478,7 +513,10 @@ export function AgentRunOutputViewer({
         if (Array.isArray(msg.content)) {
           let hasVisibleContent = false;
           for (const content of msg.content) {
-            if (content.type === "text") { hasVisibleContent = true; break; }
+            if (content.type === "text") {
+              hasVisibleContent = true;
+              break;
+            }
             if (content.type === "tool_result") {
               // Check if this tool result will be displayed as a widget
               let willBeSkipped = false;
@@ -486,12 +524,38 @@ export function AgentRunOutputViewer({
                 // Find the corresponding tool use
                 for (let i = messages.indexOf(message) - 1; i >= 0; i--) {
                   const prevMsg = messages[i];
-                  if (prevMsg.type === 'assistant' && prevMsg.message?.content && Array.isArray(prevMsg.message.content)) {
-                    const toolUse = prevMsg.message.content.find((c: any) => c.type === 'tool_use' && c.id === content.tool_use_id);
+                  if (
+                    prevMsg.type === "assistant" &&
+                    prevMsg.message?.content &&
+                    Array.isArray(prevMsg.message.content)
+                  ) {
+                    const toolUse = prevMsg.message.content.find(
+                      (c: unknown) =>
+                        typeof c === "object" &&
+                        c !== null &&
+                        "type" in c &&
+                        "id" in c &&
+                        (c as { type: string; id: string }).type === "tool_use" &&
+                        (c as { type: string; id: string }).id === content.tool_use_id
+                    );
                     if (toolUse) {
-                      const toolName = toolUse.name?.toLowerCase();
-                      const toolsWithWidgets = ['task','edit','multiedit','todowrite','ls','read','glob','bash','write','grep'];
-                      if (toolsWithWidgets.includes(toolName) || toolUse.name?.startsWith('mcp__')) {
+                      const toolName = (toolUse as { name?: string }).name?.toLowerCase();
+                      const toolsWithWidgets = [
+                        "task",
+                        "edit",
+                        "multiedit",
+                        "todowrite",
+                        "ls",
+                        "read",
+                        "glob",
+                        "bash",
+                        "write",
+                        "grep",
+                      ];
+                      if (
+                        (toolName && toolsWithWidgets.includes(toolName)) ||
+                        (toolUse as { name?: string }).name?.startsWith("mcp__")
+                      ) {
                         willBeSkipped = true;
                       }
                       break;
@@ -499,7 +563,10 @@ export function AgentRunOutputViewer({
                   }
                 }
               }
-              if (!willBeSkipped) { hasVisibleContent = true; break; }
+              if (!willBeSkipped) {
+                hasVisibleContent = true;
+                break;
+              }
             }
           }
           if (!hasVisibleContent) return false;
@@ -544,30 +611,26 @@ export function AgentRunOutputViewer({
 
   return (
     <>
-      <div className={`h-full flex flex-col ${className || ''}`}>
+      <div className={`h-full flex flex-col ${className || ""}`}>
         <Card className="h-full flex flex-col">
-        <CardHeader className="pb-3">
-          <div className="flex items-start justify-between gap-4">
+          <CardHeader className="pb-3">
+            <div className="flex items-start justify-between gap-4">
               <div className="flex items-start gap-3 flex-1 min-w-0">
-                <div className="mt-0.5">
-                  {renderIcon(run.agent_icon)}
-                </div>
+                <div className="mt-0.5">{renderIcon(run.agent_icon)}</div>
                 <div className="flex-1 min-w-0">
                   <CardTitle className="text-lg flex items-center gap-2">
                     {run.agent_name}
-                    {run.status === 'running' && (
+                    {run.status === "running" && (
                       <div className="flex items-center gap-1">
                         <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                         <span className="text-xs text-green-600 font-medium">Running</span>
                       </div>
                     )}
                   </CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1 truncate">
-                    {run.task}
-                  </p>
+                  <p className="text-sm text-muted-foreground mt-1 truncate">{run.task}</p>
                   <div className="flex items-center gap-3 text-xs text-muted-foreground mt-2">
                     <Badge variant="outline" className="text-xs">
-                      {run.model === 'opus' ? 'Claude 4 Opus' : 'Claude 4 Sonnet'}
+                      {run.model === "opus" ? "Claude 4 Opus" : "Claude 4 Sonnet"}
                     </Badge>
                     <div className="flex items-center gap-1">
                       <Clock className="h-3 w-3" />
@@ -594,11 +657,7 @@ export function AgentRunOutputViewer({
               <div className="flex items-center gap-1">
                 <Popover
                   trigger={
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 px-2"
-                    >
+                    <Button variant="ghost" size="sm" className="h-8 px-2">
                       <Copy className="h-4 w-4 mr-1" />
                       Copy
                       <ChevronDown className="h-3 w-3 ml-1" />
@@ -649,9 +708,9 @@ export function AgentRunOutputViewer({
                   title="Refresh output"
                   className="h-8 px-2"
                 >
-                  <RotateCcw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+                  <RotateCcw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
                 </Button>
-                {run.status === 'running' && (
+                {run.status === "running" && (
                   <Button
                     variant="ghost"
                     size="sm"
@@ -664,10 +723,12 @@ export function AgentRunOutputViewer({
                   </Button>
                 )}
               </div>
-          </div>
-        </CardHeader>
-        <CardContent className={`${isFullscreen ? 'h-[calc(100vh-120px)]' : 'flex-1'} p-0 overflow-hidden`}>
-          {loading ? (
+            </div>
+          </CardHeader>
+          <CardContent
+            className={`${isFullscreen ? "h-[calc(100vh-120px)]" : "flex-1"} p-0 overflow-hidden`}
+          >
+            {loading ? (
               <div className="flex items-center justify-center h-full">
                 <div className="flex items-center space-x-2">
                   <RefreshCw className="h-4 w-4 animate-spin" />
@@ -679,7 +740,7 @@ export function AgentRunOutputViewer({
                 <p>No output available yet</p>
               </div>
             ) : (
-              <div 
+              <div
                 ref={scrollAreaRef}
                 className="h-full overflow-y-auto p-4 space-y-2"
                 onScroll={handleScroll}
@@ -700,8 +761,8 @@ export function AgentRunOutputViewer({
                 </AnimatePresence>
                 <div ref={outputEndRef} />
               </div>
-          )}
-        </CardContent>
+            )}
+          </CardContent>
         </Card>
       </div>
 
@@ -719,10 +780,7 @@ export function AgentRunOutputViewer({
             <div className="flex items-center gap-2">
               <Popover
                 trigger={
-                  <Button
-                    variant="outline"
-                    size="sm"
-                  >
+                  <Button variant="outline" size="sm">
                     <Copy className="h-4 w-4 mr-2" />
                     Copy Output
                     <ChevronDown className="h-3 w-3 ml-2" />
@@ -750,36 +808,22 @@ export function AgentRunOutputViewer({
                 }
                 align="end"
               />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleRefresh}
-                disabled={refreshing}
-              >
-                <RotateCcw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+              <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
+                <RotateCcw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
               </Button>
-              {run.status === 'running' && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleStop}
-                  disabled={refreshing}
-                >
+              {run.status === "running" && (
+                <Button variant="outline" size="sm" onClick={handleStop} disabled={refreshing}>
                   <StopCircle className="h-4 w-4 mr-2" />
                   Stop
                 </Button>
               )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsFullscreen(false)}
-              >
+              <Button variant="outline" size="sm" onClick={() => setIsFullscreen(false)}>
                 <Minimize2 className="h-4 w-4 mr-2" />
                 Exit Fullscreen
               </Button>
             </div>
           </div>
-          <div 
+          <div
             ref={fullscreenScrollRef}
             className="flex-1 overflow-y-auto p-6"
             onScroll={handleScroll}
@@ -816,15 +860,11 @@ export function AgentRunOutputViewer({
       {/* Toast Notification */}
       <ToastContainer>
         {toast && (
-          <Toast
-            message={toast.message}
-            type={toast.type}
-            onDismiss={() => setToast(null)}
-          />
+          <Toast message={toast.message} type={toast.type} onDismiss={() => setToast(null)} />
         )}
       </ToastContainer>
     </>
   );
 }
 
-export default AgentRunOutputViewer; 
+export default AgentRunOutputViewer;

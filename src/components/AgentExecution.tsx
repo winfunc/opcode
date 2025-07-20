@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  ArrowLeft, 
-  Play, 
-  StopCircle, 
-  FolderOpen, 
+import {
+  ArrowLeft,
+  Play,
+  StopCircle,
+  FolderOpen,
   Terminal,
   AlertCircle,
   Loader2,
@@ -12,7 +12,7 @@ import {
   ChevronDown,
   Maximize2,
   X,
-  Settings2
+  Settings2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,7 +35,7 @@ import { StreamMessage } from "./StreamMessage";
 import { ExecutionControlBar } from "./ExecutionControlBar";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { AGENT_ICONS } from "./CCAgents";
+import { AGENT_ICONS } from "@/constants/agentIcons";
 import { HooksEditor } from "./HooksEditor";
 import { logger } from "@/lib/logger";
 import { handleError } from "@/lib/errorHandler";
@@ -55,11 +55,21 @@ interface AgentExecutionProps {
   className?: string;
 }
 
+interface MessageContent {
+  type: string;
+  text?: string;
+  name?: string;
+  input?: unknown;
+  content?: string;
+  tool_use_id?: string;
+  id?: string;
+}
+
 export interface ClaudeStreamMessage {
   type: "system" | "assistant" | "user" | "result";
   subtype?: string;
   message?: {
-    content?: any[];
+    content?: MessageContent[];
     usage?: {
       input_tokens: number;
       output_tokens: number;
@@ -69,20 +79,25 @@ export interface ClaudeStreamMessage {
     input_tokens: number;
     output_tokens: number;
   };
-  [key: string]: any;
+  tools?: string[];
+  cost_usd?: number;
+  duration_ms?: number;
+  num_turns?: number;
+  result?: string;
+  error?: string;
+  session_id?: string;
+  model?: string;
+  cwd?: string;
+  [key: string]: unknown;
 }
 
 /**
  * AgentExecution component for running CC agents
- * 
+ *
  * @example
  * <AgentExecution agent={agent} onBack={() => setView('list')} />
  */
-export const AgentExecution: React.FC<AgentExecutionProps> = ({
-  agent,
-  onBack,
-  className,
-}) => {
+export const AgentExecution: React.FC<AgentExecutionProps> = ({ agent, onBack, className }) => {
   const [projectPath, setProjectPath] = useState("");
   const [task, setTask] = useState(agent.default_task || "");
   const [model, setModel] = useState<ClaudeModel>((agent.model as ClaudeModel) || "sonnet-3-5");
@@ -91,7 +106,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
   const [rawJsonlOutput, setRawJsonlOutput] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [copyPopoverOpen, setCopyPopoverOpen] = useState(false);
-  
+
   // Hooks configuration state
   const [isHooksDialogOpen, setIsHooksDialogOpen] = useState(false);
   const [activeHooksTab, setActiveHooksTab] = useState("project");
@@ -102,14 +117,14 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
   const [elapsedTime, setElapsedTime] = useState(0);
   const [hasUserScrolled, setHasUserScrolled] = useState(false);
   const [isFullscreenModalOpen, setIsFullscreenModalOpen] = useState(false);
-  
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const messagesContainerRef = useRef<HTMLDivElement>(null);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const fullscreenScrollRef = useRef<HTMLDivElement>(null);
-  const fullscreenMessagesEndRef = useRef<HTMLDivElement>(null);
+
+  const messagesEndRef = useRef<globalThis.HTMLDivElement>(null);
+  const messagesContainerRef = useRef<globalThis.HTMLDivElement>(null);
+  const scrollContainerRef = useRef<globalThis.HTMLDivElement>(null);
+  const fullscreenScrollRef = useRef<globalThis.HTMLDivElement>(null);
+  const fullscreenMessagesEndRef = useRef<globalThis.HTMLDivElement>(null);
   const unlistenRefs = useRef<UnlistenFn[]>([]);
-  const elapsedTimeIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const elapsedTimeIntervalRef = useRef<globalThis.NodeJS.Timeout | null>(null);
   const [runId, setRunId] = useState<number | null>(null);
 
   // Filter out messages that shouldn't be displayed
@@ -123,12 +138,12 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
       // Skip empty user messages
       if (message.type === "user" && message.message) {
         if (message.isMeta) return false;
-        
+
         const msg = message.message;
         if (!msg.content || (Array.isArray(msg.content) && msg.content.length === 0)) {
           return false;
         }
-        
+
         // Check if user message has visible content by checking its parts
         if (Array.isArray(msg.content)) {
           let hasVisibleContent = false;
@@ -143,17 +158,38 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
                 // Look for the matching tool_use in previous assistant messages
                 for (let i = index - 1; i >= 0; i--) {
                   const prevMsg = messages[i];
-                  if (prevMsg.type === 'assistant' && prevMsg.message?.content && Array.isArray(prevMsg.message.content)) {
-                    const toolUse = prevMsg.message.content.find((c: any) => 
-                      c.type === 'tool_use' && c.id === content.tool_use_id
+                  if (
+                    prevMsg.type === "assistant" &&
+                    prevMsg.message?.content &&
+                    Array.isArray(prevMsg.message.content)
+                  ) {
+                    const toolUse = prevMsg.message.content.find(
+                      (c: unknown) =>
+                        typeof c === "object" &&
+                        c !== null &&
+                        "type" in c &&
+                        "id" in c &&
+                        (c as { type: string; id: string }).type === "tool_use" &&
+                        (c as { type: string; id: string }).id === content.tool_use_id
                     );
                     if (toolUse) {
-                      const toolName = toolUse.name?.toLowerCase();
+                      const toolName = (toolUse as { name?: string }).name?.toLowerCase();
                       const toolsWithWidgets = [
-                        'task', 'edit', 'multiedit', 'todowrite', 'ls', 'read', 
-                        'glob', 'bash', 'write', 'grep'
+                        "task",
+                        "edit",
+                        "multiedit",
+                        "todowrite",
+                        "ls",
+                        "read",
+                        "glob",
+                        "bash",
+                        "write",
+                        "grep",
                       ];
-                      if (toolsWithWidgets.includes(toolName) || toolUse.name?.startsWith('mcp__')) {
+                      if (
+                        (toolName && toolsWithWidgets.includes(toolName)) ||
+                        (toolUse as MessageContent).name?.startsWith("mcp__")
+                      ) {
                         willBeSkipped = true;
                       }
                       break;
@@ -161,14 +197,14 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
                   }
                 }
               }
-              
+
               if (!willBeSkipped) {
                 hasVisibleContent = true;
                 break;
               }
             }
           }
-          
+
           if (!hasVisibleContent) {
             return false;
           }
@@ -197,23 +233,25 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
   useEffect(() => {
     // Clean up listeners on unmount
     return () => {
-      unlistenRefs.current.forEach(unlisten => unlisten());
+      unlistenRefs.current.forEach((unlisten) => unlisten());
       if (elapsedTimeIntervalRef.current) {
-        clearInterval(elapsedTimeIntervalRef.current);
+        globalThis.clearInterval(elapsedTimeIntervalRef.current);
       }
     };
   }, []);
 
   // Check if user is at the very bottom of the scrollable container
-  const isAtBottom = () => {
-    const container = isFullscreenModalOpen ? fullscreenScrollRef.current : scrollContainerRef.current;
+  const isAtBottom = useCallback(() => {
+    const container = isFullscreenModalOpen
+      ? fullscreenScrollRef.current
+      : scrollContainerRef.current;
     if (container) {
       const { scrollTop, scrollHeight, clientHeight } = container;
       const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
       return distanceFromBottom < 1;
     }
     return true;
-  };
+  }, [isFullscreenModalOpen]);
 
   useEffect(() => {
     if (displayableMessages.length === 0) return;
@@ -223,28 +261,41 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
 
     if (shouldAutoScroll) {
       if (isFullscreenModalOpen) {
-        fullscreenRowVirtualizer.scrollToIndex(displayableMessages.length - 1, { align: "end", behavior: "smooth" });
+        fullscreenRowVirtualizer.scrollToIndex(displayableMessages.length - 1, {
+          align: "end",
+          behavior: "smooth",
+        });
       } else {
-        rowVirtualizer.scrollToIndex(displayableMessages.length - 1, { align: "end", behavior: "smooth" });
+        rowVirtualizer.scrollToIndex(displayableMessages.length - 1, {
+          align: "end",
+          behavior: "smooth",
+        });
       }
     }
-  }, [displayableMessages.length, hasUserScrolled, isFullscreenModalOpen, rowVirtualizer, fullscreenRowVirtualizer]);
+  }, [
+    displayableMessages.length,
+    hasUserScrolled,
+    isFullscreenModalOpen,
+    rowVirtualizer,
+    fullscreenRowVirtualizer,
+    isAtBottom,
+  ]);
 
   // Update elapsed time while running
   useEffect(() => {
     if (isRunning && executionStartTime) {
-      elapsedTimeIntervalRef.current = setInterval(() => {
+      elapsedTimeIntervalRef.current = globalThis.setInterval(() => {
         setElapsedTime(Math.floor((Date.now() - executionStartTime) / 1000));
       }, 100);
     } else {
       if (elapsedTimeIntervalRef.current) {
-        clearInterval(elapsedTimeIntervalRef.current);
+        globalThis.clearInterval(elapsedTimeIntervalRef.current);
       }
     }
-    
+
     return () => {
       if (elapsedTimeIntervalRef.current) {
-        clearInterval(elapsedTimeIntervalRef.current);
+        globalThis.clearInterval(elapsedTimeIntervalRef.current);
       }
     };
   }, [isRunning, executionStartTime]);
@@ -263,22 +314,21 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
     setTotalTokens(tokens);
   }, [messages]);
 
-
   const handleSelectPath = async () => {
     try {
       const selected = await open({
         directory: true,
         multiple: false,
-        title: "Select Project Directory"
+        title: "Select Project Directory",
       });
-      
+
       if (selected) {
         setProjectPath(selected as string);
         setError(null); // Clear any previous errors
       }
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
-      await handleError(error, { operation: 'selectDirectory', component: 'AgentExecution' });
+      await handleError(error, { operation: "selectDirectory", component: "AgentExecution" });
       setError(`Failed to select directory: ${error.message}`);
     }
   };
@@ -294,51 +344,73 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
       setMessages([]);
       setRawJsonlOutput([]);
       setRunId(null);
-      
+
       // Clear any existing listeners
-      unlistenRefs.current.forEach(unlisten => unlisten());
+      unlistenRefs.current.forEach((unlisten) => unlisten());
       unlistenRefs.current = [];
-      
+
       // Execute the agent and get the run ID
-      const executionRunId = await api.executeAgent(agent.id!, projectPath, task, model);
+      const executionRunId = await api.executeAgent(agent.id ?? 0, projectPath, task, model);
       logger.debug("Agent execution started with run ID:", executionRunId);
       setRunId(executionRunId);
-      
+
       // Set up event listeners with run ID isolation
-      const outputUnlisten = await listen<string>(`agent-output:${executionRunId}`, async (event) => {
-        try {
-          // Store raw JSONL
-          setRawJsonlOutput(prev => [...prev, event.payload]);
-          
-          // Parse and display
-          const message = JSON.parse(event.payload) as ClaudeStreamMessage;
-          setMessages(prev => [...prev, message]);
-        } catch (err) {
-          const error = err instanceof Error ? err : new Error(String(err));
-          await handleError(error, { operation: 'parseAgentMessage', payload: event.payload, component: 'AgentExecution' });
+      const outputUnlisten = await listen<string>(
+        `agent-output:${executionRunId}`,
+        async (event) => {
+          try {
+            // Store raw JSONL
+            setRawJsonlOutput((prev) => [...prev, event.payload]);
+
+            // Parse and display
+            const message = JSON.parse(event.payload) as ClaudeStreamMessage;
+            setMessages((prev) => [...prev, message]);
+          } catch (err) {
+            const error = err instanceof Error ? err : new Error(String(err));
+            await handleError(error, {
+              operation: "parseAgentMessage",
+              payload: event.payload,
+              component: "AgentExecution",
+            });
+          }
         }
-      });
+      );
 
       const errorUnlisten = await listen<string>(`agent-error:${executionRunId}`, async (event) => {
-        await handleError(new Error(event.payload), { operation: 'agentError', component: 'AgentExecution' });
+        await handleError(new Error(event.payload), {
+          operation: "agentError",
+          component: "AgentExecution",
+        });
         setError(event.payload);
       });
 
-      const completeUnlisten = await listen<boolean>(`agent-complete:${executionRunId}`, async (event) => {
-        setIsRunning(false);
-        setExecutionStartTime(null);
-        if (!event.payload) {
-          await handleError(new Error("Agent execution failed"), { operation: 'agentExecutionFailed', component: 'AgentExecution' });
-          setError("Agent execution failed");
+      const completeUnlisten = await listen<boolean>(
+        `agent-complete:${executionRunId}`,
+        async (event) => {
+          setIsRunning(false);
+          setExecutionStartTime(null);
+          if (!event.payload) {
+            await handleError(new Error("Agent execution failed"), {
+              operation: "agentExecutionFailed",
+              component: "AgentExecution",
+            });
+            setError("Agent execution failed");
+          }
         }
-      });
+      );
 
-      const cancelUnlisten = await listen<boolean>(`agent-cancelled:${executionRunId}`, async () => {
-        setIsRunning(false);
-        setExecutionStartTime(null);
-        await handleError(new Error("Agent execution was cancelled"), { operation: 'agentExecutionCancelled', component: 'AgentExecution' });
-        setError("Agent execution was cancelled");
-      });
+      const cancelUnlisten = await listen<boolean>(
+        `agent-cancelled:${executionRunId}`,
+        async () => {
+          setIsRunning(false);
+          setExecutionStartTime(null);
+          await handleError(new Error("Agent execution was cancelled"), {
+            operation: "agentExecutionCancelled",
+            component: "AgentExecution",
+          });
+          setError("Agent execution was cancelled");
+        }
+      );
 
       unlistenRefs.current = [outputUnlisten, errorUnlisten, completeUnlisten, cancelUnlisten];
     } catch (err) {
@@ -347,74 +419,86 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
       setExecutionStartTime(null);
       setRunId(null);
       // Show error in messages
-      setMessages(prev => [...prev, {
-        type: "result",
-        subtype: "error",
-        is_error: true,
-        result: `Failed to execute agent: ${err instanceof Error ? err.message : 'Unknown error'}`,
-        duration_ms: 0,
-        usage: {
-          input_tokens: 0,
-          output_tokens: 0
-        }
-      }]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          type: "result",
+          subtype: "error",
+          is_error: true,
+          result: `Failed to execute agent: ${err instanceof Error ? err.message : "Unknown error"}`,
+          duration_ms: 0,
+          usage: {
+            input_tokens: 0,
+            output_tokens: 0,
+          },
+        },
+      ]);
     }
   };
 
   const handleStop = async () => {
     try {
       if (!runId) {
-        await handleError("No run ID available to stop", { operation: 'stopAgent', component: 'AgentExecution' });
+        await handleError("No run ID available to stop", {
+          operation: "stopAgent",
+          component: "AgentExecution",
+        });
         return;
       }
 
       // Call the API to kill the agent session
       const success = await api.killAgentSession(runId);
-      
+
       if (success) {
         logger.debug(`Successfully stopped agent session ${runId}`);
       } else {
         logger.warn(`Failed to stop agent session ${runId} - it may have already finished`);
       }
-      
+
       // Update UI state
       setIsRunning(false);
       setExecutionStartTime(null);
-      
+
       // Clean up listeners
-      unlistenRefs.current.forEach(unlisten => unlisten());
+      unlistenRefs.current.forEach((unlisten) => unlisten());
       unlistenRefs.current = [];
-      
+
       // Add a message indicating execution was stopped
-      setMessages(prev => [...prev, {
-        type: "result",
-        subtype: "error",
-        is_error: true,
-        result: "Execution stopped by user",
-        duration_ms: elapsedTime * 1000,
-        usage: {
-          input_tokens: totalTokens,
-          output_tokens: 0
-        }
-      }]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          type: "result",
+          subtype: "error",
+          is_error: true,
+          result: "Execution stopped by user",
+          duration_ms: elapsedTime * 1000,
+          usage: {
+            input_tokens: totalTokens,
+            output_tokens: 0,
+          },
+        },
+      ]);
     } catch (err) {
       logger.error("Failed to stop agent:", err);
       // Still update UI state even if the backend call failed
       setIsRunning(false);
       setExecutionStartTime(null);
-      
+
       // Show error message
-      setMessages(prev => [...prev, {
-        type: "result",
-        subtype: "error",
-        is_error: true,
-        result: `Failed to stop execution: ${err instanceof Error ? err.message : 'Unknown error'}`,
-        duration_ms: elapsedTime * 1000,
-        usage: {
-          input_tokens: totalTokens,
-          output_tokens: 0
-        }
-      }]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          type: "result",
+          subtype: "error",
+          is_error: true,
+          result: `Failed to stop execution: ${err instanceof Error ? err.message : "Unknown error"}`,
+          duration_ms: elapsedTime * 1000,
+          usage: {
+            input_tokens: totalTokens,
+            output_tokens: 0,
+          },
+        },
+      ]);
     }
   };
 
@@ -428,17 +512,17 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
         return;
       }
     }
-    
+
     // Clean up listeners but don't stop the actual agent process
-    unlistenRefs.current.forEach(unlisten => unlisten());
+    unlistenRefs.current.forEach((unlisten) => unlisten());
     unlistenRefs.current = [];
-    
+
     // Navigate back
     onBack();
   };
 
   const handleCopyAsJsonl = async () => {
-    const jsonl = rawJsonlOutput.join('\n');
+    const jsonl = rawJsonlOutput.join("\n");
     await navigator.clipboard.writeText(jsonl);
     setCopyPopoverOpen(false);
   };
@@ -446,17 +530,17 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
   const handleCopyAsMarkdown = async () => {
     let markdown = `# Agent Execution: ${agent.name}\n\n`;
     markdown += `**Task:** ${task}\n`;
-    markdown += `**Model:** ${model === 'opus' ? 'Claude 4 Opus' : 'Claude 4 Sonnet'}\n`;
+    markdown += `**Model:** ${model === "opus" ? "Claude 4 Opus" : "Claude 4 Sonnet"}\n`;
     markdown += `**Date:** ${new Date().toISOString()}\n\n`;
     markdown += `---\n\n`;
 
     for (const msg of messages) {
       if (msg.type === "system" && msg.subtype === "init") {
         markdown += `## System Initialization\n\n`;
-        markdown += `- Session ID: \`${msg.session_id || 'N/A'}\`\n`;
-        markdown += `- Model: \`${msg.model || 'default'}\`\n`;
+        markdown += `- Session ID: \`${msg.session_id || "N/A"}\`\n`;
+        markdown += `- Model: \`${msg.model || "default"}\`\n`;
         if (msg.cwd) markdown += `- Working Directory: \`${msg.cwd}\`\n`;
-        if (msg.tools?.length) markdown += `- Tools: ${msg.tools.join(', ')}\n`;
+        if (msg.tools?.length) markdown += `- Tools: ${msg.tools.join(", ")}\n`;
         markdown += `\n`;
       } else if (msg.type === "assistant" && msg.message) {
         markdown += `## Assistant\n\n`;
@@ -510,7 +594,8 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
   };
 
   const renderIcon = () => {
-    const Icon = agent.icon in AGENT_ICONS ? AGENT_ICONS[agent.icon as keyof typeof AGENT_ICONS] : Terminal;
+    const Icon =
+      agent.icon in AGENT_ICONS ? AGENT_ICONS[agent.icon as keyof typeof AGENT_ICONS] : Terminal;
     return <Icon className="h-5 w-5" />;
   };
 
@@ -544,7 +629,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
                     <div>
                       <h1 className="text-xl font-bold">Execute: {agent.name}</h1>
                       <p className="text-sm text-muted-foreground">
-                        {model === 'opus' ? 'Claude 4 Opus' : 'Claude 4 Sonnet'}
+                        {model === "opus" ? "Claude 4 Opus" : "Claude 4 Sonnet"}
                       </p>
                     </div>
                   </div>
@@ -564,7 +649,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
             </motion.div>
           </div>
         </div>
-        
+
         {/* Sticky Configuration */}
         <div className="sticky top-[73px] z-10 bg-background border-b border-border">
           <div className="w-full max-w-5xl mx-auto p-4 space-y-4">
@@ -627,11 +712,11 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
                     <span className="flex items-center gap-2">
                       {(() => {
                         const modelNames = {
-                          "haiku": "Claude 3.5 Haiku",
-                          "sonnet-3-5": "Claude 3.5 Sonnet", 
+                          haiku: "Claude 3.5 Haiku",
+                          "sonnet-3-5": "Claude 3.5 Sonnet",
                           "sonnet-3-7": "Claude 3.7 Sonnet",
-                          "sonnet": "Claude 4 Sonnet",
-                          "opus": "Claude 4 Opus"
+                          sonnet: "Claude 4 Sonnet",
+                          opus: "Claude 4 Opus",
                         };
                         return modelNames[model as keyof typeof modelNames] || model;
                       })()}
@@ -646,7 +731,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
                       { id: "sonnet-3-5", name: "Claude 3.5 Sonnet", desc: "Balanced performance" },
                       { id: "sonnet-3-7", name: "Claude 3.7 Sonnet", desc: "Advanced reasoning" },
                       { id: "sonnet", name: "Claude 4 Sonnet", desc: "Fast and efficient" },
-                      { id: "opus", name: "Claude 4 Opus", desc: "Most capable" }
+                      { id: "opus", name: "Claude 4 Opus", desc: "Most capable" },
                     ].map((modelOption) => (
                       <button
                         key={modelOption.id}
@@ -711,7 +796,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
         {/* Scrollable Output Display */}
         <div className="flex-1 overflow-hidden">
           <div className="w-full max-w-5xl mx-auto h-full">
-            <div 
+            <div
               ref={scrollContainerRef}
               className="h-full overflow-y-auto p-6 space-y-8"
               onScroll={() => {
@@ -719,7 +804,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
                 if (!hasUserScrolled) {
                   setHasUserScrolled(true);
                 }
-                
+
                 // If user scrolls back to bottom, re-enable auto-scroll
                 if (isAtBottom()) {
                   setHasUserScrolled(false);
@@ -727,53 +812,53 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
               }}
             >
               <div ref={messagesContainerRef}>
-              {messages.length === 0 && !isRunning && (
-                <div className="flex flex-col items-center justify-center h-full text-center">
-                  <Terminal className="h-16 w-16 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-medium mb-2">Ready to Execute</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Select a project path and enter a task to run the agent
-                  </p>
-                </div>
-              )}
-
-              {isRunning && messages.length === 0 && (
-                <div className="flex items-center justify-center h-full">
-                  <div className="flex items-center gap-3">
-                    <Loader2 className="h-6 w-6 animate-spin" />
-                    <span className="text-sm text-muted-foreground">Initializing agent...</span>
+                {messages.length === 0 && !isRunning && (
+                  <div className="flex flex-col items-center justify-center h-full text-center">
+                    <Terminal className="h-16 w-16 text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-medium mb-2">Ready to Execute</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Select a project path and enter a task to run the agent
+                    </p>
                   </div>
-                </div>
-              )}
+                )}
 
-              <div
-                className="relative w-full"
-                style={{ height: `${rowVirtualizer.getTotalSize()}px` }}
-              >
-                <AnimatePresence>
-                  {rowVirtualizer.getVirtualItems().map((virtualItem) => {
-                    const message = displayableMessages[virtualItem.index];
-                    return (
-                      <motion.div
-                        key={virtualItem.key}
-                        data-index={virtualItem.index}
-                        ref={(el) => el && rowVirtualizer.measureElement(el)}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="absolute inset-x-4 pb-4"
-                        style={{ top: virtualItem.start }}
-                      >
-                        <ErrorBoundary>
-                          <StreamMessage message={message} streamMessages={messages} />
-                        </ErrorBoundary>
-                      </motion.div>
-                    );
-                  })}
-                </AnimatePresence>
-              </div>
-              
-              <div ref={messagesEndRef} />
+                {isRunning && messages.length === 0 && (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="flex items-center gap-3">
+                      <Loader2 className="h-6 w-6 animate-spin" />
+                      <span className="text-sm text-muted-foreground">Initializing agent...</span>
+                    </div>
+                  </div>
+                )}
+
+                <div
+                  className="relative w-full"
+                  style={{ height: `${rowVirtualizer.getTotalSize()}px` }}
+                >
+                  <AnimatePresence>
+                    {rowVirtualizer.getVirtualItems().map((virtualItem) => {
+                      const message = displayableMessages[virtualItem.index];
+                      return (
+                        <motion.div
+                          key={virtualItem.key}
+                          data-index={virtualItem.index}
+                          ref={(el) => el && rowVirtualizer.measureElement(el)}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="absolute inset-x-4 pb-4"
+                          style={{ top: virtualItem.start }}
+                        >
+                          <ErrorBoundary>
+                            <StreamMessage message={message} streamMessages={messages} />
+                          </ErrorBoundary>
+                        </motion.div>
+                      );
+                    })}
+                  </AnimatePresence>
+                </div>
+
+                <div ref={messagesEndRef} />
               </div>
             </div>
           </div>
@@ -806,11 +891,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
             <div className="flex items-center gap-2">
               <Popover
                 trigger={
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="flex items-center gap-2"
-                  >
+                  <Button variant="ghost" size="sm" className="flex items-center gap-2">
                     <Copy className="h-4 w-4" />
                     Copy Output
                     <ChevronDown className="h-3 w-3" />
@@ -854,7 +935,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
 
           {/* Modal Content */}
           <div className="flex-1 overflow-hidden p-6">
-            <div 
+            <div
               ref={fullscreenScrollRef}
               className="h-full overflow-y-auto space-y-8"
               onScroll={() => {
@@ -862,7 +943,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
                 if (!hasUserScrolled) {
                   setHasUserScrolled(true);
                 }
-                
+
                 // If user scrolls back to bottom, re-enable auto-scroll
                 if (isAtBottom()) {
                   setHasUserScrolled(false);
@@ -914,7 +995,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
                   })}
                 </AnimatePresence>
               </div>
-              
+
               <div ref={fullscreenMessagesEndRef} />
             </div>
           </div>
@@ -922,49 +1003,45 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
       )}
 
       {/* Hooks Configuration Dialog */}
-      <Dialog 
-        open={isHooksDialogOpen} 
-        onOpenChange={setIsHooksDialogOpen}
-      >
+      <Dialog open={isHooksDialogOpen} onOpenChange={setIsHooksDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>Configure Hooks</DialogTitle>
             <DialogDescription>
-              Configure hooks that run before, during, and after tool executions. Changes are saved immediately.
+              Configure hooks that run before, during, and after tool executions. Changes are saved
+              immediately.
             </DialogDescription>
           </DialogHeader>
-          
-          <Tabs value={activeHooksTab} onValueChange={setActiveHooksTab} className="flex-1 flex flex-col overflow-hidden">
+
+          <Tabs
+            value={activeHooksTab}
+            onValueChange={setActiveHooksTab}
+            className="flex-1 flex flex-col overflow-hidden"
+          >
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="project">Project Settings</TabsTrigger>
               <TabsTrigger value="local">Local Settings</TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="project" className="flex-1 overflow-auto">
               <div className="space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  Project hooks are stored in <code className="bg-muted px-1 py-0.5 rounded">.claude/settings.json</code> and 
+                  Project hooks are stored in{" "}
+                  <code className="bg-muted px-1 py-0.5 rounded">.claude/settings.json</code> and
                   are committed to version control.
                 </p>
-                <HooksEditor
-                  projectPath={projectPath}
-                  scope="project"
-                  className="border-0"
-                />
+                <HooksEditor projectPath={projectPath} scope="project" className="border-0" />
               </div>
             </TabsContent>
-            
+
             <TabsContent value="local" className="flex-1 overflow-auto">
               <div className="space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  Local hooks are stored in <code className="bg-muted px-1 py-0.5 rounded">.claude/settings.local.json</code> and 
-                  are not committed to version control.
+                  Local hooks are stored in{" "}
+                  <code className="bg-muted px-1 py-0.5 rounded">.claude/settings.local.json</code>{" "}
+                  and are not committed to version control.
                 </p>
-                <HooksEditor
-                  projectPath={projectPath}
-                  scope="local"
-                  className="border-0"
-                />
+                <HooksEditor projectPath={projectPath} scope="local" className="border-0" />
               </div>
             </TabsContent>
           </Tabs>

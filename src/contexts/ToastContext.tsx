@@ -3,18 +3,13 @@
  * 提供全局Toast通知管理
  */
 
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import { Toast, ToastContainer, type ToastType } from '@/components/ui/toast';
-import { AnimatePresence } from 'framer-motion';
+import React, { useState, useCallback, ReactNode } from "react";
+import { Toast, ToastContainer } from "@/components/ui/toast";
+import { AnimatePresence } from "framer-motion";
+import { generateToastId } from "./toastUtils";
+import { ToastContext, type ToastType, type ToastItem } from "./contexts";
 
-interface ToastItem {
-  id: string;
-  message: string;
-  type: ToastType;
-  duration?: number;
-}
-
-interface ToastContextValue {
+type ToastContextValue = {
   showToast: (message: string, type?: ToastType, duration?: number) => void;
   showSuccess: (message: string, duration?: number) => void;
   showError: (message: string, duration?: number) => void;
@@ -23,52 +18,51 @@ interface ToastContextValue {
   clearAllToasts: () => void;
 }
 
-const ToastContext = createContext<ToastContextValue | undefined>(undefined);
-
 interface ToastProviderProps {
   children: ReactNode;
   maxToasts?: number;
 }
 
-export const ToastProvider: React.FC<ToastProviderProps> = ({ 
-  children, 
-  maxToasts = 3 
-}) => {
+export const ToastProvider: React.FC<ToastProviderProps> = ({ children, maxToasts = 3 }) => {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
-  const generateId = useCallback(() => {
-    return `toast_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  }, []);
+  const showToast = useCallback(
+    (message: string, type: ToastType = "info", duration = 3000) => {
+      const id = generateToastId();
+      const newToast: ToastItem = { id, message, type, duration };
 
-  const showToast = useCallback((
-    message: string, 
-    type: ToastType = 'info', 
-    duration = 3000
-  ) => {
-    const id = generateId();
-    const newToast: ToastItem = { id, message, type, duration };
+      setToasts((prev) => {
+        const updated = [newToast, ...prev];
+        // 限制最大Toast数量
+        return updated.slice(0, maxToasts);
+      });
+    },
+    [maxToasts]
+  );
 
-    setToasts(prev => {
-      const updated = [newToast, ...prev];
-      // 限制最大Toast数量
-      return updated.slice(0, maxToasts);
-    });
-  }, [generateId, maxToasts]);
+  const showSuccess = useCallback(
+    (message: string, duration?: number) => {
+      showToast(message, "success", duration);
+    },
+    [showToast]
+  );
 
-  const showSuccess = useCallback((message: string, duration?: number) => {
-    showToast(message, 'success', duration);
-  }, [showToast]);
+  const showError = useCallback(
+    (message: string, duration?: number) => {
+      showToast(message, "error", duration);
+    },
+    [showToast]
+  );
 
-  const showError = useCallback((message: string, duration?: number) => {
-    showToast(message, 'error', duration);
-  }, [showToast]);
-
-  const showInfo = useCallback((message: string, duration?: number) => {
-    showToast(message, 'info', duration);
-  }, [showToast]);
+  const showInfo = useCallback(
+    (message: string, duration?: number) => {
+      showToast(message, "info", duration);
+    },
+    [showToast]
+  );
 
   const dismissToast = useCallback((id: string) => {
-    setToasts(prev => prev.filter(toast => toast.id !== id));
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
   }, []);
 
   const clearAllToasts = useCallback(() => {
@@ -81,7 +75,7 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({
     showError,
     showInfo,
     dismissToast,
-    clearAllToasts
+    clearAllToasts,
   };
 
   return (
@@ -89,7 +83,7 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({
       {children}
       <ToastContainer>
         <AnimatePresence mode="sync">
-          {toasts.map(toast => (
+          {toasts.map((toast) => (
             <Toast
               key={toast.id}
               message={toast.message}
@@ -103,14 +97,6 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({
       </ToastContainer>
     </ToastContext.Provider>
   );
-};
-
-export const useToast = (): ToastContextValue => {
-  const context = useContext(ToastContext);
-  if (!context) {
-    throw new Error('useToast must be used within a ToastProvider');
-  }
-  return context;
 };
 
 export default ToastProvider;

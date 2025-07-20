@@ -16,12 +16,12 @@ interface ExecutionControlBarProps {
  * Floating control bar shown during agent execution
  * Provides stop functionality and real-time statistics
  */
-export const ExecutionControlBar: React.FC<ExecutionControlBarProps> = ({ 
-  isExecuting, 
-  onStop, 
+export const ExecutionControlBar: React.FC<ExecutionControlBarProps> = ({
+  isExecuting,
+  onStop,
   totalTokens = 0,
   elapsedTime = 0,
-  className 
+  className,
 }) => {
   // Format elapsed time
   const formatTime = (seconds: number) => {
@@ -86,12 +86,7 @@ export const ExecutionControlBar: React.FC<ExecutionControlBarProps> = ({
           <div className="h-4 w-px bg-border" />
 
           {/* Stop button */}
-          <Button
-            size="sm"
-            variant="destructive"
-            onClick={onStop}
-            className="gap-2"
-          >
+          <Button size="sm" variant="destructive" onClick={onStop} className="gap-2">
             <StopCircle className="h-3.5 w-3.5" />
             Stop
           </Button>
@@ -99,4 +94,4 @@ export const ExecutionControlBar: React.FC<ExecutionControlBarProps> = ({
       )}
     </AnimatePresence>
   );
-}; 
+};

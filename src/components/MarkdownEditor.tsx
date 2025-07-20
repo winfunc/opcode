@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import MDEditor from "@uiw/react-md-editor";
 import { motion } from "framer-motion";
 import { ArrowLeft, Save, Loader2 } from "lucide-react";
@@ -7,7 +7,7 @@ import { Toast, ToastContainer } from "@/components/ui/toast";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
-import { handleError } from '@/lib/errorHandler';
+import { handleError } from "@/lib/errorHandler";
 interface MarkdownEditorProps {
   /**
    * Callback to go back to the main view
@@ -21,14 +21,11 @@ interface MarkdownEditorProps {
 
 /**
  * MarkdownEditor component for editing the CLAUDE.md system prompt
- * 
+ *
  * @example
  * <MarkdownEditor onBack={() => setView('main')} />
  */
-export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
-  onBack,
-  className,
-}) => {
+export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({ onBack, className }) => {
   const { t } = useI18n();
   const [content, setContent] = useState<string>("");
   const [originalContent, setOriginalContent] = useState<string>("");
@@ -36,15 +33,11 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
-  
+
   const hasChanges = content !== originalContent;
-  
+
   // Load the system prompt on mount
-  useEffect(() => {
-    loadSystemPrompt();
-  }, []);
-  
-  const loadSystemPrompt = async () => {
+  const loadSystemPrompt = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -57,8 +50,12 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
     } finally {
       setLoading(false);
     }
-  };
-  
+  }, [t.claudemd.failedToLoad]);
+
+  useEffect(() => {
+    loadSystemPrompt();
+  }, [loadSystemPrompt]);
+
   const handleSave = async () => {
     try {
       setSaving(true);
@@ -75,17 +72,15 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
       setSaving(false);
     }
   };
-  
+
   const handleBack = () => {
     if (hasChanges) {
-      const confirmLeave = window.confirm(
-        t.claudemd.unsavedChanges
-      );
+      const confirmLeave = window.confirm(t.claudemd.unsavedChanges);
       if (!confirmLeave) return;
     }
     onBack();
   };
-  
+
   return (
     <div className={cn("flex flex-col h-full bg-background", className)}>
       <div className="w-full max-w-5xl mx-auto flex flex-col h-full">
@@ -97,27 +92,16 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
           className="flex items-center justify-between p-4 border-b border-border"
         >
           <div className="flex items-center space-x-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleBack}
-              className="h-8 w-8"
-            >
+            <Button variant="ghost" size="icon" onClick={handleBack} className="h-8 w-8">
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div>
               <h2 className="text-lg font-semibold">{t.claudemd.title}</h2>
-              <p className="text-xs text-muted-foreground">
-                {t.claudemd.editSystemPrompt}
-              </p>
+              <p className="text-xs text-muted-foreground">{t.claudemd.editSystemPrompt}</p>
             </div>
           </div>
-          
-          <Button
-            onClick={handleSave}
-            disabled={!hasChanges || saving}
-            size="sm"
-          >
+
+          <Button onClick={handleSave} disabled={!hasChanges || saving} size="sm">
             {saving ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
@@ -126,7 +110,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
             {saving ? t.common.loading : t.common.save}
           </Button>
         </motion.div>
-        
+
         {/* Error display */}
         {error && (
           <motion.div
@@ -137,7 +121,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
             {error}
           </motion.div>
         )}
-        
+
         {/* Editor */}
         <div className="flex-1 p-4 overflow-hidden">
           {loading ? (
@@ -145,7 +129,10 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : (
-            <div className="h-full rounded-lg border border-border overflow-hidden shadow-sm" data-color-mode="dark">
+            <div
+              className="h-full rounded-lg border border-border overflow-hidden shadow-sm"
+              data-color-mode="dark"
+            >
               <MDEditor
                 value={content}
                 onChange={(val) => setContent(val || "")}
@@ -157,17 +144,13 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
           )}
         </div>
       </div>
-      
+
       {/* Toast Notification */}
       <ToastContainer>
         {toast && (
-          <Toast
-            message={toast.message}
-            type={toast.type}
-            onDismiss={() => setToast(null)}
-          />
+          <Toast message={toast.message} type={toast.type} onDismiss={() => setToast(null)} />
         )}
       </ToastContainer>
     </div>
   );
-}; 
+};

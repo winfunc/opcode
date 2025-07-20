@@ -1,19 +1,19 @@
-import { createContext, useContext } from 'react';
+import { createContext, useContext } from "react";
 
 // 支持的语言列表
 export const SUPPORTED_LANGUAGES = {
-  en: 'English',
-  zh: '中文',
-  ja: '日本語',
-  ko: '한국어',
-  es: 'Español',
-  fr: 'Français',
-  de: 'Deutsch',
-  ru: 'Русский',
-  pt: 'Português',
-  it: 'Italiano',
-  ar: 'العربية',
-  hi: 'हिन्दी'
+  en: "English",
+  zh: "中文",
+  ja: "日本語",
+  ko: "한국어",
+  es: "Español",
+  fr: "Français",
+  de: "Deutsch",
+  ru: "Русский",
+  pt: "Português",
+  it: "Italiano",
+  ar: "العربية",
+  hi: "हिन्दी",
 } as const;
 
 export type Language = keyof typeof SUPPORTED_LANGUAGES;
@@ -170,7 +170,7 @@ export interface Translations {
     saving: string;
     settingsSaved: string;
     failedToSave: string;
-    
+
     // 标签页
     general: string;
     permissions: string;
@@ -179,7 +179,7 @@ export interface Translations {
     hooks: string;
     commands: string;
     storage: string;
-    
+
     // 通用设置
     generalSettings: string;
     includeCoAuthoredBy: string;
@@ -211,7 +211,7 @@ export interface Translations {
     noInstallationsFound: string;
     validating: string;
     binaryPathChanged: string;
-    
+
     // 权限设置
     permissionRules: string;
     permissionRulesDesc: string;
@@ -221,14 +221,14 @@ export interface Translations {
     noAllowRules: string;
     noDenyRules: string;
     permissionExamples: string;
-    
+
     // 环境变量
     environmentVariables: string;
     environmentVariablesDesc: string;
     addVariable: string;
     noEnvironmentVariables: string;
     commonVariables: string;
-    
+
     // 高级设置
     advancedSettings: string;
     advancedSettingsDesc: string;
@@ -236,23 +236,23 @@ export interface Translations {
     apiKeyHelperDesc: string;
     rawSettings: string;
     rawSettingsDesc: string;
-    
+
     // Hooks设置
     userHooks: string;
     userHooksDesc: string;
-    
+
     // 权限示例
     allowAllBashCommands: string;
     allowExactCommand: string;
     allowCommandsWithPrefix: string;
     allowReadingSpecificFile: string;
     allowEditingFilesInDocsDirectory: string;
-    
+
     // 环境变量示例
     enableDisableTelemetry: string;
     customModelName: string;
     disableCostWarnings: string;
-    
+
     // 其他缺失的键
     examples: string;
     failedToLoadSettings: string;
@@ -776,7 +776,7 @@ export interface Translations {
     autoCleanupDesc: string;
     enableAutoCleanup: string;
     cleanupInterval: string;
-    
+
     // 数据库存储特定翻译
     databaseStorage: string;
     sqlQuery: string;
@@ -842,24 +842,28 @@ export const I18nContext = createContext<I18nContextType | undefined>(undefined)
 export const useI18n = (): I18nContextType => {
   const context = useContext(I18nContext);
   if (!context) {
-    throw new Error('useI18n must be used within an I18nProvider');
+    throw new Error("useI18n must be used within an I18nProvider");
   }
   return context;
 };
 
 // 获取浏览器语言
 export const getBrowserLanguage = (): Language => {
-  const browserLang = navigator.language.split('-')[0] as Language;
-  return Object.keys(SUPPORTED_LANGUAGES).includes(browserLang) ? browserLang : 'en';
+  const browserLang = navigator.language.split("-")[0] as Language;
+  return Object.keys(SUPPORTED_LANGUAGES).includes(browserLang) ? browserLang : "en";
 };
 
 // 检查是否为RTL语言
 export const isRTLLanguage = (language: Language): boolean => {
-  return ['ar'].includes(language);
+  return ["ar"].includes(language);
 };
 
 // 格式化相对时间
-export const formatRelativeTime = (timestamp: number, _language: Language, translations: Translations): string => {
+export const formatRelativeTime = (
+  timestamp: number,
+  _language: Language,
+  translations: Translations
+): string => {
   const now = Date.now();
   const diff = now - timestamp;
   const seconds = Math.floor(diff / 1000);
@@ -868,7 +872,7 @@ export const formatRelativeTime = (timestamp: number, _language: Language, trans
   const days = Math.floor(hours / 24);
 
   if (seconds < 60) return translations.time.justNow;
-  if (minutes < 60) return translations.time.minutesAgo.replace('{count}', minutes.toString());
-  if (hours < 24) return translations.time.hoursAgo.replace('{count}', hours.toString());
-  return translations.time.daysAgo.replace('{count}', days.toString());
+  if (minutes < 60) return translations.time.minutesAgo.replace("{count}", minutes.toString());
+  if (hours < 24) return translations.time.hoursAgo.replace("{count}", hours.toString());
+  return translations.time.daysAgo.replace("{count}", days.toString());
 };

@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Plus, 
-  Trash2, 
+import {
+  Plus,
+  Trash2,
   Edit,
   Save,
   Command,
@@ -16,7 +16,7 @@ import {
   Loader2,
   Search,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,17 +24,29 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { api, type SlashCommand } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { COMMON_TOOL_MATCHERS } from "@/types/hooks";
 import { useI18n } from "@/lib/i18n";
-import { handleError } from '@/lib/errorHandler';
+import { handleError } from "@/lib/errorHandler";
 interface SlashCommandsManagerProps {
   projectPath?: string;
   className?: string;
-  scopeFilter?: 'project' | 'user' | 'all';
+  scopeFilter?: "project" | "user" | "all";
 }
 
 interface CommandForm {
@@ -43,34 +55,37 @@ interface CommandForm {
   content: string;
   description: string;
   allowedTools: string[];
-  scope: 'project' | 'user';
+  scope: "project" | "user";
 }
 
 const EXAMPLE_COMMANDS = [
   {
     name: "review",
     description: "Review code for best practices",
-    content: "Review the following code for best practices, potential issues, and improvements:\n\n@$ARGUMENTS",
-    allowedTools: ["Read", "Grep"]
+    content:
+      "Review the following code for best practices, potential issues, and improvements:\n\n@$ARGUMENTS",
+    allowedTools: ["Read", "Grep"],
   },
   {
     name: "explain",
     description: "Explain how something works",
-    content: "Explain how $ARGUMENTS works in detail, including its purpose, implementation, and usage examples.",
-    allowedTools: ["Read", "Grep", "WebSearch"]
+    content:
+      "Explain how $ARGUMENTS works in detail, including its purpose, implementation, and usage examples.",
+    allowedTools: ["Read", "Grep", "WebSearch"],
   },
   {
     name: "fix-issue",
     description: "Fix a specific issue",
     content: "Fix issue #$ARGUMENTS following our coding standards and best practices.",
-    allowedTools: ["Read", "Edit", "MultiEdit", "Write"]
+    allowedTools: ["Read", "Edit", "MultiEdit", "Write"],
   },
   {
     name: "test",
     description: "Write tests for code",
-    content: "Write comprehensive tests for:\n\n@$ARGUMENTS\n\nInclude unit tests, edge cases, and integration tests where appropriate.",
-    allowedTools: ["Read", "Write", "Edit"]
-  }
+    content:
+      "Write comprehensive tests for:\n\n@$ARGUMENTS\n\nInclude unit tests, edge cases, and integration tests where appropriate.",
+    allowedTools: ["Read", "Write", "Edit"],
+  },
 ];
 
 // Get icon for command based on its properties
@@ -90,7 +105,7 @@ const getCommandIcon = (command: SlashCommand) => {
 export const SlashCommandsManager: React.FC<SlashCommandsManagerProps> = ({
   projectPath,
   className,
-  scopeFilter = 'all',
+  scopeFilter = "all",
 }) => {
   const { t } = useI18n();
   const [commands, setCommands] = useState<SlashCommand[]>([]);
@@ -98,9 +113,11 @@ export const SlashCommandsManager: React.FC<SlashCommandsManagerProps> = ({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedScope, setSelectedScope] = useState<'all' | 'project' | 'user'>(scopeFilter === 'all' ? 'all' : scopeFilter as 'project' | 'user');
+  const [selectedScope, setSelectedScope] = useState<"all" | "project" | "user">(
+    scopeFilter === "all" ? "all" : (scopeFilter as "project" | "user")
+  );
   const [expandedCommands, setExpandedCommands] = useState<Set<string>>(new Set());
-  
+
   // Edit dialog state
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingCommand, setEditingCommand] = useState<SlashCommand | null>(null);
@@ -110,7 +127,7 @@ export const SlashCommandsManager: React.FC<SlashCommandsManagerProps> = ({
     content: "",
     description: "",
     allowedTools: [],
-    scope: 'user'
+    scope: "user",
   });
 
   // Delete confirmation dialog state
@@ -121,9 +138,9 @@ export const SlashCommandsManager: React.FC<SlashCommandsManagerProps> = ({
   // Load commands on mount
   useEffect(() => {
     loadCommands();
-  }, [projectPath]);
+  }, [projectPath]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const loadCommands = async () => {
+  const loadCommands = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -135,7 +152,7 @@ export const SlashCommandsManager: React.FC<SlashCommandsManagerProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [projectPath, t.messages.saveError]);
 
   const handleCreateNew = () => {
     setEditingCommand(null);
@@ -145,7 +162,7 @@ export const SlashCommandsManager: React.FC<SlashCommandsManagerProps> = ({
       content: "",
       description: "",
       allowedTools: [],
-      scope: scopeFilter !== 'all' ? scopeFilter : (projectPath ? 'project' : 'user')
+      scope: scopeFilter !== "all" ? scopeFilter : projectPath ? "project" : "user",
     });
     setEditDialogOpen(true);
   };
@@ -158,7 +175,7 @@ export const SlashCommandsManager: React.FC<SlashCommandsManagerProps> = ({
       content: command.content,
       description: command.description || "",
       allowedTools: command.allowed_tools,
-      scope: command.scope as 'project' | 'user'
+      scope: command.scope as "project" | "user",
     });
     setEditDialogOpen(true);
   };
@@ -175,7 +192,7 @@ export const SlashCommandsManager: React.FC<SlashCommandsManagerProps> = ({
         commandForm.content,
         commandForm.description || undefined,
         commandForm.allowedTools,
-        commandForm.scope === 'project' ? projectPath : undefined
+        commandForm.scope === "project" ? projectPath : undefined
       );
 
       setEditDialogOpen(false);
@@ -218,7 +235,7 @@ export const SlashCommandsManager: React.FC<SlashCommandsManagerProps> = ({
   };
 
   const toggleExpanded = (commandId: string) => {
-    setExpandedCommands(prev => {
+    setExpandedCommands((prev) => {
       const next = new Set(prev);
       if (next.has(commandId)) {
         next.delete(commandId);
@@ -230,38 +247,38 @@ export const SlashCommandsManager: React.FC<SlashCommandsManagerProps> = ({
   };
 
   const handleToolToggle = (tool: string) => {
-    setCommandForm(prev => ({
+    setCommandForm((prev) => ({
       ...prev,
       allowedTools: prev.allowedTools.includes(tool)
-        ? prev.allowedTools.filter(t => t !== tool)
-        : [...prev.allowedTools, tool]
+        ? prev.allowedTools.filter((t) => t !== tool)
+        : [...prev.allowedTools, tool],
     }));
   };
 
-  const applyExample = (example: typeof EXAMPLE_COMMANDS[0]) => {
-    setCommandForm(prev => ({
+  const applyExample = (example: (typeof EXAMPLE_COMMANDS)[0]) => {
+    setCommandForm((prev) => ({
       ...prev,
       name: example.name,
       description: example.description,
       content: example.content,
-      allowedTools: example.allowedTools
+      allowedTools: example.allowedTools,
     }));
   };
 
   // Filter commands
-  const filteredCommands = commands.filter(cmd => {
+  const filteredCommands = commands.filter((cmd) => {
     // Hide default commands
-    if (cmd.scope === 'default') {
+    if (cmd.scope === "default") {
       return false;
     }
 
     // Apply scopeFilter if set to specific scope
-    if (scopeFilter !== 'all' && cmd.scope !== scopeFilter) {
+    if (scopeFilter !== "all" && cmd.scope !== scopeFilter) {
       return false;
     }
 
     // Scope filter
-    if (selectedScope !== 'all' && cmd.scope !== selectedScope) {
+    if (selectedScope !== "all" && cmd.scope !== selectedScope) {
       return false;
     }
 
@@ -280,16 +297,19 @@ export const SlashCommandsManager: React.FC<SlashCommandsManagerProps> = ({
   });
 
   // Group commands by namespace and scope
-  const groupedCommands = filteredCommands.reduce((acc, cmd) => {
-    const key = cmd.namespace 
-      ? `${cmd.namespace} (${cmd.scope})` 
-      : `${cmd.scope === 'project' ? t.commands.project : t.commands.user} ${t.commands.title}`;
-    if (!acc[key]) {
-      acc[key] = [];
-    }
-    acc[key].push(cmd);
-    return acc;
-  }, {} as Record<string, SlashCommand[]>);
+  const groupedCommands = filteredCommands.reduce(
+    (acc, cmd) => {
+      const key = cmd.namespace
+        ? `${cmd.namespace} (${cmd.scope})`
+        : `${cmd.scope === "project" ? t.commands.project : t.commands.user} ${t.commands.title}`;
+      if (!acc[key]) {
+        acc[key] = [];
+      }
+      acc[key].push(cmd);
+      return acc;
+    },
+    {} as Record<string, SlashCommand[]>
+  );
 
   return (
     <div className={cn("space-y-4", className)}>
@@ -297,12 +317,10 @@ export const SlashCommandsManager: React.FC<SlashCommandsManagerProps> = ({
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold">
-            {scopeFilter === 'project' ? t.commands.projectCommands : t.commands.title}
+            {scopeFilter === "project" ? t.commands.projectCommands : t.commands.title}
           </h3>
           <p className="text-sm text-muted-foreground mt-1">
-            {scopeFilter === 'project' 
-              ? t.commands.projectCommandsDesc 
-              : t.commands.subtitle}
+            {scopeFilter === "project" ? t.commands.projectCommandsDesc : t.commands.subtitle}
           </p>
         </div>
         <Button onClick={handleCreateNew} size="sm" className="gap-2">
@@ -324,8 +342,8 @@ export const SlashCommandsManager: React.FC<SlashCommandsManagerProps> = ({
             />
           </div>
         </div>
-        {scopeFilter === 'all' && (
-          <Select value={selectedScope} onValueChange={(value: any) => setSelectedScope(value)}>
+        {scopeFilter === "all" && (
+          <Select value={selectedScope} onValueChange={(value) => setSelectedScope(value as "user" | "project" | "all")}>
             <SelectTrigger className="w-[150px]">
               <SelectValue />
             </SelectTrigger>
@@ -356,16 +374,16 @@ export const SlashCommandsManager: React.FC<SlashCommandsManagerProps> = ({
           <div className="text-center">
             <Command className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <p className="text-sm text-muted-foreground">
-              {searchQuery 
-                ? t.commands.noCommandsFound 
-                : scopeFilter === 'project' 
-                  ? t.commands.noProjectCommands 
+              {searchQuery
+                ? t.commands.noCommandsFound
+                : scopeFilter === "project"
+                  ? t.commands.noProjectCommands
                   : t.commands.noCommandsCreated}
             </p>
             {!searchQuery && (
               <Button onClick={handleCreateNew} variant="outline" size="sm" className="mt-4">
-                {scopeFilter === 'project' 
-                  ? t.commands.createFirstProjectCommand 
+                {scopeFilter === "project"
+                  ? t.commands.createFirstProjectCommand
                   : t.commands.createFirstCommand}
               </Button>
             )}
@@ -376,22 +394,20 @@ export const SlashCommandsManager: React.FC<SlashCommandsManagerProps> = ({
           {Object.entries(groupedCommands).map(([groupKey, groupCommands]) => (
             <Card key={groupKey} className="overflow-hidden">
               <div className="p-4 bg-muted/50 border-b">
-                <h4 className="text-sm font-medium">
-                  {groupKey}
-                </h4>
+                <h4 className="text-sm font-medium">{groupKey}</h4>
               </div>
-              
+
               <div className="divide-y">
                 {groupCommands.map((command) => {
                   const Icon = getCommandIcon(command);
                   const isExpanded = expandedCommands.has(command.id);
-                  
+
                   return (
                     <div key={command.id}>
                       <div className="p-4">
                         <div className="flex items-start gap-4">
                           <Icon className="h-5 w-5 mt-0.5 text-muted-foreground flex-shrink-0" />
-                          
+
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
                               <code className="text-sm font-mono text-primary">
@@ -403,32 +419,35 @@ export const SlashCommandsManager: React.FC<SlashCommandsManagerProps> = ({
                                 </Badge>
                               )}
                             </div>
-                            
+
                             {command.description && (
                               <p className="text-sm text-muted-foreground mb-2">
                                 {command.description}
                               </p>
                             )}
-                            
+
                             <div className="flex items-center gap-4 text-xs">
                               {command.allowed_tools.length > 0 && (
                                 <span className="text-muted-foreground">
-                                  {command.allowed_tools.length} {command.allowed_tools.length === 1 ? t.commands.tools.slice(0, -1) : t.commands.tools}
+                                  {command.allowed_tools.length}{" "}
+                                  {command.allowed_tools.length === 1
+                                    ? t.commands.tools.slice(0, -1)
+                                    : t.commands.tools}
                                 </span>
                               )}
-                              
+
                               {command.has_bash_commands && (
                                 <Badge variant="outline" className="text-xs">
                                   {t.commands.bash}
                                 </Badge>
                               )}
-                              
+
                               {command.has_file_references && (
                                 <Badge variant="outline" className="text-xs">
                                   {t.commands.files}
                                 </Badge>
                               )}
-                              
+
                               <button
                                 onClick={() => toggleExpanded(command.id)}
                                 className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
@@ -447,7 +466,7 @@ export const SlashCommandsManager: React.FC<SlashCommandsManagerProps> = ({
                               </button>
                             </div>
                           </div>
-                          
+
                           <div className="flex items-center gap-2">
                             <Button
                               variant="ghost"
@@ -467,7 +486,7 @@ export const SlashCommandsManager: React.FC<SlashCommandsManagerProps> = ({
                             </Button>
                           </div>
                         </div>
-                        
+
                         <AnimatePresence>
                           {isExpanded && (
                             <motion.div
@@ -508,16 +527,20 @@ export const SlashCommandsManager: React.FC<SlashCommandsManagerProps> = ({
             {/* Scope */}
             <div className="space-y-2">
               <Label>{t.commands.scope}</Label>
-              <Select 
-                value={commandForm.scope} 
-                onValueChange={(value: 'project' | 'user') => setCommandForm(prev => ({ ...prev, scope: value }))}
-                disabled={scopeFilter !== 'all' || (!projectPath && commandForm.scope === 'project')}
+              <Select
+                value={commandForm.scope}
+                onValueChange={(value: "project" | "user") =>
+                  setCommandForm((prev) => ({ ...prev, scope: value }))
+                }
+                disabled={
+                  scopeFilter !== "all" || (!projectPath && commandForm.scope === "project")
+                }
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {(scopeFilter === 'all' || scopeFilter === 'user') && (
+                  {(scopeFilter === "all" || scopeFilter === "user") && (
                     <SelectItem value="user">
                       <div className="flex items-center gap-2">
                         <Globe className="h-4 w-4" />
@@ -525,7 +548,7 @@ export const SlashCommandsManager: React.FC<SlashCommandsManagerProps> = ({
                       </div>
                     </SelectItem>
                   )}
-                  {(scopeFilter === 'all' || scopeFilter === 'project') && (
+                  {(scopeFilter === "all" || scopeFilter === "project") && (
                     <SelectItem value="project" disabled={!projectPath}>
                       <div className="flex items-center gap-2">
                         <FolderOpen className="h-4 w-4" />
@@ -536,8 +559,8 @@ export const SlashCommandsManager: React.FC<SlashCommandsManagerProps> = ({
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                {commandForm.scope === 'user' 
-                  ? t.commands.availableAcrossProjects 
+                {commandForm.scope === "user"
+                  ? t.commands.availableAcrossProjects
                   : t.commands.onlyAvailableInProject}
               </p>
             </div>
@@ -549,16 +572,18 @@ export const SlashCommandsManager: React.FC<SlashCommandsManagerProps> = ({
                 <Input
                   placeholder={t.commands.commandNamePlaceholder}
                   value={commandForm.name}
-                  onChange={(e) => setCommandForm(prev => ({ ...prev, name: e.target.value }))}
+                  onChange={(e) => setCommandForm((prev) => ({ ...prev, name: e.target.value }))}
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label>{t.commands.namespace}</Label>
                 <Input
                   placeholder={t.commands.namespacePlaceholder}
                   value={commandForm.namespace}
-                  onChange={(e) => setCommandForm(prev => ({ ...prev, namespace: e.target.value }))}
+                  onChange={(e) =>
+                    setCommandForm((prev) => ({ ...prev, namespace: e.target.value }))
+                  }
                 />
               </div>
             </div>
@@ -569,7 +594,9 @@ export const SlashCommandsManager: React.FC<SlashCommandsManagerProps> = ({
               <Input
                 placeholder={t.commands.descriptionPlaceholder}
                 value={commandForm.description}
-                onChange={(e) => setCommandForm(prev => ({ ...prev, description: e.target.value }))}
+                onChange={(e) =>
+                  setCommandForm((prev) => ({ ...prev, description: e.target.value }))
+                }
               />
             </div>
 
@@ -579,12 +606,10 @@ export const SlashCommandsManager: React.FC<SlashCommandsManagerProps> = ({
               <Textarea
                 placeholder={t.commands.contentPlaceholder}
                 value={commandForm.content}
-                onChange={(e) => setCommandForm(prev => ({ ...prev, content: e.target.value }))}
+                onChange={(e) => setCommandForm((prev) => ({ ...prev, content: e.target.value }))}
                 className="min-h-[150px] font-mono text-sm"
               />
-              <p className="text-xs text-muted-foreground">
-                {t.commands.contentDesc}
-              </p>
+              <p className="text-xs text-muted-foreground">{t.commands.contentDesc}</p>
             </div>
 
             {/* Allowed Tools */}
@@ -603,9 +628,7 @@ export const SlashCommandsManager: React.FC<SlashCommandsManagerProps> = ({
                   </Button>
                 ))}
               </div>
-              <p className="text-xs text-muted-foreground">
-                {t.commands.allowedToolsDesc}
-              </p>
+              <p className="text-xs text-muted-foreground">{t.commands.allowedToolsDesc}</p>
             </div>
 
             {/* Examples */}
@@ -635,10 +658,9 @@ export const SlashCommandsManager: React.FC<SlashCommandsManagerProps> = ({
                 <Label>{t.commands.preview}</Label>
                 <div className="p-3 bg-muted rounded-md">
                   <code className="text-sm">
-                    /
-                    {commandForm.namespace && `${commandForm.namespace}:`}
+                    /{commandForm.namespace && `${commandForm.namespace}:`}
                     {commandForm.name}
-                    {commandForm.content.includes('$ARGUMENTS') && ` [${t.commands.arguments}]`}
+                    {commandForm.content.includes("$ARGUMENTS") && ` [${t.commands.arguments}]`}
                   </code>
                 </div>
               </div>
@@ -682,24 +704,20 @@ export const SlashCommandsManager: React.FC<SlashCommandsManagerProps> = ({
               <div className="p-3 bg-muted rounded-md">
                 <code className="text-sm font-mono">{commandToDelete.full_command}</code>
                 {commandToDelete.description && (
-                  <p className="text-sm text-muted-foreground mt-1">{commandToDelete.description}</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {commandToDelete.description}
+                  </p>
                 )}
               </div>
             )}
-            <p className="text-sm text-muted-foreground">
-              {t.commands.deleteCommandDesc}
-            </p>
+            <p className="text-sm text-muted-foreground">{t.commands.deleteCommandDesc}</p>
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={cancelDelete} disabled={deleting}>
               {t.common.cancel}
             </Button>
-            <Button
-              variant="destructive"
-              onClick={confirmDelete}
-              disabled={deleting}
-            >
+            <Button variant="destructive" onClick={confirmDelete} disabled={deleting}>
               {deleting ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -717,4 +735,4 @@ export const SlashCommandsManager: React.FC<SlashCommandsManagerProps> = ({
       </Dialog>
     </div>
   );
-}; 
+};

@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Plus, 
-  Edit, 
-  Trash2, 
+import {
+  Plus,
+  Edit,
+  Trash2,
   Play,
   Bot,
   ArrowLeft,
@@ -12,9 +12,9 @@ import {
   Upload,
   Globe,
   FileJson,
-  ChevronDown
+  ChevronDown,
 } from "lucide-react";
-import { useI18n } from '@/lib/i18n';
+import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import {
@@ -40,8 +40,8 @@ import { CreateAgent } from "./CreateAgent";
 import { AgentExecution } from "./AgentExecution";
 import { AgentRunsList } from "./AgentRunsList";
 import { GitHubAgentBrowser } from "./GitHubAgentBrowser";
-import { ICON_MAP } from "./IconPicker";
-import { handleError } from '@/lib/errorHandler';
+import { AGENT_ICONS } from "@/constants/agentIcons";
+import { handleError } from "@/lib/errorHandler";
 interface CCAgentsProps {
   /**
    * Callback to go back to the main view
@@ -53,14 +53,11 @@ interface CCAgentsProps {
   className?: string;
 }
 
-// Available icons for agents - now using all icons from IconPicker
-export const AGENT_ICONS = ICON_MAP;
-
 export type AgentIconName = keyof typeof AGENT_ICONS;
 
 /**
  * CCAgents component for managing Claude Code agents
- * 
+ *
  * @example
  * <CCAgents onBack={() => setView('home')} />
  */
@@ -83,12 +80,7 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
 
   const AGENTS_PER_PAGE = 9; // 3x3 grid
 
-  useEffect(() => {
-    loadAgents();
-    loadRuns();
-  }, []);
-
-  const loadAgents = async () => {
+  const loadAgents = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -101,7 +93,12 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [t.agents.failedToLoadAgents]);
+
+  useEffect(() => {
+    loadAgents();
+    loadRuns();
+  }, [loadAgents]);
 
   const loadRuns = async () => {
     try {
@@ -193,24 +190,26 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
     try {
       // Show native save dialog
       const filePath = await save({
-        defaultPath: `${agent.name.toLowerCase().replace(/\s+/g, '-')}.claudia.json`,
-        filters: [{
-          name: 'Claudia Agent',
-          extensions: ['claudia.json']
-        }]
+        defaultPath: `${agent.name.toLowerCase().replace(/\s+/g, "-")}.claudia.json`,
+        filters: [
+          {
+            name: "Claudia Agent",
+            extensions: ["claudia.json"],
+          },
+        ],
       });
-      
+
       if (!filePath) {
         // User cancelled the dialog
         return;
       }
-      
+
       // Export the agent to the selected file
-      await invoke('export_agent_to_file', { 
-        id: agent.id!,
-        filePath 
+      await invoke("export_agent_to_file", {
+        id: agent.id ?? 0,
+        filePath,
       });
-      
+
       setToast({ message: t.agents.agentExportedSuccessfully, type: "success" });
     } catch (err) {
       await handleError("Failed to export agent:", { context: err });
@@ -223,20 +222,22 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
       // Show native open dialog
       const filePath = await open({
         multiple: false,
-        filters: [{
-          name: 'Claudia Agent',
-          extensions: ['claudia.json', 'json']
-        }]
+        filters: [
+          {
+            name: "Claudia Agent",
+            extensions: ["claudia.json", "json"],
+          },
+        ],
       });
-      
+
       if (!filePath) {
         // User cancelled the dialog
         return;
       }
-      
+
       // Import the agent from the selected file
       await api.importAgentFromFile(filePath as string);
-      
+
       setToast({ message: t.agents.agentImportedSuccessfully, type: "success" });
       await loadAgents();
     } catch (err) {
@@ -257,12 +258,7 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
   };
 
   if (view === "create") {
-    return (
-      <CreateAgent
-        onBack={() => setView("list")}
-        onAgentCreated={handleAgentCreated}
-      />
-    );
+    return <CreateAgent onBack={() => setView("list")} onAgentCreated={handleAgentCreated} />;
   }
 
   if (view === "edit" && selectedAgent) {
@@ -301,29 +297,18 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onBack}
-                className="h-8 w-8"
-              >
+              <Button variant="ghost" size="icon" onClick={onBack} className="h-8 w-8">
                 <ArrowLeft className="h-4 w-4" />
               </Button>
               <div>
                 <h1 className="text-2xl font-bold">{t.agents.title}</h1>
-                <p className="text-sm text-muted-foreground">
-                  {t.agents.subtitle}
-                </p>
+                <p className="text-sm text-muted-foreground">{t.agents.subtitle}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button
-                    size="default"
-                    variant="outline"
-                    className="flex items-center gap-2"
-                  >
+                  <Button size="default" variant="outline" className="flex items-center gap-2">
                     <Download className="h-4 w-4" />
                     {t.common.import}
                     <ChevronDown className="h-3 w-3" />
@@ -409,11 +394,10 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
                                 <div className="mb-4 p-4 rounded-full bg-primary/10 text-primary">
                                   {renderIcon(agent.icon)}
                                 </div>
-                                <h3 className="text-lg font-semibold mb-2">
-                                  {agent.name}
-                                </h3>
+                                <h3 className="text-lg font-semibold mb-2">{agent.name}</h3>
                                 <p className="text-xs text-muted-foreground">
-                                  {t.agents.created}: {new Date(agent.created_at).toLocaleDateString()}
+                                  {t.agents.created}:{" "}
+                                  {new Date(agent.created_at).toLocaleDateString()}
                                 </p>
                               </CardContent>
                               <CardFooter className="p-4 pt-0 flex justify-center gap-1 flex-wrap">
@@ -470,7 +454,7 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                           disabled={currentPage === 1}
                         >
                           {t.common.previous}
@@ -481,7 +465,7 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                           disabled={currentPage === totalPages}
                         >
                           {t.common.next}
@@ -504,9 +488,7 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
                       <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
                     </div>
                   ) : (
-                    <AgentRunsList 
-                      runs={runs} 
-                    />
+                    <AgentRunsList runs={runs} />
                   )}
                 </div>
               )}
@@ -518,11 +500,7 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
       {/* Toast Notification */}
       <ToastContainer>
         {toast && (
-          <Toast
-            message={toast.message}
-            type={toast.type}
-            onDismiss={() => setToast(null)}
-          />
+          <Toast message={toast.message} type={toast.type} onDismiss={() => setToast(null)} />
         )}
       </ToastContainer>
 
@@ -546,7 +524,7 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
               {t.agents.deleteAgentTitle}
             </DialogTitle>
             <DialogDescription>
-              {t.agents.deleteAgentConfirmation.replace('{name}', agentToDelete?.name || '')}
+              {t.agents.deleteAgentConfirmation.replace("{name}", agentToDelete?.name || "")}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">

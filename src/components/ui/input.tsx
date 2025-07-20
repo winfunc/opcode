@@ -5,34 +5,33 @@ import { cn } from "@/lib/utils";
  * Props interface for the Input component
  * Extends all standard HTML input attributes
  */
-export interface InputProps
-  extends React.InputHTMLAttributes<HTMLInputElement> {}
+export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {}
 
 /**
  * Input component for form inputs with consistent styling
- * 
+ *
  * A styled input component that provides consistent appearance across
  * the application with support for focus states, disabled states, and
  * file inputs. Uses CSS custom properties for theming.
- * 
+ *
  * @param type - Input type (text, number, email, password, etc.)
  * @param className - Additional CSS classes to apply
  * @param placeholder - Placeholder text
  * @param disabled - Whether the input is disabled
  * @param value - Controlled value
  * @param onChange - Change event handler
- * 
+ *
  * @example
  * ```tsx
- * <Input 
- *   type="text" 
- *   placeholder="Enter your name..." 
+ * <Input
+ *   type="text"
+ *   placeholder="Enter your name..."
  *   value={name}
  *   onChange={(e) => setName(e.target.value)}
  * />
- * 
- * <Input 
- *   type="file" 
+ *
+ * <Input
+ *   type="file"
  *   accept=".json,.txt"
  *   onChange={handleFileSelect}
  * />
@@ -53,7 +52,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         style={{
           borderColor: "var(--color-input)",
           backgroundColor: "transparent",
-          color: "var(--color-foreground)"
+          color: "var(--color-foreground)",
         }}
         ref={ref}
         {...props}
@@ -64,4 +63,4 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
 
 Input.displayName = "Input";
 
-export { Input }; 
+export { Input };

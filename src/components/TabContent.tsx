@@ -1,25 +1,26 @@
-import React, { Suspense, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useTabState } from '@/hooks/useTabState';
-import { Tab } from '@/contexts/TabContext';
-import { Loader2, Plus } from 'lucide-react';
-import { api, type Project, type Session, type ClaudeMdFile } from '@/lib/api';
-import { ProjectList } from '@/components/ProjectList';
-import { SessionList } from '@/components/SessionList';
-import { RunningClaudeSessions } from '@/components/RunningClaudeSessions';
-import { Button } from '@/components/ui/button';
-import { useI18n } from '@/lib/i18n';
-import { logger } from '@/lib/logger';
-import { ClaudeCodeSession } from '@/components/ClaudeCodeSession';
-import AgentRunOutputViewer from '@/components/AgentRunOutputViewer';
-import { AgentExecution } from '@/components/AgentExecution';
-import { CreateAgent } from '@/components/CreateAgent';
-import { UsageDashboard } from '@/components/UsageDashboard';
-import { MCPManager } from '@/components/MCPManager';
-import { Settings } from '@/components/Settings';
-import { MarkdownEditor } from '@/components/MarkdownEditor';
+import React, { Suspense, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useTabState } from "@/hooks/useTabState";
+import type { Tab } from "@/contexts/contexts";
+import { Loader2, Plus } from "lucide-react";
+import { api, type Project, type Session, type ClaudeMdFile } from "@/lib/api";
+import type { Agent } from "@/lib/api";
+import { ProjectList } from "@/components/ProjectList";
+import { SessionList } from "@/components/SessionList";
+import { RunningClaudeSessions } from "@/components/RunningClaudeSessions";
+import { Button } from "@/components/ui/button";
+import { useI18n } from "@/lib/i18n";
+import { logger } from "@/lib/logger";
+import { ClaudeCodeSession } from "@/components/ClaudeCodeSession";
+import AgentRunOutputViewer from "@/components/AgentRunOutputViewer";
+import { AgentExecution } from "@/components/AgentExecution";
+import { CreateAgent } from "@/components/CreateAgent";
+import { UsageDashboard } from "@/components/UsageDashboard";
+import { MCPManager } from "@/components/MCPManager";
+import { Settings } from "@/components/Settings";
+import { MarkdownEditor } from "@/components/MarkdownEditor";
 
-import { handleError } from '@/lib/errorHandler';
+import { handleError } from "@/lib/errorHandler";
 // Import non-lazy components for projects view
 
 interface TabPanelProps {
@@ -38,7 +39,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
 
   // Load projects when tab becomes active and is of type 'projects'
   useEffect(() => {
-    if (isActive && tab.type === 'projects') {
+    if (isActive && tab.type === "projects") {
       loadProjects();
     }
   }, [isActive, tab.type]);
@@ -87,16 +88,14 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
 
   const renderContent = () => {
     switch (tab.type) {
-      case 'projects':
+      case "projects":
         return (
           <div className="h-full overflow-y-auto">
             <div className="container mx-auto p-6">
               {/* Header */}
               <div className="mb-6">
                 <h1 className="text-3xl font-bold tracking-tight">{t.projects.title}</h1>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {t.projects.subtitle}
-                </p>
+                <p className="mt-1 text-sm text-muted-foreground">{t.projects.subtitle}</p>
               </div>
 
               {/* Error display */}
@@ -135,8 +134,8 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
                         onSessionClick={(session) => {
                           // Update tab to show this session
                           updateTab(tab.id, {
-                            type: 'chat',
-                            title: session.project_path.split('/').pop() || 'Session',
+                            type: "chat",
+                            title: session.project_path.split("/").pop() || "Session",
                             sessionId: session.id,
                             sessionData: session, // Store full session object
                             initialProjectPath: session.project_path,
@@ -144,9 +143,11 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
                         }}
                         onEditClaudeFile={(file: ClaudeMdFile) => {
                           // Open CLAUDE.md file in a new tab
-                          window.dispatchEvent(new CustomEvent('open-claude-file', {
-                            detail: { file }
-                          }));
+                          window.dispatchEvent(
+                            new window.CustomEvent("open-claude-file", {
+                              detail: { file },
+                            })
+                          );
                         }}
                       />
                     </motion.div>
@@ -185,7 +186,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
                           onProjectClick={handleProjectClick}
                           onProjectSettings={(project) => {
                             // Project settings functionality can be added here if needed
-                            logger.debug('Project settings clicked for:', project);
+                            logger.debug("Project settings clicked for:", project);
                           }}
                           loading={loading}
                           className="animate-fade-in"
@@ -205,46 +206,40 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
           </div>
         );
 
-      case 'chat':
+      case "chat":
         return (
           <ClaudeCodeSession
-            session={tab.sessionData} // Pass the full session object if available
+            session={tab.sessionData as Session} // Pass the full session object if available
             initialProjectPath={tab.initialProjectPath || tab.sessionId}
             onBack={() => {
               // Go back to projects view in the same tab
               updateTab(tab.id, {
-                type: 'projects',
+                type: "projects",
                 title: t.projects.title,
               });
             }}
           />
         );
 
-      case 'agent':
+      case "agent":
         if (!tab.agentRunId) {
           return <div className="p-4">No agent run ID specified</div>;
         }
-        return (
-          <AgentRunOutputViewer
-            agentRunId={tab.agentRunId}
-            tabId={tab.id}
-          />
-        );
+        return <AgentRunOutputViewer agentRunId={tab.agentRunId} tabId={tab.id} />;
 
+      case "usage":
+        return <UsageDashboard onBack={() => {}} />;
 
-      case 'usage':
-        return <UsageDashboard onBack={() => { }} />;
+      case "mcp":
+        return <MCPManager onBack={() => {}} />;
 
-      case 'mcp':
-        return <MCPManager onBack={() => { }} />;
+      case "settings":
+        return <Settings onBack={() => {}} />;
 
-      case 'settings':
-        return <Settings onBack={() => { }} />;
+      case "claude-md":
+        return <MarkdownEditor onBack={() => {}} />;
 
-      case 'claude-md':
-        return <MarkdownEditor onBack={() => { }} />;
-
-      case 'claude-file':
+      case "claude-file":
         if (!tab.claudeFileId) {
           return <div className="p-4">No Claude file ID specified</div>;
         }
@@ -252,32 +247,31 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
         // For now, returning a placeholder
         return <div className="p-4">Claude file editor not yet implemented in tabs</div>;
 
-      case 'agent-execution':
+      case "agent-execution":
         if (!tab.agentData) {
           return <div className="p-4">No agent data specified</div>;
         }
-        return (
-          <AgentExecution
-            agent={tab.agentData}
-            onBack={() => { }}
-          />
-        );
+        return <AgentExecution agent={tab.agentData as Agent} onBack={() => {}} />;
 
-      case 'create-agent':
+      case "create-agent":
         return (
           <CreateAgent
             onAgentCreated={() => {
               // Close this tab after agent is created
-              window.dispatchEvent(new CustomEvent('close-tab', { detail: { tabId: tab.id } }));
+              window.dispatchEvent(
+                new window.CustomEvent("close-tab", { detail: { tabId: tab.id } })
+              );
             }}
             onBack={() => {
               // Close this tab when back is clicked
-              window.dispatchEvent(new CustomEvent('close-tab', { detail: { tabId: tab.id } }));
+              window.dispatchEvent(
+                new window.CustomEvent("close-tab", { detail: { tabId: tab.id } })
+              );
             }}
           />
         );
 
-      case 'import-agent':
+      case "import-agent":
         // TODO: Implement import agent component
         return <div className="p-4">Import agent functionality coming soon...</div>;
 
@@ -308,12 +302,24 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
 };
 
 export const TabContent: React.FC = () => {
-  const { tabs, activeTabId, createChatTab, findTabBySessionId, createClaudeFileTab, createAgentExecutionTab, createCreateAgentTab, createImportAgentTab, closeTab, updateTab } = useTabState();
+  const {
+    tabs,
+    activeTabId,
+    createChatTab,
+    findTabBySessionId,
+    createClaudeFileTab,
+    createAgentExecutionTab,
+    createCreateAgentTab,
+    createImportAgentTab,
+    closeTab,
+    updateTab,
+  } = useTabState();
 
   // Listen for events to open sessions in tabs
   useEffect(() => {
-    const handleOpenSessionInTab = (event: CustomEvent) => {
-      const { session } = event.detail;
+    const handleOpenSessionInTab = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const { session } = customEvent.detail;
 
       // Check if tab already exists for this session
       const existingTab = findTabBySessionId(session.id);
@@ -321,28 +327,32 @@ export const TabContent: React.FC = () => {
         // Update existing tab with session data and switch to it
         updateTab(existingTab.id, {
           sessionData: session,
-          title: session.project_path.split('/').pop() || 'Session'
+          title: session.project_path.split("/").pop() || "Session",
         });
-        window.dispatchEvent(new CustomEvent('switch-to-tab', { detail: { tabId: existingTab.id } }));
+        window.dispatchEvent(
+          new CustomEvent("switch-to-tab", { detail: { tabId: existingTab.id } })
+        );
       } else {
         // Create new tab for this session
-        const projectName = session.project_path.split('/').pop() || 'Session';
+        const projectName = session.project_path.split("/").pop() || "Session";
         const newTabId = createChatTab(session.id, projectName);
         // Update the new tab with session data
         updateTab(newTabId, {
           sessionData: session,
-          initialProjectPath: session.project_path
+          initialProjectPath: session.project_path,
         });
       }
     };
 
-    const handleOpenClaudeFile = (event: CustomEvent) => {
-      const { file } = event.detail;
-      createClaudeFileTab(file.id, file.name || 'CLAUDE.md');
+    const handleOpenClaudeFile = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const { file } = customEvent.detail;
+      createClaudeFileTab(file.id, file.name || "CLAUDE.md");
     };
 
-    const handleOpenAgentExecution = (event: CustomEvent) => {
-      const { agent, tabId } = event.detail;
+    const handleOpenAgentExecution = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const { agent, tabId } = customEvent.detail;
       createAgentExecutionTab(agent, tabId);
     };
 
@@ -354,23 +364,27 @@ export const TabContent: React.FC = () => {
       createImportAgentTab();
     };
 
-    const handleCloseTab = (event: CustomEvent) => {
-      const { tabId } = event.detail;
+    const handleCloseTab = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const { tabId } = customEvent.detail;
       closeTab(tabId);
     };
 
-    const handleClaudeSessionSelected = (event: CustomEvent) => {
-      const { session } = event.detail;
+    const handleClaudeSessionSelected = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const { session } = customEvent.detail;
       // Reuse same logic as handleOpenSessionInTab
       const existingTab = findTabBySessionId(session.id);
       if (existingTab) {
         updateTab(existingTab.id, {
           sessionData: session,
-          title: session.project_path.split('/').pop() || 'Session',
+          title: session.project_path.split("/").pop() || "Session",
         });
-        window.dispatchEvent(new CustomEvent('switch-to-tab', { detail: { tabId: existingTab.id } }));
+        window.dispatchEvent(
+          new CustomEvent("switch-to-tab", { detail: { tabId: existingTab.id } })
+        );
       } else {
-        const projectName = session.project_path.split('/').pop() || 'Session';
+        const projectName = session.project_path.split("/").pop() || "Session";
         const newTabId = createChatTab(session.id, projectName);
         updateTab(newTabId, {
           sessionData: session,
@@ -379,33 +393,38 @@ export const TabContent: React.FC = () => {
       }
     };
 
-    window.addEventListener('open-session-in-tab', handleOpenSessionInTab as EventListener);
-    window.addEventListener('open-claude-file', handleOpenClaudeFile as EventListener);
-    window.addEventListener('open-agent-execution', handleOpenAgentExecution as EventListener);
-    window.addEventListener('open-create-agent-tab', handleOpenCreateAgentTab);
-    window.addEventListener('open-import-agent-tab', handleOpenImportAgentTab);
-    window.addEventListener('close-tab', handleCloseTab as EventListener);
-    window.addEventListener('claude-session-selected', handleClaudeSessionSelected as EventListener);
+    window.addEventListener("open-session-in-tab", handleOpenSessionInTab);
+    window.addEventListener("open-claude-file", handleOpenClaudeFile);
+    window.addEventListener("open-agent-execution", handleOpenAgentExecution);
+    window.addEventListener("open-create-agent-tab", handleOpenCreateAgentTab);
+    window.addEventListener("open-import-agent-tab", handleOpenImportAgentTab);
+    window.addEventListener("close-tab", handleCloseTab);
+    window.addEventListener("claude-session-selected", handleClaudeSessionSelected);
     return () => {
-      window.removeEventListener('open-session-in-tab', handleOpenSessionInTab as EventListener);
-      window.removeEventListener('open-claude-file', handleOpenClaudeFile as EventListener);
-      window.removeEventListener('open-agent-execution', handleOpenAgentExecution as EventListener);
-      window.removeEventListener('open-create-agent-tab', handleOpenCreateAgentTab);
-      window.removeEventListener('open-import-agent-tab', handleOpenImportAgentTab);
-      window.removeEventListener('close-tab', handleCloseTab as EventListener);
-      window.removeEventListener('claude-session-selected', handleClaudeSessionSelected as EventListener);
+      window.removeEventListener("open-session-in-tab", handleOpenSessionInTab);
+      window.removeEventListener("open-claude-file", handleOpenClaudeFile);
+      window.removeEventListener("open-agent-execution", handleOpenAgentExecution);
+      window.removeEventListener("open-create-agent-tab", handleOpenCreateAgentTab);
+      window.removeEventListener("open-import-agent-tab", handleOpenImportAgentTab);
+      window.removeEventListener("close-tab", handleCloseTab);
+      window.removeEventListener("claude-session-selected", handleClaudeSessionSelected);
     };
-  }, [createChatTab, findTabBySessionId, createClaudeFileTab, createAgentExecutionTab, createCreateAgentTab, createImportAgentTab, closeTab, updateTab]);
+  }, [
+    createChatTab,
+    findTabBySessionId,
+    createClaudeFileTab,
+    createAgentExecutionTab,
+    createCreateAgentTab,
+    createImportAgentTab,
+    closeTab,
+    updateTab,
+  ]);
 
   return (
     <div className="flex-1 h-full relative">
       <AnimatePresence mode="wait">
         {tabs.map((tab) => (
-          <TabPanel
-            key={tab.id}
-            tab={tab}
-            isActive={tab.id === activeTabId}
-          />
+          <TabPanel key={tab.id} tab={tab} isActive={tab.id === activeTabId} />
         ))}
       </AnimatePresence>
 

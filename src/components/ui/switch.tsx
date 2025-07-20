@@ -1,8 +1,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
-export interface SwitchProps
-  extends React.InputHTMLAttributes<HTMLInputElement> {
+export interface SwitchProps extends React.InputHTMLAttributes<HTMLInputElement> {
   /**
    * Whether the switch is checked
    */
@@ -15,7 +14,7 @@ export interface SwitchProps
 
 /**
  * Switch component for toggling boolean values
- * 
+ *
  * @example
  * <Switch checked={isEnabled} onCheckedChange={setIsEnabled} />
  */
@@ -34,7 +33,7 @@ const Switch = React.forwardRef<HTMLInputElement, SwitchProps>(
           className
         )}
         style={{
-          backgroundColor: checked ? "var(--color-primary)" : "var(--color-muted)"
+          backgroundColor: checked ? "var(--color-primary)" : "var(--color-muted)",
         }}
       >
         <span
@@ -43,7 +42,7 @@ const Switch = React.forwardRef<HTMLInputElement, SwitchProps>(
             checked ? "translate-x-4" : "translate-x-0"
           )}
           style={{
-            backgroundColor: "var(--color-background)"
+            backgroundColor: "var(--color-background)",
           }}
         />
         <input
@@ -61,4 +60,4 @@ const Switch = React.forwardRef<HTMLInputElement, SwitchProps>(
 
 Switch.displayName = "Switch";
 
-export { Switch }; 
+export { Switch };

@@ -1,14 +1,14 @@
-import React from 'react';
-import { Globe } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import React from "react";
+import { Globe } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { useI18n } from '@/lib/i18n';
-import { SUPPORTED_LANGUAGES, type Language } from '@/lib/i18n';
+} from "@/components/ui/dropdown-menu";
+import { useI18n } from "@/lib/i18n";
+import { SUPPORTED_LANGUAGES, type Language } from "@/lib/i18n";
 
 interface LanguageSelectorProps {
   /**
@@ -57,14 +57,10 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
           <DropdownMenuItem
             key={code}
             onClick={() => handleLanguageChange(code as Language)}
-            className={`cursor-pointer ${
-              language === code ? 'bg-accent' : ''
-            }`}
+            className={`cursor-pointer ${language === code ? "bg-accent" : ""}`}
           >
             <span className="flex-1">{name}</span>
-            {language === code && (
-              <span className="text-primary">✓</span>
-            )}
+            {language === code && <span className="text-primary">✓</span>}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>

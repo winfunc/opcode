@@ -1,10 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { Card } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { Button } from '@/components/ui/button';
-import { logger, LogLevel } from '@/lib/logger';
+import React, { useState, useEffect } from "react";
+import { Card } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
+import { logger, LogLevel } from "@/lib/logger";
 
 interface LoggerSettingsProps {
   className?: string;
@@ -29,7 +35,10 @@ export const LoggerSettings: React.FC<LoggerSettingsProps> = ({ className }) => 
   };
 
   const getLevelName = (level: LogLevel): string => {
-    return Object.keys(LogLevel).find(key => LogLevel[key as keyof typeof LogLevel] === level) || 'INFO';
+    return (
+      Object.keys(LogLevel).find((key) => LogLevel[key as keyof typeof LogLevel] === level) ||
+      "INFO"
+    );
   };
 
   return (
@@ -45,10 +54,7 @@ export const LoggerSettings: React.FC<LoggerSettingsProps> = ({ className }) => 
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <Label htmlFor="log-level">日志级别</Label>
-            <Select
-              value={getLevelName(config.level)}
-              onValueChange={handleLevelChange}
-            >
+            <Select value={getLevelName(config.level)} onValueChange={handleLevelChange}>
               <SelectTrigger className="w-32">
                 <SelectValue />
               </SelectTrigger>
@@ -72,11 +78,21 @@ export const LoggerSettings: React.FC<LoggerSettingsProps> = ({ className }) => 
           </div>
 
           <div className="text-sm text-gray-500">
-            <p><strong>DEBUG:</strong> 显示所有日志信息，包括调试信息</p>
-            <p><strong>INFO:</strong> 显示一般信息和更高级别的日志</p>
-            <p><strong>WARN:</strong> 仅显示警告和错误信息</p>
-            <p><strong>ERROR:</strong> 仅显示错误信息</p>
-            <p><strong>NONE:</strong> 不显示任何日志</p>
+            <p>
+              <strong>DEBUG:</strong> 显示所有日志信息，包括调试信息
+            </p>
+            <p>
+              <strong>INFO:</strong> 显示一般信息和更高级别的日志
+            </p>
+            <p>
+              <strong>WARN:</strong> 仅显示警告和错误信息
+            </p>
+            <p>
+              <strong>ERROR:</strong> 仅显示错误信息
+            </p>
+            <p>
+              <strong>NONE:</strong> 不显示任何日志
+            </p>
           </div>
         </div>
 

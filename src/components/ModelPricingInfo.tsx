@@ -1,9 +1,14 @@
-import React from 'react';
-import { getModelPricing, formatPrice, getModelCostEfficiency, MODEL_USE_CASES } from '@/config/pricing';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { DollarSign, Zap, Clock, Target } from 'lucide-react';
-import { useI18n } from '@/lib/i18n';
+import React from "react";
+import {
+  getModelPricing,
+  formatPrice,
+  getModelCostEfficiency,
+  MODEL_USE_CASES,
+} from "@/config/pricing";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { DollarSign, Zap, Clock, Target } from "lucide-react";
+import { useI18n } from "@/lib/i18n";
 
 interface ModelPricingInfoProps {
   model: string;
@@ -17,7 +22,7 @@ interface ModelPricingInfoProps {
 export const ModelPricingInfo: React.FC<ModelPricingInfoProps> = ({
   model,
   showDetails = false,
-  className
+  className,
 }) => {
   const { t } = useI18n();
   const pricing = getModelPricing(model);
@@ -33,15 +38,15 @@ export const ModelPricingInfo: React.FC<ModelPricingInfoProps> = ({
   }
 
   const efficiencyColors = {
-    high: 'bg-green-100 text-green-800 border-green-200',
-    medium: 'bg-yellow-100 text-yellow-800 border-yellow-200', 
-    low: 'bg-red-100 text-red-800 border-red-200'
+    high: "bg-green-100 text-green-800 border-green-200",
+    medium: "bg-yellow-100 text-yellow-800 border-yellow-200",
+    low: "bg-red-100 text-red-800 border-red-200",
   };
 
   const efficiencyLabels = {
     high: t.agents.highEfficiency,
     medium: t.agents.mediumEfficiency,
-    low: t.agents.lowEfficiency
+    low: t.agents.lowEfficiency,
   };
 
   if (!showDetails) {
@@ -49,12 +54,12 @@ export const ModelPricingInfo: React.FC<ModelPricingInfoProps> = ({
       <div className={`text-xs space-y-1 ${className}`}>
         <div className="flex items-center gap-2">
           <DollarSign className="w-3 h-3" />
-          <span>{t.agents.inputTokens}: {formatPrice(pricing.inputPrice)}/M • {t.agents.outputTokens}: {formatPrice(pricing.outputPrice)}/M</span>
+          <span>
+            {t.agents.inputTokens}: {formatPrice(pricing.inputPrice)}/M • {t.agents.outputTokens}:{" "}
+            {formatPrice(pricing.outputPrice)}/M
+          </span>
         </div>
-        <Badge 
-          variant="outline" 
-          className={`text-xs ${efficiencyColors[efficiency]}`}
-        >
+        <Badge variant="outline" className={`text-xs ${efficiencyColors[efficiency]}`}>
           {efficiencyLabels[efficiency]}
         </Badge>
       </div>
@@ -66,10 +71,7 @@ export const ModelPricingInfo: React.FC<ModelPricingInfoProps> = ({
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg">{t.agents.pricingDetails}</CardTitle>
-          <Badge 
-            variant="outline" 
-            className={efficiencyColors[efficiency]}
-          >
+          <Badge variant="outline" className={efficiencyColors[efficiency]}>
             {efficiencyLabels[efficiency]}
           </Badge>
         </div>
@@ -162,7 +164,7 @@ export const ModelPricingInfo: React.FC<ModelPricingInfoProps> = ({
  */
 export const ModelPricingBadge: React.FC<{ model: string; className?: string }> = ({
   model,
-  className
+  className,
 }) => {
   const pricing = getModelPricing(model);
   const efficiency = getModelCostEfficiency(model);
@@ -170,15 +172,19 @@ export const ModelPricingBadge: React.FC<{ model: string; className?: string }> 
   if (!pricing) return null;
 
   const efficiencyColors = {
-    high: 'bg-green-50 text-green-700 border-green-200',
-    medium: 'bg-yellow-50 text-yellow-700 border-yellow-200',
-    low: 'bg-red-50 text-red-700 border-red-200'
+    high: "bg-green-50 text-green-700 border-green-200",
+    medium: "bg-yellow-50 text-yellow-700 border-yellow-200",
+    low: "bg-red-50 text-red-700 border-red-200",
   };
 
   return (
-    <div className={`inline-flex items-center gap-2 px-2 py-1 rounded-md border text-xs ${efficiencyColors[efficiency]} ${className}`}>
+    <div
+      className={`inline-flex items-center gap-2 px-2 py-1 rounded-md border text-xs ${efficiencyColors[efficiency]} ${className}`}
+    >
       <DollarSign className="w-3 h-3" />
-      <span>{formatPrice(pricing.inputPrice)}/{formatPrice(pricing.outputPrice)}</span>
+      <span>
+        {formatPrice(pricing.inputPrice)}/{formatPrice(pricing.outputPrice)}
+      </span>
     </div>
   );
 };

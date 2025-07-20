@@ -1,52 +1,14 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { api } from './api';
-import { logger } from '@/lib/logger';
+import React, { useState, useCallback, useEffect } from "react";
+import { api } from "./api";
+import { logger } from "@/lib/logger";
 
-import { handleError } from '@/lib/errorHandler';
-// Use the same message interface as AgentExecution for consistency
-export interface ClaudeStreamMessage {
-  type: "system" | "assistant" | "user" | "result";
-  subtype?: string;
-  message?: {
-    content?: any[];
-    usage?: {
-      input_tokens: number;
-      output_tokens: number;
-    };
-  };
-  usage?: {
-    input_tokens: number;
-    output_tokens: number;
-  };
-  [key: string]: any;
-}
-
-interface CachedSessionOutput {
-  output: string;
-  messages: ClaudeStreamMessage[];
-  lastUpdated: number;
-  status: string;
-}
-
-interface OutputCacheContextType {
-  getCachedOutput: (sessionId: number) => CachedSessionOutput | null;
-  setCachedOutput: (sessionId: number, data: CachedSessionOutput) => void;
-  updateSessionStatus: (sessionId: number, status: string) => void;
-  clearCache: (sessionId?: number) => void;
-  isPolling: boolean;
-  startBackgroundPolling: () => void;
-  stopBackgroundPolling: () => void;
-}
-
-const OutputCacheContext = createContext<OutputCacheContextType | null>(null);
-
-export function useOutputCache() {
-  const context = useContext(OutputCacheContext);
-  if (!context) {
-    throw new Error('useOutputCache must be used within an OutputCacheProvider');
-  }
-  return context;
-}
+import { handleError } from "@/lib/errorHandler";
+import {
+  ClaudeStreamMessage,
+  CachedSessionOutput,
+  OutputCacheContextType,
+} from "./outputCacheUtils";
+import { OutputCacheContext } from "./outputCacheHook";
 
 interface OutputCacheProviderProps {
   children: React.ReactNode;
@@ -55,18 +17,21 @@ interface OutputCacheProviderProps {
 export function OutputCacheProvider({ children }: OutputCacheProviderProps) {
   const [cache, setCache] = useState<Map<number, CachedSessionOutput>>(new Map());
   const [isPolling, setIsPolling] = useState(false);
-  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
+  const [pollingInterval, setPollingInterval] = useState<ReturnType<typeof setInterval> | null>(null);
 
-  const getCachedOutput = useCallback((sessionId: number): CachedSessionOutput | null => {
-    return cache.get(sessionId) || null;
-  }, [cache]);
+  const getCachedOutput = useCallback(
+    (sessionId: number): CachedSessionOutput | null => {
+      return cache.get(sessionId) || null;
+    },
+    [cache]
+  );
 
   const setCachedOutput = useCallback((sessionId: number, data: CachedSessionOutput) => {
-    setCache(prev => new Map(prev.set(sessionId, data)));
+    setCache((prev) => new Map(prev.set(sessionId, data)));
   }, []);
 
   const updateSessionStatus = useCallback((sessionId: number, status: string) => {
-    setCache(prev => {
+    setCache((prev) => {
       const existing = prev.get(sessionId);
       if (existing) {
         const updated = new Map(prev);
@@ -79,7 +44,7 @@ export function OutputCacheProvider({ children }: OutputCacheProviderProps) {
 
   const clearCache = useCallback((sessionId?: number) => {
     if (sessionId) {
-      setCache(prev => {
+      setCache((prev) => {
         const updated = new Map(prev);
         updated.delete(sessionId);
         return updated;
@@ -92,7 +57,7 @@ export function OutputCacheProvider({ children }: OutputCacheProviderProps) {
   const parseOutput = useCallback(async (rawOutput: string): Promise<ClaudeStreamMessage[]> => {
     if (!rawOutput) return [];
 
-    const lines = rawOutput.split('\n').filter(line => line.trim());
+    const lines = rawOutput.split("\n").filter((line) => line.trim());
     const parsedMessages: ClaudeStreamMessage[] = [];
 
     for (const line of lines) {
@@ -103,10 +68,10 @@ export function OutputCacheProvider({ children }: OutputCacheProviderProps) {
         await handleError("Failed to parse message:", { context: err, line });
         // Add a fallback message for unparseable content
         parsedMessages.push({
-          type: 'result',
-          subtype: 'error',
-          error: 'Failed to parse message',
-          raw_content: line
+          type: "result",
+          subtype: "error",
+          error: "Failed to parse message",
+          raw_content: line,
         });
       }
     }
@@ -114,48 +79,51 @@ export function OutputCacheProvider({ children }: OutputCacheProviderProps) {
     return parsedMessages;
   }, []);
 
-  const updateSessionCache = useCallback(async (sessionId: number, status: string) => {
-    try {
-      const rawOutput = await api.getSessionOutput(sessionId);
-      
-      // 使用 Promise.resolve 包装以避免阻塞
-      const messages = await Promise.resolve(parseOutput(rawOutput));
-      
-      setCachedOutput(sessionId, {
-        output: rawOutput,
-        messages,
-        lastUpdated: Date.now(),
-        status
-      });
-    } catch (error) {
-      logger.warn(`Failed to update cache for session ${sessionId}:`, error);
-    }
-  }, [parseOutput, setCachedOutput]);
+  const updateSessionCache = useCallback(
+    async (sessionId: number, status: string) => {
+      try {
+        const rawOutput = await api.getSessionOutput(sessionId);
+
+        // 使用 Promise.resolve 包装以避免阻塞
+        const messages = await Promise.resolve(parseOutput(rawOutput));
+
+        setCachedOutput(sessionId, {
+          output: rawOutput,
+          messages,
+          lastUpdated: Date.now(),
+          status,
+        });
+      } catch (error) {
+        logger.warn(`Failed to update cache for session ${sessionId}:`, error);
+      }
+    },
+    [parseOutput, setCachedOutput]
+  );
 
   const pollRunningSessions = useCallback(async () => {
     try {
       const runningSessions = await api.listRunningAgentSessions();
-      
+
       // Update cache for all running sessions
       for (const session of runningSessions) {
-        if (session.id && session.status === 'running') {
+        if (session.id && session.status === "running") {
           await updateSessionCache(session.id, session.status);
         }
       }
 
       // Clean up cache for sessions that are no longer running
-      const runningIds = new Set(runningSessions.map(s => s.id).filter(Boolean));
-      setCache(prev => {
+      const runningIds = new Set(runningSessions.map((s) => s.id).filter(Boolean));
+      setCache((prev) => {
         const updated = new Map();
         for (const [sessionId, data] of prev) {
-          if (runningIds.has(sessionId) || data.status !== 'running') {
+          if (runningIds.has(sessionId) || data.status !== "running") {
             updated.set(sessionId, data);
           }
         }
         return updated;
       });
     } catch (error) {
-      logger.warn('Failed to poll running sessions:', error);
+      logger.warn("Failed to poll running sessions:", error);
     }
   }, [updateSessionCache]);
 
@@ -191,9 +159,5 @@ export function OutputCacheProvider({ children }: OutputCacheProviderProps) {
     stopBackgroundPolling,
   };
 
-  return (
-    <OutputCacheContext.Provider value={value}>
-      {children}
-    </OutputCacheContext.Provider>
-  );
+  return <OutputCacheContext.Provider value={value}>{children}</OutputCacheContext.Provider>;
 }

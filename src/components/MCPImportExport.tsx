@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { SelectComponent } from "@/components/ui/select";
 import { api } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
-import { handleError } from '@/lib/errorHandler';
+import { handleError } from "@/lib/errorHandler";
 interface MCPImportExportProps {
   /**
    * Callback when import is completed
@@ -21,10 +21,7 @@ interface MCPImportExportProps {
 /**
  * Component for importing and exporting MCP server configurations
  */
-export const MCPImportExport: React.FC<MCPImportExportProps> = ({
-  onImportCompleted,
-  onError,
-}) => {
+export const MCPImportExport: React.FC<MCPImportExportProps> = ({ onImportCompleted, onError }) => {
   const { t } = useI18n();
   const [importingDesktop, setImportingDesktop] = useState(false);
   const [importingJson, setImportingJson] = useState(false);
@@ -41,11 +38,14 @@ export const MCPImportExport: React.FC<MCPImportExportProps> = ({
 
       // Show detailed results if available
       if (result.servers && result.servers.length > 0) {
-        const successfulServers = result.servers.filter(s => s.success);
-        const failedServers = result.servers.filter(s => !s.success);
+        const successfulServers = result.servers.filter((s) => s.success);
+        const failedServers = result.servers.filter((s) => !s.success);
 
         if (successfulServers.length > 0) {
-          const successMessage = t.mcp.successfullyImported.replace('{servers}', successfulServers.map(s => s.name).join(", "));
+          const successMessage = t.mcp.successfullyImported.replace(
+            "{servers}",
+            successfulServers.map((s) => s.name).join(", ")
+          );
           onImportCompleted(result.imported_count, result.failed_count);
           // Show success details
           if (failedServers.length === 0) {
@@ -55,16 +55,20 @@ export const MCPImportExport: React.FC<MCPImportExportProps> = ({
 
         if (failedServers.length > 0) {
           const failureDetails = failedServers
-            .map(s => `${s.name}: ${s.error || "Unknown error"}`)
+            .map((s) => `${s.name}: ${s.error || "Unknown error"}`)
             .join("\n");
-          onError(t.mcp.failedToImportSomeServers.replace('{details}', failureDetails));
+          onError(t.mcp.failedToImportSomeServers.replace("{details}", failureDetails));
         }
       } else {
         onImportCompleted(result.imported_count, result.failed_count);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       await handleError("Failed to import from Claude Desktop:", { context: error });
-      onError(error.toString() || t.mcp.failedToImportFromClaudeDesktop);
+      onError(
+        error instanceof Error
+          ? error.message
+          : String(error) || t.mcp.failedToImportFromClaudeDesktop
+      );
     } finally {
       setImportingDesktop(false);
     }
@@ -85,7 +89,7 @@ export const MCPImportExport: React.FC<MCPImportExportProps> = ({
       let jsonData;
       try {
         jsonData = JSON.parse(content);
-      } catch (e) {
+      } catch (_e) {
         onError(t.mcp.invalidJsonFile);
         return;
       }
@@ -100,9 +104,9 @@ export const MCPImportExport: React.FC<MCPImportExportProps> = ({
           try {
             const serverConfig = {
               type: "stdio",
-              command: (config as any).command,
-              args: (config as any).args || [],
-              env: (config as any).env || {}
+              command: (config as Record<string, unknown>).command as string,
+              args: ((config as Record<string, unknown>).args as string[]) || [],
+              env: ((config as Record<string, unknown>).env as Record<string, string>) || {},
             };
 
             const result = await api.mcpAddJson(name, JSON.stringify(serverConfig), importScope);
@@ -111,7 +115,7 @@ export const MCPImportExport: React.FC<MCPImportExportProps> = ({
             } else {
               failed++;
             }
-          } catch (e) {
+          } catch (_e) {
             failed++;
           }
         }
@@ -119,7 +123,7 @@ export const MCPImportExport: React.FC<MCPImportExportProps> = ({
         onImportCompleted(imported, failed);
       } else if (jsonData.type && jsonData.command) {
         // Single server format
-        const name = prompt(t.mcp.enterServerName);
+        const name = window.prompt(t.mcp.enterServerName);
         if (!name) return;
 
         const result = await api.mcpAddJson(name, content, importScope);
@@ -166,9 +170,7 @@ export const MCPImportExport: React.FC<MCPImportExportProps> = ({
     <div className="p-6 space-y-6">
       <div>
         <h3 className="text-base font-semibold">{t.mcp.importExportTitle}</h3>
-        <p className="text-sm text-muted-foreground mt-1">
-          {t.mcp.importExportSubtitle}
-        </p>
+        <p className="text-sm text-muted-foreground mt-1">{t.mcp.importExportSubtitle}</p>
       </div>
 
       <div className="space-y-4">
@@ -188,9 +190,7 @@ export const MCPImportExport: React.FC<MCPImportExportProps> = ({
                 { value: "user", label: t.mcp.userAllProjects },
               ]}
             />
-            <p className="text-xs text-muted-foreground">
-              {t.mcp.chooseImportScope}
-            </p>
+            <p className="text-xs text-muted-foreground">{t.mcp.chooseImportScope}</p>
           </div>
         </Card>
 
@@ -237,9 +237,7 @@ export const MCPImportExport: React.FC<MCPImportExportProps> = ({
               </div>
               <div className="flex-1">
                 <h4 className="text-sm font-medium">{t.mcp.importFromJson}</h4>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {t.mcp.importFromJsonDesc}
-                </p>
+                <p className="text-xs text-muted-foreground mt-1">{t.mcp.importFromJsonDesc}</p>
               </div>
             </div>
             <div>
@@ -308,9 +306,7 @@ export const MCPImportExport: React.FC<MCPImportExportProps> = ({
               </div>
               <div className="flex-1">
                 <h4 className="text-sm font-medium">{t.mcp.useClaudeCodeAsMcp}</h4>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {t.mcp.useClaudeCodeAsMcpDesc}
-                </p>
+                <p className="text-xs text-muted-foreground mt-1">{t.mcp.useClaudeCodeAsMcpDesc}</p>
               </div>
             </div>
             <Button
@@ -368,4 +364,4 @@ export const MCPImportExport: React.FC<MCPImportExportProps> = ({
       </Card>
     </div>
   );
-}; 
+};

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Loader2, Bot, FolderCode } from "lucide-react";
 import { api, type Project, type Session, type ClaudeMdFile } from "@/lib/api";
@@ -20,7 +20,7 @@ import { MCPManager } from "@/components/MCPManager";
 import { NFOCredits } from "@/components/NFOCredits";
 import { ClaudeBinaryDialog } from "@/components/ClaudeBinaryDialog";
 import { Toast, ToastContainer } from "@/components/ui/toast";
-import { ProjectSettings } from '@/components/ProjectSettings';
+import { ProjectSettings } from "@/components/ProjectSettings";
 import { TabManager } from "@/components/TabManager";
 import { TabContent } from "@/components/TabContent";
 import { AgentsModal } from "@/components/AgentsModal";
@@ -28,11 +28,11 @@ import { useTabState } from "@/hooks/useTabState";
 import { ToastProvider } from "@/contexts/ToastContext";
 import { handleApiError } from "@/lib/errorHandler";
 
-type View = 
-  | "welcome" 
-  | "projects" 
-  | "editor" 
-  | "claude-file-editor" 
+type View =
+  | "welcome"
+  | "projects"
+  | "editor"
+  | "claude-file-editor"
   | "settings"
   | "cc-agents"
   | "create-agent"
@@ -59,12 +59,32 @@ function AppContent() {
   const [error, setError] = useState<string | null>(null);
   const [showNFO, setShowNFO] = useState(false);
   const [showClaudeBinaryDialog, setShowClaudeBinaryDialog] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error" | "info";
+  } | null>(null);
   const [projectForSettings, setProjectForSettings] = useState<Project | null>(null);
   const [previousView] = useState<View>("welcome");
   const [showAgentsModal, setShowAgentsModal] = useState(false);
 
   // Load projects on mount when in projects view
+  /**
+   * Loads all projects from the ~/.claude/projects directory
+   */
+  const loadProjects = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const projectList = await api.listProjects();
+      setProjects(projectList);
+    } catch (err) {
+      await handleApiError(err as Error, { operation: "loadProjects", component: "App" });
+      setError(t.messages.failedToLoadProjects);
+    } finally {
+      setLoading(false);
+    }
+  }, [t.messages.failedToLoadProjects]);
+
   useEffect(() => {
     if (view === "projects") {
       loadProjects();
@@ -72,48 +92,50 @@ function AppContent() {
       // Reset loading state for welcome view
       setLoading(false);
     }
-  }, [view]);
+  }, [view, loadProjects]);
 
   // Keyboard shortcuts for tab navigation
   useEffect(() => {
     if (view !== "tabs") return;
-    
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+
+    const handleKeyDown = (e: globalThis.KeyboardEvent) => {
+      const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
       const modKey = isMac ? e.metaKey : e.ctrlKey;
-      
+
       if (modKey) {
         switch (e.key) {
-          case 't':
+          case "t":
             e.preventDefault();
-            window.dispatchEvent(new CustomEvent('create-chat-tab'));
+            window.dispatchEvent(new globalThis.CustomEvent("create-chat-tab"));
             break;
-          case 'w':
+          case "w":
             e.preventDefault();
-            window.dispatchEvent(new CustomEvent('close-current-tab'));
+            window.dispatchEvent(new globalThis.CustomEvent("close-current-tab"));
             break;
-          case 'Tab':
+          case "Tab":
             e.preventDefault();
             if (e.shiftKey) {
-              window.dispatchEvent(new CustomEvent('switch-to-previous-tab'));
+              window.dispatchEvent(new globalThis.CustomEvent("switch-to-previous-tab"));
             } else {
-              window.dispatchEvent(new CustomEvent('switch-to-next-tab'));
+              window.dispatchEvent(new globalThis.CustomEvent("switch-to-next-tab"));
             }
             break;
           default:
             // Handle number keys 1-9
-            if (e.key >= '1' && e.key <= '9') {
+            if (e.key >= "1" && e.key <= "9") {
               e.preventDefault();
               const index = parseInt(e.key) - 1;
-              window.dispatchEvent(new CustomEvent('switch-to-tab-by-index', { detail: { index } }));
+              window.dispatchEvent(
+                new globalThis.CustomEvent("switch-to-tab-by-index", { detail: { index } })
+              );
             }
             break;
         }
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [view]);
 
   // Listen for Claude not found events
@@ -122,28 +144,14 @@ function AppContent() {
       setShowClaudeBinaryDialog(true);
     };
 
-    window.addEventListener('claude-not-found', handleClaudeNotFound as EventListener);
+    window.addEventListener("claude-not-found", handleClaudeNotFound as globalThis.EventListener);
     return () => {
-      window.removeEventListener('claude-not-found', handleClaudeNotFound as EventListener);
+      window.removeEventListener(
+        "claude-not-found",
+        handleClaudeNotFound as globalThis.EventListener
+      );
     };
   }, []);
-
-  /**
-   * Loads all projects from the ~/.claude/projects directory
-   */
-  const loadProjects = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const projectList = await api.listProjects();
-      setProjects(projectList);
-    } catch (err) {
-      await handleApiError(err as Error, { operation: 'loadProjects', component: 'App' });
-      setError(t.messages.failedToLoadProjects);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   /**
    * Handles project selection and loads its sessions
@@ -156,7 +164,7 @@ function AppContent() {
       setSessions(sessionList);
       setSelectedProject(project);
     } catch (err) {
-      await handleApiError(err as Error, { operation: 'loadSessions', component: 'App' });
+      await handleApiError(err as Error, { operation: "loadSessions", component: "App" });
       setError(t.messages.failedToLoadSessions);
     } finally {
       setLoading(false);
@@ -211,7 +219,6 @@ function AppContent() {
     handleViewChange("project-settings");
   };
 
-
   const renderContent = () => {
     switch (view) {
       case "welcome":
@@ -239,7 +246,7 @@ function AppContent() {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.5, delay: 0.1 }}
                 >
-                  <Card 
+                  <Card
                     className="h-64 cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-lg border border-border/50 shimmer-hover trailing-border"
                     onClick={() => handleViewChange("cc-agents")}
                   >
@@ -256,7 +263,7 @@ function AppContent() {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.5, delay: 0.2 }}
                 >
-                  <Card 
+                  <Card
                     className="h-64 cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-lg border border-border/50 shimmer-hover trailing-border"
                     onClick={() => handleViewChange("projects")}
                   >
@@ -266,18 +273,13 @@ function AppContent() {
                     </div>
                   </Card>
                 </motion.div>
-
               </div>
             </div>
           </div>
         );
 
       case "cc-agents":
-        return (
-          <CCAgents 
-            onBack={() => handleViewChange("welcome")} 
-          />
-        );
+        return <CCAgents onBack={() => handleViewChange("welcome")} />;
 
       case "editor":
         return (
@@ -285,14 +287,14 @@ function AppContent() {
             <MarkdownEditor onBack={() => handleViewChange("welcome")} />
           </div>
         );
-      
+
       case "settings":
         return (
           <div className="flex-1 flex flex-col" style={{ minHeight: 0 }}>
             <Settings onBack={() => handleViewChange("welcome")} />
           </div>
         );
-      
+
       case "projects":
         return (
           <div className="flex-1 overflow-y-auto">
@@ -314,9 +316,7 @@ function AppContent() {
                 </Button>
                 <div className="mb-4">
                   <h1 className="text-3xl font-bold tracking-tight">{t.projects.title}</h1>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {t.projects.subtitle}
-                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">{t.projects.subtitle}</p>
                 </div>
               </motion.div>
 
@@ -395,9 +395,7 @@ function AppContent() {
                         />
                       ) : (
                         <div className="py-8 text-center">
-                          <p className="text-sm text-muted-foreground">
-                            {t.projects.noProjects}
-                          </p>
+                          <p className="text-sm text-muted-foreground">{t.projects.noProjects}</p>
                         </div>
                       )}
                     </motion.div>
@@ -407,15 +405,12 @@ function AppContent() {
             </div>
           </div>
         );
-      
+
       case "claude-file-editor":
         return editingClaudeFile ? (
-          <ClaudeFileEditor
-            file={editingClaudeFile}
-            onBack={handleBackFromClaudeFileEditor}
-          />
+          <ClaudeFileEditor file={editingClaudeFile} onBack={handleBackFromClaudeFileEditor} />
         ) : null;
-      
+
       case "tabs":
         return (
           <div className="h-full flex flex-col">
@@ -425,17 +420,13 @@ function AppContent() {
             </div>
           </div>
         );
-      
+
       case "usage-dashboard":
-        return (
-          <UsageDashboard onBack={() => handleViewChange("welcome")} />
-        );
-      
+        return <UsageDashboard onBack={() => handleViewChange("welcome")} />;
+
       case "mcp":
-        return (
-          <MCPManager onBack={() => handleViewChange("welcome")} />
-        );
-      
+        return <MCPManager onBack={() => handleViewChange("welcome")} />;
+
       case "project-settings":
         if (projectForSettings) {
           return (
@@ -449,7 +440,7 @@ function AppContent() {
           );
         }
         break;
-      
+
       default:
         return null;
     }
@@ -466,21 +457,16 @@ function AppContent() {
         onInfoClick={() => setShowNFO(true)}
         onAgentsClick={() => setShowAgentsModal(true)}
       />
-      
+
       {/* Main Content */}
-      <div className="flex-1 overflow-hidden">
-        {renderContent()}
-      </div>
-      
+      <div className="flex-1 overflow-hidden">{renderContent()}</div>
+
       {/* NFO Credits Modal */}
       {showNFO && <NFOCredits onClose={() => setShowNFO(false)} />}
-      
+
       {/* Agents Modal */}
-      <AgentsModal 
-        open={showAgentsModal} 
-        onOpenChange={setShowAgentsModal} 
-      />
-      
+      <AgentsModal open={showAgentsModal} onOpenChange={setShowAgentsModal} />
+
       {/* Claude Binary Dialog */}
       <ClaudeBinaryDialog
         open={showClaudeBinaryDialog}
@@ -492,15 +478,11 @@ function AppContent() {
         }}
         onError={(message) => setToast({ message, type: "error" })}
       />
-      
+
       {/* Toast Container */}
       <ToastContainer>
         {toast && (
-          <Toast
-            message={toast.message}
-            type={toast.type}
-            onDismiss={() => setToast(null)}
-          />
+          <Toast message={toast.message} type={toast.type} onDismiss={() => setToast(null)} />
         )}
       </ToastContainer>
     </div>

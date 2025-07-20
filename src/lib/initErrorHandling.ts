@@ -3,12 +3,17 @@
  * 设置全局错误处理、Toast通知和用户偏好
  */
 
-import { errorHandler, setupGlobalErrorHandling } from './errorHandler';
-import { APP_ERROR_CONFIGS, getEnvironmentErrorConfig, getUserErrorPreferences, applyUserPreferencesToConfig } from '@/config/errorConfig';
-import { logger } from './logger';
+import { errorHandler, setupGlobalErrorHandling } from "./errorHandler";
+import {
+  APP_ERROR_CONFIGS,
+  getEnvironmentErrorConfig,
+  getUserErrorPreferences,
+  applyUserPreferencesToConfig,
+} from "@/config/errorConfig";
+import { logger } from "./logger";
 
 // Toast回调函数类型
-type ToastCallback = (message: string, type: 'error' | 'warning' | 'info') => void;
+type ToastCallback = (message: string, type: "error" | "warning" | "info") => void;
 type ModalCallback = (title: string, message: string, details?: string) => void;
 type RedirectCallback = (path: string) => void;
 
@@ -22,7 +27,7 @@ export const initializeErrorHandling = (callbacks: {
   redirect?: RedirectCallback;
 }) => {
   try {
-    logger.info('Initializing error handling system...');
+    logger.info("Initializing error handling system...");
 
     // 设置全局错误捕获
     setupGlobalErrorHandling();
@@ -38,7 +43,7 @@ export const initializeErrorHandling = (callbacks: {
     Object.entries(APP_ERROR_CONFIGS).forEach(([_key, config]) => {
       // 应用环境配置
       const envOverride = envConfig[config.type] || {};
-      
+
       // 应用用户偏好
       const finalConfig = applyUserPreferencesToConfig(
         { ...config, ...envOverride },
@@ -48,14 +53,14 @@ export const initializeErrorHandling = (callbacks: {
       errorHandler.updateErrorConfig(config.type, finalConfig);
     });
 
-    logger.info('Error handling system initialized successfully', {
+    logger.info("Error handling system initialized successfully", {
       userPreferences,
-      configCount: Object.keys(APP_ERROR_CONFIGS).length
+      configCount: Object.keys(APP_ERROR_CONFIGS).length,
     });
-
   } catch (error) {
     // 使用原生console避免循环引用
-    console.error('Failed to initialize error handling system:', error);
+    // eslint-disable-next-line no-console
+    console.error("Failed to initialize error handling system:", error);
   }
 };
 
@@ -65,20 +70,20 @@ export const initializeErrorHandling = (callbacks: {
 export const createErrorMiddleware = () => {
   return {
     // API调用前的预处理
-    beforeRequest: (operation: string, params?: any) => {
+    beforeRequest: (operation: string, params?: unknown) => {
       logger.debug(`API Request: ${operation}`, params);
     },
 
     // API调用后的错误处理
-    afterRequest: async (operation: string, error?: any, params?: any) => {
+    afterRequest: async (operation: string, error?: unknown, params?: unknown) => {
       if (error) {
-        await errorHandler.handle(error, {
+        await errorHandler.handle(error instanceof Error ? error : String(error), {
           operation,
           params,
-          timestamp: Date.now()
+          timestamp: Date.now(),
         });
       }
-    }
+    },
   };
 };
 
@@ -86,11 +91,11 @@ export const createErrorMiddleware = () => {
  * 创建React组件错误边界处理器
  */
 export const createComponentErrorHandler = (componentName: string) => {
-  return async (error: Error, errorInfo?: any) => {
+  return async (error: Error, errorInfo?: unknown) => {
     await errorHandler.handle(error, {
       component: componentName,
       errorInfo,
-      source: 'react_error_boundary'
+      source: "react_error_boundary",
     });
   };
 };
@@ -99,11 +104,11 @@ export const createComponentErrorHandler = (componentName: string) => {
  * 创建异步操作错误处理器
  */
 export const createAsyncErrorHandler = (operationName: string) => {
-  return async (error: any, context?: Record<string, any>) => {
-    await errorHandler.handle(error, {
+  return async (error: unknown, context?: Record<string, unknown>) => {
+    await errorHandler.handle(error instanceof Error ? error : String(error), {
       operation: operationName,
       ...context,
-      source: 'async_operation'
+      source: "async_operation",
     });
   };
 };
@@ -114,33 +119,33 @@ export const createAsyncErrorHandler = (operationName: string) => {
 export const errorRecoveryStrategies = {
   // 重新加载页面
   reloadPage: () => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       window.location.reload();
     }
   },
 
   // 清除本地存储
   clearLocalStorage: () => {
-    if (typeof localStorage !== 'undefined') {
+    if (typeof localStorage !== "undefined") {
       localStorage.clear();
-      logger.info('Local storage cleared for error recovery');
+      logger.info("Local storage cleared for error recovery");
     }
   },
 
   // 重置应用状态
   resetAppState: () => {
     // 这里可以调用状态管理器的重置方法
-    logger.info('App state reset for error recovery');
+    logger.info("App state reset for error recovery");
   },
 
   // 返回主页
   goHome: (navigate?: (path: string) => void) => {
     if (navigate) {
-      navigate('/');
-    } else if (typeof window !== 'undefined') {
-      window.location.href = '/';
+      navigate("/");
+    } else if (typeof window !== "undefined") {
+      window.location.href = "/";
     }
-  }
+  },
 };
 
 /**
@@ -164,13 +169,13 @@ export const errorAnalytics = {
     const fiveMinutesAgo = now - 5 * 60 * 1000;
 
     const recentErrorCount = recentErrors.filter(
-      error => error.timestamp > fiveMinutesAgo
+      (error) => error.timestamp > fiveMinutesAgo
     ).length;
 
     if (recentErrorCount > 10) {
-      logger.warn('High error frequency detected', {
+      logger.warn("High error frequency detected", {
         errorCount: recentErrorCount,
-        timeWindow: '5 minutes'
+        timeWindow: "5 minutes",
       });
       return true;
     }
@@ -182,25 +187,25 @@ export const errorAnalytics = {
   generateErrorReport: () => {
     const stats = errorHandler.getErrorStats();
     const recentErrors = errorHandler.getErrorHistory(50);
-    
+
     return {
       timestamp: new Date().toISOString(),
       stats,
-      recentErrors: recentErrors.map(error => ({
+      recentErrors: recentErrors.map((error) => ({
         id: error.id,
         type: error.type,
         severity: error.severity,
         message: error.message,
         timestamp: error.timestamp,
-        context: error.context
+        context: error.context,
       })),
       systemInfo: {
-        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
-        url: typeof window !== 'undefined' ? window.location.href : 'unknown',
-        timestamp: Date.now()
-      }
+        userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "unknown",
+        url: typeof window !== "undefined" ? window.location.href : "unknown",
+        timestamp: Date.now(),
+      },
     };
-  }
+  },
 };
 
 export default {
@@ -209,5 +214,5 @@ export default {
   createComponentErrorHandler,
   createAsyncErrorHandler,
   errorRecoveryStrategies,
-  errorAnalytics
+  errorAnalytics,
 };

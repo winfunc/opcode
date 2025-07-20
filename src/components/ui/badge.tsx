@@ -1,7 +1,7 @@
-import * as React from "react"
-import { cva, type VariantProps } from "class-variance-authority"
+import * as React from "react";
+import { cva, type VariantProps } from "class-variance-authority";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
 /**
  * Badge variants configuration using class-variance-authority
@@ -11,8 +11,7 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
-        default:
-          "border-transparent bg-primary text-primary-foreground hover:bg-primary/80",
+        default: "border-transparent bg-primary text-primary-foreground hover:bg-primary/80",
         secondary:
           "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
         destructive:
@@ -24,7 +23,7 @@ const badgeVariants = cva(
       variant: "default",
     },
   }
-)
+);
 
 /**
  * Props interface for the Badge component
@@ -35,14 +34,14 @@ export interface BadgeProps
 
 /**
  * Badge component for displaying status, labels, or categories
- * 
+ *
  * A small component used to display status information, labels, or categories.
  * Supports multiple visual variants and can be used inline with text or standalone.
- * 
+ *
  * @param variant - Visual style variant (default, secondary, destructive, outline)
  * @param className - Additional CSS classes
  * @param children - Badge content
- * 
+ *
  * @example
  * ```tsx
  * <Badge variant="default">New</Badge>
@@ -51,9 +50,9 @@ export interface BadgeProps
  * ```
  */
 function Badge({ className, variant, ...props }: BadgeProps) {
-  return (
-    <div className={cn(badgeVariants({ variant }), className)} {...props} />
-  )
+  return <div className={cn(badgeVariants({ variant }), className)} {...props} />;
 }
 
-export { Badge, badgeVariants } 
+export { Badge };
+// eslint-disable-next-line react-refresh/only-export-components
+export { badgeVariants };

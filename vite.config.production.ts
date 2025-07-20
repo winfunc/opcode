@@ -45,31 +45,39 @@ export default defineConfig(async () => ({
   build: {
     // 增加 chunk 大小警告限制
     chunkSizeWarningLimit: 2000,
-    
+
     // 启用压缩
-    minify: 'terser',
-    
+    minify: "terser",
+
     // Terser 配置 - 移除 console 和 debugger
     terserOptions: {
       compress: {
         drop_console: true,
         drop_debugger: true,
-        pure_funcs: ['console.log', 'console.debug', 'console.info'],
+        pure_funcs: ["console.log", "console.debug", "console.info"],
       },
     },
-    
+
     rollupOptions: {
       output: {
         // 手动分块以优化加载
         manualChunks: {
           // Vendor chunks
-          'react-vendor': ['react', 'react-dom'],
-          'ui-vendor': ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-select', '@radix-ui/react-tabs', '@radix-ui/react-tooltip', '@radix-ui/react-switch', '@radix-ui/react-popover'],
-          'editor-vendor': ['@uiw/react-md-editor'],
-          'syntax-vendor': ['react-syntax-highlighter'],
+          "react-vendor": ["react", "react-dom"],
+          "ui-vendor": [
+            "@radix-ui/react-dialog",
+            "@radix-ui/react-dropdown-menu",
+            "@radix-ui/react-select",
+            "@radix-ui/react-tabs",
+            "@radix-ui/react-tooltip",
+            "@radix-ui/react-switch",
+            "@radix-ui/react-popover",
+          ],
+          "editor-vendor": ["@uiw/react-md-editor"],
+          "syntax-vendor": ["react-syntax-highlighter"],
           // Tauri and other utilities
-          'tauri': ['@tauri-apps/api', '@tauri-apps/plugin-dialog', '@tauri-apps/plugin-shell'],
-          'utils': ['date-fns', 'clsx', 'tailwind-merge'],
+          tauri: ["@tauri-apps/api", "@tauri-apps/plugin-dialog", "@tauri-apps/plugin-shell"],
+          utils: ["date-fns", "clsx", "tailwind-merge"],
         },
       },
     },

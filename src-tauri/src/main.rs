@@ -47,17 +47,19 @@ use process::ProcessRegistryState;
 use std::sync::Mutex;
 use tauri::Manager;
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize unified logger
     logger::init_logger();
-
 
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
         .setup(|app| {
             // Initialize agents database
-            let conn = init_database(&app.handle()).expect("Failed to initialize agents database");
+            let conn = init_database(&app.handle()).map_err(|e| {
+                log::error!("Failed to initialize agents database: {}", e);
+                format!("Database initialization failed: {}", e)
+            })?;
             app.manage(AgentDb(Mutex::new(conn)));
 
             // Initialize checkpoint state
@@ -198,5 +200,10 @@ fn main() {
             commands::slash_commands::slash_command_delete,
         ])
         .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .map_err(|e| {
+            log::error!("Failed to run Tauri application: {}", e);
+            e
+        })?;
+
+    Ok(())
 }
