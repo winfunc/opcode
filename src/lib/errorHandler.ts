@@ -4,7 +4,6 @@
  */
 
 import { logger } from "./logger";
-
 // 错误类型枚举
 export enum ErrorType {
   NETWORK = "network",
@@ -395,8 +394,7 @@ export class ErrorHandler {
   private showToast(error: StandardError, config: ErrorConfig): boolean {
     if (!this.toastCallback) {
       logger.warn("Toast callback not set, falling back to console");
-      // eslint-disable-next-line no-console
-      console.error(config.customMessage || error.message);
+      logger.error(config.customMessage || error.message);
       return false;
     }
 

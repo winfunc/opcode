@@ -54,6 +54,7 @@
     "date-fns": "^3.6.0",
     "diff": "^8.0.2",
     "framer-motion": "^12.0.0-alpha.1",
+    "glob": "^11.0.3",
     "html2canvas": "^1.4.1",
     "lucide-react": "^0.468.0",
     "react": "^18.3.1",

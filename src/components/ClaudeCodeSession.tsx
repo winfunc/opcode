@@ -326,7 +326,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
           parsedMessages.push(message);
         } catch (_err) {
           // Skip invalid JSON lines
-          // console.warn('Failed to parse message:', line);
+          // logger.warn('Failed to parse message:', line);
         }
       }
       setMessages(parsedMessages);

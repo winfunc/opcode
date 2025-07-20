@@ -61,7 +61,7 @@ interface UseErrorHandlerReturn {
  * ```tsx
  * const { handleError, handleApiError, withErrorBoundary } = useErrorHandler({
  *   defaultConfig: { strategy: ErrorStrategy.TOAST },
- *   onError: (error) => console.log('Error occurred:', error)
+ *   onError: (error) => logger.info('Error occurred:', error)
  * });
  *
  * // 直接处理错误

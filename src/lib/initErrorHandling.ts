@@ -11,7 +11,6 @@ import {
   applyUserPreferencesToConfig,
 } from "@/config/errorConfig";
 import { logger } from "./logger";
-
 // Toast回调函数类型
 type ToastCallback = (message: string, type: "error" | "warning" | "info") => void;
 type ModalCallback = (title: string, message: string, details?: string) => void;
@@ -59,8 +58,7 @@ export const initializeErrorHandling = (callbacks: {
     });
   } catch (error) {
     // 使用原生console避免循环引用
-    // eslint-disable-next-line no-console
-    console.error("Failed to initialize error handling system:", error);
+    logger.error("Failed to initialize error handling system:", error);
   }
 };
 
