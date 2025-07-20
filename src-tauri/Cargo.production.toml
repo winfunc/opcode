@@ -1,0 +1,30 @@
+# 生产环境 Cargo 配置
+# 使用方法: CARGO_MANIFEST_PATH=Cargo.production.toml cargo build --release
+
+[profile.release]
+# 启用最大优化
+opt-level = 3
+# 启用 LTO (Link Time Optimization)
+lto = true
+# 减少代码大小
+codegen-units = 1
+# 启用 panic = "abort" 以减少二进制大小
+panic = "abort"
+# 去除调试符号
+debug = false
+# 启用所有优化
+overflow-checks = false
+
+[profile.release.package."*"]
+# 对所有依赖包也启用最大优化
+opt-level = 3
+
+# 生产环境特定的依赖配置
+[dependencies.log]
+version = "0.4"
+features = ["release_max_level_warn"]  # 编译时移除 debug 和 info 日志
+
+[dependencies.env_logger]
+version = "0.11"
+default-features = false
+features = ["color"]

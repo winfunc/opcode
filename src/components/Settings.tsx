@@ -26,6 +26,7 @@ import { ClaudeVersionSelector } from "./ClaudeVersionSelector";
 import { StorageTab } from "./StorageTab";
 import { HooksEditor } from "./HooksEditor";
 import { SlashCommandsManager } from "./SlashCommandsManager";
+import { logger } from "@/lib/logger";
 
 interface SettingsProps {
   /**
@@ -93,7 +94,7 @@ export const Settings: React.FC<SettingsProps> = ({
       const path = await api.getClaudeBinaryPath();
       setCurrentBinaryPath(path);
     } catch (err) {
-      console.error("Failed to load Claude binary path:", err);
+      logger.error("Failed to load Claude binary path:", err);
     }
   };
 
@@ -108,7 +109,7 @@ export const Settings: React.FC<SettingsProps> = ({
       
       // Ensure loadedSettings is an object
       if (!loadedSettings || typeof loadedSettings !== 'object') {
-        console.warn("Loaded settings is not an object:", loadedSettings);
+        logger.warn("Loaded settings is not an object:", loadedSettings);
         setSettings({});
         return;
       }
@@ -146,7 +147,7 @@ export const Settings: React.FC<SettingsProps> = ({
         );
       }
     } catch (err) {
-      console.error("Failed to load settings:", err);
+      logger.error("Failed to load settings:", err);
       setError(t.settings.failedToLoadSettings);
       setSettings({});
     } finally {
@@ -197,7 +198,7 @@ export const Settings: React.FC<SettingsProps> = ({
 
       setToast({ message: t.settings.settingsSavedSuccessfully, type: "success" });
     } catch (err) {
-      console.error("Failed to save settings:", err);
+      logger.error("Failed to save settings:", err);
       setError("Failed to save settings.");
       setToast({ message: t.settings.failedToSaveSettings, type: "error" });
     } finally {

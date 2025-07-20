@@ -4,6 +4,7 @@ import { X, Plus, MessageSquare, Bot, AlertCircle, Loader2, Folder, BarChart, Se
 import { useTabState } from '@/hooks/useTabState';
 import { Tab } from '@/contexts/TabContext';
 import { cn } from '@/lib/utils';
+import { logger } from '@/lib/logger';
 
 interface TabItemProps {
   tab: Tab;
@@ -223,7 +224,7 @@ export const TabManager: React.FC<TabManagerProps> = ({ className }) => {
 
   const handleReorder = (newOrder: Tab[]) => {
     // This will be handled by the context when we implement reorderTabs
-    console.log('Reorder tabs:', newOrder);
+    logger.debug('Reorder tabs:', newOrder);
   };
 
   const handleCloseTab = async (id: string) => {

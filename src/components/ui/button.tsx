@@ -45,7 +45,7 @@ export interface ButtonProps
  * Button component with multiple variants and sizes
  * 
  * @example
- * <Button variant="outline" size="lg" onClick={() => console.log('clicked')}>
+ * <Button variant="outline" size="lg" onClick={() => logger.debug('clicked')}>
  *   Click me
  * </Button>
  */

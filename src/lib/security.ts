@@ -3,6 +3,8 @@
  * Provides functions to validate and sanitize user inputs to prevent security vulnerabilities
  */
 
+import { logger } from '@/lib/logger';
+
 /**
  * Validates if a string is a safe file path
  * Prevents path traversal attacks and ensures the path is within allowed boundaries
@@ -217,7 +219,7 @@ export function safeJsonParse(jsonString: string, maxSize: number = 1024 * 1024)
   try {
     return JSON.parse(jsonString);
   } catch (error) {
-    console.warn('Invalid JSON input:', error);
+    logger.warn('Invalid JSON input:', error);
     return null;
   }
 }

@@ -52,6 +52,7 @@ import { cn } from '@/lib/utils';
 import { HooksManager } from '@/lib/hooksManager';
 import { api } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
+import { logger } from '@/lib/logger';
 import {
   HooksConfiguration,
   HookEvent,
@@ -196,7 +197,7 @@ export const HooksEditor: React.FC<HooksEditorProps> = ({
           setHasUnsavedChanges(false);
         })
         .catch((err) => {
-          console.error("Failed to load hooks configuration:", err);
+          logger.error("Failed to load hooks configuration:", err);
           setLoadError(err instanceof Error ? err.message : "Failed to load hooks configuration");
           setHooks({});
         })
@@ -327,7 +328,7 @@ export const HooksEditor: React.FC<HooksEditorProps> = ({
       setHooks(newHooks);
       setHasUnsavedChanges(false);
     } catch (error) {
-      console.error('Failed to save hooks:', error);
+      logger.error('Failed to save hooks:', error);
       setLoadError(error instanceof Error ? error.message : 'Failed to save hooks');
     } finally {
       setIsSaving(false);

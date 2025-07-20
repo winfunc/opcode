@@ -12,6 +12,7 @@ import type { AgentRun } from '@/lib/api';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { StreamMessage } from './StreamMessage';
 import { ErrorBoundary } from './ErrorBoundary';
+import { logger } from '@/lib/logger';
 
 interface SessionOutputViewerProps {
   session: AgentRun;
@@ -139,13 +140,13 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
             try {
               await api.streamSessionOutput(session.id);
             } catch (streamError) {
-              console.warn('Failed to start streaming, will poll instead:', streamError);
+              logger.warn('Failed to start streaming, will poll instead:', streamError);
             }
           }
           
           return;
         } catch (err) {
-          console.warn('Failed to load from JSONL, falling back to regular output:', err);
+          logger.warn('Failed to load from JSONL, falling back to regular output:', err);
         }
       }
 
@@ -162,7 +163,7 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
           const message = JSON.parse(line) as ClaudeStreamMessage;
           parsedMessages.push(message);
         } catch (err) {
-          console.error("Failed to parse message:", err, line);
+          logger.error("Failed to parse message:", err, line);
         }
       }
       setMessages(parsedMessages);
@@ -182,11 +183,11 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
         try {
           await api.streamSessionOutput(session.id);
         } catch (streamError) {
-          console.warn('Failed to start streaming, will poll instead:', streamError);
+          logger.warn('Failed to start streaming, will poll instead:', streamError);
         }
       }
     } catch (error) {
-      console.error('Failed to load session output:', error);
+      logger.error('Failed to load session output:', error);
       setToast({ message: 'Failed to load session output', type: 'error' });
     } finally {
       setLoading(false);
@@ -211,12 +212,12 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
           const message = JSON.parse(event.payload) as ClaudeStreamMessage;
           setMessages(prev => [...prev, message]);
         } catch (err) {
-          console.error("Failed to parse message:", err, event.payload);
+          logger.error("Failed to parse message:", err, event.payload);
         }
       });
 
       const errorUnlisten = await listen<string>(`agent-error:${session.id}`, (event) => {
-        console.error("Agent error:", event.payload);
+        logger.error("Agent error:", event.payload);
         setToast({ message: event.payload, type: 'error' });
       });
 
@@ -231,7 +232,7 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
 
       unlistenRefs.current = [outputUnlisten, errorUnlisten, completeUnlisten, cancelUnlisten];
     } catch (error) {
-      console.error('Failed to set up live event listeners:', error);
+      logger.error('Failed to set up live event listeners:', error);
     }
   };
 
@@ -305,7 +306,7 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
       await loadOutput(true); // Skip cache when manually refreshing
       setToast({ message: 'Output refreshed', type: 'success' });
     } catch (error) {
-      console.error('Failed to refresh output:', error);
+      logger.error('Failed to refresh output:', error);
       setToast({ message: 'Failed to refresh output', type: 'error' });
     } finally {
       setRefreshing(false);

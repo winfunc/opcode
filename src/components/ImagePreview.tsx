@@ -32,7 +32,7 @@ interface ImagePreviewProps {
  * @example
  * <ImagePreview 
  *   images={["/path/to/image1.png", "/path/to/image2.jpg"]}
- *   onRemove={(index) => console.log('Remove image at', index)}
+ *   onRemove={(index) => logger.debug('Remove image at', index)}
  * />
  */
 export const ImagePreview: React.FC<ImagePreviewProps> = ({

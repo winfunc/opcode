@@ -3,6 +3,8 @@
  * Provides functions and utilities to improve application performance
  */
 
+import { logger } from '@/lib/logger';
+
 /**
  * Memoization utility for expensive function calls
  * Caches function results based on arguments to avoid repeated calculations
@@ -14,7 +16,7 @@
  * @example
  * ```typescript
  * const expensiveCalculation = memoize((a: number, b: number) => {
- *   console.log('Calculating...');
+ *   logger.debug('Calculating...');
  *   return a * b * Math.random();
  * });
  * 
@@ -164,7 +166,7 @@ export class BatchProcessor<T> {
     try {
       await this.processor(items);
     } catch (error) {
-      console.error('Batch processing error:', error);
+      logger.error('Batch processing error:', error);
     }
   }
 

@@ -10,6 +10,7 @@ import { MCPServerList } from "./MCPServerList";
 import { MCPAddServer } from "./MCPAddServer";
 import { MCPImportExport } from "./MCPImportExport";
 import { useI18n } from "@/lib/i18n";
+import { logger } from '@/lib/logger';
 
 interface MCPManagerProps {
   /**
@@ -49,13 +50,13 @@ export const MCPManager: React.FC<MCPManagerProps> = ({
     try {
       setLoading(true);
       setError(null);
-      console.log("MCPManager: Loading servers...");
+      logger.debug("MCPManager: Loading servers...");
       const serverList = await api.mcpList();
-      console.log("MCPManager: Received server list:", serverList);
-      console.log("MCPManager: Server count:", serverList.length);
+      logger.debug("MCPManager: Received server list:", serverList);
+      logger.debug("MCPManager: Server count:", serverList.length);
       setServers(serverList);
     } catch (err) {
-      console.error("MCPManager: Failed to load MCP servers:", err);
+      logger.error("MCPManager: Failed to load MCP servers:", err);
       setError(t.mcp.failedToLoadServers);
     } finally {
       setLoading(false);

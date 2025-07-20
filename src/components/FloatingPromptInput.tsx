@@ -22,6 +22,7 @@ import { useI18n } from "@/lib/i18n";
 import { type FileEntry, type SlashCommand } from "@/lib/api";
 import { type ClaudeModel } from "@/types/models";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { logger } from "@/lib/logger";
 
 interface FloatingPromptInputProps {
   /**
@@ -144,7 +145,7 @@ type Model = {
  * const promptRef = useRef<FloatingPromptInputRef>(null);
  * <FloatingPromptInput
  *   ref={promptRef}
- *   onSend={(prompt, model) => console.log('Send:', prompt, model)}
+ *   onSend={(prompt, model) => logger.debug('Send:', prompt, model)}
  *   isLoading={false}
  * />
  */
@@ -255,7 +256,7 @@ const FloatingPromptInputInner = (
 
   // Extract image paths from prompt text
   const extractImagePaths = (text: string): string[] => {
-    console.log('[extractImagePaths] Input text length:', text.length);
+    logger.debug('[extractImagePaths] Input text length:', text.length);
     
     // Updated regex to handle both quoted and unquoted paths
     // Pattern 1: @"path with spaces or data URLs" - quoted paths
@@ -267,11 +268,11 @@ const FloatingPromptInputInner = (
     
     // First, extract quoted paths (including data URLs)
     let matches = Array.from(text.matchAll(quotedRegex));
-    console.log('[extractImagePaths] Quoted matches:', matches.length);
+    logger.debug('[extractImagePaths] Quoted matches:', matches.length);
     
     for (const match of matches) {
       const path = match[1]; // No need to trim, quotes preserve exact path
-      console.log('[extractImagePaths] Processing quoted path:', path.startsWith('data:') ? 'data URL' : path);
+      logger.debug('[extractImagePaths] Processing quoted path:', path.startsWith('data:') ? 'data URL' : path);
       
       // For data URLs, use as-is; for file paths, convert to absolute
       const fullPath = path.startsWith('data:') 
@@ -288,14 +289,14 @@ const FloatingPromptInputInner = (
     
     // Then extract unquoted paths (typically file paths)
     matches = Array.from(textWithoutQuoted.matchAll(unquotedRegex));
-    console.log('[extractImagePaths] Unquoted matches:', matches.length);
+    logger.debug('[extractImagePaths] Unquoted matches:', matches.length);
     
     for (const match of matches) {
       const path = match[1].trim();
       // Skip if it looks like a data URL fragment (shouldn't happen with proper quoting)
       if (path.includes('data:')) continue;
       
-      console.log('[extractImagePaths] Processing unquoted path:', path);
+      logger.debug('[extractImagePaths] Processing unquoted path:', path);
       
       // Convert relative path to absolute if needed
       const fullPath = path.startsWith('/') ? path : (projectPath ? `${projectPath}/${path}` : path);
@@ -306,15 +307,15 @@ const FloatingPromptInputInner = (
     }
 
     const uniquePaths = Array.from(pathsSet);
-    console.log('[extractImagePaths] Final extracted paths (unique):', uniquePaths.length);
+    logger.debug('[extractImagePaths] Final extracted paths (unique):', uniquePaths.length);
     return uniquePaths;
   };
 
   // Update embedded images when prompt changes
   useEffect(() => {
-    console.log('[useEffect] Prompt changed:', prompt);
+    logger.debug('[useEffect] Prompt changed:', prompt);
     const imagePaths = extractImagePaths(prompt);
-    console.log('[useEffect] Setting embeddedImages to:', imagePaths);
+    logger.debug('[useEffect] Setting embeddedImages to:', imagePaths);
     setEmbeddedImages(imagePaths);
   }, [prompt, projectPath]);
 
@@ -381,7 +382,7 @@ const FloatingPromptInputInner = (
           }
         });
       } catch (error) {
-        console.error('Failed to set up Tauri drag-drop listener:', error);
+        logger.error('Failed to set up Tauri drag-drop listener:', error);
       }
     };
 
@@ -432,7 +433,7 @@ const FloatingPromptInputInner = (
         (newCursorPosition > 1 && /\s/.test(newValue[newCursorPosition - 2]));
       
       if (isStartOfCommand) {
-        console.log('[FloatingPromptInput] / detected for slash command');
+        logger.debug('[FloatingPromptInput] / detected for slash command');
         setShowSlashCommandPicker(true);
         setSlashCommandQuery("");
         setCursorPosition(newCursorPosition);
@@ -441,7 +442,7 @@ const FloatingPromptInputInner = (
 
     // Check if @ was just typed
     if (projectPath?.trim() && newValue.length > prompt.length && newValue[newCursorPosition - 1] === '@') {
-      console.log('[FloatingPromptInput] @ detected, projectPath:', projectPath);
+      logger.debug('[FloatingPromptInput] @ detected, projectPath:', projectPath);
       setShowFilePicker(true);
       setFilePickerQuery("");
       setCursorPosition(newCursorPosition);
@@ -518,7 +519,7 @@ const FloatingPromptInputInner = (
 
       if (atPosition === -1) {
         // @ not found, this shouldn't happen but handle gracefully
-        console.error('[FloatingPromptInput] @ position not found');
+        logger.error('[FloatingPromptInput] @ position not found');
         return;
       }
 
@@ -571,7 +572,7 @@ const FloatingPromptInputInner = (
     }
 
     if (slashPosition === -1) {
-      console.error('[FloatingPromptInput] / position not found');
+      logger.error('[FloatingPromptInput] / position not found');
       return;
     }
 
@@ -676,7 +677,7 @@ const FloatingPromptInputInner = (
           
           reader.readAsDataURL(blob);
         } catch (error) {
-          console.error('Failed to paste image:', error);
+          logger.error('Failed to paste image:', error);
         }
       }
     }

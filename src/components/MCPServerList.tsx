@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { api, type MCPServer } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
+import { logger } from '@/lib/logger';
 
 interface MCPServerListProps {
   /**
@@ -88,7 +89,7 @@ export const MCPServerList: React.FC<MCPServerListProps> = ({
       setCopiedServer(serverName);
       setTimeout(() => setCopiedServer(null), 2000);
     } catch (error) {
-      console.error("Failed to copy command:", error);
+      logger.error("Failed to copy command:", error);
     }
   };
 
@@ -101,7 +102,7 @@ export const MCPServerList: React.FC<MCPServerListProps> = ({
       await api.mcpRemove(name);
       onServerRemoved(name);
     } catch (error) {
-      console.error("Failed to remove server:", error);
+      logger.error("Failed to remove server:", error);
     } finally {
       setRemovingServer(null);
     }
@@ -115,9 +116,9 @@ export const MCPServerList: React.FC<MCPServerListProps> = ({
       setTestingServer(name);
       const result = await api.mcpTestConnection(name);
       // TODO: Show result in a toast or modal
-      console.log("Test result:", result);
+      logger.debug("Test result:", result);
     } catch (error) {
-      console.error("Failed to test connection:", error);
+      logger.error("Failed to test connection:", error);
     } finally {
       setTestingServer(null);
     }

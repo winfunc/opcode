@@ -4,6 +4,8 @@
  * 更新时间：2025年1月19日
  * 
  * 价格单位：美元/百万tokens
+
+import { logger } from '@/lib/logger';
  */
 
 export interface ModelPricing {
@@ -87,7 +89,7 @@ export const MODEL_PRICING: Record<string, ModelPricing> = {
  * ```typescript
  * const pricing = getModelPricing('claude-3-5-sonnet-20241022');
  * if (pricing) {
- *   console.log(`Input: $${pricing.inputPrice}/M tokens`);
+ *   logger.debug(`Input: $${pricing.inputPrice}/M tokens`);
  * }
  * ```
  */
@@ -111,7 +113,7 @@ export function getModelPricing(model: string): ModelPricing | null {
  * @example
  * ```typescript
  * const cost = calculateCost('claude-3-5-sonnet-20241022', 1000, 500);
- * console.log(`Total cost: $${cost.toFixed(4)}`);
+ * logger.debug(`Total cost: $${cost.toFixed(4)}`);
  * 
  * // 包含缓存的计算
  * const costWithCache = calculateCost('haiku', 1000, 500, 100, 200);

@@ -37,6 +37,7 @@ import { ErrorBoundary } from "./ErrorBoundary";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { AGENT_ICONS } from "./CCAgents";
 import { HooksEditor } from "./HooksEditor";
+import { logger } from "@/lib/logger";
 
 interface AgentExecutionProps {
   /**
@@ -275,7 +276,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
         setError(null); // Clear any previous errors
       }
     } catch (err) {
-      console.error("Failed to select directory:", err);
+      logger.error("Failed to select directory:", err);
       // More detailed error logging
       const errorMessage = err instanceof Error ? err.message : String(err);
       setError(`Failed to select directory: ${errorMessage}`);
@@ -300,7 +301,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
       
       // Execute the agent and get the run ID
       const executionRunId = await api.executeAgent(agent.id!, projectPath, task, model);
-      console.log("Agent execution started with run ID:", executionRunId);
+      logger.debug("Agent execution started with run ID:", executionRunId);
       setRunId(executionRunId);
       
       // Set up event listeners with run ID isolation
@@ -313,12 +314,12 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
           const message = JSON.parse(event.payload) as ClaudeStreamMessage;
           setMessages(prev => [...prev, message]);
         } catch (err) {
-          console.error("Failed to parse message:", err, event.payload);
+          logger.error("Failed to parse message:", err, event.payload);
         }
       });
 
       const errorUnlisten = await listen<string>(`agent-error:${executionRunId}`, (event) => {
-        console.error("Agent error:", event.payload);
+        logger.error("Agent error:", event.payload);
         setError(event.payload);
       });
 
@@ -338,7 +339,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
 
       unlistenRefs.current = [outputUnlisten, errorUnlisten, completeUnlisten, cancelUnlisten];
     } catch (err) {
-      console.error("Failed to execute agent:", err);
+      logger.error("Failed to execute agent:", err);
       setIsRunning(false);
       setExecutionStartTime(null);
       setRunId(null);
@@ -360,7 +361,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
   const handleStop = async () => {
     try {
       if (!runId) {
-        console.error("No run ID available to stop");
+        logger.error("No run ID available to stop");
         return;
       }
 
@@ -368,9 +369,9 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
       const success = await api.killAgentSession(runId);
       
       if (success) {
-        console.log(`Successfully stopped agent session ${runId}`);
+        logger.debug(`Successfully stopped agent session ${runId}`);
       } else {
-        console.warn(`Failed to stop agent session ${runId} - it may have already finished`);
+        logger.warn(`Failed to stop agent session ${runId} - it may have already finished`);
       }
       
       // Update UI state
@@ -394,7 +395,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
         }
       }]);
     } catch (err) {
-      console.error("Failed to stop agent:", err);
+      logger.error("Failed to stop agent:", err);
       // Still update UI state even if the backend call failed
       setIsRunning(false);
       setExecutionStartTime(null);

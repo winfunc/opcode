@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
+import { logger } from '@/lib/logger';
 
 interface UsageDashboardProps {
   /**
@@ -83,7 +84,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
       setStats(statsData);
       setSessionStats(sessionData);
     } catch (err) {
-      console.error("Failed to load usage stats:", err);
+      logger.error("Failed to load usage stats:", err);
       setError(t.usage.failedToLoadUsageStats);
     } finally {
       setLoading(false);

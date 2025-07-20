@@ -9,6 +9,7 @@ import { SessionList } from '@/components/SessionList';
 import { RunningClaudeSessions } from '@/components/RunningClaudeSessions';
 import { Button } from '@/components/ui/button';
 import { useI18n } from '@/lib/i18n';
+import { logger } from '@/lib/logger';
 import { ClaudeCodeSession } from '@/components/ClaudeCodeSession';
 import AgentRunOutputViewer from '@/components/AgentRunOutputViewer';
 import { AgentExecution } from '@/components/AgentExecution';
@@ -48,7 +49,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
       const projectList = await api.listProjects();
       setProjects(projectList);
     } catch (err) {
-      console.error("Failed to load projects:", err);
+      logger.error("Failed to load projects:", err);
       setError("Failed to load projects. Please ensure ~/.claude directory exists.");
     } finally {
       setLoading(false);
@@ -63,7 +64,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
       setSessions(sessionList);
       setSelectedProject(project);
     } catch (err) {
-      console.error("Failed to load sessions:", err);
+      logger.error("Failed to load sessions:", err);
       setError("Failed to load sessions for this project.");
     } finally {
       setLoading(false);
@@ -183,7 +184,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
                           onProjectClick={handleProjectClick}
                           onProjectSettings={(project) => {
                             // Project settings functionality can be added here if needed
-                            console.log('Project settings clicked for:', project);
+                            logger.debug('Project settings clicked for:', project);
                           }}
                           loading={loading}
                           className="animate-fade-in"

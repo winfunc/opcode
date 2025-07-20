@@ -11,6 +11,7 @@ import MDEditor from "@uiw/react-md-editor";
 import { type AgentIconName } from "./CCAgents";
 import { IconPicker, ICON_MAP } from "./IconPicker";
 import { useI18n } from "@/lib/i18n";
+import { logger } from '@/lib/logger';
 import { getModelPricing, formatPrice } from "@/config/pricing";
 
 
@@ -94,7 +95,7 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
 
       onAgentCreated();
     } catch (err) {
-      console.error("Failed to save agent:", err);
+      logger.error("Failed to save agent:", err);
       setError(isEditMode ? t.agents.failedToUpdateAgent : t.agents.failedToCreateAgent);
       setToast({
         message: isEditMode ? t.agents.failedToUpdateAgent : t.agents.failedToCreateAgent,

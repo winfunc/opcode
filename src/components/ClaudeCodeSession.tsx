@@ -35,6 +35,7 @@ import { WebviewPreview } from "./WebviewPreview";
 import type { ClaudeStreamMessage } from "./AgentExecution";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useI18n } from "@/lib/i18n";
+import { logger } from "@/lib/logger";
 
 interface ClaudeCodeSessionProps {
   /**
@@ -224,7 +225,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
 
   // Debug logging
   useEffect(() => {
-    console.log('[ClaudeCodeSession] State update:', {
+    logger.debug('[ClaudeCodeSession] State update:', {
       projectPath,
       session,
       extractedSessionInfo,
@@ -300,7 +301,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       // After loading history, we're continuing a conversation
       setIsFirstPrompt(false);
     } catch (err) {
-      console.error("Failed to load session history:", err);
+      logger.error("Failed to load session history:", err);
       setError("Failed to load session history");
     } finally {
       setIsLoading(false);
@@ -321,7 +322,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         
         if (activeSession) {
           // Session is still active, reconnect to its stream
-          console.log('[ClaudeCodeSession] Found active session, reconnecting:', session.id);
+          logger.debug('[ClaudeCodeSession] Found active session, reconnecting:', session.id);
           // IMPORTANT: Set claudeSessionId before reconnecting
           setClaudeSessionId(session.id);
           
@@ -332,17 +333,17 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
           reconnectToSession(session.id);
         }
       } catch (err) {
-        console.error('Failed to check for active sessions:', err);
+        logger.error('Failed to check for active sessions:', err);
       }
     }
   };
 
   const reconnectToSession = async (sessionId: string) => {
-    console.log('[ClaudeCodeSession] Reconnecting to session:', sessionId);
+    logger.debug('[ClaudeCodeSession] Reconnecting to session:', sessionId);
     
     // Prevent duplicate listeners
     if (isListeningRef.current) {
-      console.log('[ClaudeCodeSession] Already listening to session, skipping reconnect');
+      logger.debug('[ClaudeCodeSession] Already listening to session, skipping reconnect');
       return;
     }
     
@@ -359,7 +360,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     // Set up session-specific listeners
     const outputUnlisten = await listen<string>(`claude-output:${sessionId}`, async (event) => {
       try {
-        console.log('[ClaudeCodeSession] Received claude-output on reconnect:', event.payload);
+        logger.debug('[ClaudeCodeSession] Received claude-output on reconnect:', event.payload);
         
         if (!isMountedRef.current) return;
         
@@ -370,19 +371,19 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         const message = JSON.parse(event.payload) as ClaudeStreamMessage;
         setMessages(prev => [...prev, message]);
       } catch (err) {
-        console.error("Failed to parse message:", err, event.payload);
+        logger.error("Failed to parse message:", err, event.payload);
       }
     });
 
     const errorUnlisten = await listen<string>(`claude-error:${sessionId}`, (event) => {
-      console.error("Claude error:", event.payload);
+      logger.error("Claude error:", event.payload);
       if (isMountedRef.current) {
         setError(event.payload);
       }
     });
 
     const completeUnlisten = await listen<boolean>(`claude-complete:${sessionId}`, async (event) => {
-      console.log('[ClaudeCodeSession] Received claude-complete on reconnect:', event.payload);
+      logger.debug('[ClaudeCodeSession] Received claude-complete on reconnect:', event.payload);
       if (isMountedRef.current) {
         setIsLoading(false);
         hasActiveSessionRef.current = false;
@@ -411,14 +412,14 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         setError(null);
       }
     } catch (err) {
-      console.error("Failed to select directory:", err);
+      logger.error("Failed to select directory:", err);
       const errorMessage = err instanceof Error ? err.message : String(err);
       setError(`Failed to select directory: ${errorMessage}`);
     }
   };
 
   const handleSendPrompt = async (prompt: string, model: ClaudeModel) => {
-    console.log('[ClaudeCodeSession] handleSendPrompt called with:', { prompt, model, projectPath, claudeSessionId, effectiveSession });
+    logger.debug('[ClaudeCodeSession] handleSendPrompt called with:', { prompt, model, projectPath, claudeSessionId, effectiveSession });
     
     if (!projectPath) {
       setError("Please select a project directory first");
@@ -468,25 +469,25 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         //     generic ones to prevent duplicate handling.
         // --------------------------------------------------------------------
 
-        console.log('[ClaudeCodeSession] Setting up generic event listeners first');
+        logger.debug('[ClaudeCodeSession] Setting up generic event listeners first');
 
         let currentSessionId: string | null = claudeSessionId || effectiveSession?.id || null;
 
         // Helper to attach session-specific listeners **once we are sure**
         const attachSessionSpecificListeners = async (sid: string) => {
-          console.log('[ClaudeCodeSession] Attaching session-specific listeners for', sid);
+          logger.debug('[ClaudeCodeSession] Attaching session-specific listeners for', sid);
 
           const specificOutputUnlisten = await listen<string>(`claude-output:${sid}`, (evt) => {
             handleStreamMessage(evt.payload);
           });
 
           const specificErrorUnlisten = await listen<string>(`claude-error:${sid}`, (evt) => {
-            console.error('Claude error (scoped):', evt.payload);
+            logger.error('Claude error (scoped):', evt.payload);
             setError(evt.payload);
           });
 
           const specificCompleteUnlisten = await listen<boolean>(`claude-complete:${sid}`, (evt) => {
-            console.log('[ClaudeCodeSession] Received claude-complete (scoped):', evt.payload);
+            logger.debug('[ClaudeCodeSession] Received claude-complete (scoped):', evt.payload);
             processComplete(evt.payload);
           });
 
@@ -504,7 +505,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
             const msg = JSON.parse(event.payload) as ClaudeStreamMessage;
             if (msg.type === 'system' && msg.subtype === 'init' && msg.session_id) {
               if (!currentSessionId || currentSessionId !== msg.session_id) {
-                console.log('[ClaudeCodeSession] Detected new session_id from generic listener:', msg.session_id);
+                logger.debug('[ClaudeCodeSession] Detected new session_id from generic listener:', msg.session_id);
                 currentSessionId = msg.session_id;
                 setClaudeSessionId(msg.session_id);
 
@@ -535,7 +536,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
             const message = JSON.parse(payload) as ClaudeStreamMessage;
             setMessages((prev) => [...prev, message]);
           } catch (err) {
-            console.error('Failed to parse message:', err, payload);
+            logger.error('Failed to parse message:', err, payload);
           }
         }
 
@@ -564,7 +565,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                 setTimelineVersion((v) => v + 1);
               }
             } catch (err) {
-              console.error('Failed to check auto checkpoint:', err);
+              logger.error('Failed to check auto checkpoint:', err);
             }
           }
 
@@ -581,12 +582,12 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         };
 
         const genericErrorUnlisten = await listen<string>('claude-error', (evt) => {
-          console.error('Claude error:', evt.payload);
+          logger.error('Claude error:', evt.payload);
           setError(evt.payload);
         });
 
         const genericCompleteUnlisten = await listen<boolean>('claude-complete', (evt) => {
-          console.log('[ClaudeCodeSession] Received claude-complete (generic):', evt.payload);
+          logger.debug('[ClaudeCodeSession] Received claude-complete (generic):', evt.payload);
           processComplete(evt.payload);
         });
 
@@ -613,16 +614,16 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
 
         // Execute the appropriate command
         if (effectiveSession && !isFirstPrompt) {
-          console.log('[ClaudeCodeSession] Resuming session:', effectiveSession.id);
+          logger.debug('[ClaudeCodeSession] Resuming session:', effectiveSession.id);
           await api.resumeClaudeCode(projectPath, effectiveSession.id, prompt, model);
         } else {
-          console.log('[ClaudeCodeSession] Starting new session');
+          logger.debug('[ClaudeCodeSession] Starting new session');
           setIsFirstPrompt(false);
           await api.executeClaudeCode(projectPath, prompt, model);
         }
       }
     } catch (err) {
-      console.error("Failed to send prompt:", err);
+      logger.error("Failed to send prompt:", err);
       setError("Failed to send prompt");
       setIsLoading(false);
       hasActiveSessionRef.current = false;
@@ -742,7 +743,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       };
       setMessages(prev => [...prev, cancelMessage]);
     } catch (err) {
-      console.error("Failed to cancel execution:", err);
+      logger.error("Failed to cancel execution:", err);
       
       // Even if backend fails, we should update UI to reflect stopped state
       // Add error message but still stop the UI loading state
@@ -791,13 +792,13 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       
       // Open the new forked session
       // You would need to implement navigation to the new session
-      console.log("Forked to new session:", newSessionId);
+      logger.debug("Forked to new session:", newSessionId);
       
       setShowForkDialog(false);
       setForkCheckpointId(null);
       setForkSessionName("");
     } catch (err) {
-      console.error("Failed to fork checkpoint:", err);
+      logger.error("Failed to fork checkpoint:", err);
       setError("Failed to fork checkpoint");
     } finally {
       setIsLoading(false);
@@ -819,7 +820,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   };
 
   const handlePreviewUrlChange = (url: string) => {
-    console.log('[ClaudeCodeSession] Preview URL changed to:', url);
+    logger.debug('[ClaudeCodeSession] Preview URL changed to:', url);
     setPreviewUrl(url);
   };
 
@@ -836,7 +837,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     isMountedRef.current = true;
     
     return () => {
-      console.log('[ClaudeCodeSession] Component unmounting, cleaning up listeners');
+      logger.debug('[ClaudeCodeSession] Component unmounting, cleaning up listeners');
       isMountedRef.current = false;
       isListeningRef.current = false;
       
@@ -847,7 +848,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       // Clear checkpoint manager when session ends
       if (effectiveSession) {
         api.clearCheckpointManager(effectiveSession.id).catch(err => {
-          console.error("Failed to clear checkpoint manager:", err);
+          logger.error("Failed to clear checkpoint manager:", err);
         });
       }
     };

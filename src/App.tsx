@@ -25,6 +25,7 @@ import { TabManager } from "@/components/TabManager";
 import { TabContent } from "@/components/TabContent";
 import { AgentsModal } from "@/components/AgentsModal";
 import { useTabState } from "@/hooks/useTabState";
+import { logger } from "@/lib/logger";
 
 type View = 
   | "welcome" 
@@ -136,7 +137,7 @@ function AppContent() {
       const projectList = await api.listProjects();
       setProjects(projectList);
     } catch (err) {
-      console.error("Failed to load projects:", err);
+      logger.error("Failed to load projects:", err);
       setError(t.messages.failedToLoadProjects);
     } finally {
       setLoading(false);
@@ -154,7 +155,7 @@ function AppContent() {
       setSessions(sessionList);
       setSelectedProject(project);
     } catch (err) {
-      console.error("Failed to load sessions:", err);
+      logger.error("Failed to load sessions:", err);
       setError(t.messages.failedToLoadSessions);
     } finally {
       setLoading(false);

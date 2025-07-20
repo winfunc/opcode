@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { logger } from "@/lib/logger";
 
 /**
  * @fileoverview API layer for communicating with the Tauri backend
@@ -460,7 +461,7 @@ export const api = {
     try {
       return await invoke<Project[]>("list_projects");
     } catch (error) {
-      console.error("Failed to list projects:", error);
+      logger.error("Failed to list projects:", error);
       throw error;
     }
   },
@@ -474,7 +475,7 @@ export const api = {
     try {
       return await invoke<Session[]>('get_project_sessions', { projectId });
     } catch (error) {
-      console.error("Failed to get project sessions:", error);
+      logger.error("Failed to get project sessions:", error);
       throw error;
     }
   },
@@ -487,7 +488,7 @@ export const api = {
     try {
       return await invoke<GitHubAgentFile[]>('fetch_github_agents');
     } catch (error) {
-      console.error("Failed to fetch GitHub agents:", error);
+      logger.error("Failed to fetch GitHub agents:", error);
       throw error;
     }
   },
@@ -501,7 +502,7 @@ export const api = {
     try {
       return await invoke<AgentExport>('fetch_github_agent_content', { downloadUrl });
     } catch (error) {
-      console.error("Failed to fetch GitHub agent content:", error);
+      logger.error("Failed to fetch GitHub agent content:", error);
       throw error;
     }
   },
@@ -515,7 +516,7 @@ export const api = {
     try {
       return await invoke<Agent>('import_agent_from_github', { downloadUrl });
     } catch (error) {
-      console.error("Failed to import agent from GitHub:", error);
+      logger.error("Failed to import agent from GitHub:", error);
       throw error;
     }
   },
@@ -527,7 +528,7 @@ export const api = {
   async getClaudeSettings(): Promise<ClaudeSettings> {
     try {
       const result = await invoke<{ data: ClaudeSettings }>("get_claude_settings");
-      console.log("Raw result from get_claude_settings:", result);
+      logger.debug("Raw result from get_claude_settings:", result);
       
       // The Rust backend returns ClaudeSettings { data: ... }
       // We need to extract the data field
@@ -538,7 +539,7 @@ export const api = {
       // If the result is already the settings object, return it
       return result as ClaudeSettings;
     } catch (error) {
-      console.error("Failed to get Claude settings:", error);
+      logger.error("Failed to get Claude settings:", error);
       throw error;
     }
   },
@@ -552,7 +553,7 @@ export const api = {
     try {
       return await invoke<string>("open_new_session", { path });
     } catch (error) {
-      console.error("Failed to open new session:", error);
+      logger.error("Failed to open new session:", error);
       throw error;
     }
   },
@@ -565,7 +566,7 @@ export const api = {
     try {
       return await invoke<string>("get_system_prompt");
     } catch (error) {
-      console.error("Failed to get system prompt:", error);
+      logger.error("Failed to get system prompt:", error);
       throw error;
     }
   },
@@ -578,7 +579,7 @@ export const api = {
     try {
       return await invoke<ClaudeVersionStatus>("check_claude_version");
     } catch (error) {
-      console.error("Failed to check Claude version:", error);
+      logger.error("Failed to check Claude version:", error);
       throw error;
     }
   },
@@ -592,7 +593,7 @@ export const api = {
     try {
       return await invoke<string>("save_system_prompt", { content });
     } catch (error) {
-      console.error("Failed to save system prompt:", error);
+      logger.error("Failed to save system prompt:", error);
       throw error;
     }
   },
@@ -606,7 +607,7 @@ export const api = {
     try {
       return await invoke<string>("save_claude_settings", { settings });
     } catch (error) {
-      console.error("Failed to save Claude settings:", error);
+      logger.error("Failed to save Claude settings:", error);
       throw error;
     }
   },
@@ -620,7 +621,7 @@ export const api = {
     try {
       return await invoke<ClaudeMdFile[]>("find_claude_md_files", { projectPath });
     } catch (error) {
-      console.error("Failed to find CLAUDE.md files:", error);
+      logger.error("Failed to find CLAUDE.md files:", error);
       throw error;
     }
   },
@@ -634,7 +635,7 @@ export const api = {
     try {
       return await invoke<string>("read_claude_md_file", { filePath });
     } catch (error) {
-      console.error("Failed to read CLAUDE.md file:", error);
+      logger.error("Failed to read CLAUDE.md file:", error);
       throw error;
     }
   },
@@ -649,7 +650,7 @@ export const api = {
     try {
       return await invoke<string>("save_claude_md_file", { filePath, content });
     } catch (error) {
-      console.error("Failed to save CLAUDE.md file:", error);
+      logger.error("Failed to save CLAUDE.md file:", error);
       throw error;
     }
   },
@@ -664,7 +665,7 @@ export const api = {
     try {
       return await invoke<Agent[]>('list_agents');
     } catch (error) {
-      console.error("Failed to list agents:", error);
+      logger.error("Failed to list agents:", error);
       throw error;
     }
   },
@@ -697,7 +698,7 @@ export const api = {
         hooks
       });
     } catch (error) {
-      console.error("Failed to create agent:", error);
+      logger.error("Failed to create agent:", error);
       throw error;
     }
   },
@@ -733,7 +734,7 @@ export const api = {
         hooks
       });
     } catch (error) {
-      console.error("Failed to update agent:", error);
+      logger.error("Failed to update agent:", error);
       throw error;
     }
   },
@@ -747,7 +748,7 @@ export const api = {
     try {
       return await invoke('delete_agent', { id });
     } catch (error) {
-      console.error("Failed to delete agent:", error);
+      logger.error("Failed to delete agent:", error);
       throw error;
     }
   },
@@ -761,7 +762,7 @@ export const api = {
     try {
       return await invoke<Agent>('get_agent', { id });
     } catch (error) {
-      console.error("Failed to get agent:", error);
+      logger.error("Failed to get agent:", error);
       throw error;
     }
   },
@@ -775,7 +776,7 @@ export const api = {
     try {
       return await invoke<string>('export_agent', { id });
     } catch (error) {
-      console.error("Failed to export agent:", error);
+      logger.error("Failed to export agent:", error);
       throw error;
     }
   },
@@ -789,7 +790,7 @@ export const api = {
     try {
       return await invoke<Agent>('import_agent', { jsonData });
     } catch (error) {
-      console.error("Failed to import agent:", error);
+      logger.error("Failed to import agent:", error);
       throw error;
     }
   },
@@ -803,7 +804,7 @@ export const api = {
     try {
       return await invoke<Agent>('import_agent_from_file', { filePath });
     } catch (error) {
-      console.error("Failed to import agent from file:", error);
+      logger.error("Failed to import agent from file:", error);
       throw error;
     }
   },
@@ -822,7 +823,7 @@ export const api = {
       const apiModel = model ? getApiModel(model as ClaudeModel) : undefined;
       return await invoke<number>('execute_agent', { agentId, projectPath, task, model: apiModel });
     } catch (error) {
-      console.error("Failed to execute agent:", error);
+      logger.error("Failed to execute agent:", error);
       // Return a sentinel value to indicate error
       throw new Error(`Failed to execute agent: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
@@ -837,7 +838,7 @@ export const api = {
     try {
       return await invoke<AgentRunWithMetrics[]>('list_agent_runs', { agentId });
     } catch (error) {
-      console.error("Failed to list agent runs:", error);
+      logger.error("Failed to list agent runs:", error);
       // Return empty array instead of throwing to prevent UI crashes
       return [];
     }
@@ -852,7 +853,7 @@ export const api = {
     try {
       return await invoke<AgentRunWithMetrics>('get_agent_run', { id });
     } catch (error) {
-      console.error("Failed to get agent run:", error);
+      logger.error("Failed to get agent run:", error);
       throw new Error(`Failed to get agent run: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   },
@@ -866,7 +867,7 @@ export const api = {
     try {
       return await invoke<AgentRunWithMetrics>('get_agent_run_with_real_time_metrics', { id });
     } catch (error) {
-      console.error("Failed to get agent run with real-time metrics:", error);
+      logger.error("Failed to get agent run with real-time metrics:", error);
       throw new Error(`Failed to get agent run with real-time metrics: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   },
@@ -879,7 +880,7 @@ export const api = {
     try {
       return await invoke<AgentRun[]>('list_running_sessions');
     } catch (error) {
-      console.error("Failed to list running agent sessions:", error);
+      logger.error("Failed to list running agent sessions:", error);
       throw new Error(`Failed to list running agent sessions: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   },
@@ -893,7 +894,7 @@ export const api = {
     try {
       return await invoke<boolean>('kill_agent_session', { runId });
     } catch (error) {
-      console.error("Failed to kill agent session:", error);
+      logger.error("Failed to kill agent session:", error);
       throw new Error(`Failed to kill agent session: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   },
@@ -907,7 +908,7 @@ export const api = {
     try {
       return await invoke<string | null>('get_session_status', { runId });
     } catch (error) {
-      console.error("Failed to get session status:", error);
+      logger.error("Failed to get session status:", error);
       throw new Error(`Failed to get session status: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   },
@@ -920,7 +921,7 @@ export const api = {
     try {
       return await invoke<number[]>('cleanup_finished_processes');
     } catch (error) {
-      console.error("Failed to cleanup finished processes:", error);
+      logger.error("Failed to cleanup finished processes:", error);
       throw new Error(`Failed to cleanup finished processes: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   },
@@ -934,7 +935,7 @@ export const api = {
     try {
       return await invoke<string>('get_session_output', { runId });
     } catch (error) {
-      console.error("Failed to get session output:", error);
+      logger.error("Failed to get session output:", error);
       throw new Error(`Failed to get session output: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   },
@@ -948,7 +949,7 @@ export const api = {
     try {
       return await invoke<string>('get_live_session_output', { runId });
     } catch (error) {
-      console.error("Failed to get live session output:", error);
+      logger.error("Failed to get live session output:", error);
       throw new Error(`Failed to get live session output: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   },
@@ -962,7 +963,7 @@ export const api = {
     try {
       return await invoke<void>('stream_session_output', { runId });
     } catch (error) {
-      console.error("Failed to start streaming session output:", error);
+      logger.error("Failed to start streaming session output:", error);
       throw new Error(`Failed to start streaming session output: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   },
@@ -984,7 +985,7 @@ export const api = {
     try {
       return await invoke<any[]>('load_agent_session_history', { sessionId });
     } catch (error) {
-      console.error("Failed to load agent session history:", error);
+      logger.error("Failed to load agent session history:", error);
       throw error;
     }
   },
@@ -1060,7 +1061,7 @@ export const api = {
     try {
       return await invoke<UsageStats>("get_usage_stats");
     } catch (error) {
-      console.error("Failed to get usage stats:", error);
+      logger.error("Failed to get usage stats:", error);
       throw error;
     }
   },
@@ -1075,7 +1076,7 @@ export const api = {
     try {
       return await invoke<UsageStats>("get_usage_by_date_range", { startDate, endDate });
     } catch (error) {
-      console.error("Failed to get usage by date range:", error);
+      logger.error("Failed to get usage by date range:", error);
       throw error;
     }
   },
@@ -1099,7 +1100,7 @@ export const api = {
         order,
       });
     } catch (error) {
-      console.error("Failed to get session stats:", error);
+      logger.error("Failed to get session stats:", error);
       throw error;
     }
   },
@@ -1113,7 +1114,7 @@ export const api = {
     try {
       return await invoke<UsageEntry[]>("get_usage_details", { limit });
     } catch (error) {
-      console.error("Failed to get usage details:", error);
+      logger.error("Failed to get usage details:", error);
       throw error;
     }
   },
@@ -1241,7 +1242,7 @@ export const api = {
         projectId
       });
     } catch (error) {
-      console.error("Failed to get checkpoint diff:", error);
+      logger.error("Failed to get checkpoint diff:", error);
       throw error;
     }
   },
@@ -1263,7 +1264,7 @@ export const api = {
         message
       });
     } catch (error) {
-      console.error("Failed to track checkpoint message:", error);
+      logger.error("Failed to track checkpoint message:", error);
       throw error;
     }
   },
@@ -1285,7 +1286,7 @@ export const api = {
         message
       });
     } catch (error) {
-      console.error("Failed to check auto checkpoint:", error);
+      logger.error("Failed to check auto checkpoint:", error);
       throw error;
     }
   },
@@ -1307,7 +1308,7 @@ export const api = {
         keepCount
       });
     } catch (error) {
-      console.error("Failed to cleanup old checkpoints:", error);
+      logger.error("Failed to cleanup old checkpoints:", error);
       throw error;
     }
   },
@@ -1332,7 +1333,7 @@ export const api = {
         projectPath
       });
     } catch (error) {
-      console.error("Failed to get checkpoint settings:", error);
+      logger.error("Failed to get checkpoint settings:", error);
       throw error;
     }
   },
@@ -1344,7 +1345,7 @@ export const api = {
     try {
       await invoke("clear_checkpoint_manager", { sessionId });
     } catch (error) {
-      console.error("Failed to clear checkpoint manager:", error);
+      logger.error("Failed to clear checkpoint manager:", error);
       throw error;
     }
   },
@@ -1383,7 +1384,7 @@ export const api = {
         scope
       });
     } catch (error) {
-      console.error("Failed to add MCP server:", error);
+      logger.error("Failed to add MCP server:", error);
       throw error;
     }
   },
@@ -1393,12 +1394,12 @@ export const api = {
    */
   async mcpList(): Promise<MCPServer[]> {
     try {
-      console.log("API: Calling mcp_list...");
+      logger.debug("API: Calling mcp_list...");
       const result = await invoke<MCPServer[]>("mcp_list");
-      console.log("API: mcp_list returned:", result);
+      logger.debug("API: mcp_list returned:", result);
       return result;
     } catch (error) {
-      console.error("API: Failed to list MCP servers:", error);
+      logger.error("API: Failed to list MCP servers:", error);
       throw error;
     }
   },
@@ -1410,7 +1411,7 @@ export const api = {
     try {
       return await invoke<MCPServer>("mcp_get", { name });
     } catch (error) {
-      console.error("Failed to get MCP server:", error);
+      logger.error("Failed to get MCP server:", error);
       throw error;
     }
   },
@@ -1422,7 +1423,7 @@ export const api = {
     try {
       return await invoke<string>("mcp_remove", { name });
     } catch (error) {
-      console.error("Failed to remove MCP server:", error);
+      logger.error("Failed to remove MCP server:", error);
       throw error;
     }
   },
@@ -1434,7 +1435,7 @@ export const api = {
     try {
       return await invoke<AddServerResult>("mcp_add_json", { name, jsonConfig, scope });
     } catch (error) {
-      console.error("Failed to add MCP server from JSON:", error);
+      logger.error("Failed to add MCP server from JSON:", error);
       throw error;
     }
   },
@@ -1446,7 +1447,7 @@ export const api = {
     try {
       return await invoke<ImportResult>("mcp_add_from_claude_desktop", { scope });
     } catch (error) {
-      console.error("Failed to import from Claude Desktop:", error);
+      logger.error("Failed to import from Claude Desktop:", error);
       throw error;
     }
   },
@@ -1458,7 +1459,7 @@ export const api = {
     try {
       return await invoke<string>("mcp_serve");
     } catch (error) {
-      console.error("Failed to start MCP server:", error);
+      logger.error("Failed to start MCP server:", error);
       throw error;
     }
   },
@@ -1470,7 +1471,7 @@ export const api = {
     try {
       return await invoke<string>("mcp_test_connection", { name });
     } catch (error) {
-      console.error("Failed to test MCP connection:", error);
+      logger.error("Failed to test MCP connection:", error);
       throw error;
     }
   },
@@ -1482,7 +1483,7 @@ export const api = {
     try {
       return await invoke<string>("mcp_reset_project_choices");
     } catch (error) {
-      console.error("Failed to reset project choices:", error);
+      logger.error("Failed to reset project choices:", error);
       throw error;
     }
   },
@@ -1494,7 +1495,7 @@ export const api = {
     try {
       return await invoke<Record<string, ServerStatus>>("mcp_get_server_status");
     } catch (error) {
-      console.error("Failed to get server status:", error);
+      logger.error("Failed to get server status:", error);
       throw error;
     }
   },
@@ -1506,7 +1507,7 @@ export const api = {
     try {
       return await invoke<MCPProjectConfig>("mcp_read_project_config", { projectPath });
     } catch (error) {
-      console.error("Failed to read project MCP config:", error);
+      logger.error("Failed to read project MCP config:", error);
       throw error;
     }
   },
@@ -1518,7 +1519,7 @@ export const api = {
     try {
       return await invoke<string>("mcp_save_project_config", { projectPath, config });
     } catch (error) {
-      console.error("Failed to save project MCP config:", error);
+      logger.error("Failed to save project MCP config:", error);
       throw error;
     }
   },
@@ -1531,7 +1532,7 @@ export const api = {
     try {
       return await invoke<string | null>("get_claude_binary_path");
     } catch (error) {
-      console.error("Failed to get Claude binary path:", error);
+      logger.error("Failed to get Claude binary path:", error);
       throw error;
     }
   },
@@ -1545,7 +1546,7 @@ export const api = {
     try {
       return await invoke<void>("set_claude_binary_path", { path });
     } catch (error) {
-      console.error("Failed to set Claude binary path:", error);
+      logger.error("Failed to set Claude binary path:", error);
       throw error;
     }
   },
@@ -1558,7 +1559,7 @@ export const api = {
     try {
       return await invoke<ClaudeInstallation[]>("list_claude_installations");
     } catch (error) {
-      console.error("Failed to list Claude installations:", error);
+      logger.error("Failed to list Claude installations:", error);
       throw error;
     }
   },
@@ -1573,7 +1574,7 @@ export const api = {
     try {
       return await invoke<any[]>("storage_list_tables");
     } catch (error) {
-      console.error("Failed to list tables:", error);
+      logger.error("Failed to list tables:", error);
       throw error;
     }
   },
@@ -1600,7 +1601,7 @@ export const api = {
         searchQuery,
       });
     } catch (error) {
-      console.error("Failed to read table:", error);
+      logger.error("Failed to read table:", error);
       throw error;
     }
   },
@@ -1624,7 +1625,7 @@ export const api = {
         updates,
       });
     } catch (error) {
-      console.error("Failed to update row:", error);
+      logger.error("Failed to update row:", error);
       throw error;
     }
   },
@@ -1645,7 +1646,7 @@ export const api = {
         primaryKeyValues,
       });
     } catch (error) {
-      console.error("Failed to delete row:", error);
+      logger.error("Failed to delete row:", error);
       throw error;
     }
   },
@@ -1666,7 +1667,7 @@ export const api = {
         values,
       });
     } catch (error) {
-      console.error("Failed to insert row:", error);
+      logger.error("Failed to insert row:", error);
       throw error;
     }
   },
@@ -1680,7 +1681,7 @@ export const api = {
     try {
       return await invoke<any>("storage_execute_sql", { query });
     } catch (error) {
-      console.error("Failed to execute SQL:", error);
+      logger.error("Failed to execute SQL:", error);
       throw error;
     }
   },
@@ -1693,7 +1694,7 @@ export const api = {
     try {
       return await invoke<void>("storage_reset_database");
     } catch (error) {
-      console.error("Failed to reset database:", error);
+      logger.error("Failed to reset database:", error);
       throw error;
     }
   },
@@ -1708,7 +1709,7 @@ export const api = {
     try {
       return await invoke<HooksConfiguration>("get_hooks_config", { scope, projectPath });
     } catch (error) {
-      console.error("Failed to get hooks config:", error);
+      logger.error("Failed to get hooks config:", error);
       throw error;
     }
   },
@@ -1728,7 +1729,7 @@ export const api = {
     try {
       return await invoke<string>("update_hooks_config", { scope, projectPath, hooks });
     } catch (error) {
-      console.error("Failed to update hooks config:", error);
+      logger.error("Failed to update hooks config:", error);
       throw error;
     }
   },
@@ -1742,7 +1743,7 @@ export const api = {
     try {
       return await invoke<{ valid: boolean; message: string }>("validate_hook_command", { command });
     } catch (error) {
-      console.error("Failed to validate hook command:", error);
+      logger.error("Failed to validate hook command:", error);
       throw error;
     }
   },
@@ -1763,7 +1764,7 @@ export const api = {
       // Use HooksManager for merging
       return HooksManager.mergeConfigs(userHooks, projectHooks, localHooks);
     } catch (error) {
-      console.error("Failed to get merged hooks config:", error);
+      logger.error("Failed to get merged hooks config:", error);
       throw error;
     }
   },
@@ -1779,7 +1780,7 @@ export const api = {
     try {
       return await invoke<SlashCommand[]>("slash_commands_list", { projectPath });
     } catch (error) {
-      console.error("Failed to list slash commands:", error);
+      logger.error("Failed to list slash commands:", error);
       throw error;
     }
   },
@@ -1793,7 +1794,7 @@ export const api = {
     try {
       return await invoke<SlashCommand>("slash_command_get", { commandId });
     } catch (error) {
-      console.error("Failed to get slash command:", error);
+      logger.error("Failed to get slash command:", error);
       throw error;
     }
   },
@@ -1829,7 +1830,7 @@ export const api = {
         projectPath
       });
     } catch (error) {
-      console.error("Failed to save slash command:", error);
+      logger.error("Failed to save slash command:", error);
       throw error;
     }
   },
@@ -1844,7 +1845,7 @@ export const api = {
     try {
       return await invoke<string>("slash_command_delete", { commandId, projectPath });
     } catch (error) {
-      console.error("Failed to delete slash command:", error);
+      logger.error("Failed to delete slash command:", error);
       throw error;
     }
   }

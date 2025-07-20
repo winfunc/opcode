@@ -7,7 +7,7 @@
   "scripts": {
     "predev": "bun run build:executables:current",
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "tsc && vite build --config vite.config.production.ts",
     "prebuild": "bun run build:executables:current",
     "build:executables": "bun run scripts/fetch-and-build.js --version=1.0.55",
     "build:executables:current": "bun run scripts/fetch-and-build.js current --version=1.0.55",
@@ -76,6 +76,7 @@
     "@vitejs/plugin-react": "^4.3.4",
     "jsdom": "^26.1.0",
     "sharp": "^0.34.2",
+    "terser": "^5.43.1",
     "typescript": "~5.6.2",
     "vite": "^6.0.3",
     "vitest": "^3.2.4"

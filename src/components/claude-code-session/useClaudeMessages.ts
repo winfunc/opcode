@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { api } from '@/lib/api';
+import { logger } from '@/lib/logger';
 import type { ClaudeStreamMessage } from '../AgentExecution';
 
 interface UseClaudeMessagesOptions {
@@ -82,7 +83,7 @@ export function useClaudeMessages(options: UseClaudeMessagesOptions = {}) {
               loadedMessages.push(msg);
               loadedRawJsonl.push(line);
             } catch (e) {
-              console.error("Failed to parse JSONL:", e);
+              logger.error("Failed to parse JSONL:", e);
             }
           });
         }
@@ -91,7 +92,7 @@ export function useClaudeMessages(options: UseClaudeMessagesOptions = {}) {
       setMessages(loadedMessages);
       setRawJsonlOutput(loadedRawJsonl);
     } catch (error) {
-      console.error("Failed to load session outputs:", error);
+      logger.error("Failed to load session outputs:", error);
       throw error;
     }
   }, []);
@@ -108,7 +109,7 @@ export function useClaudeMessages(options: UseClaudeMessagesOptions = {}) {
           const message = JSON.parse(event.payload) as ClaudeStreamMessage;
           handleMessage(message);
         } catch (error) {
-          console.error("Failed to parse Claude stream message:", error);
+          logger.error("Failed to parse Claude stream message:", error);
         }
       });
     };

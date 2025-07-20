@@ -1,4 +1,4 @@
-#!/usr/bin/env bun
+﻿#!/usr/bin/env bun
 
 /**
  * Prepare the CLI for bundling using Bun's native embedding features
@@ -7,12 +7,13 @@
 
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { join } from 'path';
+import { logger as log } from '../src/lib/logger.ts';
 
 // Read the original CLI file
 const cliPath = './cli.js';
 let cliContent = readFileSync(cliPath, 'utf-8');
 
-console.log('Preparing CLI for native Bun embedding...');
+log.info('Preparing CLI for native Bun embedding...');
 
 // 1. Build list of embedded imports based on what files actually exist
 const embeddedImports = [];
@@ -37,7 +38,7 @@ if (existsSync('./yoga.wasm')) {
   embeddedImports.push('import __embeddedYogaWasm from "./yoga.wasm" with { type: "file" };');
   embeddedFilesMapping.push("  'yoga.wasm': __embeddedYogaWasm,");
 } else {
-  console.error('Warning: yoga.wasm not found');
+  log.error('Warning: yoga.wasm not found');
 }
 
 // Only import ripgrep files that exist
@@ -82,19 +83,19 @@ const yoga141Replacement = `var k81=await(async()=>{return await nUA(await Bun.f
 
 if (yoga155Pattern.test(cliContent)) {
   cliContent = cliContent.replace(yoga155Pattern, yoga155Replacement);
-  console.log('✓ Replaced yoga.wasm loading with embedded version (1.0.55 pattern)');
+  log.info('�?Replaced yoga.wasm loading with embedded version (1.0.55 pattern)');
 } else if (yoga141Pattern.test(cliContent)) {
   cliContent = cliContent.replace(yoga141Pattern, yoga141Replacement);
-  console.log('✓ Replaced yoga.wasm loading with embedded version (1.0.41 pattern)');
+  log.info('�?Replaced yoga.wasm loading with embedded version (1.0.41 pattern)');
 } else {
-  console.error('Warning: Could not find yoga.wasm loading pattern');
+  log.error('Warning: Could not find yoga.wasm loading pattern');
   // Try a more general pattern that works for both versions
   const generalYogaPattern = /var\s+(\w+)\s*=\s*await\s+(\w+)\s*\(\s*await\s+(\w+)\s*\([^)]+\.resolve\s*\(\s*["']\.\/yoga\.wasm["']\s*\)\s*\)\s*\)/;
   if (generalYogaPattern.test(cliContent)) {
     cliContent = cliContent.replace(generalYogaPattern, (match, varName, func1, func2) => {
       return `var ${varName}=await(async()=>{return await ${func1}(await Bun.file(__embeddedYogaWasm).arrayBuffer())})()`;
     });
-    console.log('✓ Replaced yoga.wasm loading with embedded version (general pattern)');
+    log.info('�?Replaced yoga.wasm loading with embedded version (general pattern)');
   }
 }
 
@@ -111,7 +112,7 @@ let B=Db.resolve(et9,"vendor","ripgrep");`;
 
 if (ripgrepPattern.test(cliContent)) {
   cliContent = cliContent.replace(ripgrepPattern, ripgrepReplacement);
-  console.log('✓ Added embedded file handling for ripgrep');
+  log.info('�?Added embedded file handling for ripgrep');
 }
 
 // 4. Replace ripgrep.node loading - handle the entire if-else structure
@@ -125,7 +126,7 @@ const ripgrepNodeReplacement = `if(typeof Bun!=="undefined"&&Bun.embeddedFiles?.
 
 if (ripgrepNodePattern.test(cliContent)) {
   cliContent = cliContent.replace(ripgrepNodePattern, ripgrepNodeReplacement);
-  console.log('✓ Added embedded file handling for ripgrep.node');
+  log.info('�?Added embedded file handling for ripgrep.node');
 } else {
   // Fallback to simpler pattern if the exact pattern doesn't match
   const simplePattern = /B="\.\/ripgrep\.node"/;
@@ -135,7 +136,7 @@ if (ripgrepNodePattern.test(cliContent)) {
       const nodeKey = \`vendor/ripgrep/\${platform}/ripgrep.node\`;
       return __embeddedFiles[nodeKey] || "./ripgrep.node";
     })()`);
-    console.log('✓ Added embedded file handling for ripgrep.node (fallback pattern)');
+    log.info('�?Added embedded file handling for ripgrep.node (fallback pattern)');
   }
 }
 
@@ -149,6 +150,7 @@ cliContent = cliContent.replace(
 const outputPath = './cli-native-bundled.js';
 writeFileSync(outputPath, cliContent);
 
-console.log(`\n✅ Created ${outputPath} ready for bundling with native embedding`);
-console.log('\nNow you can run:');
-console.log(`  bun build --compile --minify ./cli-native-bundled.js --outfile dist/claude-code`); 
+log.info(`\n�?Created ${outputPath} ready for bundling with native embedding`);
+log.info('\nNow you can run:');
+log.info(`  bun build --compile --minify ./cli-native-bundled.js --outfile dist/claude-code`); 
+

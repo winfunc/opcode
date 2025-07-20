@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { logger } from '@/lib/logger';
 
 /**
  * Toast notification function
@@ -9,7 +10,7 @@ function showToast(message: string, type: 'success' | 'error' | 'info' | 'warnin
   const timestamp = new Date().toLocaleTimeString();
   const prefix = type === 'error' ? '❌' : type === 'success' ? '✅' : 'ℹ️';
   
-  console.log(`${prefix} [${timestamp}] ${message}`);
+  logger.debug(`${prefix} [${timestamp}] ${message}`);
   
   // In a real implementation, this would trigger a toast notification
   // Example: toast({ message, type, duration: 3000 });
@@ -90,7 +91,7 @@ export function useApiCall<T>(
 
           // Validate result
           if (result === undefined) {
-            console.warn('API function returned undefined, this might indicate an error');
+            logger.warn('API function returned undefined, this might indicate an error');
           }
 
           setData(result);

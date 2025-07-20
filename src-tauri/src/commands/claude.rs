@@ -12,6 +12,7 @@ use tokio::sync::Mutex;
 use tauri_plugin_shell::ShellExt;
 use tauri_plugin_shell::process::CommandEvent;
 use regex;
+use crate::{debug_log, info_log};
 
 /// Global state to track current Claude process
 pub struct ClaudeProcessState {
@@ -246,7 +247,7 @@ fn create_command_with_env(program: &str) -> Command {
             || key == "HOMEBREW_PREFIX"
             || key == "HOMEBREW_CELLAR"
         {
-            log::debug!("Inheriting env var: {}={}", key, value);
+            debug_log!("Inheriting env var: {}={}", key, value);
             tokio_cmd.env(&key, &value);
         }
     }
@@ -422,7 +423,7 @@ fn create_system_command(
 /// Lists all projects in the ~/.claude/projects directory
 #[tauri::command]
 pub async fn list_projects() -> Result<Vec<Project>, String> {
-    log::info!("Listing projects from ~/.claude/projects");
+    info_log!("Listing projects from ~/.claude/projects");
 
     let claude_dir = get_claude_dir().map_err(|e| e.to_string())?;
     let projects_dir = claude_dir.join("projects");

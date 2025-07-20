@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { api } from './api';
+import { logger } from '@/lib/logger';
 
 // Use the same message interface as AgentExecution for consistency
 export interface ClaudeStreamMessage {
@@ -98,7 +99,7 @@ export function OutputCacheProvider({ children }: OutputCacheProviderProps) {
         const message = JSON.parse(line) as ClaudeStreamMessage;
         parsedMessages.push(message);
       } catch (err) {
-        console.error("Failed to parse message:", err, line);
+        logger.error("Failed to parse message:", err, line);
         // Add a fallback message for unparseable content
         parsedMessages.push({
           type: 'result',
@@ -124,7 +125,7 @@ export function OutputCacheProvider({ children }: OutputCacheProviderProps) {
         status
       });
     } catch (error) {
-      console.warn(`Failed to update cache for session ${sessionId}:`, error);
+      logger.warn(`Failed to update cache for session ${sessionId}:`, error);
     }
   }, [parseOutput, setCachedOutput]);
 
@@ -151,7 +152,7 @@ export function OutputCacheProvider({ children }: OutputCacheProviderProps) {
         return updated;
       });
     } catch (error) {
-      console.warn('Failed to poll running sessions:', error);
+      logger.warn('Failed to poll running sessions:', error);
     }
   }, [updateSessionCache]);
 

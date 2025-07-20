@@ -4,6 +4,7 @@
 mod checkpoint;
 mod claude_binary;
 mod commands;
+mod logger;
 mod process;
 
 use checkpoint::state::CheckpointState;
@@ -47,8 +48,8 @@ use std::sync::Mutex;
 use tauri::Manager;
 
 fn main() {
-    // Initialize logger
-    env_logger::init();
+    // Initialize unified logger
+    logger::init_logger();
 
 
     tauri::Builder::default()

@@ -17,6 +17,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { logger } from '@/lib/logger';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -132,7 +133,7 @@ export const StorageTab: React.FC = () => {
         setSelectedTable(result[0].name);
       }
     } catch (err) {
-      console.error("Failed to load tables:", err);
+      logger.error("Failed to load tables:", err);
       setError(t.storage.failedToLoadTables);
     } finally {
       setLoading(false);
@@ -157,7 +158,7 @@ export const StorageTab: React.FC = () => {
       setTableData(result);
       setCurrentPage(page);
     } catch (err) {
-      console.error("Failed to load table data:", err);
+      logger.error("Failed to load table data:", err);
       setError(t.storage.failedToLoadTableData);
     } finally {
       setLoading(false);
@@ -204,7 +205,7 @@ export const StorageTab: React.FC = () => {
       await loadTableData(currentPage);
       setEditingRow(null);
     } catch (err) {
-      console.error("Failed to update row:", err);
+      logger.error("Failed to update row:", err);
       setError(t.storage.failedToUpdateRow);
     } finally {
       setLoading(false);
@@ -224,7 +225,7 @@ export const StorageTab: React.FC = () => {
       await loadTableData(currentPage);
       setDeletingRow(null);
     } catch (err) {
-      console.error("Failed to delete row:", err);
+      logger.error("Failed to delete row:", err);
       setError(t.storage.failedToDeleteRow);
     } finally {
       setLoading(false);
@@ -243,7 +244,7 @@ export const StorageTab: React.FC = () => {
       await loadTableData(currentPage);
       setNewRow(null);
     } catch (err) {
-      console.error("Failed to insert row:", err);
+      logger.error("Failed to insert row:", err);
       setError(t.storage.failedToInsertRow);
     } finally {
       setLoading(false);
@@ -268,7 +269,7 @@ export const StorageTab: React.FC = () => {
         }
       }
     } catch (err) {
-      console.error("Failed to execute SQL:", err);
+      logger.error("Failed to execute SQL:", err);
       setSqlError(err instanceof Error ? err.message : t.storage.failedToExecuteSQL);
     } finally {
       setLoading(false);
@@ -291,7 +292,7 @@ export const StorageTab: React.FC = () => {
         type: "success",
       });
     } catch (err) {
-      console.error("Failed to reset database:", err);
+      logger.error("Failed to reset database:", err);
       setError(t.storage.failedToResetDatabase);
       setToast({
         message: t.storage.resetFailed,

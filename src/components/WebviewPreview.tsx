@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { logger } from '@/lib/logger';
 
 interface WebviewPreviewProps {
   /**
@@ -91,7 +92,7 @@ const WebviewPreviewComponent: React.FC<WebviewPreviewProps> = ({
 
   // Debug: Log initial URL on mount
   useEffect(() => {
-    console.log('[WebviewPreview] Component mounted with initialUrl:', initialUrl, 'isMaximized:', isMaximized);
+    logger.debug('[WebviewPreview] Component mounted with initialUrl:', initialUrl, 'isMaximized:', isMaximized);
   }, []);
 
   // Focus management for full screen mode
@@ -125,7 +126,7 @@ const WebviewPreviewComponent: React.FC<WebviewPreviewProps> = ({
       const urlObj = new URL(url.startsWith('http') ? url : `https://${url}`);
       const finalUrl = urlObj.href;
       
-      console.log('[WebviewPreview] Navigating to:', finalUrl);
+      logger.debug('[WebviewPreview] Navigating to:', finalUrl);
       setCurrentUrl(finalUrl);
       setInputUrl(finalUrl);
       setHasError(false);
@@ -150,12 +151,12 @@ const WebviewPreviewComponent: React.FC<WebviewPreviewProps> = ({
 
   const handleGoBack = () => {
     // In real implementation, this would call webview.goBack()
-    console.log("Go back");
+    logger.debug("Go back");
   };
 
   const handleGoForward = () => {
     // In real implementation, this would call webview.goForward()
-    console.log("Go forward");
+    logger.debug("Go forward");
   };
 
   const handleRefresh = () => {

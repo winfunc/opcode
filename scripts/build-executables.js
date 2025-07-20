@@ -1,4 +1,4 @@
-#!/usr/bin/env bun
+﻿#!/usr/bin/env bun
 
 /**
  * Build script for creating single-file executables from Claude Code package
@@ -6,7 +6,8 @@
  * 
  * Output files follow Tauri sidecar triple naming convention: name-platform-architecture
  * Examples: claude-code-x86_64-apple-darwin, claude-code-aarch64-unknown-linux-gnu
- * 
+
+* 
  * Usage:
  *   bun run build-executables.js           # Build all platforms
  *   bun run build-executables.js linux     # Build Linux executables only
@@ -19,6 +20,16 @@ import { spawn } from 'child_process';
 import { mkdir, rm } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join } from 'path';
+
+// Logger functions
+const isDev = process.env.NODE_ENV !== 'production';
+const log = {
+  debug: (...args) => isDev && console.log('[DEBUG]', ...args),
+  info: (...args) => console.log('[INFO]', ...args),
+  warn: (...args) => console.warn('[WARN]', ...args),
+  error: (...args) => console.error('[ERROR]', ...args)
+};
+
 
 // All supported targets with proper output names
 const PLATFORMS = {
@@ -58,7 +69,7 @@ const PLATFORMS = {
 
 async function runCommand(command, args) {
   return new Promise((resolve, reject) => {
-    console.log(`Running: ${command} ${args.join(' ')}`);
+    log.info(`Running: ${command} ${args.join(' ')}`);
     const child = spawn(command, args, { stdio: 'inherit' });
     
     child.on('error', reject);
@@ -73,12 +84,12 @@ async function runCommand(command, args) {
 }
 
 async function prepareBundle() {
-  console.log('\nPreparing bundle with native Bun embedding...');
+  log.info('\nPreparing bundle with native Bun embedding...');
   await runCommand('bun', ['run', 'scripts/prepare-bundle-native.js']);
 }
 
 async function buildExecutable(target, output) {
-  console.log(`\nBuilding ${output}...`);
+  log.info(`\nBuilding ${output}...`);
   const startTime = Date.now();
   
   try {
@@ -94,7 +105,7 @@ async function buildExecutable(target, output) {
     ]);
     
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-    console.log(`✓ Built ${output} in ${elapsed}s`);
+    log.info(`✓ Built ${output} in ${elapsed}s`);
   } catch (error) {
     // If compilation fails, throw the error
     throw error;
@@ -108,7 +119,7 @@ async function cleanupBundledFile() {
       await rm(file);
     }
   }
-  console.log('\n✓ Cleaned up temporary files');
+  log.info('\n✓ Cleaned up temporary files');
 }
 
 async function getCurrentPlatform() {
@@ -165,17 +176,17 @@ async function main() {
     if (current) {
       platformsToBuild = [current];
     } else {
-      console.error(`Current platform ${currentTargetTriple} not found in build targets`);
+      log.error(`Current platform ${currentTargetTriple} not found in build targets`);
       process.exit(1);
     }
   } else {
-    console.error(`Unknown argument: ${arg}`);
-    console.error('Usage: bun run build-executables.js [all|linux|macos|windows|current]');
+    log.error(`Unknown argument: ${arg}`);
+    log.error('Usage: bun run build-executables.js [all|linux|macos|windows|current]');
     process.exit(1);
   }
   
-  console.log(`Building ${platformsToBuild.length} executable(s) with full optimizations...`);
-  console.log('Optimizations enabled: --minify --sourcemap');
+  log.info(`Building ${platformsToBuild.length} executable(s) with full optimizations...`);
+  log.info('Optimizations enabled: --minify --sourcemap');
   const startTime = Date.now();
   
   try {
@@ -189,20 +200,20 @@ async function main() {
         await buildExecutable(platform.target, platform.output);
         successCount++;
       } catch (error) {
-        console.error(`Failed to build ${platform.output}:`, error.message);
+        log.error(`Failed to build ${platform.output}:`, error.message);
       }
     }
     
     const totalElapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-    console.log(`\n✅ Successfully built ${successCount}/${platformsToBuild.length} executables in ${totalElapsed}s`);
-    console.log('\nExecutables are available in the src-tauri/binaries/ directory');
-    console.log('\nNotes:');
-    console.log('- All executables include embedded assets (yoga.wasm, ripgrep binaries)');
-    console.log('- File names follow Tauri sidecar triple naming convention (name-platform-architecture)');
-    console.log('- Modern variants require CPUs from 2013+ (AVX2 support)');
-    console.log('- Baseline variants support older CPUs (pre-2013)');
-    console.log('- Musl variants are for Alpine Linux and similar distributions');
-    console.log('- All executables are optimized with minification and sourcemaps');
+    log.info(`\n✅ Successfully built ${successCount}/${platformsToBuild.length} executables in ${totalElapsed}s`);
+    log.info('\nExecutables are available in the src-tauri/binaries/ directory');
+    log.info('\nNotes:');
+    log.info('- All executables include embedded assets (yoga.wasm, ripgrep binaries)');
+    log.info('- File names follow Tauri sidecar triple naming convention (name-platform-architecture)');
+    log.info('- Modern variants require CPUs from 2013+ (AVX2 support)');
+    log.info('- Baseline variants support older CPUs (pre-2013)');
+    log.info('- Musl variants are for Alpine Linux and similar distributions');
+    log.info('- All executables are optimized with minification and sourcemaps');
   } finally {
     // Clean up temporary files
     await cleanupBundledFile();
@@ -213,3 +224,8 @@ main().catch(error => {
   console.error('Build failed:', error);
   process.exit(1);
 }); 
+
+
+
+
+

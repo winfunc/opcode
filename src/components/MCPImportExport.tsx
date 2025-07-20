@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { SelectComponent } from "@/components/ui/select";
 import { api } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
+import { logger } from '@/lib/logger';
 
 interface MCPImportExportProps {
   /**
@@ -63,7 +64,7 @@ export const MCPImportExport: React.FC<MCPImportExportProps> = ({
         onImportCompleted(result.imported_count, result.failed_count);
       }
     } catch (error: any) {
-      console.error("Failed to import from Claude Desktop:", error);
+      logger.error("Failed to import from Claude Desktop:", error);
       onError(error.toString() || t.mcp.failedToImportFromClaudeDesktop);
     } finally {
       setImportingDesktop(false);
@@ -132,7 +133,7 @@ export const MCPImportExport: React.FC<MCPImportExportProps> = ({
         onError(t.mcp.unrecognizedJsonFormat);
       }
     } catch (error) {
-      console.error("Failed to import JSON:", error);
+      logger.error("Failed to import JSON:", error);
       onError(t.mcp.failedToImportJson);
     } finally {
       setImportingJson(false);
@@ -157,7 +158,7 @@ export const MCPImportExport: React.FC<MCPImportExportProps> = ({
       await api.mcpServe();
       onError(t.mcp.claudeCodeMcpServerStarted);
     } catch (error) {
-      console.error("Failed to start MCP server:", error);
+      logger.error("Failed to start MCP server:", error);
       onError(t.mcp.failedToStartMcpServer);
     }
   };

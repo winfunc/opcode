@@ -8,6 +8,7 @@ import { SelectComponent } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { api } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
+import { logger } from '@/lib/logger';
 
 interface MCPAddServerProps {
   /**
@@ -145,7 +146,7 @@ export const MCPAddServer: React.FC<MCPAddServerProps> = ({
       }
     } catch (error) {
       onError(t.messages.saveError);
-      console.error("Failed to add stdio server:", error);
+      logger.error("Failed to add stdio server:", error);
     } finally {
       setSaving(false);
     }
@@ -198,7 +199,7 @@ export const MCPAddServer: React.FC<MCPAddServerProps> = ({
       }
     } catch (error) {
       onError(t.messages.saveError);
-      console.error("Failed to add SSE server:", error);
+      logger.error("Failed to add SSE server:", error);
     } finally {
       setSaving(false);
     }

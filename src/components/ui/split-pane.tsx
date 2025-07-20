@@ -43,7 +43,7 @@ interface SplitPaneProps {
  *   left={<div>Left content</div>}
  *   right={<div>Right content</div>}
  *   initialSplit={60}
- *   onSplitChange={(pos) => console.log('Split at', pos)}
+ *   onSplitChange={(pos) => logger.debug('Split at', pos)}
  * />
  */
 export const SplitPane: React.FC<SplitPaneProps> = ({
