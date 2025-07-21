@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { ProjectList } from "../ProjectList";
+import { I18nProvider } from "../I18nProvider";
 
 // Mock framer-motion
 vi.mock("framer-motion", () => ({
@@ -27,7 +28,11 @@ describe("ProjectList Component", () => {
   ];
 
   it("renders project list correctly", () => {
-    render(<ProjectList projects={mockProjects} onProjectClick={vi.fn()} />);
+    render(
+      <I18nProvider>
+        <ProjectList projects={mockProjects} onProjectClick={vi.fn()} />
+      </I18nProvider>
+    );
 
     expect(screen.getByText("project1")).toBeInTheDocument();
     expect(screen.getByText("project2")).toBeInTheDocument();
@@ -35,7 +40,11 @@ describe("ProjectList Component", () => {
 
   it("handles project selection", () => {
     const onProjectClick = vi.fn();
-    render(<ProjectList projects={mockProjects} onProjectClick={onProjectClick} />);
+    render(
+      <I18nProvider>
+        <ProjectList projects={mockProjects} onProjectClick={onProjectClick} />
+      </I18nProvider>
+    );
 
     const project1 = screen.getByText("project1").closest(".cursor-pointer");
     if (project1) {
@@ -46,7 +55,11 @@ describe("ProjectList Component", () => {
   });
 
   it("shows empty state when no projects", () => {
-    render(<ProjectList projects={[]} onProjectClick={vi.fn()} />);
+    render(
+      <I18nProvider>
+        <ProjectList projects={[]} onProjectClick={vi.fn()} />
+      </I18nProvider>
+    );
 
     // Should render empty grid
     expect(screen.queryByText("project1")).not.toBeInTheDocument();
@@ -55,11 +68,13 @@ describe("ProjectList Component", () => {
   it("handles project settings callback", () => {
     const onProjectSettings = vi.fn();
     render(
-      <ProjectList
-        projects={mockProjects}
-        onProjectClick={vi.fn()}
-        onProjectSettings={onProjectSettings}
-      />
+      <I18nProvider>
+        <ProjectList
+          projects={mockProjects}
+          onProjectClick={vi.fn()}
+          onProjectSettings={onProjectSettings}
+        />
+      </I18nProvider>
     );
 
     // Should render settings dropdown when callback is provided

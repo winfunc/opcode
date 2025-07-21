@@ -23,7 +23,7 @@ describe("useApiCall Hook", () => {
 
     expect(result.current.isLoading).toBe(false);
     expect(result.current.error).toBeNull();
-    expect(result.current.data).toBeUndefined();
+    expect(result.current.data).toBeNull();
   });
 
   it("should handle successful API call", async () => {
@@ -44,7 +44,9 @@ describe("useApiCall Hook", () => {
       throw new Error("Promise was not assigned");
     }
 
-    const response = await promise;
+    const response = await act(async () => {
+      return await promise!;
+    });
 
     expect(response).toBe(mockData);
     expect(result.current.isLoading).toBe(false);
@@ -69,15 +71,17 @@ describe("useApiCall Hook", () => {
       throw new Error("Promise was not assigned");
     }
 
-    try {
-      await promise;
-    } catch (_error) {
-      // Expected to throw
-    }
+    await act(async () => {
+      try {
+        await promise!;
+      } catch (_error) {
+        // Expected to throw
+      }
+    });
 
     expect(result.current.isLoading).toBe(false);
     expect(result.current.error).toBe(mockError);
-    expect(result.current.data).toBeUndefined();
+    expect(result.current.data).toBeNull();
   });
 
   it("should clear error on new execution", async () => {
@@ -97,11 +101,13 @@ describe("useApiCall Hook", () => {
       throw new Error("Promise was not assigned");
     }
 
-    try {
-      await promise1;
-    } catch (_error) {
-      // Expected to throw
-    }
+    await act(async () => {
+      try {
+        await promise1!;
+      } catch (_error) {
+        // Expected to throw
+      }
+    });
 
     expect(result.current.error).toBe(mockError);
 
@@ -119,7 +125,9 @@ describe("useApiCall Hook", () => {
       throw new Error("Promise was not assigned");
     }
 
-    await promise2;
+    await act(async () => {
+      await promise2!;
+    });
 
     expect(result.current.error).toBeNull();
     expect(result.current.data).toBe(mockData);

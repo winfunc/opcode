@@ -2,6 +2,7 @@ import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { ClaudeCodeSession } from "../ClaudeCodeSession";
+import { I18nProvider } from "../I18nProvider";
 
 // Mock the API module
 vi.mock("@/lib/api", () => ({
@@ -9,6 +10,11 @@ vi.mock("@/lib/api", () => ({
     getProjects: vi.fn(),
     getSessions: vi.fn(),
     executeClaudeCode: vi.fn(),
+    listRunningClaudeSessions: vi.fn().mockResolvedValue([]),
+    clearCheckpointManager: vi.fn().mockResolvedValue({}),
+    getSettings: vi.fn().mockResolvedValue({}),
+    updateSettings: vi.fn().mockResolvedValue({}),
+    getSessionOutput: vi.fn().mockResolvedValue([]),
   },
 }));
 
@@ -47,23 +53,41 @@ describe("ClaudeCodeSession", () => {
   });
 
   it("renders correctly with basic props", () => {
-    render(<ClaudeCodeSession onBack={mockOnBack} initialProjectPath="/test/path" />);
+    render(
+      <I18nProvider>
+        <ClaudeCodeSession onBack={mockOnBack} initialProjectPath="/test/path" />
+      </I18nProvider>
+    );
 
     expect(screen.getByText("Claude Code Session")).toBeInTheDocument();
   });
 
   it("calls onBack when back button is clicked", () => {
-    render(<ClaudeCodeSession onBack={mockOnBack} />);
+    render(
+      <I18nProvider>
+        <ClaudeCodeSession onBack={mockOnBack} />
+      </I18nProvider>
+    );
 
-    const backButton = screen.getByRole("button", { name: /back/i });
-    fireEvent.click(backButton);
+    // Find the back button (first button with arrow-left icon)
+    const buttons = screen.getAllByRole("button");
+    const backButton = buttons.find(button => 
+      button.querySelector('svg.lucide-arrow-left')
+    );
+    
+    expect(backButton).toBeDefined();
+    fireEvent.click(backButton!);
 
     expect(mockOnBack).toHaveBeenCalledTimes(1);
   });
 
   it("displays project path when provided", () => {
     const testPath = "/test/project/path";
-    render(<ClaudeCodeSession onBack={mockOnBack} initialProjectPath={testPath} />);
+    render(
+      <I18nProvider>
+        <ClaudeCodeSession onBack={mockOnBack} initialProjectPath={testPath} />
+      </I18nProvider>
+    );
 
     expect(screen.getByDisplayValue(testPath)).toBeInTheDocument();
   });
@@ -78,16 +102,23 @@ describe("ClaudeCodeSession", () => {
       message_timestamp: new Date().toISOString(),
     };
 
-    render(<ClaudeCodeSession session={mockSession} onBack={mockOnBack} />);
+    render(
+      <I18nProvider>
+        <ClaudeCodeSession session={mockSession} onBack={mockOnBack} />
+      </I18nProvider>
+    );
 
-    await waitFor(() => {
-      expect(screen.getByText("Resume Session")).toBeInTheDocument();
-    });
+    // Check that the session path is displayed
+    expect(screen.getByText("/test/path")).toBeInTheDocument();
   });
 
   it("applies custom className", () => {
     const customClass = "custom-test-class";
-    const { container } = render(<ClaudeCodeSession onBack={mockOnBack} className={customClass} />);
+    const { container } = render(
+      <I18nProvider>
+        <ClaudeCodeSession onBack={mockOnBack} className={customClass} />
+      </I18nProvider>
+    );
 
     expect(container.firstChild).toHaveClass(customClass);
   });

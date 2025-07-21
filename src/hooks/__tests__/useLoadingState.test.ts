@@ -45,7 +45,9 @@ describe("useLoadingState Hook", () => {
       throw new Error("Promise was not assigned");
     }
 
-    const response = await promise;
+    const response = await act(async () => {
+      return await promise!;
+    });
 
     expect(response).toBe("processed: test");
     expect(result.current.isLoading).toBe(false);
@@ -69,11 +71,13 @@ describe("useLoadingState Hook", () => {
       throw new Error("Promise was not assigned");
     }
 
-    try {
-      await promise;
-    } catch (_error) {
-      // Expected to throw
-    }
+    await act(async () => {
+      try {
+        await promise!;
+      } catch (_error) {
+        // Expected to throw
+      }
+    });
 
     expect(result.current.isLoading).toBe(false);
     expect(result.current.error).toBeTruthy();
@@ -98,11 +102,13 @@ describe("useLoadingState Hook", () => {
       throw new Error("Promise was not assigned");
     }
 
-    try {
-      await promise1;
-    } catch (_error) {
-      // Expected to throw
-    }
+    await act(async () => {
+      try {
+        await promise1!;
+      } catch (_error) {
+        // Expected to throw
+      }
+    });
 
     expect(result.current.error).toBeTruthy();
 
@@ -121,7 +127,9 @@ describe("useLoadingState Hook", () => {
       throw new Error("Promise was not assigned");
     }
 
-    await promise2;
+    await act(async () => {
+      await promise2!;
+    });
 
     expect(result2.current.error).toBeNull();
   });
