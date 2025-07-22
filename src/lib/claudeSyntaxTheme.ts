@@ -1,175 +1,162 @@
 /**
  * Claude-themed syntax highlighting theme
  * Features orange, purple, and violet colors to match Claude's aesthetic
+ * Supports both light and dark themes
  */
-export const claudeSyntaxTheme: any = {
-  'code[class*="language-"]': {
-    color: '#e3e8f0',
-    background: 'transparent',
-    textShadow: 'none',
-    fontFamily: 'var(--font-mono)',
-    fontSize: '0.875em',
-    textAlign: 'left',
-    whiteSpace: 'pre',
-    wordSpacing: 'normal',
-    wordBreak: 'normal',
-    wordWrap: 'normal',
-    lineHeight: '1.5',
-    MozTabSize: '4',
-    OTabSize: '4',
-    tabSize: '4',
-    WebkitHyphens: 'none',
-    MozHyphens: 'none',
-    msHyphens: 'none',
-    hyphens: 'none',
-  },
-  'pre[class*="language-"]': {
-    color: '#e3e8f0',
-    background: 'transparent',
-    textShadow: 'none',
-    fontFamily: 'var(--font-mono)',
-    fontSize: '0.875em',
-    textAlign: 'left',
-    whiteSpace: 'pre',
-    wordSpacing: 'normal',
-    wordBreak: 'normal',
-    wordWrap: 'normal',
-    lineHeight: '1.5',
-    MozTabSize: '4',
-    OTabSize: '4',
-    tabSize: '4',
-    WebkitHyphens: 'none',
-    MozHyphens: 'none',
-    msHyphens: 'none',
-    hyphens: 'none',
-    padding: '1em',
-    margin: '0',
-    overflow: 'auto',
-  },
-  ':not(pre) > code[class*="language-"]': {
-    background: 'rgba(139, 92, 246, 0.1)',
-    padding: '0.1em 0.3em',
-    borderRadius: '0.3em',
-    whiteSpace: 'normal',
-  },
-  'comment': {
-    color: '#6b7280',
-    fontStyle: 'italic',
-  },
-  'prolog': {
-    color: '#6b7280',
-  },
-  'doctype': {
-    color: '#6b7280',
-  },
-  'cdata': {
-    color: '#6b7280',
-  },
-  'punctuation': {
-    color: '#9ca3af',
-  },
-  'namespace': {
-    opacity: '0.7',
-  },
-  'property': {
-    color: '#f59e0b', // Amber/Orange
-  },
-  'tag': {
-    color: '#8b5cf6', // Violet
-  },
-  'boolean': {
-    color: '#f59e0b', // Amber/Orange
-  },
-  'number': {
-    color: '#f59e0b', // Amber/Orange
-  },
-  'constant': {
-    color: '#f59e0b', // Amber/Orange
-  },
-  'symbol': {
-    color: '#f59e0b', // Amber/Orange
-  },
-  'deleted': {
-    color: '#ef4444',
-  },
-  'selector': {
-    color: '#a78bfa', // Light Purple
-  },
-  'attr-name': {
-    color: '#a78bfa', // Light Purple
-  },
-  'string': {
-    color: '#10b981', // Emerald Green
-  },
-  'char': {
-    color: '#10b981', // Emerald Green
-  },
-  'builtin': {
-    color: '#8b5cf6', // Violet
-  },
-  'url': {
-    color: '#10b981', // Emerald Green
-  },
-  'inserted': {
-    color: '#10b981', // Emerald Green
-  },
-  'entity': {
-    color: '#a78bfa', // Light Purple
-    cursor: 'help',
-  },
-  'atrule': {
-    color: '#c084fc', // Light Violet
-  },
-  'attr-value': {
-    color: '#10b981', // Emerald Green
-  },
-  'keyword': {
-    color: '#c084fc', // Light Violet
-  },
-  'function': {
-    color: '#818cf8', // Indigo
-  },
-  'class-name': {
-    color: '#f59e0b', // Amber/Orange
-  },
-  'regex': {
-    color: '#06b6d4', // Cyan
-  },
-  'important': {
-    color: '#f59e0b', // Amber/Orange
-    fontWeight: 'bold',
-  },
-  'variable': {
-    color: '#a78bfa', // Light Purple
-  },
-  'bold': {
-    fontWeight: 'bold',
-  },
-  'italic': {
-    fontStyle: 'italic',
-  },
-  'operator': {
-    color: '#9ca3af',
-  },
-  'script': {
-    color: '#e3e8f0',
-  },
-  'parameter': {
-    color: '#fbbf24', // Yellow
-  },
-  'method': {
-    color: '#818cf8', // Indigo
-  },
-  'field': {
-    color: '#f59e0b', // Amber/Orange
-  },
-  'annotation': {
-    color: '#6b7280',
-  },
-  'type': {
-    color: '#a78bfa', // Light Purple
-  },
-  'module': {
-    color: '#8b5cf6', // Violet
-  },
-}; 
+
+const baseTheme = {
+  textShadow: 'none',
+  fontFamily: 'var(--font-mono)',
+  fontSize: '0.875em',
+  textAlign: 'left' as const,
+  whiteSpace: 'pre' as const,
+  wordSpacing: 'normal',
+  wordBreak: 'normal' as const,
+  wordWrap: 'normal' as const,
+  lineHeight: '1.5',
+  MozTabSize: '4',
+  OTabSize: '4',
+  tabSize: '4',
+  WebkitHyphens: 'none' as const,
+  MozHyphens: 'none' as const,
+  msHyphens: 'none' as const,
+  hyphens: 'none' as const,
+};
+
+const lightColors = {
+  base: '#1f2937',
+  comment: '#9ca3af',
+  punctuation: '#6b7280',
+  property: '#f59e0b', // Amber/Orange
+  tag: '#8b5cf6', // Violet
+  boolean: '#f59e0b', // Amber/Orange
+  number: '#f59e0b', // Amber/Orange
+  constant: '#f59e0b', // Amber/Orange
+  symbol: '#f59e0b', // Amber/Orange
+  deleted: '#ef4444',
+  selector: '#a78bfa', // Light Purple
+  string: '#10b981', // Emerald Green
+  builtin: '#8b5cf6', // Violet
+  inserted: '#10b981', // Emerald Green
+  entity: '#a78bfa', // Light Purple
+  atrule: '#c084fc', // Light Violet
+  keyword: '#c084fc', // Light Violet
+  function: '#818cf8', // Indigo
+  className: '#f59e0b', // Amber/Orange
+  regex: '#06b6d4', // Cyan
+  important: '#f59e0b', // Amber/Orange
+  variable: '#a78bfa', // Light Purple
+  parameter: '#fbbf24', // Yellow
+  method: '#818cf8', // Indigo
+  field: '#f59e0b', // Amber/Orange
+  annotation: '#9ca3af',
+  type: '#a78bfa', // Light Purple
+  module: '#8b5cf6', // Violet
+  inlineCodeBg: 'rgba(139, 92, 246, 0.15)',
+};
+
+const darkColors = {
+  base: '#e3e8f0',
+  comment: '#6b7280',
+  punctuation: '#9ca3af',
+  property: '#f59e0b', // Amber/Orange
+  tag: '#8b5cf6', // Violet
+  boolean: '#f59e0b', // Amber/Orange
+  number: '#f59e0b', // Amber/Orange
+  constant: '#f59e0b', // Amber/Orange
+  symbol: '#f59e0b', // Amber/Orange
+  deleted: '#ef4444',
+  selector: '#a78bfa', // Light Purple
+  string: '#10b981', // Emerald Green
+  builtin: '#8b5cf6', // Violet
+  inserted: '#10b981', // Emerald Green
+  entity: '#a78bfa', // Light Purple
+  atrule: '#c084fc', // Light Violet
+  keyword: '#c084fc', // Light Violet
+  function: '#818cf8', // Indigo
+  className: '#f59e0b', // Amber/Orange
+  regex: '#06b6d4', // Cyan
+  important: '#f59e0b', // Amber/Orange
+  variable: '#a78bfa', // Light Purple
+  parameter: '#fbbf24', // Yellow
+  method: '#818cf8', // Indigo
+  field: '#f59e0b', // Amber/Orange
+  annotation: '#6b7280',
+  type: '#a78bfa', // Light Purple
+  module: '#8b5cf6', // Violet
+  inlineCodeBg: 'rgba(139, 92, 246, 0.1)',
+};
+
+function createTheme(colors: typeof lightColors) {
+  return {
+    'code[class*="language-"]': {
+      color: colors.base,
+      background: 'transparent',
+      ...baseTheme,
+    },
+    'pre[class*="language-"]': {
+      color: colors.base,
+      background: 'transparent',
+      ...baseTheme,
+      padding: '1em',
+      margin: '0',
+      overflow: 'auto',
+    },
+    ':not(pre) > code[class*="language-"]': {
+      background: colors.inlineCodeBg,
+      padding: '0.1em 0.3em',
+      borderRadius: '0.3em',
+      whiteSpace: 'normal' as const,
+    },
+    'comment': { color: colors.comment, fontStyle: 'italic' },
+    'prolog': { color: colors.comment },
+    'doctype': { color: colors.comment },
+    'cdata': { color: colors.comment },
+    'punctuation': { color: colors.punctuation },
+    'namespace': { opacity: '0.7' },
+    'property': { color: colors.property },
+    'tag': { color: colors.tag },
+    'boolean': { color: colors.boolean },
+    'number': { color: colors.number },
+    'constant': { color: colors.constant },
+    'symbol': { color: colors.symbol },
+    'deleted': { color: colors.deleted },
+    'selector': { color: colors.selector },
+    'attr-name': { color: colors.selector },
+    'string': { color: colors.string },
+    'char': { color: colors.string },
+    'builtin': { color: colors.builtin },
+    'url': { color: colors.string },
+    'inserted': { color: colors.inserted },
+    'entity': { color: colors.entity, cursor: 'help' },
+    'atrule': { color: colors.atrule },
+    'attr-value': { color: colors.string },
+    'keyword': { color: colors.keyword },
+    'function': { color: colors.function },
+    'class-name': { color: colors.className },
+    'regex': { color: colors.regex },
+    'important': { color: colors.important, fontWeight: 'bold' },
+    'variable': { color: colors.variable },
+    'bold': { fontWeight: 'bold' },
+    'italic': { fontStyle: 'italic' },
+    'operator': { color: colors.punctuation },
+    'script': { color: colors.base },
+    'parameter': { color: colors.parameter },
+    'method': { color: colors.method },
+    'field': { color: colors.field },
+    'annotation': { color: colors.annotation },
+    'type': { color: colors.type },
+    'module': { color: colors.module },
+  };
+}
+
+export const claudeSyntaxThemeLight = createTheme(lightColors);
+export const claudeSyntaxThemeDark = createTheme(darkColors);
+
+// Default export for backward compatibility
+export const claudeSyntaxTheme = claudeSyntaxThemeLight;
+
+// Function to get theme based on current theme mode
+export function getClaudeSyntaxTheme(isDark: boolean) {
+  return isDark ? claudeSyntaxThemeDark : claudeSyntaxThemeLight;
+}

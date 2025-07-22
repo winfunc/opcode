@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Toast, ToastContainer } from "@/components/ui/toast";
+import { useTheme } from "@/contexts/ThemeContext";
 import { api, type Agent } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import MDEditor from "@uiw/react-md-editor";
@@ -43,6 +44,7 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
   onAgentCreated,
   className,
 }) => {
+  const { theme } = useTheme();
   const [name, setName] = useState(agent?.name || "");
   const [selectedIcon, setSelectedIcon] = useState<AgentIconName>((agent?.icon as AgentIconName) || "bot");
   const [systemPrompt, setSystemPrompt] = useState(agent?.system_prompt || "");
@@ -299,7 +301,7 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
                 <p className="text-xs text-muted-foreground mb-2">
                   Define the behavior and capabilities of your CC Agent
                 </p>
-                <div className="rounded-lg border border-border overflow-hidden shadow-sm" data-color-mode="dark">
+                <div className="rounded-lg border border-border overflow-hidden shadow-sm" data-color-mode={theme}>
                   <MDEditor
                     value={systemPrompt}
                     onChange={(val) => setSystemPrompt(val || "")}

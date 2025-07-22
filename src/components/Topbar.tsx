@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Circle, FileText, Settings, ExternalLink, BarChart3, Network, Info, Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover } from "@/components/ui/popover";
+import { ThemeSelector } from "@/components/ThemeSelector";
 import { api, type ClaudeVersionStatus } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -239,6 +240,8 @@ export const Topbar: React.FC<TopbarProps> = ({
         >
           <Info className="h-4 w-4" />
         </Button>
+        
+        <ThemeSelector />
       </div>
     </motion.div>
   );
