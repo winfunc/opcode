@@ -15,6 +15,10 @@ interface MCPImportExportProps {
    * Callback for error messages
    */
   onError: (message: string) => void;
+  /**
+   * Callback for success messages
+   */
+  onSuccess?: (message: string) => void;
 }
 
 /**
@@ -23,6 +27,7 @@ interface MCPImportExportProps {
 export const MCPImportExport: React.FC<MCPImportExportProps> = ({
   onImportCompleted,
   onError,
+  onSuccess,
 }) => {
   const [importingDesktop, setImportingDesktop] = useState(false);
   const [importingJson, setImportingJson] = useState(false);
@@ -153,7 +158,12 @@ export const MCPImportExport: React.FC<MCPImportExportProps> = ({
   const handleStartMCPServer = async () => {
     try {
       await api.mcpServe();
-      onError("Claude Code MCP server started. You can now connect to it from other applications.");
+      // Use onSuccess if available, otherwise use onError with a different message
+      if (onSuccess) {
+        onSuccess("Claude Code MCP server started successfully! You can now connect to it from other applications.");
+      } else {
+        onError("Claude Code MCP server started. You can now connect to it from other applications.");
+      }
     } catch (error) {
       console.error("Failed to start MCP server:", error);
       onError("Failed to start Claude Code as MCP server");

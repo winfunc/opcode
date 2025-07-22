@@ -192,6 +192,7 @@ export const MCPManager: React.FC<MCPManagerProps> = ({
                   <MCPImportExport
                     onImportCompleted={handleImportCompleted}
                     onError={(message: string) => setToast({ message, type: "error" })}
+                    onSuccess={(message: string) => setToast({ message, type: "success" })}
                   />
                 </Card>
               </TabsContent>

@@ -1,0 +1,260 @@
+/* Cursor Layout Styles */
+
+/* Hide scrollbars but maintain functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Cursor layout specific styles */
+.cursor-layout {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Modern button hover effects */
+.cursor-layout button {
+  transition: all 150ms ease-out;
+}
+
+.cursor-layout button:hover {
+  transform: translateY(-0.5px);
+}
+
+.cursor-layout button:active {
+  transform: translateY(0);
+}
+
+/* Tab bar enhancements */
+.cursor-layout .tab-bar {
+  background: linear-gradient(90deg, 
+    hsl(var(--background)) 0%, 
+    hsl(var(--muted) / 0.1) 50%, 
+    hsl(var(--background)) 100%
+  );
+}
+
+/* Sidebar polish */
+.cursor-layout .sidebar {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* Chat panel animations */
+.cursor-layout .chat-message {
+  animation: slideInFromRight 200ms ease-out;
+}
+
+@keyframes slideInFromRight {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Resize handles */
+.cursor-layout .resize-handle {
+  position: relative;
+}
+
+.cursor-layout .resize-handle::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 1px;
+  height: 100%;
+  background: hsl(var(--border));
+  transform: translateX(-50%);
+  transition: background-color 150ms ease;
+}
+
+.cursor-layout .resize-handle:hover::before {
+  background: hsl(var(--primary));
+}
+
+/* Focus styles */
+.cursor-layout *:focus-visible {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Selection styles */
+.cursor-layout ::selection {
+  background: hsl(var(--primary) / 0.2);
+}
+
+/* Smooth scrolling */
+.cursor-layout * {
+  scroll-behavior: smooth;
+}
+
+/* Modern shadows */
+.cursor-layout .modern-shadow {
+  box-shadow: 
+    0 1px 3px hsl(var(--foreground) / 0.12),
+    0 1px 2px hsl(var(--foreground) / 0.24);
+}
+
+.cursor-layout .modern-shadow-lg {
+  box-shadow: 
+    0 10px 25px hsl(var(--foreground) / 0.1),
+    0 4px 6px hsl(var(--foreground) / 0.05);
+}
+
+/* Glassmorphism effects */
+.cursor-layout .glass {
+  background: hsl(var(--background) / 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid hsl(var(--border) / 0.2);
+}
+
+/* Subtle animations */
+.cursor-layout .fade-in {
+  animation: fadeIn 300ms ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.cursor-layout .slide-up {
+  animation: slideUp 200ms ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Enhanced hover states */
+.cursor-layout .enhanced-hover {
+  transition: all 150ms ease-out;
+}
+
+.cursor-layout .enhanced-hover:hover {
+  background: hsl(var(--accent));
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px hsl(var(--foreground) / 0.1);
+}
+
+/* Typography improvements */
+.cursor-layout {
+  letter-spacing: -0.01em;
+}
+
+.cursor-layout h1, 
+.cursor-layout h2, 
+.cursor-layout h3, 
+.cursor-layout h4 {
+  letter-spacing: -0.02em;
+  font-weight: 600;
+}
+
+/* Code syntax highlighting improvements */
+.cursor-layout pre {
+  background: hsl(var(--muted));
+  border: 1px solid hsl(var(--border));
+  border-radius: 6px;
+  padding: 12px;
+  overflow-x: auto;
+  font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', 'Monaco', 'Cascadia Code', monospace;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.cursor-layout code {
+  font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', 'Monaco', 'Cascadia Code', monospace;
+  font-size: 13px;
+  background: hsl(var(--muted));
+  padding: 2px 4px;
+  border-radius: 3px;
+  border: 1px solid hsl(var(--border));
+}
+
+/* Status indicators */
+.cursor-layout .status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.cursor-layout .status-dot.online {
+  background: #22c55e;
+  box-shadow: 0 0 4px #22c55e50;
+}
+
+.cursor-layout .status-dot.offline {
+  background: #ef4444;
+  box-shadow: 0 0 4px #ef444450;
+}
+
+.cursor-layout .status-dot.away {
+  background: #f59e0b;
+  box-shadow: 0 0 4px #f59e0b50;
+}
+
+/* Loading states */
+.cursor-layout .loading-shimmer {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--muted)) 0%,
+    hsl(var(--muted) / 0.8) 50%,
+    hsl(var(--muted)) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Dark mode specific improvements */
+@media (prefers-color-scheme: dark) {
+  .cursor-layout {
+    color-scheme: dark;
+  }
+  
+  .cursor-layout .glass {
+    background: hsl(var(--background) / 0.9);
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .cursor-layout {
+    --border: hsl(0 0% 50%);
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .cursor-layout * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Loader2, Bot, FolderCode } from "lucide-react";
+import { usePerformanceClick } from "@/hooks/useDebounceClick";
 import { api, type Project, type Session, type ClaudeMdFile } from "@/lib/api";
 import { OutputCacheProvider } from "@/lib/outputCache";
 import { TabProvider } from "@/contexts/TabContext";
@@ -24,6 +24,9 @@ import { TabManager } from "@/components/TabManager";
 import { TabContent } from "@/components/TabContent";
 import { AgentsModal } from "@/components/AgentsModal";
 import { useTabState } from "@/hooks/useTabState";
+import { CursorStyleApp } from "@/components/CursorStyleApp";
+import { LayoutSwitcher } from "@/components/LayoutSwitcher";
+import "@/styles/cursor-layout.css";
 
 type View = 
   | "welcome" 
@@ -45,6 +48,12 @@ type View =
  * AppContent component - Contains the main app logic, wrapped by providers
  */
 function AppContent() {
+  // Layout state - check localStorage for saved preference
+  const [layoutType, setLayoutType] = useState<'classic' | 'cursor'>(() => {
+    const saved = localStorage.getItem('claudia-preferred-layout');
+    return (saved === 'cursor' || saved === 'classic') ? saved : 'cursor'; // Default to cursor layout
+  });
+  
   const [view, setView] = useState<View>("tabs");
   const { createClaudeMdTab, createSettingsTab, createUsageTab, createMCPTab } = useTabState();
   const [projects, setProjects] = useState<Project[]>([]);
@@ -59,6 +68,7 @@ function AppContent() {
   const [projectForSettings, setProjectForSettings] = useState<Project | null>(null);
   const [previousView] = useState<View>("welcome");
   const [showAgentsModal, setShowAgentsModal] = useState(false);
+
 
   // Load projects on mount when in projects view
   useEffect(() => {
@@ -207,6 +217,25 @@ function AppContent() {
     handleViewChange("project-settings");
   };
 
+  // 性能优化的事件处理器
+  const performanceViewChange = usePerformanceClick((newView: View) => {
+    handleViewChange(newView);
+  });
+  const performanceProjectClick = usePerformanceClick(handleProjectClick);
+  const performanceNewSession = usePerformanceClick(handleNewSession);
+  const performanceEditClaudeFile = usePerformanceClick(handleEditClaudeFile);
+  const performanceProjectSettings = usePerformanceClick(handleProjectSettings);
+
+  // Handle layout changes
+  const handleLayoutChange = (newLayout: 'classic' | 'cursor') => {
+    setLayoutType(newLayout);
+    localStorage.setItem('claudia-preferred-layout', newLayout);
+  };
+
+  // If using cursor layout, render the cursor-style app
+  if (layoutType === 'cursor') {
+    return <CursorStyleApp />;
+  }
 
   const renderContent = () => {
     switch (view) {
@@ -215,53 +244,40 @@ function AppContent() {
           <div className="flex items-center justify-center p-4" style={{ height: "100%" }}>
             <div className="w-full max-w-4xl">
               {/* Welcome Header */}
-              <motion.div
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                className="mb-12 text-center"
-              >
+              <div className="mb-12 text-center fade-in-fast">
                 <h1 className="text-4xl font-bold tracking-tight">
                   <span className="rotating-symbol"></span>
                   Welcome to Claudia
                 </h1>
-              </motion.div>
+              </div>
 
               {/* Navigation Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
                 {/* CC Agents Card */}
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.5, delay: 0.1 }}
-                >
+                <div className="scale-in-fast" style={{ animationDelay: '0.1s' }}>
                   <Card 
-                    className="h-64 cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-lg border border-border/50 shimmer-hover trailing-border"
-                    onClick={() => handleViewChange("cc-agents")}
+                    className="h-64 cursor-pointer card-fast ultra-hover border border-border/50 shimmer-hover trailing-border instant-feedback"
+                    onClick={() => performanceViewChange("cc-agents")}
                   >
                     <div className="h-full flex flex-col items-center justify-center p-8">
                       <Bot className="h-16 w-16 mb-4 text-primary" />
                       <h2 className="text-xl font-semibold">CC Agents</h2>
                     </div>
                   </Card>
-                </motion.div>
+                </div>
 
                 {/* CC Projects Card */}
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.5, delay: 0.2 }}
-                >
+                <div className="scale-in-fast" style={{ animationDelay: '0.2s' }}>
                   <Card 
-                    className="h-64 cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-lg border border-border/50 shimmer-hover trailing-border"
-                    onClick={() => handleViewChange("projects")}
+                    className="h-64 cursor-pointer card-fast ultra-hover border border-border/50 shimmer-hover trailing-border instant-feedback"
+                    onClick={() => performanceViewChange("projects")}
                   >
                     <div className="h-full flex flex-col items-center justify-center p-8">
                       <FolderCode className="h-16 w-16 mb-4 text-primary" />
                       <h2 className="text-xl font-semibold">CC Projects</h2>
                     </div>
                   </Card>
-                </motion.div>
+                </div>
 
               </div>
             </div>
@@ -292,39 +308,30 @@ function AppContent() {
       case "projects":
         return (
           <div className="flex-1 overflow-y-auto">
-            <div className="container mx-auto p-6">
-              {/* Header with back button */}
-              <motion.div
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                className="mb-6"
-              >
+            <div className="container mx-auto px-4 md:px-8 lg:px-12 py-6 md:py-10 lg:py-12">
+              {/* Header with back button - 行业标准间距 */}
+              <header className="mb-16 fade-in-fast">
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => handleViewChange("welcome")}
-                  className="mb-4"
+                  onClick={() => performanceViewChange("welcome")}
+                  className="mb-8 btn-perf instant-feedback"
                 >
                   ← Back to Home
                 </Button>
-                <div className="mb-4">
-                  <h1 className="text-3xl font-bold tracking-tight">CC Projects</h1>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Browse your Claude Code sessions
+                <div className="space-y-3">
+                  <h1 className="text-4xl md:text-5xl font-bold tracking-tight">CC Projects</h1>
+                  <p className="text-base md:text-lg text-muted-foreground max-w-2xl">
+                    Browse and manage your Claude Code sessions
                   </p>
                 </div>
-              </motion.div>
+              </header>
 
               {/* Error display */}
               {error && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="mb-4 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-xs text-destructive max-w-2xl"
-                >
+                <div className="mb-4 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-xs text-destructive max-w-2xl fade-in-fast">
                   {error}
-                </motion.div>
+                </div>
               )}
 
               {/* Loading state */}
@@ -336,69 +343,71 @@ function AppContent() {
 
               {/* Content */}
               {!loading && (
-                <AnimatePresence mode="wait">
+                <>
                   {selectedProject ? (
-                    <motion.div
-                      key="sessions"
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -20 }}
-                      transition={{ duration: 0.3 }}
-                    >
+                    <div className="slide-in-fast">
                       <SessionList
                         sessions={sessions}
                         projectPath={selectedProject.path}
                         onBack={handleBack}
-                        onEditClaudeFile={handleEditClaudeFile}
+                        onEditClaudeFile={performanceEditClaudeFile}
                       />
-                    </motion.div>
+                    </div>
                   ) : (
-                    <motion.div
-                      key="projects"
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      {/* New session button at the top */}
-                      <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5 }}
-                        className="mb-4"
-                      >
-                        <Button
-                          onClick={handleNewSession}
-                          size="default"
-                          className="w-full max-w-md"
-                        >
-                          <Plus className="mr-2 h-4 w-4" />
-                          New Claude Code session
-                        </Button>
-                      </motion.div>
+                    <div className="slide-in-fast">
+                      {/* 改进的布局结构 - 使用行业标准间距 */}
+                      <div className="space-y-16">
+                        {/* New session button at the top */}
+                        <section className="slide-up-fast">
+                          <Button
+                            onClick={performanceNewSession}
+                            size="lg"
+                            className="w-full md:w-auto min-w-[280px] btn-perf instant-feedback"
+                          >
+                            <Plus className="mr-2 h-5 w-5" />
+                            New Claude Code session
+                          </Button>
+                        </section>
 
-                      {/* Running Claude Sessions */}
-                      <RunningClaudeSessions />
+                        {/* Running Claude Sessions - 增强视觉分离 */}
+                        <section>
+                          <RunningClaudeSessions />
+                        </section>
 
-                      {/* Project list */}
-                      {projects.length > 0 ? (
-                        <ProjectList
-                          projects={projects}
-                          onProjectClick={handleProjectClick}
-                          onProjectSettings={handleProjectSettings}
-                          loading={loading}
-                          className="animate-fade-in"
-                        />
-                      ) : (
-                        <div className="py-8 text-center">
-                          <p className="text-sm text-muted-foreground">
-                            No projects found in ~/.claude/projects
-                          </p>
-                        </div>
-                      )}
-                    </motion.div>
+                        {/* Project list - 明确的视觉分隔 */}
+                        <section>
+                          <h2 className="text-2xl font-semibold mb-8">All Projects</h2>
+                          {projects.length > 0 ? (
+                            <ProjectList
+                              projects={projects}
+                              onProjectClick={performanceProjectClick}
+                              onProjectSettings={performanceProjectSettings}
+                              loading={loading}
+                              className="fade-in-fast"
+                            />
+                          ) : (
+                            <div className="py-24 text-center">
+                              <div className="w-16 h-16 mx-auto mb-6 bg-muted/20 rounded-full flex items-center justify-center">
+                                <FolderCode className="h-8 w-8 text-muted-foreground/50" />
+                              </div>
+                              <h3 className="text-lg font-medium mb-2">No projects yet</h3>
+                              <p className="text-muted-foreground mb-8 max-w-sm mx-auto">
+                                Start a new Claude Code session to create your first project
+                              </p>
+                              <Button size="lg" onClick={performanceNewSession}>
+                                <Plus className="mr-2 h-4 w-4" />
+                                Create New Session
+                              </Button>
+                            </div>
+                          )}
+                        </section>
+                      </div>
+                      
+                      {/* 页脚留白 */}
+                      <div className="h-16" />
+                    </div>
                   )}
-                </AnimatePresence>
+                </>
               )}
             </div>
           </div>
@@ -452,7 +461,7 @@ function AppContent() {
   };
 
   return (
-    <div className="h-screen bg-background flex flex-col">
+    <div className="h-screen bg-background flex flex-col main-content scroll-performance">
       {/* Topbar */}
       <Topbar
         onClaudeClick={() => createClaudeMdTab()}
@@ -462,6 +471,15 @@ function AppContent() {
         onInfoClick={() => setShowNFO(true)}
         onAgentsClick={() => setShowAgentsModal(true)}
       />
+      
+      {/* Layout Switcher - add to topbar area */}
+      <div className="px-4 py-2 border-b border-border bg-muted/30 flex justify-between items-center">
+        <span className="text-sm text-muted-foreground">Current Layout: Classic</span>
+        <LayoutSwitcher 
+          currentLayout={layoutType}
+          onLayoutChange={handleLayoutChange}
+        />
+      </div>
       
       {/* Main Content */}
       <div className="flex-1 overflow-hidden">

@@ -95,18 +95,20 @@ export const RunningClaudeSessions: React.FC<RunningClaudeSessionsProps> = ({
   }
 
   return (
-    <div className={cn("space-y-3", className)}>
-      <div className="flex items-center gap-2">
-        <div className="flex items-center gap-1">
-          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-          <h3 className="text-sm font-medium">Active Claude Sessions</h3>
+    <div className={cn("space-y-6", className)}>
+      {/* 使用卡片容器增强视觉分组 */}
+      <Card className="p-8 border-2 border-green-200/50 bg-green-50/30 dark:bg-green-950/20">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+            <h3 className="text-xl font-semibold">Active Claude Sessions</h3>
+          </div>
+          <span className="text-sm text-muted-foreground">
+            ({runningSessions.length} running)
+          </span>
         </div>
-        <span className="text-xs text-muted-foreground">
-          ({runningSessions.length} running)
-        </span>
-      </div>
 
-      <div className="space-y-2">
+        <div className="space-y-4">
         {runningSessions.map((session) => {
           const sessionId = 'ClaudeSession' in session.process_type 
             ? session.process_type.ClaudeSession.session_id 
@@ -121,9 +123,9 @@ export const RunningClaudeSessions: React.FC<RunningClaudeSessionsProps> = ({
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.2 }}
             >
-              <Card className="transition-all hover:shadow-md hover:scale-[1.01] cursor-pointer">
+              <Card className="transition-all hover:shadow-xl cursor-pointer border-green-200/50 hover:border-green-300/50 bg-background">
                 <CardContent 
-                  className="p-3"
+                  className="p-6"
                   onClick={() => handleResumeSession(session)}
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -169,7 +171,8 @@ export const RunningClaudeSessions: React.FC<RunningClaudeSessionsProps> = ({
             </motion.div>
           );
         })}
-      </div>
+        </div>
+      </Card>
     </div>
   );
 }; 

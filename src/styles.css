@@ -2,26 +2,26 @@
 
 /* Dark theme configuration */
 @theme {
-  /* Colors */
-  --color-background: oklch(0.12 0.01 240);
-  --color-foreground: oklch(0.98 0.01 240);
-  --color-card: oklch(0.14 0.01 240);
-  --color-card-foreground: oklch(0.98 0.01 240);
-  --color-popover: oklch(0.12 0.01 240);
-  --color-popover-foreground: oklch(0.98 0.01 240);
-  --color-primary: oklch(0.98 0.01 240);
-  --color-primary-foreground: oklch(0.17 0.01 240);
-  --color-secondary: oklch(0.16 0.01 240);
-  --color-secondary-foreground: oklch(0.98 0.01 240);
-  --color-muted: oklch(0.16 0.01 240);
-  --color-muted-foreground: oklch(0.68 0.01 240);
-  --color-accent: oklch(0.16 0.01 240);
-  --color-accent-foreground: oklch(0.98 0.01 240);
+  /* Colors - Anthropic Console Style */
+  --color-background: rgb(20, 20, 20);        /* 仪表盘功能部分 */
+  --color-foreground: rgb(250, 249, 245);     /* 按钮色作为前景色 */
+  --color-card: rgb(38, 38, 36);              /* 仪表盘空白部分 */
+  --color-card-foreground: rgb(250, 249, 245);
+  --color-popover: rgb(30, 30, 29);           /* 侧边栏颜色 */
+  --color-popover-foreground: rgb(250, 249, 245);
+  --color-primary: rgb(250, 249, 245);        /* 按钮色 */
+  --color-primary-foreground: rgb(20, 20, 20);
+  --color-secondary: rgb(30, 30, 29);         /* 侧边栏颜色 */
+  --color-secondary-foreground: rgb(250, 249, 245);
+  --color-muted: rgb(38, 38, 36);             /* 仪表盘空白部分 */
+  --color-muted-foreground: rgb(156, 156, 156);
+  --color-accent: rgb(38, 38, 36);            /* 仪表盘空白部分 */
+  --color-accent-foreground: rgb(250, 249, 245);
   --color-destructive: oklch(0.6 0.2 25);
-  --color-destructive-foreground: oklch(0.98 0.01 240);
-  --color-border: oklch(0.16 0.01 240);
-  --color-input: oklch(0.16 0.01 240);
-  --color-ring: oklch(0.52 0.015 240);
+  --color-destructive-foreground: rgb(250, 249, 245);
+  --color-border: rgb(48, 48, 46);            /* 稍微亮一点的边框色 */
+  --color-input: rgb(38, 38, 36);             /* 仪表盘空白部分 */
+  --color-ring: rgb(156, 156, 156);
   
   /* Additional colors for status messages */
   --color-green-500: oklch(0.72 0.20 142);
@@ -38,9 +38,28 @@
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
 
-  /* Transitions */
+  /* Enhanced Interaction System */
+  /* Duration Standards */
+  --duration-instant: 0ms;
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 400ms;
+  --duration-very-slow: 600ms;
+  
+  /* Professional Easing Functions */
   --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out-back: cubic-bezier(0.68, -0.6, 0.32, 1.6);
+  --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  --ease-elastic: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  
+  /* Elevation Shadows */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.1), 0 10px 10px rgba(0, 0, 0, 0.04);
 }
 
 /* Reset and base styles */
@@ -530,9 +549,9 @@ button:focus-visible,
     from var(--angle),
     transparent 0%,
     transparent 85%,
-    #d97757 90%,
-    #ff9a7a 92.5%,
-    #d97757 95%,
+    rgb(150, 74, 46) 90%,
+    rgb(170, 84, 56) 92.5%,
+    rgb(150, 74, 46) 95%,
     transparent 100%
   );
   -webkit-mask: 
@@ -556,36 +575,90 @@ button:focus-visible,
   z-index: 1;
 }
 
-/* --- THEME-MATCHING SCROLLBARS --- */
+/* ========================================= */
+/* PROFESSIONAL SCROLLBAR SYSTEM */
+/* ========================================= */
 
-/* For Firefox */
+/* Firefox - 现代细滚动条 */
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--color-muted-foreground) var(--color-background);
+  scrollbar-color: rgba(156, 156, 156, 0.3) transparent;
 }
 
-/* For Webkit Browsers (Chrome, Safari, Edge) */
+/* Webkit 浏览器 - 超薄现代滚动条 */
 *::-webkit-scrollbar {
-  width: 12px;
-  height: 12px;
+  width: 8px;
+  height: 8px;
+  background: transparent;
 }
 
 *::-webkit-scrollbar-track {
-  background: var(--color-background);
+  background: transparent;
+  border-radius: 4px;
+  margin: 4px;
 }
 
+/* 流畅渐变滚动条thumb */
 *::-webkit-scrollbar-thumb {
-  background-color: var(--color-muted);
-  border-radius: 6px;
-  border: 3px solid var(--color-background);
+  background: linear-gradient(180deg, 
+    rgba(156, 156, 156, 0.2) 0%,
+    rgba(156, 156, 156, 0.4) 50%,
+    rgba(156, 156, 156, 0.2) 100%
+  );
+  border-radius: 4px;
+  border: 1px solid rgba(156, 156, 156, 0.1);
+  transition: all 0.2s ease;
+  
+  /* 性能优化 */
+  will-change: background-color;
+  transform: translateZ(0);
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background-color: var(--color-muted-foreground);
+  background: linear-gradient(180deg, 
+    rgba(156, 156, 156, 0.4) 0%,
+    rgba(156, 156, 156, 0.6) 50%,
+    rgba(156, 156, 156, 0.4) 100%
+  );
+  transform: scaleX(1.2);
+}
+
+*::-webkit-scrollbar-thumb:active {
+  background: linear-gradient(180deg, 
+    rgba(156, 156, 156, 0.6) 0%,
+    rgba(156, 156, 156, 0.8) 50%,
+    rgba(156, 156, 156, 0.6) 100%
+  );
+  transform: scaleX(1.4);
 }
 
 *::-webkit-scrollbar-corner {
   background: transparent;
+}
+
+/* 主要内容区域 - 更精致的滚动条 */
+.main-content::-webkit-scrollbar,
+.message-list::-webkit-scrollbar,
+.session-output::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.main-content::-webkit-scrollbar-thumb,
+.message-list::-webkit-scrollbar-thumb,
+.session-output::-webkit-scrollbar-thumb {
+  background: rgba(250, 249, 245, 0.15);
+  border-radius: 5px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.main-content::-webkit-scrollbar-thumb:hover,
+.message-list::-webkit-scrollbar-thumb:hover,
+.session-output::-webkit-scrollbar-thumb:hover {
+  background: rgba(250, 249, 245, 0.25);
+  border-width: 1px;
 }
 
 /* Code blocks and editors specific scrollbar */
@@ -716,4 +789,698 @@ code::-webkit-scrollbar-thumb:hover,
 
 .image-move-to-input {
   animation: moveToInput 0.8s ease-in-out forwards;
+}
+
+/* ========================================= */
+/* ENHANCED INTERACTION SYSTEM */
+/* ========================================= */
+
+/* Performance Optimization */
+.interactive-element {
+  will-change: transform, opacity, box-shadow;
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Universal Button Enhancement */
+button, 
+.btn, 
+[role="button"], 
+.interactive-button {
+  position: relative;
+  transition: all var(--duration-fast) var(--ease-out-expo);
+  transform: translateY(0) translateZ(0);
+  transform-style: preserve-3d;
+}
+
+/* Button Hover States */
+button:hover:not(:disabled), 
+.btn:hover:not(:disabled) {
+  transform: translateY(-1px) translateZ(0);
+  box-shadow: var(--shadow-md);
+  filter: brightness(1.05);
+}
+
+/* Button Active States */
+button:active:not(:disabled), 
+.btn:active:not(:disabled) {
+  transform: translateY(0px) scale(0.98) translateZ(0);
+  box-shadow: var(--shadow-xs);
+  transition-duration: var(--duration-instant);
+}
+
+/* Button Focus States (Accessibility) */
+button:focus-visible, 
+.btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.1);
+}
+
+/* Card and Container Micro-interactions */
+.card, 
+.widget, 
+.interactive-card {
+  transition: all var(--duration-normal) var(--ease-out-expo);
+  border: 1px solid var(--color-border);
+  position: relative;
+  overflow: hidden;
+}
+
+.card:hover, 
+.widget:hover, 
+.interactive-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+  border-color: rgba(250, 249, 245, 0.1);
+}
+
+/* Input Field Enhancements */
+input, 
+textarea, 
+select {
+  transition: all var(--duration-fast) var(--ease-out-expo);
+  border: 2px solid var(--color-border);
+  position: relative;
+}
+
+input:focus, 
+textarea:focus, 
+select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(250, 249, 245, 0.1);
+  transform: scale(1.01);
+  outline: none;
+}
+
+/* Link Interactions */
+a, 
+.link {
+  transition: all var(--duration-fast) var(--ease-out-expo);
+  position: relative;
+  display: inline-block;
+}
+
+a:hover, 
+.link:hover {
+  transform: translateY(-1px);
+  text-decoration: none;
+}
+
+/* Loading States Enhancement */
+.loading-pulse {
+  animation: gentle-pulse 2s ease-in-out infinite;
+}
+
+@keyframes gentle-pulse {
+  0%, 100% { 
+    opacity: 0.6; 
+    transform: scale(1); 
+  }
+  50% { 
+    opacity: 1; 
+    transform: scale(1.02); 
+  }
+}
+
+/* Enhanced Loading Spinner */
+.loading-spinner {
+  animation: smooth-spin 1s linear infinite;
+}
+
+@keyframes smooth-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Interactive Icons */
+.icon-interactive {
+  transition: all var(--duration-fast) var(--ease-spring);
+  cursor: pointer;
+}
+
+.icon-interactive:hover {
+  transform: scale(1.1) rotate(5deg);
+  color: var(--color-primary);
+}
+
+.icon-interactive:active {
+  transform: scale(0.95) rotate(-2deg);
+}
+
+/* Ripple Effect for Click Feedback */
+.ripple-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.ripple-effect::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(250, 249, 245, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width var(--duration-normal) var(--ease-out-expo), 
+              height var(--duration-normal) var(--ease-out-expo);
+}
+
+.ripple-effect:active::after {
+  width: 300px;
+  height: 300px;
+}
+
+/* ========================================= */
+/* PROFESSIONAL SCROLL OPTIMIZATION */
+/* ========================================= */
+
+/* Global Smooth Scrolling */
+html {
+  scroll-behavior: smooth;
+  /* 防止过度滚动反弹 */
+  overscroll-behavior: none;
+}
+
+/* 高性能滚动容器 */
+.scroll-container {
+  /* 硬件加速 */
+  will-change: scroll-position;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  
+  /* 现代滚动属性 */
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
+  
+  /* CSS Containment - 隔离布局/样式重计算 */
+  contain: layout style paint;
+  
+  /* 滚动优化 */
+  -webkit-overflow-scrolling: touch; /* iOS滚动优化 */
+  scrollbar-width: thin;
+}
+
+/* 主要内容区域滚动优化 */
+.main-content,
+.content-area,
+.message-list,
+.code-editor,
+.session-output {
+  /* 核心性能属性 */
+  will-change: scroll-position;
+  transform: translateZ(0);
+  contain: layout style paint;
+  
+  /* 流畅滚动 */
+  scroll-behavior: smooth;
+  overscroll-behavior-y: contain;
+  overscroll-behavior-x: auto;
+  
+  /* 防止滚动时的layout shift */
+  overflow-anchor: auto;
+}
+
+/* 代码编辑器特殊优化 */
+.code-editor,
+.monaco-editor,
+.cm-editor {
+  /* 代码编辑器需要更精确的滚动控制 */
+  scroll-behavior: auto; /* 代码跳转时不要smooth */
+  contain: layout style paint size;
+  will-change: scroll-position, contents;
+}
+
+/* 虚拟滚动优化 */
+.virtual-scroll {
+  contain: strict;
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+/* 长列表优化 */
+.long-list,
+.file-tree,
+.session-list {
+  /* 列表滚动优化 */
+  contain: layout style paint;
+  will-change: scroll-position;
+  
+  /* 防止滚动抖动 */
+  scroll-snap-type: y proximity;
+  overflow-anchor: auto;
+}
+
+/* 横向滚动优化 */
+.horizontal-scroll {
+  scroll-behavior: smooth;
+  overscroll-behavior-x: contain;
+  overscroll-behavior-y: none;
+  scroll-snap-type: x mandatory;
+}
+
+/* 防止滚动时动画冲突 */
+.scrolling {
+  pointer-events: none;
+}
+
+.scrolling * {
+  animation-play-state: paused;
+  transition: none;
+}
+
+/* Momentum scrolling for iOS/macOS */
+.smooth-scroll {
+  -webkit-overflow-scrolling: touch;
+  -ms-overflow-style: -ms-autohiding-scrollbar;
+}
+
+/* 滚动性能监控类 */
+.scroll-performance {
+  /* 最高性能设置 */
+  will-change: scroll-position;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+  contain: layout style paint size;
+  
+  /* 防止滚动时的抖动 */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Enhanced Cursor System */
+.cursor-grab { cursor: grab; }
+.cursor-grab:active { cursor: grabbing; }
+.cursor-pointer { cursor: pointer; }
+.cursor-text { cursor: text; }
+.cursor-wait { cursor: wait; }
+.cursor-not-allowed { cursor: not-allowed; }
+.cursor-help { cursor: help; }
+.cursor-move { cursor: move; }
+.cursor-crosshair { cursor: crosshair; }
+
+/* Responsive Touch Optimizations */
+@media (hover: none) and (pointer: coarse) {
+  /* Remove hover effects on touch devices */
+  button:hover, 
+  .btn:hover,
+  .card:hover,
+  .widget:hover {
+    transform: none;
+    box-shadow: none;
+    filter: none;
+  }
+  
+  /* Enhanced touch feedback */
+  button:active, 
+  .btn:active {
+    transform: scale(0.95);
+    background-color: var(--color-accent);
+  }
+  
+  /* Larger touch targets */
+  button, .btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Accessibility: Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  button, .btn {
+    border: 2px solid;
+  }
+  
+  button:focus, .btn:focus {
+    outline: 3px solid;
+    outline-offset: 2px;
+  }
+}
+
+/* Enhanced form validation feedback */
+.input-error {
+  border-color: var(--color-destructive);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+  animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+.input-success {
+  border-color: var(--color-green-500);
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+}
+
+/* Smooth page transitions */
+.page-transition {
+  animation: fade-in-up var(--duration-normal) var(--ease-out-expo);
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Interactive table rows */
+tr.interactive {
+  transition: all var(--duration-fast) var(--ease-out-expo);
+}
+
+tr.interactive:hover {
+  background-color: var(--color-accent);
+  transform: scale(1.01);
+}
+
+/* Enhanced dropdown animations */
+.dropdown-enter {
+  animation: dropdown-appear var(--duration-normal) var(--ease-spring);
+}
+
+@keyframes dropdown-appear {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ========================================= */
+/* ADVANCED SCROLL PERFORMANCE HACKS */
+/* ========================================= */
+
+/* 高频滚动优化 - 避免layout thrashing */
+.scroll-optimized {
+  /* 启用GPU合成层 */
+  will-change: scroll-position;
+  transform: translateZ(0);
+  
+  /* 防止不必要的重绘 */
+  contain: layout style paint;
+  
+  /* 优化滚动事件 */
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
+  
+  /* 字体渲染优化 */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeSpeed;
+}
+
+/* 无限滚动容器优化 */
+.infinite-scroll {
+  contain: strict;
+  will-change: transform, scroll-position;
+  transform: translate3d(0, 0, 0);
+  
+  /* 滚动锚定 */
+  overflow-anchor: auto;
+  scroll-snap-type: y proximity;
+}
+
+/* 代码编辑器专用滚动优化 */
+.code-scroll {
+  /* 禁用smooth scrolling用于精确定位 */
+  scroll-behavior: auto;
+  
+  /* 启用严格containment */
+  contain: size layout style paint;
+  
+  /* 防止滚动时的字体模糊 */
+  -webkit-font-smoothing: subpixel-antialiased;
+  font-variant-ligatures: none;
+}
+
+/* 移动端滚动优化 */
+@media (max-width: 768px) {
+  .mobile-scroll {
+    /* iOS惯性滚动 */
+    -webkit-overflow-scrolling: touch;
+    
+    /* 防止过度滚动 */
+    overscroll-behavior: none;
+    
+    /* 优化触摸响应 */
+    touch-action: pan-y;
+  }
+}
+
+/* 滚动时暂停动画（性能优化） */
+.scroll-disable-animations {
+  animation-play-state: paused !important;
+}
+
+.scroll-disable-animations * {
+  animation-play-state: paused !important;
+  transition: none !important;
+}
+
+/* Intersection Observer优化的可见性类 */
+.scroll-visible {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.scroll-hidden {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+/* 滚动条隐藏（保持功能） */
+.scrollbar-hidden {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
+
+/* ========================================= */
+/* ULTRA PERFORMANCE OPTIMIZATION */
+/* ========================================= */
+
+/* 防止点击穿透和重复触发 */
+.click-protection {
+  pointer-events: auto;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 即时点击反馈 */
+.instant-feedback {
+  transition: transform 0.1s ease-out, box-shadow 0.1s ease-out;
+}
+
+.instant-feedback:active {
+  transform: scale(0.98);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* 防抖点击保护 */
+.debounced-click {
+  pointer-events: auto;
+  position: relative;
+}
+
+.debounced-click:disabled,
+.debounced-click.loading {
+  pointer-events: none;
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.debounced-click.loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border: 2px solid transparent;
+  border-top: 2px solid var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* 高性能动画替代方案 */
+.fade-in-fast {
+  animation: fadeInFast 0.2s ease-out forwards;
+}
+
+@keyframes fadeInFast {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.scale-in-fast {
+  animation: scaleInFast 0.15s ease-out forwards;
+}
+
+@keyframes scaleInFast {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* 减少motion sickness */
+@media (prefers-reduced-motion: reduce) {
+  .fade-in-fast,
+  .scale-in-fast,
+  .instant-feedback {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* 优化大列表渲染 */
+.virtualized-list {
+  contain: layout style paint;
+  will-change: scroll-position;
+  overflow-anchor: none;
+}
+
+.list-item-optimized {
+  contain: layout style;
+  will-change: auto;
+  transform: translateZ(0);
+}
+
+/* 防止layout thrashing */
+.layout-stable {
+  contain: layout;
+  min-height: 1px; /* 防止空元素导致layout shift */
+}
+
+/* 性能监控指示器 */
+.perf-indicator {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #4ade80;
+  z-index: 9999;
+  transition: background-color 0.3s ease;
+}
+
+.perf-indicator.warning {
+  background: #fbbf24;
+}
+
+.perf-indicator.error {
+  background: #ef4444;
+}
+
+/* 避免不必要的重绘 */
+.static-element {
+  will-change: auto;
+  transform: translateZ(0);
+  contain: layout style paint;
+}
+
+/* 优化文本渲染 */
+.text-optimized {
+  font-synthesis: none;
+  -webkit-font-smoothing: subpixel-antialiased;
+  text-rendering: optimizeSpeed;
+}
+
+/* ============================
+   14. 智能滚动和压缩视图样式
+   ============================ */
+
+/* 新消息提示动画 */
+@keyframes slide-up {
+  from {
+    transform: translateX(-50%) translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+
+/* 新消息提示按钮悬停效果 */
+.new-message-indicator:hover {
+  transform: translateX(-50%) translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* 压缩视图的过渡效果 */
+.compact-view-transition {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 消息过滤器开关动画 */
+.filter-toggle-enter {
+  animation: filter-toggle-enter 0.2s ease-out;
+}
+
+@keyframes filter-toggle-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* 压缩视图侧边栏样式 */
+.compact-sidebar {
+  background: linear-gradient(to bottom, var(--muted) 0%, transparent 100%);
+  backdrop-filter: blur(10px);
+}
+
+/* 消息卡片压缩模式 */
+.compact-message-card {
+  transition: all 0.2s ease;
+  border-left: 3px solid transparent;
+}
+
+.compact-message-card:hover {
+  border-left-color: var(--primary);
+  transform: translateX(2px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 } 
