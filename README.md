@@ -52,6 +52,7 @@ Think of Claudia as your command center for Claude Code - bridging the gap betwe
 - [🔨 Build from Source](#-build-from-source)
 - [🛠️ Development](#️-development)
 - [🔒 Security](#-security)
+- [📦 Release Information](#-release-information)
 - [🤝 Contributing](#-contributing)
 - [📄 License](#-license)
 - [🙏 Acknowledgments](#-acknowledgments)
@@ -148,11 +149,24 @@ Menu → MCP Manager → Add Server → Configure
 
 ## 🚀 Installation
 
-### Prerequisites
+### Pre-built Releases (Recommended)
 
-- **Claude Code CLI**: Install from [Claude's official site](https://claude.ai/code)
+Download the latest release for your platform from the [Releases page](https://github.com/getAsterisk/claudia/releases):
 
-### Release Executables Will Be Published Soon
+#### Linux
+- **`.deb` package** (Ubuntu/Debian): `sudo dpkg -i Claudia_*.deb`
+- **`.AppImage`** (Universal): Make executable and run directly
+  ```bash
+  chmod +x Claudia_*.AppImage
+  ./Claudia_*.AppImage
+  ```
+
+#### macOS
+- **`.dmg` installer** (Apple Silicon): Download and drag to Applications folder
+- **Intel Macs** (macOS Universal): Planned when Intel binaries are available
+
+#### Windows
+- **Coming Soon**: Windows installers will be available once [issue #83](https://github.com/getAsterisk/claudia/issues/83) is resolved
 
 ## 🔨 Build from Source
 
@@ -381,6 +395,21 @@ Claudia prioritizes your privacy and security:
 3. **Local Storage**: All data stays on your machine
 4. **No Telemetry**: No data collection or tracking
 5. **Open Source**: Full transparency through open source code
+
+## 📦 Release Information
+
+Claudia uses automated builds to ensure consistent, reliable releases:
+
+- **Automated Builds**: Every commit to main triggers multi-platform builds
+- **Quality Assurance**: All releases pass comprehensive testing on Linux and macOS
+- **Semantic Versioning**: Releases follow the format `v{version}-build{number}`
+- **Platform Support**: 
+  - ✅ Linux (Ubuntu) - Fully supported
+  - ✅ macOS (Apple Silicon) - Native builds
+  - ⏳ Windows - Coming soon (see [#83](https://github.com/getAsterisk/claudia/issues/83))
+  - ⏳ macOS (Universal) - Planned when Intel binaries are available
+
+**Release Schedule**: New releases are automatically created when changes are merged to the main branch.
 
 ## 🤝 Contributing
 
