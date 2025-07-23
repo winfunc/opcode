@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { api, ClaudeSettings } from '@/lib/api';
+import { api } from '@/lib/api';
 
 interface RecentDirectory {
   path: string;
