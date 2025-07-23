@@ -31,7 +31,7 @@ export function useRecentDirectories() {
       
       // Sort by last used date (most recent first) and validate
       const validRecent = recent
-        .filter(dir => dir.path && dir.lastUsed && dir.displayName)
+        .filter(dir => dir && dir.path && dir.path.trim() !== '' && dir.lastUsed && dir.displayName)
         .sort((a, b) => new Date(b.lastUsed).getTime() - new Date(a.lastUsed).getTime())
         .slice(0, MAX_RECENT_DIRECTORIES);
       
@@ -59,9 +59,11 @@ export function useRecentDirectories() {
   }, []);
 
   const addRecentDirectory = useCallback(async (path: string) => {
-    if (!path || path.trim() === '') return;
+    if (!path || path.trim() === '' || path.trim().length === 0) return;
 
     const normalizedPath = path.trim();
+    // Skip paths that are only whitespace characters
+    if (normalizedPath.replace(/[\s\t\n\r]/g, '') === '') return;
     const displayName = normalizedPath.split('/').pop() || normalizedPath;
     const now = new Date().toISOString();
 
