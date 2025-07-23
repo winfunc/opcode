@@ -18,14 +18,14 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { FilePicker } from "./FilePicker";
 import { SlashCommandPicker } from "./SlashCommandPicker";
 import { ImagePreview } from "./ImagePreview";
-import { type FileEntry, type SlashCommand } from "@/lib/api";
+import { type FileEntry, type SlashCommand, type CustomModel, type ModelConfig, api } from "@/lib/api";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 
 interface FloatingPromptInputProps {
   /**
    * Callback when prompt is sent
    */
-  onSend: (prompt: string, model: "sonnet" | "opus") => void;
+  onSend: (prompt: string, model: string) => void;
   /**
    * Whether the input is loading
    */
@@ -37,7 +37,7 @@ interface FloatingPromptInputProps {
   /**
    * Default model to select
    */
-  defaultModel?: "sonnet" | "opus";
+  defaultModel?: string;
   /**
    * Project path for file picker
    */
@@ -129,24 +129,27 @@ const ThinkingModeIndicator: React.FC<{ level: number }> = ({ level }) => {
 };
 
 type Model = {
-  id: "sonnet" | "opus";
+  id: string;
   name: string;
   description: string;
   icon: React.ReactNode;
+  group: "default" | "custom" | "env";
 };
 
-const MODELS: Model[] = [
+const DEFAULT_MODELS: Model[] = [
   {
     id: "sonnet",
     name: "Claude 4 Sonnet",
     description: "Faster, efficient for most tasks",
-    icon: <Zap className="h-4 w-4" />
+    icon: <Zap className="h-4 w-4" />,
+    group: "default"
   },
   {
-    id: "opus",
+    id: "opus", 
     name: "Claude 4 Opus",
     description: "More capable, better for complex tasks",
-    icon: <Sparkles className="h-4 w-4" />
+    icon: <Sparkles className="h-4 w-4" />,
+    group: "default"
   }
 ];
 
@@ -174,12 +177,13 @@ const FloatingPromptInputInner = (
   ref: React.Ref<FloatingPromptInputRef>,
 ) => {
   const [prompt, setPrompt] = useState("");
-  const [selectedModel, setSelectedModel] = useState<"sonnet" | "opus">(defaultModel);
+  const [selectedModel, setSelectedModel] = useState<string>(defaultModel || "sonnet");
   const [selectedThinkingMode, setSelectedThinkingMode] = useState<ThinkingMode>("auto");
   const [isExpanded, setIsExpanded] = useState(false);
   const [modelPickerOpen, setModelPickerOpen] = useState(false);
   const [thinkingModePickerOpen, setThinkingModePickerOpen] = useState(false);
   const [showFilePicker, setShowFilePicker] = useState(false);
+  const [availableModels, setAvailableModels] = useState<Model[]>(DEFAULT_MODELS);
   const [filePickerQuery, setFilePickerQuery] = useState("");
   const [showSlashCommandPicker, setShowSlashCommandPicker] = useState(false);
   const [slashCommandQuery, setSlashCommandQuery] = useState("");
@@ -295,6 +299,45 @@ const FloatingPromptInputInner = (
     console.log('[useEffect] Setting embeddedImages to:', imagePaths);
     setEmbeddedImages(imagePaths);
   }, [prompt, projectPath]);
+
+  // Load available models on component mount
+  useEffect(() => {
+    const loadModels = async () => {
+      try {
+        const modelConfig = await api.getAvailableModels();
+        const models: Model[] = [...DEFAULT_MODELS];
+        
+        // Add custom models
+        modelConfig.custom_models.forEach(customModel => {
+          models.push({
+            id: customModel.identifier,
+            name: customModel.name,
+            description: customModel.description || "Custom model",
+            icon: <Brain className="h-4 w-4" />,
+            group: "custom"
+          });
+        });
+        
+        // Add environment model if available
+        if (modelConfig.env_model) {
+          models.push({
+            id: modelConfig.env_model,
+            name: `${modelConfig.env_model}`,
+            description: "Model from ANTHROPIC_MODEL environment variable",
+            icon: <Brain className="h-4 w-4" />,
+            group: "env"
+          });
+        }
+        
+        setAvailableModels(models);
+      } catch (error) {
+        console.error("Failed to load models:", error);
+        // Keep default models on error
+      }
+    };
+    
+    loadModels();
+  }, []);
 
   // Set up Tauri drag-drop event listener
   useEffect(() => {
@@ -711,7 +754,7 @@ const FloatingPromptInputInner = (
     setPrompt(newPrompt.trim());
   };
 
-  const selectedModelData = MODELS.find(m => m.id === selectedModel) || MODELS[0];
+  const selectedModelData = availableModels.find(m => m.id === selectedModel) || availableModels[0];
 
   return (
     <>
@@ -903,28 +946,102 @@ const FloatingPromptInputInner = (
                 }
                 content={
                   <div className="w-[300px] p-1">
-                    {MODELS.map((model) => (
-                      <button
-                        key={model.id}
-                        onClick={() => {
-                          setSelectedModel(model.id);
-                          setModelPickerOpen(false);
-                        }}
-                        className={cn(
-                          "w-full flex items-start gap-3 p-3 rounded-md transition-colors text-left",
-                          "hover:bg-accent",
-                          selectedModel === model.id && "bg-accent"
-                        )}
-                      >
-                        <div className="mt-0.5">{model.icon}</div>
-                        <div className="flex-1 space-y-1">
-                          <div className="font-medium text-sm">{model.name}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {model.description}
-                          </div>
+                    {/* Custom Models Group */}
+                    {availableModels.filter(m => m.group === "custom").length > 0 && (
+                      <>
+                        <div className="px-3 py-2 text-xs font-medium text-muted-foreground">
+                          Custom Models
                         </div>
-                      </button>
-                    ))}
+                        {availableModels
+                          .filter(m => m.group === "custom")
+                          .map((model) => (
+                            <button
+                              key={model.id}
+                              onClick={() => {
+                                setSelectedModel(model.id);
+                                setModelPickerOpen(false);
+                              }}
+                              className={cn(
+                                "w-full flex items-start gap-3 p-3 rounded-md transition-colors text-left",
+                                "hover:bg-accent",
+                                selectedModel === model.id && "bg-accent"
+                              )}
+                            >
+                              <div className="mt-0.5">{model.icon}</div>
+                              <div className="flex-1 space-y-1">
+                                <div className="font-medium text-sm">{model.name}</div>
+                                <div className="text-xs text-muted-foreground">
+                                  {model.description}
+                                </div>
+                              </div>
+                            </button>
+                          ))}
+                        <div className="h-px bg-border my-1" />
+                      </>
+                    )}
+                    
+                    {/* Environment Model Group */}
+                    {availableModels.filter(m => m.group === "env").length > 0 && (
+                      <>
+                        <div className="px-3 py-2 text-xs font-medium text-muted-foreground">
+                          Environment
+                        </div>
+                        {availableModels
+                          .filter(m => m.group === "env")
+                          .map((model) => (
+                            <button
+                              key={model.id}
+                              onClick={() => {
+                                setSelectedModel(model.id);
+                                setModelPickerOpen(false);
+                              }}
+                              className={cn(
+                                "w-full flex items-start gap-3 p-3 rounded-md transition-colors text-left",
+                                "hover:bg-accent",
+                                selectedModel === model.id && "bg-accent"
+                              )}
+                            >
+                              <div className="mt-0.5">{model.icon}</div>
+                              <div className="flex-1 space-y-1">
+                                <div className="font-medium text-sm">{model.name}</div>
+                                <div className="text-xs text-muted-foreground">
+                                  {model.description}
+                                </div>
+                              </div>
+                            </button>
+                          ))}
+                        <div className="h-px bg-border my-1" />
+                      </>
+                    )}
+                    
+                    {/* Default Models Group */}
+                    <div className="px-3 py-2 text-xs font-medium text-muted-foreground">
+                      Default Models
+                    </div>
+                    {availableModels
+                      .filter(m => m.group === "default")
+                      .map((model) => (
+                        <button
+                          key={model.id}
+                          onClick={() => {
+                            setSelectedModel(model.id);
+                            setModelPickerOpen(false);
+                          }}
+                          className={cn(
+                            "w-full flex items-start gap-3 p-3 rounded-md transition-colors text-left",
+                            "hover:bg-accent",
+                            selectedModel === model.id && "bg-accent"
+                          )}
+                        >
+                          <div className="mt-0.5">{model.icon}</div>
+                          <div className="flex-1 space-y-1">
+                            <div className="font-medium text-sm">{model.name}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {model.description}
+                            </div>
+                          </div>
+                        </button>
+                      ))}
                   </div>
                 }
                 open={modelPickerOpen}

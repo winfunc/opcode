@@ -1,6 +1,19 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { HooksConfiguration } from '@/types/hooks';
 
+/** Custom model definition */
+export interface CustomModel {
+  name: string;
+  identifier: string;
+  description?: string;
+}
+
+/** Model configuration including custom models and environment model */
+export interface ModelConfig {
+  custom_models: CustomModel[];
+  env_model?: string;
+}
+
 /** Process type for tracking in ProcessRegistry */
 export type ProcessType = 
   | { AgentRun: { agent_id: number; agent_name: string } }
@@ -1823,16 +1836,63 @@ export const api = {
   },
 
   /**
-   * Deletes a slash command
-   * @param commandId - Unique identifier of the command to delete
-   * @param projectPath - Optional project path for deleting project commands
-   * @returns Promise resolving to deletion message
+   * Delete a slash command
    */
   async slashCommandDelete(commandId: string, projectPath?: string): Promise<string> {
     try {
       return await invoke<string>("slash_command_delete", { commandId, projectPath });
     } catch (error) {
       console.error("Failed to delete slash command:", error);
+      throw error;
+    }
+  },
+
+  // ===== Model Management =====
+
+  /**
+   * Get available models including custom models and environment model
+   */
+  async getAvailableModels(): Promise<ModelConfig> {
+    try {
+      return await invoke<ModelConfig>("get_available_models");
+    } catch (error) {
+      console.error("Failed to get available models:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Save custom models configuration
+   */
+  async saveCustomModels(models: CustomModel[]): Promise<void> {
+    try {
+      await invoke<void>("save_custom_models", { models });
+    } catch (error) {
+      console.error("Failed to save custom models:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Add a new custom model
+   */
+  async addCustomModel(model: CustomModel): Promise<void> {
+    try {
+      await invoke<void>("add_custom_model", { model });
+    } catch (error) {
+      console.error("Failed to add custom model:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Remove a custom model
+   */
+  async removeCustomModel(modelName: string): Promise<void> {
+    try {
+      await invoke<void>("remove_custom_model", { modelName });
+    } catch (error) {
+      console.error("Failed to remove custom model:", error);
       throw error;
     }
   }

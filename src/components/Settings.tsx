@@ -17,7 +17,9 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { 
   api, 
   type ClaudeSettings,
-  type ClaudeInstallation
+  type ClaudeInstallation,
+  type CustomModel,
+  type ModelConfig
 } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { Toast, ToastContainer } from "@/components/ui/toast";
@@ -72,6 +74,11 @@ export const Settings: React.FC<SettingsProps> = ({
   
   // Environment variables state
   const [envVars, setEnvVars] = useState<EnvironmentVariable[]>([]);
+  
+  // Custom models state
+  const [customModels, setCustomModels] = useState<CustomModel[]>([]);
+  const [modelConfig, setModelConfig] = useState<ModelConfig | null>(null);
+  const [modelsChanged, setModelsChanged] = useState(false);
   
   // Hooks state
   const [userHooksChanged, setUserHooksChanged] = useState(false);
@@ -142,6 +149,17 @@ export const Settings: React.FC<SettingsProps> = ({
             value: value as string,
           }))
         );
+      }
+
+      // Load model configuration
+      try {
+        const modelConfig = await api.getAvailableModels();
+        setModelConfig(modelConfig);
+        setCustomModels(modelConfig.custom_models);
+      } catch (err) {
+        console.error("Failed to load model configuration:", err);
+        setModelConfig({ custom_models: [], env_model: undefined });
+        setCustomModels([]);
       }
     } catch (err) {
       console.error("Failed to load settings:", err);
@@ -288,6 +306,54 @@ export const Settings: React.FC<SettingsProps> = ({
     setBinaryPathChanged(installation.path !== currentBinaryPath);
   };
 
+  /**
+   * Adds a new custom model
+   */
+  const addCustomModel = () => {
+    const newModel: CustomModel = {
+      name: "",
+      identifier: "",
+      description: "",
+    };
+    setCustomModels(prev => [...prev, newModel]);
+    setModelsChanged(true);
+  };
+
+  /**
+   * Updates a custom model
+   */
+  const updateCustomModel = (index: number, field: keyof CustomModel, value: string) => {
+    setCustomModels(prev => prev.map((model, i) => 
+      i === index ? { ...model, [field]: value } : model
+    ));
+    setModelsChanged(true);
+  };
+
+  /**
+   * Removes a custom model
+   */
+  const removeCustomModel = (index: number) => {
+    setCustomModels(prev => prev.filter((_, i) => i !== index));
+    setModelsChanged(true);
+  };
+
+  /**
+   * Saves custom models
+   */
+  const saveCustomModels = async () => {
+    try {
+      setSaving(true);
+      await api.saveCustomModels(customModels);
+      setModelsChanged(false);
+      setToast({ message: "Custom models saved successfully!", type: "success" });
+    } catch (err) {
+      console.error("Failed to save custom models:", err);
+      setToast({ message: "Failed to save custom models", type: "error" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className={cn("flex flex-col h-full bg-background text-foreground", className)}>
       <div className="max-w-4xl mx-auto w-full flex flex-col h-full">
@@ -358,10 +424,11 @@ export const Settings: React.FC<SettingsProps> = ({
       ) : (
         <div className="flex-1 overflow-y-auto p-4">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-7 w-full">
+            <TabsList className="grid grid-cols-8 w-full">
               <TabsTrigger value="general">General</TabsTrigger>
               <TabsTrigger value="permissions">Permissions</TabsTrigger>
               <TabsTrigger value="environment">Environment</TabsTrigger>
+              <TabsTrigger value="models">Models</TabsTrigger>
               <TabsTrigger value="advanced">Advanced</TabsTrigger>
               <TabsTrigger value="hooks">Hooks</TabsTrigger>
               <TabsTrigger value="commands">Commands</TabsTrigger>
@@ -642,6 +709,156 @@ export const Settings: React.FC<SettingsProps> = ({
                 </div>
               </Card>
             </TabsContent>
+            
+            {/* Custom Models */}
+            <TabsContent value="models" className="space-y-6">
+              <Card className="p-6">
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-base font-semibold">Custom Models</h3>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Add custom Claude models that will appear in the model selection dropdown
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={addCustomModel}
+                      className="gap-2"
+                    >
+                      <Plus className="h-3 w-3" />
+                      Add Model
+                    </Button>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    {customModels.length === 0 ? (
+                      <p className="text-xs text-muted-foreground py-2">
+                        No custom models configured.
+                      </p>
+                    ) : (
+                      customModels.map((model, index) => (
+                        <motion.div
+                          key={index}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          className="border rounded-lg p-4 space-y-3"
+                        >
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-medium text-sm">Model {index + 1}</h4>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeCustomModel(index)}
+                              className="h-8 w-8 hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-2">
+                              <Label htmlFor={`model-name-${index}`} className="text-xs">
+                                Display Name
+                              </Label>
+                              <Input
+                                id={`model-name-${index}`}
+                                placeholder="e.g., Custom Claude"
+                                value={model.name}
+                                onChange={(e) => updateCustomModel(index, "name", e.target.value)}
+                                className="text-sm"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor={`model-identifier-${index}`} className="text-xs">
+                                Model Identifier
+                              </Label>
+                              <Input
+                                id={`model-identifier-${index}`}
+                                placeholder="e.g., claude-sonnet-4@20250514"
+                                value={model.identifier}
+                                onChange={(e) => updateCustomModel(index, "identifier", e.target.value)}
+                                className="text-sm font-mono"
+                              />
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor={`model-description-${index}`} className="text-xs">
+                              Description (Optional)
+                            </Label>
+                            <Input
+                              id={`model-description-${index}`}
+                              placeholder="e.g., Custom model for specific tasks"
+                              value={model.description || ""}
+                              onChange={(e) => updateCustomModel(index, "description", e.target.value)}
+                              className="text-sm"
+                            />
+                          </div>
+                        </motion.div>
+                      ))
+                    )}
+                  </div>
+                  
+                  {modelsChanged && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg"
+                    >
+                      <AlertCircle className="h-4 w-4 text-amber-600" />
+                      <p className="text-sm text-amber-700 dark:text-amber-300 flex-1">
+                        You have unsaved changes to your custom models.
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={saveCustomModels}
+                        disabled={saving}
+                        className="gap-2"
+                      >
+                        {saving ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="h-4 w-4" />
+                            Save Models
+                          </>
+                        )}
+                      </Button>
+                    </motion.div>
+                  )}
+                  
+                  {modelConfig?.env_model && (
+                    <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                      <h4 className="font-medium text-sm text-blue-900 dark:text-blue-100 mb-2">
+                        Environment Model Detected
+                      </h4>
+                      <p className="text-sm text-blue-700 dark:text-blue-300">
+                        <strong>ANTHROPIC_MODEL:</strong> {modelConfig.env_model}
+                      </p>
+                      <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                        This model will appear in the dropdown with an {"{env}"} label.
+                      </p>
+                    </div>
+                  )}
+                  
+                  <div className="pt-2 space-y-2">
+                    <p className="text-xs text-muted-foreground">
+                      <strong>Notes:</strong>
+                    </p>
+                    <ul className="text-xs text-muted-foreground space-y-1 ml-4">
+                      <li>• Custom models will appear in a separate group in the model selection dropdown</li>
+                      <li>• The model identifier should match exactly what Claude CLI expects</li>
+                      <li>• Changes require saving and may need a restart to take full effect</li>
+                    </ul>
+                  </div>
+                </div>
+              </Card>
+            </TabsContent>
+            
             {/* Advanced Settings */}
             <TabsContent value="advanced" className="space-y-6">
               <Card className="p-6">

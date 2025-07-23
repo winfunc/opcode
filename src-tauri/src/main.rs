@@ -42,6 +42,9 @@ use commands::storage::{
     storage_list_tables, storage_read_table, storage_update_row, storage_delete_row,
     storage_insert_row, storage_execute_sql, storage_reset_database,
 };
+use commands::models::{
+    get_available_models, save_custom_models, add_custom_model, remove_custom_model,
+};
 use process::ProcessRegistryState;
 use std::sync::Mutex;
 use tauri::Manager;
@@ -195,6 +198,12 @@ fn main() {
             commands::slash_commands::slash_command_get,
             commands::slash_commands::slash_command_save,
             commands::slash_commands::slash_command_delete,
+            
+            // Model Management
+            get_available_models,
+            save_custom_models,
+            add_custom_model,
+            remove_custom_model,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

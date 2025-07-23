@@ -429,53 +429,77 @@ pub async fn storage_execute_sql(
     }
 }
 
-/// Reset the entire database (with confirmation)
+/// Reset the database to its initial state
 #[tauri::command]
 pub async fn storage_reset_database(app: AppHandle) -> Result<(), String> {
-    {
-        // Drop all existing tables within a scoped block
-        let db_state = app.state::<AgentDb>();
-        let conn = db_state.0.lock()
-            .map_err(|e| e.to_string())?;
-        
-        // Disable foreign key constraints temporarily to allow dropping tables
-        conn.execute("PRAGMA foreign_keys = OFF", [])
-            .map_err(|e| format!("Failed to disable foreign keys: {}", e))?;
-        
-        // Drop tables - order doesn't matter with foreign keys disabled
-        conn.execute("DROP TABLE IF EXISTS agent_runs", [])
-            .map_err(|e| format!("Failed to drop agent_runs table: {}", e))?;
-        conn.execute("DROP TABLE IF EXISTS agents", [])
-            .map_err(|e| format!("Failed to drop agents table: {}", e))?;
-        conn.execute("DROP TABLE IF EXISTS app_settings", [])
-            .map_err(|e| format!("Failed to drop app_settings table: {}", e))?;
-        
-        // Re-enable foreign key constraints
-        conn.execute("PRAGMA foreign_keys = ON", [])
-            .map_err(|e| format!("Failed to re-enable foreign keys: {}", e))?;
-        
-        // Connection is automatically dropped at end of scope
+    let db = app.state::<AgentDb>();
+    let conn = db.0.lock().unwrap();
+    
+    // Drop all tables except sqlite internal ones
+    let table_names: Vec<String> = conn
+        .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
+        .and_then(|mut stmt| {
+            let rows = stmt.query_map([], |row| Ok(row.get::<_, String>(0)?))?;
+            let mut names = Vec::new();
+            for row in rows {
+                names.push(row?);
+            }
+            Ok(names)
+        })
+        .map_err(|e| format!("Failed to list tables: {}", e))?;
+    
+    for table_name in table_names {
+        conn.execute(&format!("DROP TABLE IF EXISTS {}", table_name), [])
+            .map_err(|e| format!("Failed to drop table {}: {}", table_name, e))?;
     }
     
-    // Re-initialize the database which will recreate all tables empty
-    let new_conn = init_database(&app).map_err(|e| format!("Failed to reset database: {}", e))?;
+    // Recreate the agents table
+    super::agents::init_database(&app).map_err(|e| format!("Failed to reinitialize database: {}", e))?;
     
-    // Update the managed state with the new connection
-    {
-        let db_state = app.state::<AgentDb>();
-        let mut conn_guard = db_state.0.lock()
-            .map_err(|e| e.to_string())?;
-        *conn_guard = new_conn;
+    Ok(())
+}
+
+/// Get application settings
+pub async fn get_settings(app: &AppHandle) -> Result<std::collections::HashMap<String, serde_json::Value>, String> {
+    let data_dir = app.path().app_data_dir()
+        .map_err(|e| format!("Failed to get app data directory: {}", e))?;
+    
+    std::fs::create_dir_all(&data_dir)
+        .map_err(|e| format!("Failed to create app data directory: {}", e))?;
+    
+    let settings_path = data_dir.join("settings.json");
+    
+    if !settings_path.exists() {
+        return Ok(std::collections::HashMap::new());
     }
     
-    // Run VACUUM to optimize the database
-    {
-        let db_state = app.state::<AgentDb>();
-        let conn = db_state.0.lock()
-            .map_err(|e| e.to_string())?;
-        conn.execute("VACUUM", [])
-            .map_err(|e| e.to_string())?;
-    }
+    let content = std::fs::read_to_string(&settings_path)
+        .map_err(|e| format!("Failed to read settings file: {}", e))?;
+    
+    let settings: std::collections::HashMap<String, serde_json::Value> = serde_json::from_str(&content)
+        .map_err(|e| format!("Failed to parse settings JSON: {}", e))?;
+    
+    Ok(settings)
+}
+
+/// Save application settings
+pub async fn save_settings(
+    app: &AppHandle, 
+    settings: std::collections::HashMap<String, serde_json::Value>
+) -> Result<(), String> {
+    let data_dir = app.path().app_data_dir()
+        .map_err(|e| format!("Failed to get app data directory: {}", e))?;
+    
+    std::fs::create_dir_all(&data_dir)
+        .map_err(|e| format!("Failed to create app data directory: {}", e))?;
+    
+    let settings_path = data_dir.join("settings.json");
+    
+    let content = serde_json::to_string_pretty(&settings)
+        .map_err(|e| format!("Failed to serialize settings: {}", e))?;
+    
+    std::fs::write(&settings_path, content)
+        .map_err(|e| format!("Failed to write settings file: {}", e))?;
     
     Ok(())
 }

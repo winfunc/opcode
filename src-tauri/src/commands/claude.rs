@@ -222,6 +222,8 @@ fn extract_first_user_message(jsonl_path: &PathBuf) -> (Option<String>, Option<S
     (None, None)
 }
 
+
+
 /// Helper function to create a tokio Command with proper environment variables
 /// This ensures commands like Claude can find Node.js and other dependencies
 fn create_command_with_env(program: &str) -> Command {
@@ -265,6 +267,7 @@ fn create_command_with_env(program: &str) -> Command {
 
     tokio_cmd
 }
+
 
 
 /// Creates a system binary command with the given arguments
@@ -2062,3 +2065,5 @@ pub async fn validate_hook_command(command: String) -> Result<serde_json::Value,
         Err(e) => Err(format!("Failed to validate command: {}", e))
     }
 }
+
+
