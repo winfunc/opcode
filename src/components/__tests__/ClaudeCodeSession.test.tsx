@@ -1,6 +1,6 @@
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { ClaudeCodeSession } from "../ClaudeCodeSession";
 import { I18nProvider } from "../I18nProvider";
 
@@ -76,7 +76,9 @@ describe("ClaudeCodeSession", () => {
     );
     
     expect(backButton).toBeDefined();
-    fireEvent.click(backButton!);
+    if (backButton) {
+      fireEvent.click(backButton);
+    }
 
     expect(mockOnBack).toHaveBeenCalledTimes(1);
   });

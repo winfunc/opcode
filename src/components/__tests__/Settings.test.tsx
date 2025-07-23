@@ -64,7 +64,9 @@ describe("Settings Component", () => {
     );
     
     expect(backButton).toBeDefined();
-    fireEvent.click(backButton!);
+    if (backButton) {
+      fireEvent.click(backButton);
+    }
 
     expect(mockOnBack).toHaveBeenCalledTimes(1);
   });

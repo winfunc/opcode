@@ -46,7 +46,7 @@ describe("useLoadingState Hook", () => {
     }
 
     const response = await act(async () => {
-      return await promise!;
+      return await promise;
     });
 
     expect(response).toBe("processed: test");
@@ -73,7 +73,7 @@ describe("useLoadingState Hook", () => {
 
     await act(async () => {
       try {
-        await promise!;
+        await promise;
       } catch (_error) {
         // Expected to throw
       }
@@ -104,7 +104,7 @@ describe("useLoadingState Hook", () => {
 
     await act(async () => {
       try {
-        await promise1!;
+        await promise1;
       } catch (_error) {
         // Expected to throw
       }
@@ -128,7 +128,7 @@ describe("useLoadingState Hook", () => {
     }
 
     await act(async () => {
-      await promise2!;
+      await promise2;
     });
 
     expect(result2.current.error).toBeNull();
