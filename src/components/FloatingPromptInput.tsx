@@ -18,7 +18,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { FilePicker } from "./FilePicker";
 import { SlashCommandPicker } from "./SlashCommandPicker";
 import { ImagePreview } from "./ImagePreview";
-import { type FileEntry, type SlashCommand, type CustomModel, type ModelConfig, api } from "@/lib/api";
+import { type FileEntry, type SlashCommand, api } from "@/lib/api";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 
 interface FloatingPromptInputProps {

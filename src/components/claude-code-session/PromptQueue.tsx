@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 interface QueuedPrompt {
   id: string;
   prompt: string;
-  model: "sonnet" | "opus";
+  model: string;
 }
 
 interface PromptQueueProps {
@@ -52,17 +52,21 @@ export const PromptQueue: React.FC<PromptQueueProps> = React.memo(({
                 className="flex items-start gap-2 p-2 rounded-md bg-background/50"
               >
                 <div className="flex-shrink-0 mt-0.5">
-                  {queuedPrompt.model === "opus" ? (
+                  {queuedPrompt.model.includes("opus") ? (
                     <Sparkles className="h-3.5 w-3.5 text-purple-500" />
-                  ) : (
+                  ) : queuedPrompt.model.includes("sonnet") ? (
                     <Zap className="h-3.5 w-3.5 text-amber-500" />
+                  ) : (
+                    <Clock className="h-3.5 w-3.5 text-blue-500" />
                   )}
                 </div>
                 
                 <div className="flex-1 min-w-0">
                   <p className="text-sm truncate">{queuedPrompt.prompt}</p>
                   <span className="text-xs text-muted-foreground">
-                    {queuedPrompt.model === "opus" ? "Opus" : "Sonnet"}
+                    {queuedPrompt.model.includes("opus") ? "Opus" : 
+                     queuedPrompt.model.includes("sonnet") ? "Sonnet" :
+                     queuedPrompt.model}
                   </span>
                 </div>
                 
