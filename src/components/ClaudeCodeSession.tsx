@@ -33,6 +33,8 @@ import { SplitPane } from "@/components/ui/split-pane";
 import { WebviewPreview } from "./WebviewPreview";
 import type { ClaudeStreamMessage } from "./AgentExecution";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { RecentDirectoriesDropdown } from "./RecentDirectoriesDropdown";
+import { useRecentDirectories } from "@/hooks/useRecentDirectories";
 
 interface ClaudeCodeSessionProps {
   /**
@@ -76,6 +78,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   onStreamingChange,
 }) => {
   const [projectPath, setProjectPath] = useState(initialProjectPath || session?.project_path || "");
+  const { addRecentDirectory } = useRecentDirectories();
   const [messages, setMessages] = useState<ClaudeStreamMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -221,6 +224,11 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       // Set the claudeSessionId immediately when we have a session
       setClaudeSessionId(session.id);
       
+      // Track this project directory as recently used if it exists
+      if (session.project_path) {
+        addRecentDirectory(session.project_path);
+      }
+      
       // Load session history first, then check for active session
       const initializeSession = async () => {
         await loadSessionHistory();
@@ -232,7 +240,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       
       initializeSession();
     }
-  }, [session]); // Remove hasLoadedSession dependency to ensure it runs on mount
+  }, [session, addRecentDirectory]); // Add addRecentDirectory to dependencies
 
   // Report streaming state changes
   useEffect(() => {
@@ -405,6 +413,9 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       setError("Please select a project directory first");
       return;
     }
+
+    // Track this directory as recently used
+    addRecentDirectory(projectPath);
 
     // If already loading, queue the prompt
     if (isLoading) {
@@ -920,11 +931,17 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
           className="flex-1"
           disabled={isLoading}
         />
+        <RecentDirectoriesDropdown
+          onSelectDirectory={setProjectPath}
+          currentPath={projectPath}
+          disabled={isLoading}
+        />
         <Button
           onClick={handleSelectPath}
           size="icon"
           variant="outline"
           disabled={isLoading}
+          title="Browse folders"
         >
           <FolderOpen className="h-4 w-4" />
         </Button>
