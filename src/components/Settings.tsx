@@ -839,9 +839,6 @@ export const Settings: React.FC<SettingsProps> = ({
                       <p className="text-sm text-blue-700 dark:text-blue-300">
                         <strong>ANTHROPIC_MODEL:</strong> {modelConfig.env_model}
                       </p>
-                      <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                        This model will appear in the dropdown with an {"{env}"} label.
-                      </p>
                     </div>
                   )}
                   
@@ -890,9 +887,7 @@ export const Settings: React.FC<SettingsProps> = ({
                     <div className="p-3 rounded-md bg-muted font-mono text-xs overflow-x-auto whitespace-pre-wrap">
                       <pre>{JSON.stringify(settings, null, 2)}</pre>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      This shows the raw JSON that will be saved to ~/.claude/settings.json
-                    </p>
+
                   </div>
                 </div>
               </Card>
