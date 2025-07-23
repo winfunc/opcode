@@ -15,8 +15,6 @@ use tauri_plugin_shell::ShellExt;
 use tokio::io::{AsyncBufReadExt, BufReader as TokioBufReader};
 use tokio::process::Command;
 
-
-
 /// Finds the full path to the claude binary
 /// This is necessary because macOS apps have a limited PATH environment
 fn find_claude_binary(app_handle: &AppHandle) -> Result<String, String> {
@@ -772,8 +770,6 @@ pub async fn execute_agent(
     spawn_agent_system(app, run_id, agent_id, agent.name.clone(), claude_path, args, project_path, task, execution_model, db, registry).await
 }
 
-
-
 /// Creates a system binary command for agent execution
 fn create_agent_system_command(
     claude_path: &str,
@@ -794,66 +790,6 @@ fn create_agent_system_command(
     
     cmd
 }
-
-/// Helper function to create a tokio Command with proper environment variables
-/// This ensures commands like Claude can find Node.js and other dependencies
-fn create_command_with_env(program: &str) -> Command {
-    // Convert std::process::Command to tokio::process::Command
-    let _std_cmd = crate::claude_binary::create_command_with_env(program);
-
-    // Create a new tokio Command from the program path
-    let mut tokio_cmd = Command::new(program);
-
-    // Copy over all environment variables from the std::process::Command
-    // This is a workaround since we can't directly convert between the two types
-    for (key, value) in std::env::vars() {
-        if key == "PATH"
-            || key == "HOME"
-            || key == "USER"
-            || key == "SHELL"
-            || key == "LANG"
-            || key == "LC_ALL"
-            || key.starts_with("LC_")
-            || key == "NODE_PATH"
-            || key == "NVM_DIR"
-            || key == "NVM_BIN"
-            || key == "HOMEBREW_PREFIX"
-            || key == "HOMEBREW_CELLAR"
-        {
-            tokio_cmd.env(&key, &value);
-        }
-    }
-
-    // Add NVM support if the program is in an NVM directory
-    if program.contains("/.nvm/versions/node/") {
-        if let Some(node_bin_dir) = std::path::Path::new(program).parent() {
-            let current_path = std::env::var("PATH").unwrap_or_default();
-            let node_bin_str = node_bin_dir.to_string_lossy();
-            if !current_path.contains(&node_bin_str.as_ref()) {
-                let new_path = format!("{}:{}", node_bin_str, current_path);
-                tokio_cmd.env("PATH", new_path);
-            }
-        }
-    }
-
-    // Ensure PATH contains common Homebrew locations
-    if let Ok(existing_path) = std::env::var("PATH") {
-        let mut paths: Vec<&str> = existing_path.split(':').collect();
-        for p in ["/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "/bin"].iter() {
-            if !paths.contains(p) {
-                paths.push(p);
-            }
-        }
-        let joined = paths.join(":");
-        tokio_cmd.env("PATH", joined);
-    } else {
-        tokio_cmd.env("PATH", "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin");
-    }
-
-    tokio_cmd
-}
-
-
 
 /// Spawn agent using sidecar command
 
@@ -1673,6 +1609,64 @@ pub async fn list_claude_installations(
     }
 
     Ok(installations)
+}
+
+/// Helper function to create a tokio Command with proper environment variables
+/// This ensures commands like Claude can find Node.js and other dependencies
+fn create_command_with_env(program: &str) -> Command {
+    // Convert std::process::Command to tokio::process::Command
+    let _std_cmd = crate::claude_binary::create_command_with_env(program);
+
+    // Create a new tokio Command from the program path
+    let mut tokio_cmd = Command::new(program);
+
+    // Copy over all environment variables from the std::process::Command
+    // This is a workaround since we can't directly convert between the two types
+    for (key, value) in std::env::vars() {
+        if key == "PATH"
+            || key == "HOME"
+            || key == "USER"
+            || key == "SHELL"
+            || key == "LANG"
+            || key == "LC_ALL"
+            || key.starts_with("LC_")
+            || key == "NODE_PATH"
+            || key == "NVM_DIR"
+            || key == "NVM_BIN"
+            || key == "HOMEBREW_PREFIX"
+            || key == "HOMEBREW_CELLAR"
+        {
+            tokio_cmd.env(&key, &value);
+        }
+    }
+
+    // Add NVM support if the program is in an NVM directory
+    if program.contains("/.nvm/versions/node/") {
+        if let Some(node_bin_dir) = std::path::Path::new(program).parent() {
+            let current_path = std::env::var("PATH").unwrap_or_default();
+            let node_bin_str = node_bin_dir.to_string_lossy();
+            if !current_path.contains(&node_bin_str.as_ref()) {
+                let new_path = format!("{}:{}", node_bin_str, current_path);
+                tokio_cmd.env("PATH", new_path);
+            }
+        }
+    }
+
+    // Ensure PATH contains common Homebrew locations
+    if let Ok(existing_path) = std::env::var("PATH") {
+        let mut paths: Vec<&str> = existing_path.split(':').collect();
+        for p in ["/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "/bin"].iter() {
+            if !paths.contains(p) {
+                paths.push(p);
+            }
+        }
+        let joined = paths.join(":");
+        tokio_cmd.env("PATH", joined);
+    } else {
+        tokio_cmd.env("PATH", "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin");
+    }
+
+    tokio_cmd
 }
 
 /// Import an agent from JSON data
