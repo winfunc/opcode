@@ -43,7 +43,7 @@ use commands::storage::{
     storage_insert_row, storage_execute_sql, storage_reset_database,
 };
 use commands::models::{
-    get_available_models, save_custom_models, add_custom_model, remove_custom_model,
+    get_available_models, save_custom_models, add_custom_model, remove_custom_model, get_official_models,
 };
 use process::ProcessRegistryState;
 use std::sync::Mutex;
@@ -204,6 +204,7 @@ fn main() {
             save_custom_models,
             add_custom_model,
             remove_custom_model,
+            get_official_models,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

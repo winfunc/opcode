@@ -1895,5 +1895,17 @@ export const api = {
       console.error("Failed to remove custom model:", error);
       throw error;
     }
+  },
+
+  /**
+   * Get official Anthropic models from API
+   */
+  async getOfficialModels(): Promise<CustomModel[]> {
+    try {
+      return await invoke<CustomModel[]>("get_official_models");
+    } catch (error) {
+      console.error("Failed to get official models:", error);
+      throw error;
+    }
   }
 };

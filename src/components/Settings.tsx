@@ -7,6 +7,9 @@ import {
   Save, 
   AlertCircle,
   Loader2,
+  RefreshCw,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -79,6 +82,11 @@ export const Settings: React.FC<SettingsProps> = ({
   const [customModels, setCustomModels] = useState<CustomModel[]>([]);
   const [modelConfig, setModelConfig] = useState<ModelConfig | null>(null);
   const [modelsChanged, setModelsChanged] = useState(false);
+  
+  // Official models state
+  const [officialModels, setOfficialModels] = useState<CustomModel[]>([]);
+  const [loadingOfficialModels, setLoadingOfficialModels] = useState(false);
+  const [officialModelsExpanded, setOfficialModelsExpanded] = useState(false);
   
   // Hooks state
   const [userHooksChanged, setUserHooksChanged] = useState(false);
@@ -167,6 +175,26 @@ export const Settings: React.FC<SettingsProps> = ({
       setSettings({});
     } finally {
       setLoading(false);
+    }
+  };
+
+  /**
+   * Loads official Anthropic models
+   */
+  const loadOfficialModels = async () => {
+    try {
+      setLoadingOfficialModels(true);
+      const models = await api.getOfficialModels();
+      setOfficialModels(models);
+      // Auto-expand when models are loaded for the first time
+      if (models.length > 0 && !officialModelsExpanded) {
+        setOfficialModelsExpanded(true);
+      }
+    } catch (err) {
+      console.error("Failed to load official models:", err);
+      setToast({ message: "Failed to load official models", type: "error" });
+    } finally {
+      setLoadingOfficialModels(false);
     }
   };
 
@@ -317,6 +345,22 @@ export const Settings: React.FC<SettingsProps> = ({
     };
     setCustomModels(prev => [...prev, newModel]);
     setModelsChanged(true);
+  };
+
+  /**
+   * Adds an official model to custom models list
+   */
+  const addOfficialModelToCustom = (officialModel: CustomModel) => {
+    // Check if model already exists in custom models
+    const exists = customModels.some(model => model.identifier === officialModel.identifier);
+    if (exists) {
+      setToast({ message: "Model already exists in custom models", type: "error" });
+      return;
+    }
+    
+    setCustomModels(prev => [...prev, officialModel]);
+    setModelsChanged(true);
+    setToast({ message: `Added ${officialModel.name} to custom models`, type: "success" });
   };
 
   /**
@@ -710,8 +754,125 @@ export const Settings: React.FC<SettingsProps> = ({
               </Card>
             </TabsContent>
             
-            {/* Custom Models */}
+            {/* Models */}
             <TabsContent value="models" className="space-y-6">
+              {/* Official Models */}
+              <Card className="p-6">
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-base font-semibold">Official Models</h3>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Browse and select from Anthropic's official Claude models
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setOfficialModelsExpanded(!officialModelsExpanded)}
+                        className="gap-1"
+                      >
+                        {officialModelsExpanded ? (
+                          <>
+                            <ChevronUp className="h-4 w-4" />
+                            Hide
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown className="h-4 w-4" />
+                            Show {officialModels.length > 0 ? `(${officialModels.length})` : ''}
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={loadOfficialModels}
+                        className="gap-2"
+                        disabled={loadingOfficialModels}
+                      >
+                        {loadingOfficialModels ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <RefreshCw className="h-3 w-3" />
+                        )}
+                        {loadingOfficialModels ? "Loading..." : "Refresh"}
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <AnimatePresence>
+                    {officialModelsExpanded && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="space-y-4 overflow-hidden"
+                      >
+                        <div className="space-y-4">
+                          {loadingOfficialModels ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="h-6 w-6 animate-spin" />
+                        <span className="ml-2 text-sm text-muted-foreground">Loading official models...</span>
+                      </div>
+                    ) : officialModels.length === 0 ? (
+                      <p className="text-xs text-muted-foreground py-2">
+                        No official models available. Click Refresh to load.
+                      </p>
+                    ) : (
+                      officialModels.map((model, index) => (
+                        <motion.div
+                          key={index}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          className="border rounded-lg p-4 space-y-3"
+                        >
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-medium text-sm">{model.name}</h4>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => addOfficialModelToCustom(model)}
+                              className="gap-2"
+                            >
+                              <Plus className="h-3 w-3" />
+                              Add
+                            </Button>
+                          </div>
+                          <div className="space-y-2">
+                            <div className="text-xs text-muted-foreground">
+                              <strong>Model ID:</strong> <code className="bg-muted px-1 rounded">{model.identifier}</code>
+                            </div>
+                            {model.description && (
+                              <div className="text-xs text-muted-foreground">
+                                <strong>Description:</strong> {model.description}
+                              </div>
+                            )}
+                          </div>
+                        </motion.div>
+                      ))
+                    )}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                  
+                  <div className="pt-2 space-y-2">
+                    <p className="text-xs text-muted-foreground">
+                      <strong>Notes:</strong>
+                    </p>
+                    <ul className="text-xs text-muted-foreground space-y-1 ml-4">
+                      <li>• Click "Add" to add official models to your custom models list</li>
+                      <li>• Official models are curated by Anthropic and regularly updated</li>
+                      <li>• Added models will appear in the model selection dropdown</li>
+                    </ul>
+                  </div>
+                </div>
+              </Card>
+
+              {/* Custom Models */}
               <Card className="p-6">
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
