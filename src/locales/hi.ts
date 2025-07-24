@@ -605,6 +605,21 @@ export const hi: Translations = {
       'क्या आप वाकई एजेंट "{name}" को हटाना चाहते हैं? यह क्रिया पूर्ववत नहीं की जा सकती और एजेंट और उसके सभी संबंधित डेटा को स्थायी रूप से हटा देगी।',
     deleting: "हटा रहा है...",
   },
+
+  // विचार मोड अनुवाद
+  thinkingModes: {
+    auto: "ऑटो",
+    autoDescription: "Claude को तय करने दें",
+    think: "सोचें",
+    thinkDescription: "बुनियादी तर्क",
+    thinkHard: "गहरा सोचें",
+    thinkHardDescription: "गहरा विश्लेषण",
+    thinkHarder: "और भी गहरा सोचें",
+    thinkHarderDescription: "व्यापक तर्क",
+    ultrathink: "अल्ट्रा सोचें",
+    ultrathinkDescription: "अधिकतम गणना",
+  },
+
   hooks: {
     title: "हुक्स",
     subtitle: "इवेंट-आधारित ऑटोमेशन कॉन्फ़िगर करें",

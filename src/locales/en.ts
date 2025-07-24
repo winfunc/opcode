@@ -602,6 +602,20 @@ export const en: Translations = {
     deleting: "Deleting...",
   },
 
+  // Thinking modes for Claude AI interaction
+  thinkingModes: {
+    auto: "Auto",
+    autoDescription: "Let Claude decide",
+    think: "Think",
+    thinkDescription: "Basic reasoning",
+    thinkHard: "Think Hard",
+    thinkHardDescription: "Deeper analysis",
+    thinkHarder: "Think Harder",
+    thinkHarderDescription: "Extensive reasoning",
+    ultrathink: "Ultrathink",
+    ultrathinkDescription: "Maximum computation",
+  },
+
   // Hooks Editor translations
   hooks: {
     title: "Hooks Configuration",

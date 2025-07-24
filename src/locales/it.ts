@@ -600,6 +600,20 @@ export const it: Translations = {
     deleting: "Eliminazione in corso...",
   },
 
+  // Traduzioni delle modalità di pensiero
+  thinkingModes: {
+    auto: "Auto",
+    autoDescription: "Lascia decidere a Claude",
+    think: "Pensa",
+    thinkDescription: "Ragionamento di base",
+    thinkHard: "Pensa Intensamente",
+    thinkHardDescription: "Analisi più profonda",
+    thinkHarder: "Pensa Ancora di Più",
+    thinkHarderDescription: "Ragionamento estensivo",
+    ultrathink: "Ultrapensiero",
+    ultrathinkDescription: "Computazione massima",
+  },
+
   hooks: {
     title: "Configurazione hook",
     subtitle: "Configura comandi shell da eseguire in vari punti del ciclo di vita di Claude Code",

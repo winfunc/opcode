@@ -610,6 +610,20 @@ export const pt: Translations = {
     deleting: "Excluindo...",
   },
 
+  // Traduções dos modos de pensamento
+  thinkingModes: {
+    auto: "Auto",
+    autoDescription: "Deixar Claude decidir",
+    think: "Pensar",
+    thinkDescription: "Raciocínio básico",
+    thinkHard: "Pensar Intensamente",
+    thinkHardDescription: "Análise mais profunda",
+    thinkHarder: "Pensar Mais Intensamente",
+    thinkHarderDescription: "Raciocínio extensivo",
+    ultrathink: "Ultrapensar",
+    ultrathinkDescription: "Computação máxima",
+  },
+
   // Traduções do editor de hooks
   hooks: {
     title: "Configuração de hooks",

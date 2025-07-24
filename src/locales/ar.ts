@@ -587,6 +587,20 @@ export const ar: Translations = {
     deleting: "جاري الحذف...",
   },
 
+  // ترجمات أنماط التفكير
+  thinkingModes: {
+    auto: "تلقائي",
+    autoDescription: "دع Claude يقرر",
+    think: "فكر",
+    thinkDescription: "التفكير الأساسي",
+    thinkHard: "فكر بقوة",
+    thinkHardDescription: "تحليل أعمق",
+    thinkHarder: "فكر بقوة أكبر",
+    thinkHarderDescription: "التفكير الشامل",
+    ultrathink: "التفكير الفائق",
+    ultrathinkDescription: "الحوسبة القصوى",
+  },
+
   hooks: {
     title: "الخطافات",
     subtitle: "تكوين الأتمتة المستندة إلى الأحداث",

@@ -620,6 +620,20 @@ export const de: Translations = {
     deleting: "Wird gelöscht...",
   },
 
+  // Denkmodusübersetzungen
+  thinkingModes: {
+    auto: "Auto",
+    autoDescription: "Claude entscheiden lassen",
+    think: "Denken",
+    thinkDescription: "Grundlegende Argumentation",
+    thinkHard: "Intensiv Denken",
+    thinkHardDescription: "Tiefere Analyse",
+    thinkHarder: "Noch Intensiver Denken",
+    thinkHarderDescription: "Umfassende Argumentation",
+    ultrathink: "Ultradenken",
+    ultrathinkDescription: "Maximale Berechnung",
+  },
+
   // Hooks-Editor-Übersetzungen
   hooks: {
     title: "Hooks-Konfiguration",

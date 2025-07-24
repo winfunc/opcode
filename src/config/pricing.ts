@@ -43,13 +43,6 @@ export const MODEL_PRICING: Record<string, ModelPricing> = {
     cacheWritePrice: 3.75,
     cacheReadPrice: 0.3,
   },
-  sonnet: {
-    // 向后兼容
-    inputPrice: 3.0,
-    outputPrice: 15.0,
-    cacheWritePrice: 3.75,
-    cacheReadPrice: 0.3,
-  },
 
   // Claude 3.7 Sonnet - 最新最强性能
   "claude-3-7-sonnet-20250219": {
@@ -65,8 +58,23 @@ export const MODEL_PRICING: Record<string, ModelPricing> = {
     cacheReadPrice: 0.4,
   },
 
-  // Claude 3 Opus - 最强推理能力
-  "claude-3-opus-20240229": {
+  // Claude 4 Sonnet - 最新 Claude 4 系列
+  "claude-sonnet-4-20250514": {
+    inputPrice: 3.0,
+    outputPrice: 15.0,
+    cacheWritePrice: 3.75,
+    cacheReadPrice: 0.3,
+  },
+  sonnet: {
+    // 映射到 Claude 4 Sonnet
+    inputPrice: 3.0,
+    outputPrice: 15.0,
+    cacheWritePrice: 3.75,
+    cacheReadPrice: 0.3,
+  },
+
+  // Claude 4 Opus - 最强推理能力 Claude 4 系列
+  "claude-opus-4-20250514": {
     inputPrice: 15.0,
     outputPrice: 75.0,
     cacheWritePrice: 18.75,
@@ -173,7 +181,7 @@ export function formatPrice(price: number): string {
  * ```typescript
  * getModelCostEfficiency('claude-3-5-haiku-20241022') // 'high'
  * getModelCostEfficiency('claude-3-5-sonnet-20241022') // 'medium'
- * getModelCostEfficiency('claude-3-opus-20240229') // 'low'
+ * getModelCostEfficiency('claude-opus-4-20250514') // 'low'
  * ```
  */
 export function getModelCostEfficiency(model: string): "high" | "medium" | "low" {
@@ -194,5 +202,6 @@ export const MODEL_USE_CASES: Record<string, string[]> = {
   "claude-3-5-haiku-20241022": ["大量文本处理", "内容总结", "简单问答", "代码注释", "翻译任务"],
   "claude-3-5-sonnet-20241022": ["代码生成", "复杂分析", "创意写作", "技术文档", "数据处理"],
   "claude-3-7-sonnet-20250219": ["高级推理", "复杂编程", "深度分析", "专业咨询", "创新解决方案"],
-  "claude-3-opus-20240229": ["最复杂推理", "高级研究", "专业写作", "复杂决策", "创意项目"],
+  "claude-sonnet-4-20250514": ["平衡性能", "通用任务", "代码生成", "技术分析", "日常工作"],
+  "claude-opus-4-20250514": ["最复杂推理", "高级研究", "专业写作", "复杂决策", "创意项目"],
 };

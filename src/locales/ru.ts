@@ -612,6 +612,20 @@ export const ru: Translations = {
     deleting: "Удаление...",
   },
 
+  // Переводы режимов мышления
+  thinkingModes: {
+    auto: "Авто",
+    autoDescription: "Позволить Claude решать",
+    think: "Думать",
+    thinkDescription: "Базовые рассуждения",
+    thinkHard: "Усиленно Думать",
+    thinkHardDescription: "Более глубокий анализ",
+    thinkHarder: "Еще Усиленнее Думать",
+    thinkHarderDescription: "Обширные рассуждения",
+    ultrathink: "Ультрамышление",
+    ultrathinkDescription: "Максимальные вычисления",
+  },
+
   // Переводы редактора хуков
   hooks: {
     title: "Конфигурация хуков",

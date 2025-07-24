@@ -115,8 +115,8 @@ export const MODEL_API_MAPPING: Record<ClaudeModel, string> = {
   "claude-3-5-haiku-20241022": "claude-3-5-haiku-20241022",
   "claude-3-5-sonnet-20241022": "claude-3-5-sonnet-20241022",
   "claude-3-7-sonnet-20250219": "claude-3-7-sonnet-20250219",
-  sonnet: "claude-3-5-sonnet-20241022", // Legacy mapping to current Sonnet
-  opus: "claude-3-opus-20240229", // Legacy mapping to Opus
+  sonnet: "claude-sonnet-4-20250514", // Legacy mapping to Claude 4 Sonnet
+  opus: "claude-opus-4-20250514", // Legacy mapping to Claude 4 Opus
   haiku: "claude-3-5-haiku-20241022",
   "sonnet-3-5": "claude-3-5-sonnet-20241022",
   "sonnet-3-7": "claude-3-7-sonnet-20250219",

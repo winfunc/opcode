@@ -605,6 +605,20 @@ export const ja: Translations = {
     deleting: "削除中...",
   },
 
+  // Claude AI 交互的思考模式
+  thinkingModes: {
+    auto: "自動",
+    autoDescription: "Claudeに任せる",
+    think: "思考",
+    thinkDescription: "基本的な推論",
+    thinkHard: "深く思考",
+    thinkHardDescription: "より深い分析",
+    thinkHarder: "さらに深く思考",
+    thinkHarderDescription: "広範囲な推論",
+    ultrathink: "ウルトラ思考",
+    ultrathinkDescription: "最大の計算",
+  },
+
   // Hooks Editor translations
   hooks: {
     title: "フック設定",

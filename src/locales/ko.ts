@@ -604,6 +604,20 @@ export const ko: Translations = {
     deleting: "삭제 중...",
   },
 
+  // Claude AI 상호작용의 사고 모드
+  thinkingModes: {
+    auto: "자동",
+    autoDescription: "Claude가 결정",
+    think: "사고",
+    thinkDescription: "기본적인 추론",
+    thinkHard: "깊은 사고",
+    thinkHardDescription: "더 깊은 분석",
+    thinkHarder: "매우 깊은 사고",
+    thinkHarderDescription: "광범위한 추론",
+    ultrathink: "울트라 사고",
+    ultrathinkDescription: "최대 계산",
+  },
+
   // 훅 편집기 번역
   hooks: {
     title: "훅 구성",

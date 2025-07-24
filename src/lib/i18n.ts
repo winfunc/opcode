@@ -635,6 +635,20 @@ export interface Translations {
     basedOnOfficialPricing: string;
   };
 
+  // Thinking modes for Claude AI interaction
+  thinkingModes: {
+    auto: string;
+    autoDescription: string;
+    think: string;
+    thinkDescription: string;
+    thinkHard: string;
+    thinkHardDescription: string;
+    thinkHarder: string;
+    thinkHarderDescription: string;
+    ultrathink: string;
+    ultrathinkDescription: string;
+  };
+
   // 钩子编辑器翻译
   hooks: {
     title: string;

@@ -69,6 +69,7 @@ const ResizableTextarea = React.forwardRef<HTMLTextAreaElement, ResizableTextare
       showResizeHandle = true,
       style,
       onChange,
+      value,
       ...props
     },
     ref
@@ -77,14 +78,28 @@ const ResizableTextarea = React.forwardRef<HTMLTextAreaElement, ResizableTextare
     const [isDragging, setIsDragging] = React.useState(false);
     const textareaRef = React.useRef<HTMLTextAreaElement>(null);
 
-    // Combine refs
-    React.useImperativeHandle(ref, () => textareaRef.current as HTMLTextAreaElement);
+    // Combine refs and expose reset method
+    React.useImperativeHandle(ref, () => {
+      const textarea = textareaRef.current;
+      if (!textarea) return null as any;
+      
+      // Add resetHeight method to the textarea element
+      (textarea as any).resetHeight = () => {
+        setHeight(minHeight);
+        if (textareaRef.current) {
+          textareaRef.current.style.height = `${minHeight}px`;
+        }
+      };
+      
+      return textarea;
+    });
 
     // Auto-resize based on content
     const adjustHeight = React.useCallback(() => {
       if (!autoResize || !textareaRef.current) return;
 
       const textarea = textareaRef.current;
+      
       // Reset height to get accurate scrollHeight
       textarea.style.height = `${minHeight}px`;
 
@@ -149,6 +164,23 @@ const ResizableTextarea = React.forwardRef<HTMLTextAreaElement, ResizableTextare
       adjustHeight();
     }, [adjustHeight]);
 
+    // Reset height when value becomes empty (only when it changes from non-empty to empty)
+    const prevValueRef = React.useRef(value);
+    React.useEffect(() => {
+      const currentValue = value || '';
+      const prevValue = prevValueRef.current || '';
+      
+      // Only reset if value changed from non-empty to empty
+      if (prevValue.trim() !== '' && currentValue.trim() === '') {
+        setHeight(minHeight);
+        if (textareaRef.current) {
+          textareaRef.current.style.height = `${minHeight}px`;
+        }
+      }
+      
+      prevValueRef.current = value;
+    }, [value, minHeight]);
+
     // Cleanup on unmount
     React.useEffect(() => {
       return () => {
@@ -170,6 +202,7 @@ const ResizableTextarea = React.forwardRef<HTMLTextAreaElement, ResizableTextare
             height: `${height}px`,
             ...style,
           }}
+          value={value}
           onChange={handleChange}
           {...props}
         />

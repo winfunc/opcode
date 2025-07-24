@@ -447,9 +447,17 @@ const FloatingPromptInputInner = (
   useEffect(() => {
     // Focus the appropriate textarea when expanded state changes
     if (isExpanded && expandedTextareaRef.current) {
-      expandedTextareaRef.current.focus();
+      try {
+        expandedTextareaRef.current.focus();
+      } catch (error) {
+        console.warn('Failed to focus expanded textarea:', error);
+      }
     } else if (!isExpanded && textareaRef.current) {
-      textareaRef.current.focus();
+      try {
+        textareaRef.current.focus();
+      } catch (error) {
+        console.warn('Failed to focus textarea:', error);
+      }
     }
   }, [isExpanded]);
 
@@ -597,9 +605,13 @@ const FloatingPromptInputInner = (
 
       // Focus back on textarea and set cursor position after the inserted path
       globalThis.setTimeout(() => {
-        textarea.focus();
-        const newCursorPos = beforeAt.length + relativePath.length + 2; // +2 for @ and space
-        textarea.setSelectionRange(newCursorPos, newCursorPos);
+        try {
+          textarea.focus();
+          const newCursorPos = beforeAt.length + relativePath.length + 2; // +2 for @ and space
+          textarea.setSelectionRange(newCursorPos, newCursorPos);
+        } catch (error) {
+          console.warn('Failed to focus textarea after file select:', error);
+        }
       }, 0);
     }
   };
@@ -655,9 +667,13 @@ const FloatingPromptInputInner = (
 
       // Focus and position cursor after the command
       globalThis.setTimeout(() => {
-        textarea.focus();
-        const newCursorPos = beforeSlash.length + command.full_command.length + 1;
-        textarea.setSelectionRange(newCursorPos, newCursorPos);
+        try {
+          textarea.focus();
+          const newCursorPos = beforeSlash.length + command.full_command.length + 1;
+          textarea.setSelectionRange(newCursorPos, newCursorPos);
+        } catch (error) {
+          console.warn('Failed to focus textarea after slash command:', error);
+        }
       }, 0);
     } else {
       // Insert command and close picker
@@ -668,9 +684,13 @@ const FloatingPromptInputInner = (
 
       // Focus and position cursor after the command
       globalThis.setTimeout(() => {
-        textarea.focus();
-        const newCursorPos = beforeSlash.length + command.full_command.length + 1;
-        textarea.setSelectionRange(newCursorPos, newCursorPos);
+        try {
+          textarea.focus();
+          const newCursorPos = beforeSlash.length + command.full_command.length + 1;
+          textarea.setSelectionRange(newCursorPos, newCursorPos);
+        } catch (error) {
+          console.warn('Failed to focus textarea after slash command:', error);
+        }
       }, 0);
     }
   };

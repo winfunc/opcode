@@ -597,6 +597,20 @@ export const zh: Translations = {
     deleting: "删除中...",
   },
 
+  // Claude AI 交互的思考模式
+  thinkingModes: {
+    auto: "自动",
+    autoDescription: "让 Claude 决定",
+    think: "思考",
+    thinkDescription: "基础推理",
+    thinkHard: "深度思考",
+    thinkHardDescription: "深入分析",
+    thinkHarder: "更深度思考",
+    thinkHarderDescription: "广泛推理",
+    ultrathink: "超级思考",
+    ultrathinkDescription: "最大计算量",
+  },
+
   // 钩子编辑器翻译
   hooks: {
     title: "钩子配置",
