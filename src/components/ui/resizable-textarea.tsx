@@ -81,10 +81,10 @@ const ResizableTextarea = React.forwardRef<HTMLTextAreaElement, ResizableTextare
     // Combine refs and expose reset method
     React.useImperativeHandle(ref, () => {
       const textarea = textareaRef.current;
-      if (!textarea) return null as any;
+      if (!textarea) return null as unknown as HTMLTextAreaElement;
       
       // Add resetHeight method to the textarea element
-      (textarea as any).resetHeight = () => {
+      (textarea as HTMLTextAreaElement & { resetHeight: () => void }).resetHeight = () => {
         setHeight(minHeight);
         if (textareaRef.current) {
           textareaRef.current.style.height = `${minHeight}px`;
@@ -171,7 +171,7 @@ const ResizableTextarea = React.forwardRef<HTMLTextAreaElement, ResizableTextare
       const prevValue = prevValueRef.current || '';
       
       // Only reset if value changed from non-empty to empty
-      if (prevValue.trim() !== '' && currentValue.trim() === '') {
+      if (String(prevValue).trim() !== '' && String(currentValue).trim() === '') {
         setHeight(minHeight);
         if (textareaRef.current) {
           textareaRef.current.style.height = `${minHeight}px`;

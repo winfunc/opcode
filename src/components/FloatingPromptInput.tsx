@@ -450,13 +450,13 @@ const FloatingPromptInputInner = (
       try {
         expandedTextareaRef.current.focus();
       } catch (error) {
-        console.warn('Failed to focus expanded textarea:', error);
+        logger.warn('Failed to focus expanded textarea:', error);
       }
     } else if (!isExpanded && textareaRef.current) {
       try {
         textareaRef.current.focus();
       } catch (error) {
-        console.warn('Failed to focus textarea:', error);
+        logger.warn('Failed to focus textarea:', error);
       }
     }
   }, [isExpanded]);
@@ -610,7 +610,7 @@ const FloatingPromptInputInner = (
           const newCursorPos = beforeAt.length + relativePath.length + 2; // +2 for @ and space
           textarea.setSelectionRange(newCursorPos, newCursorPos);
         } catch (error) {
-          console.warn('Failed to focus textarea after file select:', error);
+          logger.warn('Failed to focus textarea after file select:', error);
         }
       }, 0);
     }
@@ -672,7 +672,7 @@ const FloatingPromptInputInner = (
           const newCursorPos = beforeSlash.length + command.full_command.length + 1;
           textarea.setSelectionRange(newCursorPos, newCursorPos);
         } catch (error) {
-          console.warn('Failed to focus textarea after slash command:', error);
+          logger.warn('Failed to focus textarea after slash command:', error);
         }
       }, 0);
     } else {
@@ -689,7 +689,7 @@ const FloatingPromptInputInner = (
           const newCursorPos = beforeSlash.length + command.full_command.length + 1;
           textarea.setSelectionRange(newCursorPos, newCursorPos);
         } catch (error) {
-          console.warn('Failed to focus textarea after slash command:', error);
+          logger.warn('Failed to focus textarea after slash command:', error);
         }
       }, 0);
     }
