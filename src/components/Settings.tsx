@@ -186,7 +186,7 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
         logger.debug("Audio config loaded from localStorage:", audioConfig);
       } catch (error) {
         logger.error("Failed to load audio config, using defaults:", error);
-        const defaultConfig = { mode: "off" };
+        const defaultConfig: AudioNotificationConfig = { mode: "off" };
         setAudioConfig(defaultConfig);
         audioNotificationManager.setConfig(defaultConfig);
       }
@@ -209,7 +209,7 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
       setToast(null);
 
       // Build the settings object
-      let updatedSettings: ClaudeSettings = {
+      const updatedSettings: ClaudeSettings = {
         ...settings,
         permissions: {
           allow: allowRules.map((rule) => rule.value).filter((v) => v.trim()),

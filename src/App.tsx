@@ -27,6 +27,7 @@ import { AgentsModal } from "@/components/AgentsModal";
 import { useTabState } from "@/hooks/useTabState";
 import { ToastProvider } from "@/contexts/ToastContext";
 import { handleApiError } from "@/lib/errorHandler";
+import { logger } from "@/lib/logger";
 import { audioNotificationManager, loadAudioConfigFromLocalStorage } from "@/lib/audioNotification";
 
 type View =
@@ -95,10 +96,10 @@ function AppContent() {
         // Load audio config from localStorage (independent of Claude settings)
         const audioConfig = loadAudioConfigFromLocalStorage();
         audioNotificationManager.setConfig(audioConfig);
-        console.log("Audio notifications initialized:", audioConfig);
+        logger.debug("Audio notifications initialized:", audioConfig);
       } catch (error) {
         // Silently fail if config can't be loaded - use default config
-        console.warn("Failed to load audio notification settings:", error);
+        logger.warn("Failed to load audio notification settings:", error);
       }
     };
 

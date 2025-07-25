@@ -158,12 +158,13 @@ export function saveAudioConfigToLocalStorage(config: AudioNotificationConfig): 
 /**
  * Legacy function - Load from Claude settings (for migration)
  */
-export function loadAudioConfigFromSettings(settings: any): AudioNotificationConfig {
+export function loadAudioConfigFromSettings(settings: Record<string, unknown>): AudioNotificationConfig {
   try {
     const audioConfig = settings?.audioNotifications;
-    if (audioConfig && typeof audioConfig === "object") {
+    if (audioConfig && typeof audioConfig === "object" && audioConfig !== null) {
+      const configObj = audioConfig as Record<string, unknown>;
       return {
-        mode: audioConfig.mode || "off",
+        mode: (configObj.mode as AudioNotificationMode) || "off",
       };
     }
   } catch (error) {
