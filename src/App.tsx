@@ -27,6 +27,7 @@ import { AgentsModal } from "@/components/AgentsModal";
 import { useTabState } from "@/hooks/useTabState";
 import { ToastProvider } from "@/contexts/ToastContext";
 import { handleApiError } from "@/lib/errorHandler";
+import { audioNotificationManager, loadAudioConfigFromLocalStorage } from "@/lib/audioNotification";
 
 type View =
   | "welcome"
@@ -86,6 +87,23 @@ function AppContent() {
   const [projectForSettings, setProjectForSettings] = useState<Project | null>(null);
   const [previousView] = useState<View>("welcome");
   const [showAgentsModal, setShowAgentsModal] = useState(false);
+
+  // Initialize audio notification manager on app start
+  useEffect(() => {
+    const initializeAudioNotifications = () => {
+      try {
+        // Load audio config from localStorage (independent of Claude settings)
+        const audioConfig = loadAudioConfigFromLocalStorage();
+        audioNotificationManager.setConfig(audioConfig);
+        console.log("Audio notifications initialized:", audioConfig);
+      } catch (error) {
+        // Silently fail if config can't be loaded - use default config
+        console.warn("Failed to load audio notification settings:", error);
+      }
+    };
+
+    initializeAudioNotifications();
+  }, []);
 
   // Load projects on mount when in projects view
   /**

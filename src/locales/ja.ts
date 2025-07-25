@@ -214,6 +214,21 @@ export const ja: Translations = {
     rawSettings: "生設定（JSON）",
     rawSettingsDesc: "これは~/.claude/settings.jsonに保存される生のJSONを示しています",
 
+    // オーディオ通知設定
+    audioNotifications: "オーディオ通知",
+    audioNotificationsDesc: "タスク完了時のオーディオアラートを設定",
+    audioNotificationMode: "通知モード",
+    audioNotificationModeDesc: "オーディオ通知を再生するタイミングを選択",
+    audioModeOff: "オフ",
+    audioModeOnMessage: "メッセージ完了時",
+    audioModeOnQueue: "キュー完了時",
+    audioModeOffDesc: "オーディオ通知なし",
+    audioModeOnMessageDesc: "各メッセージタスクが完了したときに音を再生",
+    audioModeOnQueueDesc: "すべてのキューされたタスクが完了したときに音を再生",
+    testAudio: "オーディオテスト",
+    testAudioDesc: "オーディオ通知の再生をテスト",
+    playTestSound: "テスト音を再生",
+
     userHooks: "ユーザーフック",
     userHooksDesc:
       "ユーザーアカウントのすべてのClaude Codeセッションに適用されるフックを設定します。これらは~/.claude/settings.jsonに保存されます",

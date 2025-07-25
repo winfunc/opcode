@@ -215,6 +215,21 @@ export const hi: Translations = {
     rawSettings: "रॉ सेटिंग्स (JSON)",
     rawSettingsDesc: "यह रॉ JSON दिखाता है जो ~/.claude/settings.json में सहेजा जाएगा",
 
+    // ऑडियो अधिसूचना सेटिंग्स
+    audioNotifications: "ऑडियो अधिसूचनाएं",
+    audioNotificationsDesc: "कार्य पूर्णता के लिए ऑडियो अलर्ट कॉन्फ़िगर करें",
+    audioNotificationMode: "अधिसूचना मोड",
+    audioNotificationModeDesc: "ऑडियो अधिसूचनाएं कब चलाना है चुनें",
+    audioModeOff: "बंद",
+    audioModeOnMessage: "संदेश पूर्ण होने पर",
+    audioModeOnQueue: "कतार पूर्ण होने पर",
+    audioModeOffDesc: "कोई ऑडियो अधिसूचना नहीं",
+    audioModeOnMessageDesc: "प्रत्येक संदेश कार्य पूरा होने पर ध्वनि चलाएं",
+    audioModeOnQueueDesc: "सभी कतारबद्ध कार्य पूरे होने पर ध्वनि चलाएं",
+    testAudio: "ऑडियो परीक्षण",
+    testAudioDesc: "ऑडियो अधिसूचना प्लेबैक का परीक्षण करें",
+    playTestSound: "परीक्षण ध्वनि चलाएं",
+
     userHooks: "उपयोगकर्ता हुक्स",
     userHooksDesc:
       "हुक्स कॉन्फ़िगर करें जो आपके उपयोगकर्ता खाते के सभी Claude Code सेशन पर लागू होते हैं। ये ~/.claude/settings.json में संग्रहीत हैं",

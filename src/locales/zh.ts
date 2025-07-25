@@ -210,6 +210,21 @@ export const zh: Translations = {
     rawSettings: "原始设置（JSON）",
     rawSettingsDesc: "这显示了将保存到 ~/.claude/settings.json 的原始 JSON",
 
+    // 音频通知设置
+    audioNotifications: "音频通知",
+    audioNotificationsDesc: "配置任务完成时的音频提醒",
+    audioNotificationMode: "通知模式",
+    audioNotificationModeDesc: "选择何时播放音频通知",
+    audioModeOff: "关闭",
+    audioModeOnMessage: "消息完成时",
+    audioModeOnQueue: "队列完成时",
+    audioModeOffDesc: "不播放音频通知",
+    audioModeOnMessageDesc: "每个消息任务完成时播放声音",
+    audioModeOnQueueDesc: "所有排队任务完成时播放声音",
+    testAudio: "测试音频",
+    testAudioDesc: "测试音频通知播放",
+    playTestSound: "播放测试音频",
+
     userHooks: "用户钩子",
     userHooksDesc:
       "配置适用于您用户账户的所有 Claude Code 会话的钩子。这些存储在 ~/.claude/settings.json 中",

@@ -44,6 +44,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useI18n } from "@/lib/i18n";
 import { logger } from "@/lib/logger";
 import { handleError, handleApiError, handleValidationError } from "@/lib/errorHandler";
+import { audioNotificationManager } from "@/lib/audioNotification";
 
 interface ClaudeCodeSessionProps {
   /**
@@ -667,6 +668,15 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
             }
           }
 
+          // Trigger audio notification for message completion
+          if (success) {
+            try {
+              await audioNotificationManager.onMessageComplete();
+            } catch (err) {
+              logger.error("Failed to play message completion audio:", err);
+            }
+          }
+
           // Process queued prompts after completion
           if (queuedPromptsRef.current.length > 0) {
             const [nextPrompt, ...remainingPrompts] = queuedPromptsRef.current;
@@ -676,6 +686,15 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
             globalThis.setTimeout(() => {
               handleSendPrompt(nextPrompt.prompt, nextPrompt.model);
             }, 100);
+          } else {
+            // All queued prompts completed - trigger queue completion notification
+            if (success) {
+              try {
+                await audioNotificationManager.onQueueComplete();
+              } catch (err) {
+                logger.error("Failed to play queue completion audio:", err);
+              }
+            }
           }
         };
 

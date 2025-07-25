@@ -218,6 +218,21 @@ export const es: Translations = {
     rawSettings: "Configuración sin procesar (JSON)",
     rawSettingsDesc: "Esto muestra el JSON sin procesar que se guardará en ~/.claude/settings.json",
 
+    // Configuración de notificaciones de audio
+    audioNotifications: "Notificaciones de Audio",
+    audioNotificationsDesc: "Configurar alertas de audio para la finalización de tareas",
+    audioNotificationMode: "Modo de Notificación",
+    audioNotificationModeDesc: "Elige cuándo reproducir notificaciones de audio",
+    audioModeOff: "Desactivado",
+    audioModeOnMessage: "Al Completar Mensaje",
+    audioModeOnQueue: "Al Completar Cola",
+    audioModeOffDesc: "Sin notificaciones de audio",
+    audioModeOnMessageDesc: "Reproducir sonido cuando se complete cada tarea de mensaje",
+    audioModeOnQueueDesc: "Reproducir sonido cuando se completen todas las tareas en cola",
+    testAudio: "Probar Audio",
+    testAudioDesc: "Probar reproducción de notificación de audio",
+    playTestSound: "Reproducir Sonido de Prueba",
+
     userHooks: "Hooks de usuario",
     userHooksDesc:
       "Configura hooks que se aplican a todas las sesiones de Claude Code para tu cuenta de usuario. Estos se almacenan en ~/.claude/settings.json",

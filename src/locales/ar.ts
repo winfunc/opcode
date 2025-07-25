@@ -212,6 +212,21 @@ export const ar: Translations = {
     rawSettings: "الإعدادات الخام (JSON)",
     rawSettingsDesc: "هذا يعرض JSON الخام الذي سيتم حفظه في ~/.claude/settings.json",
 
+    // إعدادات الإشعارات الصوتية
+    audioNotifications: "الإشعارات الصوتية",
+    audioNotificationsDesc: "تكوين التنبيهات الصوتية لإكمال المهام",
+    audioNotificationMode: "وضع الإشعار",
+    audioNotificationModeDesc: "اختر متى تشغيل الإشعارات الصوتية",
+    audioModeOff: "إيقاف",
+    audioModeOnMessage: "عند اكتمال الرسالة",
+    audioModeOnQueue: "عند اكتمال القائمة",
+    audioModeOffDesc: "لا توجد إشعارات صوتية",
+    audioModeOnMessageDesc: "تشغيل الصوت عند اكتمال كل مهمة رسالة",
+    audioModeOnQueueDesc: "تشغيل الصوت عند اكتمال جميع المهام المنتظرة",
+    testAudio: "اختبار الصوت",
+    testAudioDesc: "اختبار تشغيل الإشعار الصوتي",
+    playTestSound: "تشغيل صوت الاختبار",
+
     userHooks: "خطافات المستخدم",
     userHooksDesc:
       "تكوين الخطافات التي تنطبق على جميع جلسات Claude Code لحساب المستخدم الخاص بك. يتم تخزينها في ~/.claude/settings.json",

@@ -219,6 +219,21 @@ export const ru: Translations = {
     rawSettingsDesc:
       "Это показывает исходный JSON, который будет сохранен в ~/.claude/settings.json",
 
+    // Настройки аудио уведомлений
+    audioNotifications: "Аудио Уведомления",
+    audioNotificationsDesc: "Настройка звуковых оповещений для завершения задач",
+    audioNotificationMode: "Режим Уведомлений",
+    audioNotificationModeDesc: "Выберите, когда воспроизводить аудио уведомления",
+    audioModeOff: "Выключено",
+    audioModeOnMessage: "При Завершении Сообщения",
+    audioModeOnQueue: "При Завершении Очереди",
+    audioModeOffDesc: "Без аудио уведомлений",
+    audioModeOnMessageDesc: "Воспроизводить звук при завершении каждой задачи сообщения",
+    audioModeOnQueueDesc: "Воспроизводить звук при завершении всех задач в очереди",
+    testAudio: "Тест Аудио",
+    testAudioDesc: "Тестировать воспроизведение аудио уведомления",
+    playTestSound: "Воспроизвести Тестовый Звук",
+
     userHooks: "Пользовательские хуки",
     userHooksDesc:
       "Настройка хуков, которые применяются ко всем сессиям Claude Code для вашей учетной записи. Они хранятся в ~/.claude/settings.json",

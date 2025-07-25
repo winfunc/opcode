@@ -17,6 +17,14 @@ import { HooksEditor } from "./HooksEditor";
 import { SlashCommandsManager } from "./SlashCommandsManager";
 import { logger } from "@/lib/logger";
 import { handleError, handleApiError } from "@/lib/errorHandler";
+import { 
+  audioNotificationManager, 
+  loadAudioConfigFromLocalStorage, 
+  saveAudioConfigToLocalStorage,
+  loadAudioConfigFromSettings,
+  type AudioNotificationConfig,
+  type AudioNotificationMode 
+} from "@/lib/audioNotification";
 interface SettingsProps {
   /**
    * Callback to go back to the main view
@@ -79,6 +87,10 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
 
   // Hooks state
   const [userHooksChanged, setUserHooksChanged] = useState(false);
+
+  // Audio notification state
+  const [audioConfig, setAudioConfig] = useState<AudioNotificationConfig>({ mode: "off" });
+  const [audioConfigChanged, setAudioConfigChanged] = useState(false);
   const getUserHooks = React.useRef<(() => unknown) | null>(null);
 
   // Load settings on mount
@@ -156,6 +168,28 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
           }))
         );
       }
+
+      // Load audio notification config from localStorage (independent of Claude settings)
+      try {
+        // First try to migrate from old Claude settings if exists
+        const legacyConfig = loadAudioConfigFromSettings(loadedSettings);
+        if (legacyConfig.mode !== "off") {
+          // Migrate to localStorage and remove from Claude settings
+          saveAudioConfigToLocalStorage(legacyConfig);
+          logger.debug("Migrated audio config from Claude settings to localStorage");
+        }
+        
+        // Load from localStorage
+        const audioConfig = loadAudioConfigFromLocalStorage();
+        setAudioConfig(audioConfig);
+        audioNotificationManager.setConfig(audioConfig);
+        logger.debug("Audio config loaded from localStorage:", audioConfig);
+      } catch (error) {
+        logger.error("Failed to load audio config, using defaults:", error);
+        const defaultConfig = { mode: "off" };
+        setAudioConfig(defaultConfig);
+        audioNotificationManager.setConfig(defaultConfig);
+      }
     } catch (err) {
       await handleError("Failed to load settings:", { context: err });
       setError(t.settings.failedToLoadSettings);
@@ -175,7 +209,7 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
       setToast(null);
 
       // Build the settings object
-      const updatedSettings: ClaudeSettings = {
+      let updatedSettings: ClaudeSettings = {
         ...settings,
         permissions: {
           allow: allowRules.map((rule) => rule.value).filter((v) => v.trim()),
@@ -191,6 +225,18 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
           {} as Record<string, string>
         ),
       };
+
+      // Save audio notification config to localStorage (independent of Claude settings)
+      if (audioConfigChanged) {
+        try {
+          saveAudioConfigToLocalStorage(audioConfig);
+          audioNotificationManager.setConfig(audioConfig);
+          setAudioConfigChanged(false);
+          logger.debug("Audio config saved successfully to localStorage");
+        } catch (error) {
+          logger.error("Failed to save audio config:", error);
+        }
+      }
 
       await api.saveClaudeSettings(updatedSettings);
       setSettings(updatedSettings);
@@ -766,6 +812,76 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
                         onChange={(e) => updateSetting("apiKeyHelper", e.target.value || undefined)}
                       />
                       <p className="text-xs text-muted-foreground">{t.settings.apiKeyHelperDesc}</p>
+                    </div>
+
+                    {/* Audio Notifications */}
+                    <div className="space-y-4">
+                      <div>
+                        <Label className="text-sm font-medium">{t.settings.audioNotifications}</Label>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {t.settings.audioNotificationsDesc}
+                        </p>
+                      </div>
+                      
+                      <div className="space-y-3">
+                        <div>
+                          <Label htmlFor="audioMode" className="text-sm">
+                            {t.settings.audioNotificationMode}
+                          </Label>
+                          <p className="text-xs text-muted-foreground mb-2">
+                            {t.settings.audioNotificationModeDesc}
+                          </p>
+                          <div className="space-y-2">
+                            {[
+                              { value: "off", label: t.settings.audioModeOff, desc: t.settings.audioModeOffDesc },
+                              { value: "on_message", label: t.settings.audioModeOnMessage, desc: t.settings.audioModeOnMessageDesc },
+                              { value: "on_queue", label: t.settings.audioModeOnQueue, desc: t.settings.audioModeOnQueueDesc },
+                            ].map((option) => (
+                              <div key={option.value} className="flex items-start space-x-3">
+                                <input
+                                  type="radio"
+                                  id={`audio-${option.value}`}
+                                  name="audioMode"
+                                  value={option.value}
+                                  checked={audioConfig.mode === option.value}
+                                  onChange={(e) => {
+                                    setAudioConfig({ mode: e.target.value as AudioNotificationMode });
+                                    setAudioConfigChanged(true);
+                                  }}
+                                  className="mt-1"
+                                />
+                                <div className="flex-1">
+                                  <Label htmlFor={`audio-${option.value}`} className="text-sm font-medium">
+                                    {option.label}
+                                  </Label>
+                                  <p className="text-xs text-muted-foreground">{option.desc}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        
+                        <div className="pt-2">
+                          <Label className="text-sm">{t.settings.testAudio}</Label>
+                          <p className="text-xs text-muted-foreground mb-2">
+                            {t.settings.testAudioDesc}
+                          </p>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={async () => {
+                              try {
+                                await audioNotificationManager.testNotification();
+                              } catch (error) {
+                                logger.error("Failed to test audio notification:", error);
+                              }
+                            }}
+                            className="gap-2"
+                          >
+                            🔊 {t.settings.playTestSound}
+                          </Button>
+                        </div>
+                      </div>
                     </div>
 
                     {/* Raw JSON Editor */}

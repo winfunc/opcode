@@ -245,6 +245,21 @@ export interface Translations {
     rawSettings: string;
     rawSettingsDesc: string;
 
+    // 音频提示设置
+    audioNotifications: string;
+    audioNotificationsDesc: string;
+    audioNotificationMode: string;
+    audioNotificationModeDesc: string;
+    audioModeOff: string;
+    audioModeOnMessage: string;
+    audioModeOnQueue: string;
+    audioModeOffDesc: string;
+    audioModeOnMessageDesc: string;
+    audioModeOnQueueDesc: string;
+    testAudio: string;
+    testAudioDesc: string;
+    playTestSound: string;
+
     // Hooks设置
     userHooks: string;
     userHooksDesc: string;

@@ -214,6 +214,21 @@ export const ko: Translations = {
     rawSettings: "원시 설정(JSON)",
     rawSettingsDesc: "~/.claude/settings.json에 저장될 원시 JSON을 표시합니다",
 
+    // 오디오 알림 설정
+    audioNotifications: "오디오 알림",
+    audioNotificationsDesc: "작업 완료를 위한 오디오 경고 구성",
+    audioNotificationMode: "알림 모드",
+    audioNotificationModeDesc: "오디오 알림을 재생할 시기 선택",
+    audioModeOff: "끄기",
+    audioModeOnMessage: "메시지 완료 시",
+    audioModeOnQueue: "대기열 완료 시",
+    audioModeOffDesc: "오디오 알림 없음",
+    audioModeOnMessageDesc: "각 메시지 작업이 완료될 때 소리 재생",
+    audioModeOnQueueDesc: "모든 대기 중인 작업이 완료될 때 소리 재생",
+    testAudio: "오디오 테스트",
+    testAudioDesc: "오디오 알림 재생 테스트",
+    playTestSound: "테스트 소리 재생",
+
     userHooks: "사용자 훅",
     userHooksDesc:
       "사용자 계정의 모든 Claude Code 세션에 적용되는 훅을 구성합니다. 이는 ~/.claude/settings.json에 저장됩니다",

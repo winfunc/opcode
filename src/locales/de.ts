@@ -221,6 +221,21 @@ export const de: Translations = {
     rawSettings: "Rohe Einstellungen (JSON)",
     rawSettingsDesc: "Dies zeigt das rohe JSON, das in ~/.claude/settings.json gespeichert wird",
 
+    // Audio-Benachrichtigungseinstellungen
+    audioNotifications: "Audio-Benachrichtigungen",
+    audioNotificationsDesc: "Audio-Alarme für Aufgabenabschluss konfigurieren",
+    audioNotificationMode: "Benachrichtigungsmodus",
+    audioNotificationModeDesc: "Wählen Sie, wann Audio-Benachrichtigungen abgespielt werden sollen",
+    audioModeOff: "Aus",
+    audioModeOnMessage: "Bei Nachrichtenabschluss",
+    audioModeOnQueue: "Bei Warteschlangenabschluss",
+    audioModeOffDesc: "Keine Audio-Benachrichtigungen",
+    audioModeOnMessageDesc: "Sound abspielen, wenn jede Nachrichtenaufgabe abgeschlossen ist",
+    audioModeOnQueueDesc: "Sound abspielen, wenn alle wartenden Aufgaben abgeschlossen sind",
+    testAudio: "Audio testen",
+    testAudioDesc: "Audio-Benachrichtigung testen",
+    playTestSound: "Testsound abspielen",
+
     userHooks: "Benutzer-Hooks",
     userHooksDesc:
       "Konfigurieren Sie Hooks, die für alle Claude Code Sitzungen Ihres Benutzerkontos gelten. Diese werden in ~/.claude/settings.json gespeichert",
