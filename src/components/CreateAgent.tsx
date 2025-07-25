@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft, Save, Loader2, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,13 @@ import { cn } from "@/lib/utils";
 import MDEditor from "@uiw/react-md-editor";
 import { type AgentIconName } from "./CCAgents";
 import { IconPicker, ICON_MAP } from "./IconPicker";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 
 interface CreateAgentProps {
@@ -29,6 +36,10 @@ interface CreateAgentProps {
    * Optional className for styling
    */
   className?: string;
+  /**
+   * Default agent type to select
+   */
+  defaultAgentType?: 'claudia' | 'native';
 }
 
 /**
@@ -42,16 +53,32 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
   onBack,
   onAgentCreated,
   className,
+  defaultAgentType = 'claudia',
 }) => {
   const [name, setName] = useState(agent?.name || "");
   const [selectedIcon, setSelectedIcon] = useState<AgentIconName>((agent?.icon as AgentIconName) || "bot");
   const [systemPrompt, setSystemPrompt] = useState(agent?.system_prompt || "");
   const [defaultTask, setDefaultTask] = useState(agent?.default_task || "");
   const [model, setModel] = useState(agent?.model || "sonnet");
+  const [agentType, setAgentType] = useState<'claudia' | 'native'>(
+    agent?.source === 'native' ? 'native' : defaultAgentType
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [showIconPicker, setShowIconPicker] = useState(false);
+
+  // Listen for agent type preference from modal
+  useEffect(() => {
+    const handleCreateAgentEvent = (event: any) => {
+      if (event.detail?.defaultAgentType) {
+        setAgentType(event.detail.defaultAgentType);
+      }
+    };
+
+    window.addEventListener('open-create-agent-tab', handleCreateAgentEvent);
+    return () => window.removeEventListener('open-create-agent-tab', handleCreateAgentEvent);
+  }, []);
 
   const isEditMode = !!agent;
 
@@ -85,7 +112,9 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
           selectedIcon, 
           systemPrompt, 
           defaultTask || undefined, 
-          model
+          model,
+          undefined, // hooks
+          agentType
         );
       }
       
@@ -182,8 +211,30 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
                     <h3 className="text-sm font-medium mb-4">Basic Information</h3>
                   </div>
               
-              {/* Name and Icon */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Agent Type, Name and Icon */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label>Agent Type</Label>
+                  <Select 
+                    value={agentType} 
+                    onValueChange={(value: 'claudia' | 'native') => setAgentType(value)}
+                    disabled={isEditMode} // Can't change type when editing
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="claudia">Claudia</SelectItem>
+                      <SelectItem value="native">Native</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {isEditMode && (
+                    <p className="text-xs text-muted-foreground">
+                      Agent type cannot be changed when editing
+                    </p>
+                  )}
+                </div>
+                
                 <div className="space-y-2">
                   <Label htmlFor="name">Agent Name</Label>
                   <Input

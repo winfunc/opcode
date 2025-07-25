@@ -9,8 +9,6 @@ use std::time::SystemTime;
 use tauri::{AppHandle, Emitter, Manager};
 use tokio::process::{Child, Command};
 use tokio::sync::Mutex;
-use tauri_plugin_shell::ShellExt;
-use tauri_plugin_shell::process::CommandEvent;
 use regex;
 
 /// Global state to track current Claude process
@@ -554,7 +552,7 @@ pub async fn check_claude_version(app: AppHandle) -> Result<ClaudeVersionStatus,
         }
     };
 
-    use log::debug;debug!("Claude path: {}", claude_path);
+    log::debug!("Claude path: {}", claude_path);
 
     // In production builds, we can't check the version directly
     #[cfg(not(debug_assertions))]

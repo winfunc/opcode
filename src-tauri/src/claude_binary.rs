@@ -88,6 +88,29 @@ pub fn find_claude_binary(app_handle: &tauri::AppHandle) -> Result<String, Strin
             "Selected Claude installation: path={}, version={:?}, source={}",
             best.path, best.version, best.source
         );
+        
+        // Cache the discovered path in the database for faster future lookups
+        if let Ok(app_data_dir) = app_handle.path().app_data_dir() {
+            let db_path = app_data_dir.join("agents.db");
+            if let Ok(conn) = rusqlite::Connection::open(&db_path) {
+                // Ensure the app_settings table exists
+                let _ = conn.execute(
+                    "CREATE TABLE IF NOT EXISTS app_settings (
+                        key TEXT PRIMARY KEY,
+                        value TEXT NOT NULL
+                    )",
+                    [],
+                );
+                
+                // Store the discovered path
+                let _ = conn.execute(
+                    "INSERT OR REPLACE INTO app_settings (key, value) VALUES ('claude_binary_path', ?1)",
+                    [&best.path],
+                );
+                info!("Cached claude binary path in database");
+            }
+        }
+        
         Ok(best.path)
     } else {
         Err("No valid Claude installation found".to_string())

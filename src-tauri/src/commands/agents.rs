@@ -34,6 +34,7 @@ pub struct Agent {
     pub enable_file_write: bool,
     pub enable_network: bool,
     pub hooks: Option<String>, // JSON string of hooks configuration
+    pub source: Option<String>, // 'claudia', 'native', 'user', etc.
     pub created_at: String,
     pub updated_at: String,
 }
@@ -238,6 +239,7 @@ pub fn init_database(app: &AppHandle) -> SqliteResult<Connection> {
             enable_file_write BOOLEAN NOT NULL DEFAULT 1,
             enable_network BOOLEAN NOT NULL DEFAULT 0,
             hooks TEXT,
+            source TEXT DEFAULT 'claudia',
             created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         )",
@@ -261,6 +263,10 @@ pub fn init_database(app: &AppHandle) -> SqliteResult<Connection> {
     );
     let _ = conn.execute(
         "ALTER TABLE agents ADD COLUMN enable_network BOOLEAN DEFAULT 0",
+        [],
+    );
+    let _ = conn.execute(
+        "ALTER TABLE agents ADD COLUMN source TEXT DEFAULT 'claudia'",
         [],
     );
 
@@ -353,7 +359,7 @@ pub async fn list_agents(db: State<'_, AgentDb>) -> Result<Vec<Agent>, String> {
     let conn = db.0.lock().map_err(|e| e.to_string())?;
 
     let mut stmt = conn
-        .prepare("SELECT id, name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, hooks, created_at, updated_at FROM agents ORDER BY created_at DESC")
+        .prepare("SELECT id, name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, hooks, source, created_at, updated_at FROM agents ORDER BY created_at DESC")
         .map_err(|e| e.to_string())?;
 
     let agents = stmt
@@ -371,8 +377,9 @@ pub async fn list_agents(db: State<'_, AgentDb>) -> Result<Vec<Agent>, String> {
                 enable_file_write: row.get::<_, bool>(7).unwrap_or(true),
                 enable_network: row.get::<_, bool>(8).unwrap_or(false),
                 hooks: row.get(9)?,
-                created_at: row.get(10)?,
-                updated_at: row.get(11)?,
+                source: row.get(10).ok(),
+                created_at: row.get(11)?,
+                updated_at: row.get(12)?,
             })
         })
         .map_err(|e| e.to_string())?
@@ -395,6 +402,7 @@ pub async fn create_agent(
     enable_file_write: Option<bool>,
     enable_network: Option<bool>,
     hooks: Option<String>,
+    source: Option<String>,
 ) -> Result<Agent, String> {
     let conn = db.0.lock().map_err(|e| e.to_string())?;
     let model = model.unwrap_or_else(|| "sonnet".to_string());
@@ -402,9 +410,11 @@ pub async fn create_agent(
     let enable_file_write = enable_file_write.unwrap_or(true);
     let enable_network = enable_network.unwrap_or(false);
 
+    let source = source.unwrap_or_else(|| "claudia".to_string());
+    
     conn.execute(
-        "INSERT INTO agents (name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, hooks) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
-        params![name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, hooks],
+        "INSERT INTO agents (name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, hooks, source) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+        params![name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, hooks, source],
     )
     .map_err(|e| e.to_string())?;
 
@@ -413,7 +423,7 @@ pub async fn create_agent(
     // Fetch the created agent
     let agent = conn
         .query_row(
-            "SELECT id, name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, hooks, created_at, updated_at FROM agents WHERE id = ?1",
+            "SELECT id, name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, hooks, source, created_at, updated_at FROM agents WHERE id = ?1",
             params![id],
             |row| {
                 Ok(Agent {
@@ -427,8 +437,9 @@ pub async fn create_agent(
                     enable_file_write: row.get(7)?,
                     enable_network: row.get(8)?,
                     hooks: row.get(9)?,
-                    created_at: row.get(10)?,
-                    updated_at: row.get(11)?,
+                    source: row.get(10)?,
+                    created_at: row.get(11)?,
+                    updated_at: row.get(12)?,
                 })
             },
         )
@@ -498,7 +509,7 @@ pub async fn update_agent(
     // Fetch the updated agent
     let agent = conn
         .query_row(
-            "SELECT id, name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, hooks, created_at, updated_at FROM agents WHERE id = ?1",
+            "SELECT id, name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, hooks, source, created_at, updated_at FROM agents WHERE id = ?1",
             params![id],
             |row| {
                 Ok(Agent {
@@ -512,8 +523,9 @@ pub async fn update_agent(
                     enable_file_write: row.get(7)?,
                     enable_network: row.get(8)?,
                     hooks: row.get(9)?,
-                    created_at: row.get(10)?,
-                    updated_at: row.get(11)?,
+                    source: row.get(10).ok(),
+                    created_at: row.get(11)?,
+                    updated_at: row.get(12)?,
                 })
             },
         )
@@ -533,6 +545,106 @@ pub async fn delete_agent(db: State<'_, AgentDb>, id: i64) -> Result<(), String>
     Ok(())
 }
 
+/// Delete all native agents from database (keeping .claude/agents files intact)
+#[tauri::command]
+pub async fn delete_native_agents(db: State<'_, AgentDb>) -> Result<u32, String> {
+    info!("Deleting native agents from database");
+    let conn = db.0.lock().map_err(|e| e.to_string())?;
+
+    // First, let's debug what's actually in the database
+    let mut stmt = conn
+        .prepare("SELECT id, name, source FROM agents")
+        .map_err(|e| e.to_string())?;
+    
+    let agent_rows = stmt
+        .query_map([], |row| {
+            Ok((
+                row.get::<_, i64>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, Option<String>>(2)?,
+            ))
+        })
+        .map_err(|e| e.to_string())?;
+    
+    let mut all_agents = Vec::new();
+    for agent in agent_rows {
+        all_agents.push(agent.map_err(|e| e.to_string())?);
+    }
+    
+    info!("Total agents in database: {}", all_agents.len());
+    for (id, name, source) in &all_agents {
+        info!("Agent ID: {}, Name: '{}', Source: {:?}", id, name, source);
+    }
+
+    // Count agents that match our criteria (be more flexible)
+    let count: u32 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM agents WHERE source = 'native' OR source = 'claude_native' OR source IS NULL",
+            [],
+            |row| row.get(0),
+        )
+        .map_err(|e| e.to_string())?;
+
+    info!("Found {} agents matching native criteria to delete", count);
+
+    // Delete all native agents (including those with NULL source if they look like native agents)
+    let rows_affected = conn
+        .execute(
+            "DELETE FROM agents WHERE source = 'native' OR source = 'claude_native'",
+            [],
+        )
+        .map_err(|e| e.to_string())?;
+
+    info!("Deleted {} native agents from database", rows_affected);
+    
+    // If no agents were deleted but we expected some, try a broader delete
+    if rows_affected == 0 && count > 0 {
+        warn!("No agents deleted with strict criteria, checking for broader match");
+        
+        // Get list of known native agent names from filesystem
+        let home_dir = dirs::home_dir().ok_or("Could not find home directory")?;
+        let agents_dir = home_dir.join(".claude").join("agents");
+        
+        if agents_dir.exists() {
+            let mut native_names = Vec::new();
+            let entries = std::fs::read_dir(&agents_dir)
+                .map_err(|e| format!("Failed to read agents directory: {}", e))?;
+            
+            for entry in entries {
+                let entry = entry.map_err(|e| format!("Failed to read directory entry: {}", e))?;
+                let path = entry.path();
+                
+                if let Some(extension) = path.extension() {
+                    if extension == "md" {
+                        if let Some(file_name) = path.file_stem().and_then(|n| n.to_str()) {
+                            native_names.push(file_name.to_string());
+                        }
+                    }
+                }
+            }
+            
+            // Delete agents that match native agent names (regardless of source)
+            let mut total_deleted = 0;
+            for name in native_names {
+                let deleted = conn
+                    .execute(
+                        "DELETE FROM agents WHERE name LIKE ? OR name = ?",
+                        params![format!("{}%", name), name],
+                    )
+                    .map_err(|e| e.to_string())?;
+                total_deleted += deleted;
+                if deleted > 0 {
+                    info!("Deleted {} agents matching name pattern '{}'", deleted, name);
+                }
+            }
+            
+            return Ok(total_deleted as u32);
+        }
+    }
+
+    Ok(rows_affected as u32)
+}
+
 /// Get a single agent by ID
 #[tauri::command]
 pub async fn get_agent(db: State<'_, AgentDb>, id: i64) -> Result<Agent, String> {
@@ -540,7 +652,7 @@ pub async fn get_agent(db: State<'_, AgentDb>, id: i64) -> Result<Agent, String>
 
     let agent = conn
         .query_row(
-            "SELECT id, name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, hooks, created_at, updated_at FROM agents WHERE id = ?1",
+            "SELECT id, name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, hooks, source, created_at, updated_at FROM agents WHERE id = ?1",
             params![id],
             |row| {
                 Ok(Agent {
@@ -554,8 +666,9 @@ pub async fn get_agent(db: State<'_, AgentDb>, id: i64) -> Result<Agent, String>
                     enable_file_write: row.get::<_, bool>(7).unwrap_or(true),
                     enable_network: row.get::<_, bool>(8).unwrap_or(false),
                     hooks: row.get(9)?,
-                    created_at: row.get(10)?,
-                    updated_at: row.get(11)?,
+                    source: row.get(10).ok(),
+                    created_at: row.get(11)?,
+                    updated_at: row.get(12)?,
                 })
             },
         )
@@ -1600,9 +1713,9 @@ pub async fn set_claude_binary_path(db: State<'_, AgentDb>, path: String) -> Res
 /// List all available Claude installations on the system
 #[tauri::command]
 pub async fn list_claude_installations(
-    app: AppHandle,
+    _app: AppHandle,
 ) -> Result<Vec<crate::claude_binary::ClaudeInstallation>, String> {
-    let mut installations = crate::claude_binary::discover_claude_installations();
+    let installations = crate::claude_binary::discover_claude_installations();
 
     if installations.is_empty() {
         return Err("No Claude Code installations found on the system".to_string());
@@ -1672,6 +1785,10 @@ fn create_command_with_env(program: &str) -> Command {
 /// Import an agent from JSON data
 #[tauri::command]
 pub async fn import_agent(db: State<'_, AgentDb>, json_data: String) -> Result<Agent, String> {
+    import_agent_with_source(db, json_data, "claudia".to_string()).await
+}
+
+pub async fn import_agent_with_source(db: State<'_, AgentDb>, json_data: String, source: String) -> Result<Agent, String> {
     // Parse the JSON data
     let export_data: AgentExport =
         serde_json::from_str(&json_data).map_err(|e| format!("Invalid JSON format: {}", e))?;
@@ -1705,14 +1822,15 @@ pub async fn import_agent(db: State<'_, AgentDb>, json_data: String) -> Result<A
 
     // Create the agent
     conn.execute(
-        "INSERT INTO agents (name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, hooks) VALUES (?1, ?2, ?3, ?4, ?5, 1, 1, 0, ?6)",
+        "INSERT INTO agents (name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, hooks, source) VALUES (?1, ?2, ?3, ?4, ?5, 1, 1, 0, ?6, ?7)",
         params![
             final_name,
             agent_data.icon,
             agent_data.system_prompt,
             agent_data.default_task,
             agent_data.model,
-            agent_data.hooks
+            agent_data.hooks,
+            source
         ],
     )
     .map_err(|e| format!("Failed to create agent: {}", e))?;
@@ -1722,7 +1840,7 @@ pub async fn import_agent(db: State<'_, AgentDb>, json_data: String) -> Result<A
     // Fetch the created agent
     let agent = conn
         .query_row(
-            "SELECT id, name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, hooks, created_at, updated_at FROM agents WHERE id = ?1",
+            "SELECT id, name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, hooks, source, created_at, updated_at FROM agents WHERE id = ?1",
             params![id],
             |row| {
                 Ok(Agent {
@@ -1736,8 +1854,9 @@ pub async fn import_agent(db: State<'_, AgentDb>, json_data: String) -> Result<A
                     enable_file_write: row.get(7)?,
                     enable_network: row.get(8)?,
                     hooks: row.get(9)?,
-                    created_at: row.get(10)?,
-                    updated_at: row.get(11)?,
+                    source: row.get(10).ok(),
+                    created_at: row.get(11)?,
+                    updated_at: row.get(12)?,
                 })
             },
         )
@@ -1751,13 +1870,14 @@ pub async fn import_agent(db: State<'_, AgentDb>, json_data: String) -> Result<A
 pub async fn import_agent_from_file(
     db: State<'_, AgentDb>,
     file_path: String,
+    source: String,
 ) -> Result<Agent, String> {
     // Read the file
     let json_data =
         std::fs::read_to_string(&file_path).map_err(|e| format!("Failed to read file: {}", e))?;
 
-    // Import the agent
-    import_agent(db, json_data).await
+    // Import the agent with specified source
+    import_agent_with_source(db, json_data, source).await
 }
 
 // GitHub Agent Import functionality
@@ -1953,4 +2073,215 @@ pub async fn load_agent_session_history(
     } else {
         Err(format!("Session file not found: {}", session_id))
     }
+}
+
+/// List native agents directly from .claude/agents directory (without importing to DB)
+#[tauri::command]
+pub async fn list_native_agents() -> Result<Vec<Agent>, String> {
+    info!("Listing native agents from .claude/agents");
+    
+    let home_dir = dirs::home_dir()
+        .ok_or("Could not find home directory")?;
+    let agents_dir = home_dir.join(".claude").join("agents");
+    
+    if !agents_dir.exists() {
+        info!("No .claude/agents directory found");
+        return Ok(vec![]);
+    }
+    
+    let mut agents = Vec::new();
+    let mut agent_id = 1000; // Use high IDs to avoid conflict with DB agents
+    
+    // Read all .md files in the agents directory
+    let entries = std::fs::read_dir(&agents_dir)
+        .map_err(|e| format!("Failed to read agents directory: {}", e))?;
+    
+    for entry in entries {
+        let entry = entry.map_err(|e| format!("Failed to read directory entry: {}", e))?;
+        let path = entry.path();
+        
+        if let Some(extension) = path.extension() {
+            if extension == "md" {
+                let file_name = path.file_name()
+                    .and_then(|name| name.to_str())
+                    .unwrap_or("unknown");
+                
+                info!("Processing native agent file: {}", file_name);
+                
+                // Read the file content
+                let content = std::fs::read_to_string(&path)
+                    .map_err(|e| format!("Failed to read {}: {}", file_name, e))?;
+                
+                // Parse the frontmatter and content
+                match parse_agent_markdown(&content, file_name) {
+                    Ok((name, description, system_prompt, icon, _color)) => {
+                        agents.push(Agent {
+                            id: Some(agent_id),
+                            name,
+                            icon,
+                            system_prompt,
+                            default_task: Some(description),
+                            model: "claude-3-5-sonnet-20241022".to_string(),
+                            enable_file_read: true,
+                            enable_file_write: true,
+                            enable_network: true,
+                            hooks: None,
+                            source: Some("native".to_string()),
+                            created_at: chrono::Utc::now().to_rfc3339(),
+                            updated_at: chrono::Utc::now().to_rfc3339(),
+                        });
+                        agent_id += 1;
+                    }
+                    Err(e) => {
+                        warn!("Failed to parse agent file {}: {}", file_name, e);
+                    }
+                }
+            }
+        }
+    }
+    
+    info!("Found {} native agents", agents.len());
+    Ok(agents)
+}
+
+/// Import native agents from .claude/agents directory
+#[tauri::command]
+pub async fn import_native_agents(app: AppHandle) -> Result<u32, String> {
+    info!("Importing native agents from .claude/agents");
+    
+    let home_dir = dirs::home_dir()
+        .ok_or("Could not find home directory")?;
+    let agents_dir = home_dir.join(".claude").join("agents");
+    
+    if !agents_dir.exists() {
+        info!("No .claude/agents directory found");
+        return Ok(0);
+    }
+    
+    // Get database connection
+    let db = app.state::<AgentDb>();
+    let conn = db.0.lock().map_err(|e| e.to_string())?;
+    
+    let mut imported_count = 0;
+    let mut skipped_count = 0;
+    
+    // Read all .md files in the agents directory
+    if let Ok(entries) = std::fs::read_dir(&agents_dir) {
+        for entry in entries.filter_map(Result::ok) {
+            let path = entry.path();
+            
+            // Only process .md files
+            if path.extension() == Some(std::ffi::OsStr::new("md")) {
+                let file_name = path.file_stem()
+                    .and_then(|s| s.to_str())
+                    .ok_or("Invalid filename")?;
+                
+                info!("Processing agent file: {}", file_name);
+                
+                // Read the file content
+                let content = std::fs::read_to_string(&path)
+                    .map_err(|e| format!("Failed to read {}: {}", file_name, e))?;
+                
+                // Parse the frontmatter and content
+                let (name, description, system_prompt, icon, _color) = parse_agent_markdown(&content, file_name)?;
+                
+                // Check if agent already exists
+                let existing_count: i64 = conn
+                    .query_row(
+                        "SELECT COUNT(*) FROM agents WHERE name = ?1",
+                        params![&name],
+                        |row| row.get(0),
+                    )
+                    .unwrap_or(0);
+                
+                if existing_count > 0 {
+                    info!("Agent '{}' already exists, skipping", name);
+                    skipped_count += 1;
+                    continue;
+                }
+                
+                // Insert the agent
+                conn.execute(
+                    "INSERT INTO agents (name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, hooks, source, created_at, updated_at) 
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
+                    params![
+                        &name,
+                        &icon,
+                        &system_prompt,
+                        &description, // Use description as default_task
+                        "claude-3-5-sonnet-20241022", // Default model
+                        true, // enable_file_read
+                        true, // enable_file_write
+                        true, // enable_network
+                        None::<String>, // hooks
+                        "native", // source
+                        chrono::Utc::now().to_rfc3339(),
+                        chrono::Utc::now().to_rfc3339()
+                    ],
+                ).map_err(|e| format!("Failed to insert agent '{}': {}", name, e))?;
+                
+                imported_count += 1;
+                info!("Successfully imported agent: {}", name);
+            }
+        }
+    }
+    
+    info!("Import complete: {} imported, {} skipped", imported_count, skipped_count);
+    Ok(imported_count)
+}
+
+/// Parse agent markdown file with frontmatter
+fn parse_agent_markdown(content: &str, file_name: &str) -> Result<(String, String, String, String, String), String> {
+    let lines: Vec<&str> = content.lines().collect();
+    
+    // Check if file has frontmatter
+    if lines.is_empty() || lines[0] != "---" {
+        // No frontmatter, use file name as agent name and entire content as prompt
+        return Ok((
+            file_name.to_string(),
+            format!("Agent imported from {}.md", file_name),
+            content.to_string(),
+            "🤖".to_string(), // Default icon
+            "blue".to_string(), // Default color
+        ));
+    }
+    
+    // Parse frontmatter
+    let mut name = file_name.to_string();
+    let mut description = String::new();
+    let mut icon = "🤖".to_string();
+    let mut color = "blue".to_string();
+    let mut frontmatter_end = 0;
+    
+    for (i, line) in lines.iter().enumerate().skip(1) {
+        if *line == "---" {
+            frontmatter_end = i;
+            break;
+        }
+        
+        if let Some((key, value)) = line.split_once(':') {
+            let key = key.trim();
+            let value = value.trim().trim_matches('"');
+            
+            match key {
+                "name" => name = value.to_string(),
+                "description" => description = value.to_string(),
+                "icon" => icon = value.to_string(),
+                "color" => color = value.to_string(),
+                _ => {}
+            }
+        }
+    }
+    
+    // Get the system prompt (everything after frontmatter)
+    let system_prompt = if frontmatter_end > 0 && frontmatter_end + 1 < lines.len() {
+        lines[(frontmatter_end + 1)..]
+            .join("\n")
+            .trim()
+            .to_string()
+    } else {
+        content.to_string()
+    };
+    
+    Ok((name, description, system_prompt, icon, color))
 }

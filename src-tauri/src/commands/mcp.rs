@@ -1,12 +1,14 @@
 use anyhow::{Context, Result};
 use dirs;
-use log::{error, info};
+use log::{error, info, warn};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
-use tauri::AppHandle;
+use std::sync::{Arc, Mutex};
+use std::time::{SystemTime, UNIX_EPOCH};
+use tauri::{AppHandle, Manager};
 
 /// Helper function to create a std::process::Command with proper environment variables
 /// This ensures commands like Claude can find Node.js and other dependencies
@@ -95,11 +97,100 @@ pub struct ImportServerResult {
     pub error: Option<String>,
 }
 
-/// Executes a claude mcp command
+/// Cached MCP data
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct MCPCache {
+    pub servers: Vec<MCPServer>,
+    pub cached_at: u64,
+    pub config_hash: String,
+}
+
+/// Cache management for MCP servers
+static MCP_CACHE: std::sync::LazyLock<Arc<Mutex<Option<MCPCache>>>> = std::sync::LazyLock::new(|| Arc::new(Mutex::new(None)));
+
+/// Cache expiry time in seconds (5 minutes)
+const CACHE_EXPIRY_SECONDS: u64 = 300;
+
+/// Check if cache is valid
+fn is_cache_valid(cache: &MCPCache, current_hash: &str) -> bool {
+    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+    let cache_age = now - cache.cached_at;
+    
+    // Cache is valid if:
+    // 1. Config hash matches (no config changes)
+    // 2. Cache is not expired
+    cache.config_hash == current_hash && cache_age < CACHE_EXPIRY_SECONDS
+}
+
+/// Generate a hash of MCP configuration files for cache invalidation
+fn get_config_hash(app_handle: &AppHandle) -> String {
+    let mut hash_content = String::new();
+    
+    // Include Claude MCP config in hash
+    if let Ok(home_dir) = dirs::home_dir().ok_or("Could not find home directory") {
+        let claude_dir = home_dir.join(".claude");
+        let config_path = claude_dir.join("claude_desktop_config.json");
+        
+        if let Ok(content) = fs::read_to_string(&config_path) {
+            hash_content.push_str(&content);
+        }
+    }
+    
+    // Include current working directory .mcp.json in hash
+    if let Ok(current_dir) = std::env::current_dir() {
+        let project_config = current_dir.join(".mcp.json");
+        if let Ok(content) = fs::read_to_string(&project_config) {
+            hash_content.push_str(&content);
+        }
+    }
+    
+    // Simple hash using length and first/last chars for speed
+    format!("{}-{}", hash_content.len(), 
+        hash_content.chars().take(10).chain(hash_content.chars().rev().take(10)).collect::<String>()
+    )
+}
+
+/// Manually invalidate the MCP cache (called when configuration changes)
+fn invalidate_mcp_cache() {
+    let mut cache_guard = MCP_CACHE.lock().unwrap();
+    *cache_guard = None;
+    info!("MCP cache invalidated due to configuration change");
+}
+
+/// Clear MCP cache command for manual use
+#[tauri::command]
+pub async fn mcp_clear_cache() -> Result<String, String> {
+    invalidate_mcp_cache();
+    Ok("MCP cache cleared successfully".to_string())
+}
+
+/// Executes a claude mcp command with retry for binary discovery
 fn execute_claude_mcp_command(app_handle: &AppHandle, args: Vec<&str>) -> Result<String> {
     info!("Executing claude mcp command with args: {:?}", args);
 
-    let claude_path = find_claude_binary(app_handle)?;
+    // Try to find Claude binary with retries
+    let mut claude_path = None;
+    let max_retries = 5;
+    let retry_delay = std::time::Duration::from_millis(500);
+    
+    for attempt in 0..max_retries {
+        match find_claude_binary(app_handle) {
+            Ok(path) => {
+                claude_path = Some(path);
+                break;
+            }
+            Err(e) => {
+                if attempt < max_retries - 1 {
+                    info!("Claude binary not found (attempt {}), retrying in {:?}...", attempt + 1, retry_delay);
+                    std::thread::sleep(retry_delay);
+                } else {
+                    return Err(anyhow::anyhow!("Failed to find Claude binary after {} attempts: {}", max_retries, e));
+                }
+            }
+        }
+    }
+    
+    let claude_path = claude_path.unwrap();
     let mut cmd = create_command_with_env(&claude_path);
     cmd.arg("mcp");
     for arg in args {
@@ -191,6 +282,10 @@ pub async fn mcp_add(
     match execute_claude_mcp_command(&app, cmd_args) {
         Ok(output) => {
             info!("Successfully added MCP server: {}", name);
+            
+            // Invalidate cache since configuration changed
+            invalidate_mcp_cache();
+            
             Ok(AddServerResult {
                 success: true,
                 message: output.trim().to_string(),
@@ -211,8 +306,26 @@ pub async fn mcp_add(
 /// Lists all configured MCP servers
 #[tauri::command]
 pub async fn mcp_list(app: AppHandle) -> Result<Vec<MCPServer>, String> {
-    info!("Listing MCP servers");
+    info!("Listing MCP servers (with caching)");
 
+    // Check cache first
+    let config_hash = get_config_hash(&app);
+    {
+        let cache_guard = MCP_CACHE.lock().unwrap();
+        if let Some(ref cache) = *cache_guard {
+            if is_cache_valid(cache, &config_hash) {
+                info!("Returning cached MCP servers ({} servers)", cache.servers.len());
+                return Ok(cache.servers.clone());
+            } else {
+                info!("Cache invalid - config changed or expired");
+            }
+        } else {
+            info!("No cache found - first load");
+        }
+    }
+
+    // Cache miss or invalid - fetch fresh data
+    info!("Fetching fresh MCP server data");
     match execute_claude_mcp_command(&app, vec!["list"]) {
         Ok(output) => {
             info!("Raw output from 'claude mcp list': {:?}", output);
@@ -321,6 +434,21 @@ pub async fn mcp_list(app: AppHandle) -> Result<Vec<MCPServer>, String> {
                     idx, server.name, server.command
                 );
             }
+
+            // Store in cache
+            let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+            let cache = MCPCache {
+                servers: servers.clone(),
+                cached_at: now,
+                config_hash,
+            };
+            
+            {
+                let mut cache_guard = MCP_CACHE.lock().unwrap();
+                *cache_guard = Some(cache);
+            }
+            info!("Cached {} MCP servers for future requests", servers.len());
+
             Ok(servers)
         }
         Err(e) => {
@@ -440,6 +568,10 @@ pub async fn mcp_add_json(
     match execute_claude_mcp_command(&app, cmd_args) {
         Ok(output) => {
             info!("Successfully added MCP server from JSON: {}", name);
+            
+            // Invalidate cache since configuration changed
+            invalidate_mcp_cache();
+            
             Ok(AddServerResult {
                 success: true,
                 message: output.trim().to_string(),
@@ -614,6 +746,20 @@ pub async fn mcp_add_from_claude_desktop(
 #[tauri::command]
 pub async fn mcp_serve(app: AppHandle) -> Result<String, String> {
     info!("Starting Claude Code as MCP server");
+    
+    // Get process registry
+    let registry = app.state::<crate::process::ProcessRegistryState>();
+    
+    // Check if an MCP server is already running
+    let running_sessions = registry.0.get_running_claude_sessions()
+        .map_err(|e| format!("Failed to get running sessions: {}", e))?;
+    
+    for session in &running_sessions {
+        if session.task.contains("mcp serve") {
+            info!("MCP server already running with PID {}", session.pid);
+            return Err("MCP server already running".to_string());
+        }
+    }
 
     // Start the server in a separate process
     let claude_path = match find_claude_binary(&app) {
@@ -628,9 +774,21 @@ pub async fn mcp_serve(app: AppHandle) -> Result<String, String> {
     cmd.arg("mcp").arg("serve");
 
     match cmd.spawn() {
-        Ok(_) => {
-            info!("Successfully started Claude Code MCP server");
-            Ok("Claude Code MCP server started".to_string())
+        Ok(child) => {
+            let pid = child.id();
+            
+            // Register the process
+            let session_id = format!("mcp-server-{}", pid);
+            registry.0.register_claude_session(
+                session_id.clone(),
+                pid,
+                claude_path,
+                "mcp serve".to_string(),
+                "claude".to_string(),
+            ).map_err(|e| format!("Failed to register MCP server process: {}", e))?;
+            
+            info!("Successfully started and registered Claude Code MCP server with PID {}", pid);
+            Ok(format!("Claude Code MCP server started (PID: {})", pid))
         }
         Err(e) => {
             error!("Failed to start MCP server: {}", e);
@@ -723,4 +881,37 @@ pub async fn mcp_save_project_config(
         .map_err(|e| format!("Failed to write .mcp.json: {}", e))?;
 
     Ok("Project MCP configuration saved".to_string())
+}
+
+/// Cleanup orphaned MCP processes on startup
+pub fn cleanup_orphaned_mcp_processes() {
+    info!("Cleaning up orphaned MCP processes");
+    
+    // Use platform-specific command to find and kill orphaned claude mcp serve processes
+    #[cfg(target_os = "macos")]
+    {
+        let _ = Command::new("pkill")
+            .arg("-f")
+            .arg("claude mcp serve")
+            .output();
+    }
+    
+    #[cfg(target_os = "linux")]
+    {
+        let _ = Command::new("pkill")
+            .arg("-f")
+            .arg("claude mcp serve")
+            .output();
+    }
+    
+    #[cfg(target_os = "windows")]
+    {
+        let _ = Command::new("taskkill")
+            .arg("/F")
+            .arg("/IM")
+            .arg("claude.exe")
+            .output();
+    }
+    
+    info!("Orphaned MCP process cleanup complete");
 }
