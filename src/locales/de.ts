@@ -252,6 +252,24 @@ export const de: Translations = {
     customModelName: "Benutzerdefinierter Modellname",
     disableCostWarnings: "Kostenwarnungen deaktivieren (1)",
 
+    // Schriftgrößen-Einstellungen
+    fontScale: "Schriftgröße",
+    fontScaleDesc: "Schriftgröße der Benutzeroberfläche für hochauflösende Bildschirme anpassen oder Lesbarkeit verbessern",
+    fontScaleSmall: "Klein",
+    fontScaleNormal: "Normal",
+    fontScaleLarge: "Groß",
+    fontScaleExtraLarge: "Sehr groß",
+    fontScaleCustom: "Benutzerdefiniert",
+    fontScaleSmallDesc: "Kleinere Schriften für hochdichte Displays",
+    fontScaleNormalDesc: "Standard-Schriftgröße",
+    fontScaleLargeDesc: "Größere Schriften für verbesserte Lesbarkeit",
+    fontScaleExtraLargeDesc: "Maximale Schriftgröße für hochauflösende Bildschirme",
+    fontScaleCustomDesc: "Benutzerdefinierter Skalierungsmultiplikator",
+    customMultiplier: "Benutzerdefinierter Multiplikator",
+    customMultiplierDesc: "Geben Sie einen benutzerdefinierten Schriftskalierungsmultiplikator ein (0.5x - 3.0x)",
+    customMultiplierPlaceholder: "z.B. 1.5",
+    customMultiplierRange: "Bereich: 0.5x bis 3.0x",
+
     // Andere fehlende Schlüssel
     examples: "Beispiele:",
     failedToLoadSettings:

@@ -244,6 +244,24 @@ export const en: Translations = {
     customModelName: "Custom model name",
     disableCostWarnings: "Disable cost warnings (1)",
 
+    // Font scaling settings
+    fontScale: "Font Size",
+    fontScaleDesc: "Adjust interface font size for high-resolution displays or improved readability",
+    fontScaleSmall: "Small",
+    fontScaleNormal: "Normal",
+    fontScaleLarge: "Large",
+    fontScaleExtraLarge: "Extra Large",
+    fontScaleCustom: "Custom",
+    fontScaleSmallDesc: "Smaller fonts for high-density displays",
+    fontScaleNormalDesc: "Standard font size",
+    fontScaleLargeDesc: "Larger fonts for improved readability",
+    fontScaleExtraLargeDesc: "Maximum font size for high-resolution screens",
+    fontScaleCustomDesc: "Custom scaling multiplier",
+    customMultiplier: "Custom Multiplier",
+    customMultiplierDesc: "Enter a custom font scaling multiplier (0.5x - 3.0x)",
+    customMultiplierPlaceholder: "e.g., 1.5",
+    customMultiplierRange: "Range: 0.5x to 3.0x",
+
     // Other missing keys
     examples: "Examples:",
     failedToLoadSettings: "Failed to load settings. Please ensure ~/.claude directory exists.",

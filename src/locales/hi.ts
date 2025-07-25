@@ -246,6 +246,24 @@ export const hi: Translations = {
     customModelName: "कस्टम मॉडल नाम",
     disableCostWarnings: "लागत चेतावनियां अक्षम करें (1)",
 
+    // फ़ॉन्ट स्केल सेटिंग्स
+    fontScale: "फ़ॉन्ट आकार",
+    fontScaleDesc: "उच्च रिज़ॉल्यूशन डिस्प्ले या बेहतर पठनीयता के लिए इंटरफ़ेस फ़ॉन्ट आकार समायोजित करें",
+    fontScaleSmall: "छोटा",
+    fontScaleNormal: "सामान्य",
+    fontScaleLarge: "बड़ा",
+    fontScaleExtraLarge: "अतिरिक्त बड़ा",
+    fontScaleCustom: "कस्टम",
+    fontScaleSmallDesc: "उच्च घनत्व डिस्प्ले के लिए छोटे फ़ॉन्ट",
+    fontScaleNormalDesc: "मानक फ़ॉन्ट आकार",
+    fontScaleLargeDesc: "बेहतर पठनीयता के लिए बड़े फ़ॉन्ट",
+    fontScaleExtraLargeDesc: "उच्च रिज़ॉल्यूशन स्क्रीन के लिए अधिकतम फ़ॉन्ट आकार",
+    fontScaleCustomDesc: "कस्टम स्केलिंग गुणक",
+    customMultiplier: "कस्टम गुणक",
+    customMultiplierDesc: "कस्टम फ़ॉन्ट स्केलिंग गुणक दर्ज करें (0.5x - 3.0x)",
+    customMultiplierPlaceholder: "उदा. 1.5",
+    customMultiplierRange: "सीमा: 0.5x से 3.0x",
+
     // अन्य अनुपस्थित कुंजियां
     examples: "उदाहरण:",
     failedToLoadSettings:

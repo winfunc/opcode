@@ -249,6 +249,24 @@ export const es: Translations = {
     customModelName: "Nombre de modelo personalizado",
     disableCostWarnings: "Deshabilitar advertencias de costo (1)",
 
+    // Configuración de escala de fuente
+    fontScale: "Tamaño de fuente",
+    fontScaleDesc: "Ajustar el tamaño de fuente de la interfaz para pantallas de alta resolución o mejorar la legibilidad",
+    fontScaleSmall: "Pequeña",
+    fontScaleNormal: "Normal",
+    fontScaleLarge: "Grande",
+    fontScaleExtraLarge: "Extra grande",
+    fontScaleCustom: "Personalizada",
+    fontScaleSmallDesc: "Fuentes más pequeñas para pantallas de alta densidad",
+    fontScaleNormalDesc: "Tamaño de fuente estándar",
+    fontScaleLargeDesc: "Fuentes más grandes para mejorar la legibilidad",
+    fontScaleExtraLargeDesc: "Tamaño de fuente máximo para pantallas de alta resolución",
+    fontScaleCustomDesc: "Multiplicador de escala personalizado",
+    customMultiplier: "Multiplicador personalizado",
+    customMultiplierDesc: "Ingrese un multiplicador de escala de fuente personalizado (0.5x - 3.0x)",
+    customMultiplierPlaceholder: "ej. 1.5",
+    customMultiplierRange: "Rango: 0.5x a 3.0x",
+
     // Otras claves faltantes
     examples: "Ejemplos:",
     failedToLoadSettings:

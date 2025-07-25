@@ -276,6 +276,24 @@ export interface Translations {
     customModelName: string;
     disableCostWarnings: string;
 
+    // 字体缩放设置
+    fontScale: string;
+    fontScaleDesc: string;
+    fontScaleSmall: string;
+    fontScaleNormal: string;
+    fontScaleLarge: string;
+    fontScaleExtraLarge: string;
+    fontScaleCustom: string;
+    fontScaleSmallDesc: string;
+    fontScaleNormalDesc: string;
+    fontScaleLargeDesc: string;
+    fontScaleExtraLargeDesc: string;
+    fontScaleCustomDesc: string;
+    customMultiplier: string;
+    customMultiplierDesc: string;
+    customMultiplierPlaceholder: string;
+    customMultiplierRange: string;
+
     // 其他缺失的键
     examples: string;
     failedToLoadSettings: string;

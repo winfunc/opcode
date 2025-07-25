@@ -250,6 +250,24 @@ export const ru: Translations = {
     customModelName: "Пользовательское имя модели",
     disableCostWarnings: "Отключить предупреждения о стоимости (1)",
 
+    // Настройки масштабирования шрифта
+    fontScale: "Размер шрифта",
+    fontScaleDesc: "Настройка размера шрифта интерфейса для экранов высокого разрешения или улучшения читаемости",
+    fontScaleSmall: "Маленький",
+    fontScaleNormal: "Обычный",
+    fontScaleLarge: "Большой",
+    fontScaleExtraLarge: "Очень большой",
+    fontScaleCustom: "Пользовательский",
+    fontScaleSmallDesc: "Меньшие шрифты для экранов высокой плотности",
+    fontScaleNormalDesc: "Стандартный размер шрифта",
+    fontScaleLargeDesc: "Большие шрифты для улучшения читаемости",
+    fontScaleExtraLargeDesc: "Максимальный размер шрифта для экранов высокого разрешения",
+    fontScaleCustomDesc: "Пользовательский множитель масштабирования",
+    customMultiplier: "Пользовательский множитель",
+    customMultiplierDesc: "Введите пользовательский множитель масштабирования шрифта (0.5x - 3.0x)",
+    customMultiplierPlaceholder: "например, 1.5",
+    customMultiplierRange: "Диапазон: 0.5x до 3.0x",
+
     // Другие отсутствующие ключи
     examples: "Примеры:",
     failedToLoadSettings:

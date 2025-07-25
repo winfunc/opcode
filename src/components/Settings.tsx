@@ -25,6 +25,7 @@ import {
   type AudioNotificationConfig,
   type AudioNotificationMode 
 } from "@/lib/audioNotification";
+import { fontScaleManager, FONT_SCALE_OPTIONS, type FontScale } from "@/lib/fontScale";
 interface SettingsProps {
   /**
    * Callback to go back to the main view
@@ -91,6 +92,12 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
   // Audio notification state
   const [audioConfig, setAudioConfig] = useState<AudioNotificationConfig>({ mode: "off" });
   const [audioConfigChanged, setAudioConfigChanged] = useState(false);
+  
+  // Font scale state
+  const [fontScale, setFontScale] = useState<FontScale>(fontScaleManager.getCurrentScale());
+  const [customMultiplierInput, setCustomMultiplierInput] = useState<string>(fontScaleManager.getCustomMultiplier().toString());
+  const [fontScaleChanged, setFontScaleChanged] = useState(false);
+  
   const getUserHooks = React.useRef<(() => unknown) | null>(null);
 
   // Load settings on mount
@@ -190,6 +197,10 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
         setAudioConfig(defaultConfig);
         audioNotificationManager.setConfig(defaultConfig);
       }
+
+      // Load font scale
+      setFontScale(fontScaleManager.getCurrentScale());
+      setCustomMultiplierInput(fontScaleManager.getCustomMultiplier().toString());
     } catch (err) {
       await handleError("Failed to load settings:", { context: err });
       setError(t.settings.failedToLoadSettings);
@@ -236,6 +247,21 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
         } catch (error) {
           logger.error("Failed to save audio config:", error);
         }
+      }
+
+      // Save font scale (independent of Claude settings)
+      if (fontScaleChanged) {
+        if (fontScale === 'custom') {
+          const customValue = parseFloat(customMultiplierInput);
+          if (!isNaN(customValue) && customValue >= 0.5 && customValue <= 3.0) {
+            fontScaleManager.setScale(fontScale, customValue);
+          } else {
+            fontScaleManager.setScale(fontScale);
+          }
+        } else {
+          fontScaleManager.setScale(fontScale);
+        }
+        setFontScaleChanged(false);
       }
 
       await api.saveClaudeSettings(updatedSettings);
@@ -826,6 +852,84 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
                         onChange={(e) => updateSetting("apiKeyHelper", e.target.value || undefined)}
                       />
                       <p className="text-xs text-muted-foreground">{t.settings.apiKeyHelperDesc}</p>
+                    </div>
+
+                    {/* Font Scale */}
+                    <div className="space-y-4">
+                      <div>
+                        <Label className="text-sm font-medium">{t.settings.fontScale}</Label>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {t.settings.fontScaleDesc}
+                        </p>
+                      </div>
+                      
+                      <div className="space-y-3">
+                        <div>
+                          <Label htmlFor="fontScale" className="text-sm">
+                            {t.settings.fontScale}
+                          </Label>
+                          <div className="space-y-2 mt-2">
+                            {Object.entries(FONT_SCALE_OPTIONS).map(([key, config]) => (
+                              <div key={key} className="flex items-center space-x-2">
+                                <input
+                                  type="radio"
+                                  id={`font-${key}`}
+                                  name="fontScale"
+                                  value={key}
+                                  checked={fontScale === key}
+                                  onChange={(e) => {
+                                    const newScale = e.target.value as FontScale;
+                                    setFontScale(newScale);
+                                    setFontScaleChanged(true);
+                                  }}
+                                  className="w-4 h-4 text-primary bg-background border-border focus:ring-ring focus:ring-2"
+                                />
+                                <div className="flex-1">
+                                  <Label htmlFor={`font-${key}`} className="text-sm font-medium">
+                                    {t.settings[`fontScale${key.charAt(0).toUpperCase() + key.slice(1).replace('-', '')}` as keyof typeof t.settings]} 
+                                    {key !== 'custom' && ` (${config.multiplier}x)`}
+                                  </Label>
+                                  <p className="text-xs text-muted-foreground">
+                                    {t.settings[`fontScale${key.charAt(0).toUpperCase() + key.slice(1).replace('-', '')}Desc` as keyof typeof t.settings]}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          
+                          {/* Custom multiplier input */}
+                          {fontScale === 'custom' && (
+                            <div className="mt-4 p-4 border rounded-md bg-muted/50">
+                              <Label htmlFor="customMultiplier" className="text-sm font-medium">
+                                {t.settings.customMultiplier}
+                              </Label>
+                              <p className="text-xs text-muted-foreground mb-2">
+                                {t.settings.customMultiplierDesc}
+                              </p>
+                              <div className="flex items-center space-x-2">
+                                <Input
+                                  id="customMultiplier"
+                                  type="number"
+                                  min="0.5"
+                                  max="3.0"
+                                  step="0.1"
+                                  value={customMultiplierInput}
+                                  onChange={(e) => {
+                                    setCustomMultiplierInput(e.target.value);
+                                    setFontScaleChanged(true);
+                                  }}
+                                  placeholder={t.settings.customMultiplierPlaceholder}
+                                  className="w-24"
+                                />
+                                <span className="text-sm text-muted-foreground">x</span>
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {t.settings.customMultiplierRange}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
 
                     {/* Audio Notifications */}

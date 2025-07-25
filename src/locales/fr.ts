@@ -252,6 +252,24 @@ export const fr: Translations = {
     customModelName: "Nom de modèle personnalisé",
     disableCostWarnings: "Désactiver les avertissements de coût (1)",
 
+    // Paramètres de mise à l'échelle des polices
+    fontScale: "Taille de police",
+    fontScaleDesc: "Ajuster la taille de police de l'interface pour les écrans haute résolution ou améliorer la lisibilité",
+    fontScaleSmall: "Petite",
+    fontScaleNormal: "Normale",
+    fontScaleLarge: "Grande",
+    fontScaleExtraLarge: "Très grande",
+    fontScaleCustom: "Personnalisée",
+    fontScaleSmallDesc: "Polices plus petites pour les écrans haute densité",
+    fontScaleNormalDesc: "Taille de police standard",
+    fontScaleLargeDesc: "Polices plus grandes pour améliorer la lisibilité",
+    fontScaleExtraLargeDesc: "Taille de police maximale pour les écrans haute résolution",
+    fontScaleCustomDesc: "Multiplicateur de mise à l'échelle personnalisé",
+    customMultiplier: "Multiplicateur personnalisé",
+    customMultiplierDesc: "Entrez un multiplicateur de mise à l'échelle personnalisé (0.5x - 3.0x)",
+    customMultiplierPlaceholder: "ex. 1.5",
+    customMultiplierRange: "Plage : 0.5x à 3.0x",
+
     // Autres clés manquantes
     examples: "Exemples :",
     failedToLoadSettings:

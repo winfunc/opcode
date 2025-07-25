@@ -241,6 +241,24 @@ export const zh: Translations = {
     customModelName: "自定义模型名称",
     disableCostWarnings: "禁用费用警告（1）",
 
+    // 字体缩放设置
+    fontScale: "字体大小",
+    fontScaleDesc: "调整界面字体大小以适应高分辨率屏幕或提高可读性",
+    fontScaleSmall: "小",
+    fontScaleNormal: "正常",
+    fontScaleLarge: "大",
+    fontScaleExtraLarge: "特大",
+    fontScaleCustom: "自定义",
+    fontScaleSmallDesc: "较小的字体，适合高密度显示",
+    fontScaleNormalDesc: "标准字体大小",
+    fontScaleLargeDesc: "较大的字体，提高可读性",
+    fontScaleExtraLargeDesc: "最大字体，适合高分辨率屏幕",
+    fontScaleCustomDesc: "自定义缩放倍数",
+    customMultiplier: "自定义倍数",
+    customMultiplierDesc: "输入自定义的字体缩放倍数（0.5x - 3.0x）",
+    customMultiplierPlaceholder: "例如：1.5",
+    customMultiplierRange: "范围：0.5x 到 3.0x",
+
     // 其他缺失的键
     examples: "示例：",
     failedToLoadSettings: "加载设置失败。请确保 ~/.claude 目录存在。",

@@ -245,6 +245,24 @@ export const ko: Translations = {
     customModelName: "사용자 정의 모델 이름",
     disableCostWarnings: "비용 경고 비활성화(1)",
 
+    // 폰트 크기 설정
+    fontScale: "폰트 크기",
+    fontScaleDesc: "고해상도 디스플레이나 가독성 향상을 위해 인터페이스 폰트 크기를 조정합니다",
+    fontScaleSmall: "작게",
+    fontScaleNormal: "보통",
+    fontScaleLarge: "크게",
+    fontScaleExtraLarge: "매우 크게",
+    fontScaleCustom: "사용자 정의",
+    fontScaleSmallDesc: "고밀도 디스플레이용 작은 폰트",
+    fontScaleNormalDesc: "표준 폰트 크기",
+    fontScaleLargeDesc: "가독성 향상을 위한 큰 폰트",
+    fontScaleExtraLargeDesc: "고해상도 화면용 최대 폰트 크기",
+    fontScaleCustomDesc: "사용자 정의 크기 배율",
+    customMultiplier: "사용자 정의 배율",
+    customMultiplierDesc: "사용자 정의 폰트 크기 배율을 입력하세요 (0.5x - 3.0x)",
+    customMultiplierPlaceholder: "예: 1.5",
+    customMultiplierRange: "범위: 0.5x ~ 3.0x",
+
     // 기타 누락된 키
     examples: "예시:",
     failedToLoadSettings: "설정을 로드하지 못했습니다. ~/.claude 디렉토리가 존재하는지 확인하세요.",

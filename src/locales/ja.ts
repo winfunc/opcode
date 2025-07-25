@@ -245,6 +245,24 @@ export const ja: Translations = {
     customModelName: "カスタムモデル名",
     disableCostWarnings: "コスト警告を無効化（1）",
 
+    // フォントスケール設定
+    fontScale: "フォントサイズ",
+    fontScaleDesc: "高解像度ディスプレイや読みやすさの向上のためにインターフェースのフォントサイズを調整",
+    fontScaleSmall: "小",
+    fontScaleNormal: "標準",
+    fontScaleLarge: "大",
+    fontScaleExtraLarge: "特大",
+    fontScaleCustom: "カスタム",
+    fontScaleSmallDesc: "高密度ディスプレイ用の小さなフォント",
+    fontScaleNormalDesc: "標準のフォントサイズ",
+    fontScaleLargeDesc: "読みやすさを向上させる大きなフォント",
+    fontScaleExtraLargeDesc: "高解像度画面用の最大フォントサイズ",
+    fontScaleCustomDesc: "カスタムスケール倍率",
+    customMultiplier: "カスタム倍率",
+    customMultiplierDesc: "カスタムフォントスケール倍率を入力してください（0.5x - 3.0x）",
+    customMultiplierPlaceholder: "例：1.5",
+    customMultiplierRange: "範囲：0.5x から 3.0x",
+
     // その他の不足しているキー
     examples: "例：",
     failedToLoadSettings:

@@ -247,6 +247,24 @@ export const it: Translations = {
     customModelName: "Nome modello personalizzato",
     disableCostWarnings: "Disabilita avvisi di costo (1)",
 
+    // Impostazioni di scala del carattere
+    fontScale: "Dimensione carattere",
+    fontScaleDesc: "Regola la dimensione del carattere dell'interfaccia per schermi ad alta risoluzione o per migliorare la leggibilità",
+    fontScaleSmall: "Piccolo",
+    fontScaleNormal: "Normale",
+    fontScaleLarge: "Grande",
+    fontScaleExtraLarge: "Extra grande",
+    fontScaleCustom: "Personalizzato",
+    fontScaleSmallDesc: "Caratteri più piccoli per schermi ad alta densità",
+    fontScaleNormalDesc: "Dimensione carattere standard",
+    fontScaleLargeDesc: "Caratteri più grandi per migliorare la leggibilità",
+    fontScaleExtraLargeDesc: "Dimensione massima del carattere per schermi ad alta risoluzione",
+    fontScaleCustomDesc: "Moltiplicatore di scala personalizzato",
+    customMultiplier: "Moltiplicatore personalizzato",
+    customMultiplierDesc: "Inserisci un moltiplicatore di scala del carattere personalizzato (0.5x - 3.0x)",
+    customMultiplierPlaceholder: "es. 1.5",
+    customMultiplierRange: "Intervallo: 0.5x a 3.0x",
+
     examples: "Esempi:",
     failedToLoadSettings:
       "Impossibile caricare le impostazioni. Assicurati che la directory ~/.claude esista.",
