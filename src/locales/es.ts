@@ -255,6 +255,7 @@ export const es: Translations = {
       "Error al cargar configuración. Por favor asegúrate de que el directorio ~/.claude existe.",
     settingsSavedSuccessfully: "¡Configuración guardada exitosamente!",
     failedToSaveSettings: "Error al guardar configuración",
+    refresh: "Actualizar",
   },
 
   claude: {

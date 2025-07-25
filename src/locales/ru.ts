@@ -256,6 +256,7 @@ export const ru: Translations = {
       "Не удалось загрузить настройки. Убедитесь, что директория ~/.claude существует.",
     settingsSavedSuccessfully: "Настройки успешно сохранены!",
     failedToSaveSettings: "Не удалось сохранить настройки",
+    refresh: "Обновить",
   },
 
   claude: {

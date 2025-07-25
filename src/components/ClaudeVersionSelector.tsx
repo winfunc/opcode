@@ -12,9 +12,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { api, type ClaudeInstallation } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import { CheckCircle, Package, HardDrive, Settings } from "lucide-react";
+import { CheckCircle, Package, HardDrive, Settings, RefreshCw } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { handleError } from "@/lib/errorHandler";
+import { logger } from "@/lib/logger";
 /**
  * Props interface for the ClaudeVersionSelector component
  */
@@ -80,6 +81,11 @@ interface ClaudeVersionSelectorProps {
  * />
  * ```
  */
+// Cache for installations to avoid repeated detection
+let installationsCache: ClaudeInstallation[] | null = null;
+let cacheTimestamp: number = 0;
+const CACHE_DURATION = 30000; // 30 seconds cache
+
 export const ClaudeVersionSelector: React.FC<ClaudeVersionSelectorProps> = ({
   selectedPath,
   onSelect,
@@ -91,17 +97,37 @@ export const ClaudeVersionSelector: React.FC<ClaudeVersionSelectorProps> = ({
   const { t } = useI18n();
   const [installations, setInstallations] = useState<ClaudeInstallation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedInstallation, setSelectedInstallation] = useState<ClaudeInstallation | null>(null);
 
   /**
    * Load available Claude installations from the system
    */
-  const loadInstallations = useCallback(async () => {
+  const loadInstallations = useCallback(async (isRefresh = false) => {
     try {
-      setLoading(true);
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
       setError(null);
-      const foundInstallations = await api.listClaudeInstallations();
+      
+      let foundInstallations: ClaudeInstallation[];
+      
+      // Use cache if available and not expired, unless explicitly refreshing
+      const now = Date.now();
+      if (!isRefresh && installationsCache && (now - cacheTimestamp) < CACHE_DURATION) {
+        foundInstallations = installationsCache;
+        logger.debug("Using cached Claude installations");
+      } else {
+        // Fetch fresh installations and update cache
+        foundInstallations = await api.listClaudeInstallations();
+        installationsCache = foundInstallations;
+        cacheTimestamp = now;
+        logger.debug("Fetched fresh Claude installations and updated cache");
+      }
+      
       setInstallations(foundInstallations);
 
       // If we have a selected path, find and select it
@@ -120,6 +146,7 @@ export const ClaudeVersionSelector: React.FC<ClaudeVersionSelectorProps> = ({
       setError(err instanceof Error ? err.message : "Failed to load Claude installations");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, [onSelect, selectedPath]);
 
@@ -158,9 +185,10 @@ export const ClaudeVersionSelector: React.FC<ClaudeVersionSelectorProps> = ({
     }
   };
 
+  // Only load installations once when component mounts, not on every render
   useEffect(() => {
-    loadInstallations();
-  }, [loadInstallations]);
+    loadInstallations(false);
+  }, [loadInstallations]); // Include loadInstallations dependency
 
   useEffect(() => {
     // Update selected installation when selectedPath changes
@@ -216,7 +244,7 @@ export const ClaudeVersionSelector: React.FC<ClaudeVersionSelectorProps> = ({
         </CardHeader>
         <CardContent>
           <div className="text-sm text-destructive mb-4">{error}</div>
-          <Button onClick={loadInstallations} variant="outline" size="sm">
+          <Button onClick={() => loadInstallations(false)} variant="outline" size="sm">
             Retry
           </Button>
         </CardContent>
@@ -231,9 +259,21 @@ export const ClaudeVersionSelector: React.FC<ClaudeVersionSelectorProps> = ({
   return (
     <Card className={className}>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <CheckCircle className="h-5 w-5" />
-          {t.settings.claudeInstallation}
+        <CardTitle className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <CheckCircle className="h-5 w-5" />
+            {t.settings.claudeInstallation}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => loadInstallations(true)}
+            disabled={loading || refreshing}
+            className="gap-2"
+          >
+            <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
+            {refreshing ? t.common.loading : t.settings.refresh}
+          </Button>
         </CardTitle>
         <CardDescription>{t.settings.choosePreferredInstallation}</CardDescription>
       </CardHeader>

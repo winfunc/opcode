@@ -252,6 +252,7 @@ export const hi: Translations = {
       "सेटिंग्स लोड करने में विफल। कृपया सुनिश्चित करें कि ~/.claude डायरेक्टरी मौजूद है।",
     settingsSavedSuccessfully: "सेटिंग्स सफलतापूर्वक सहेजी गईं!",
     failedToSaveSettings: "सेटिंग्स सहेजने में विफल",
+    refresh: "ताज़ा करें",
   },
 
   claude: {

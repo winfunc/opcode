@@ -245,6 +245,7 @@ export const ar: Translations = {
     failedToLoadSettings: "فشل في تحميل الإعدادات. يرجى التأكد من وجود دليل ~/.claude.",
     settingsSavedSuccessfully: "تم حفظ الإعدادات بنجاح!",
     failedToSaveSettings: "فشل في حفظ الإعدادات",
+    refresh: "تحديث",
   },
 
   claude: {

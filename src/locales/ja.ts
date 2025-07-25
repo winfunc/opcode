@@ -251,6 +251,7 @@ export const ja: Translations = {
       "設定の読み込みに失敗しました。~/.claudeディレクトリが存在することを確認してください。",
     settingsSavedSuccessfully: "設定が正常に保存されました！",
     failedToSaveSettings: "設定の保存に失敗しました",
+    refresh: "更新",
   },
 
   claude: {

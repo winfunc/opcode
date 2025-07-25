@@ -250,6 +250,7 @@ export const ko: Translations = {
     failedToLoadSettings: "설정을 로드하지 못했습니다. ~/.claude 디렉토리가 존재하는지 확인하세요.",
     settingsSavedSuccessfully: "설정이 성공적으로 저장되었습니다!",
     failedToSaveSettings: "설정 저장 실패",
+    refresh: "새로고침",
   },
 
   claude: {

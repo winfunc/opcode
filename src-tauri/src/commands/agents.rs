@@ -1847,6 +1847,8 @@ pub async fn set_claude_binary_path(db: State<'_, AgentDb>, path: String) -> Res
             params![path],
         )
         .map_err(|e| format!("Failed to save Claude binary path: {}", e))?;
+        
+        info!("✅ Claude binary path updated to bundled sidecar: {}", path);
         return Ok(());
     }
 
@@ -1876,7 +1878,20 @@ pub async fn set_claude_binary_path(db: State<'_, AgentDb>, path: String) -> Res
     )
     .map_err(|e| format!("Failed to save Claude binary path: {}", e))?;
 
+    info!("✅ Claude binary path updated to: {}", path);
     Ok(())
+}
+
+/// Refresh the Claude binary path cache to use the newly saved path immediately
+#[tauri::command]
+pub async fn refresh_claude_binary_path(app: AppHandle) -> Result<String, String> {
+    info!("🔄 Refreshing Claude binary path...");
+    
+    // Clear any internal caches and re-read from the database
+    let current_path = find_claude_binary(&app)?;
+    
+    info!("✅ Claude binary path refreshed to: {}", current_path);
+    Ok(current_path)
 }
 
 /// List all available Claude installations on the system
@@ -1884,11 +1899,15 @@ pub async fn set_claude_binary_path(db: State<'_, AgentDb>, path: String) -> Res
 pub async fn list_claude_installations(
     app: AppHandle,
 ) -> Result<Vec<crate::claude_binary::ClaudeInstallation>, String> {
+    info!("🔍 Discovering Claude installations...");
     let mut installations = crate::claude_binary::discover_claude_installations();
 
     if installations.is_empty() {
+        warn!("No Claude Code installations found on the system");
         return Err("No Claude Code installations found on the system".to_string());
     }
+    
+    info!("Found {} Claude installation(s)", installations.len());
 
     // For bundled installations, execute the sidecar to get the actual version
     for installation in &mut installations {
@@ -1949,7 +1968,7 @@ pub async fn list_claude_installations(
                         if let Some(captures) = regex.captures(&stdout_output) {
                             if let Some(version_match) = captures.get(1) {
                                 installation.version = Some(version_match.as_str().to_string());
-                                log::info!("Bundled sidecar version: {}", version_match.as_str());
+                                info!("Bundled sidecar version: {}", version_match.as_str());
                             }
                         }
                     }

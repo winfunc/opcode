@@ -249,6 +249,7 @@ export const en: Translations = {
     failedToLoadSettings: "Failed to load settings. Please ensure ~/.claude directory exists.",
     settingsSavedSuccessfully: "Settings saved successfully!",
     failedToSaveSettings: "Failed to save settings",
+    refresh: "Refresh",
   },
 
   claude: {

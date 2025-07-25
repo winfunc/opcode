@@ -1587,6 +1587,19 @@ export const api = {
   },
 
   /**
+   * Refresh the Claude binary path cache to use the newly saved path immediately
+   * @returns Promise resolving to the current Claude binary path
+   */
+  async refreshClaudeBinaryPath(): Promise<string> {
+    try {
+      return await invoke<string>("refresh_claude_binary_path");
+    } catch (error) {
+      logger.error("Failed to refresh Claude binary path:", error);
+      throw error;
+    }
+  },
+
+  /**
    * List all available Claude installations on the system
    * @returns Promise resolving to an array of Claude installations
    */

@@ -246,6 +246,7 @@ export const zh: Translations = {
     failedToLoadSettings: "加载设置失败。请确保 ~/.claude 目录存在。",
     settingsSavedSuccessfully: "设置保存成功！",
     failedToSaveSettings: "保存设置失败",
+    refresh: "刷新",
   },
 
   claude: {

@@ -258,6 +258,7 @@ export const de: Translations = {
       "Fehler beim Laden der Einstellungen. Bitte stellen Sie sicher, dass das Verzeichnis ~/.claude existiert.",
     settingsSavedSuccessfully: "Einstellungen erfolgreich gespeichert!",
     failedToSaveSettings: "Fehler beim Speichern der Einstellungen",
+    refresh: "Aktualisieren",
   },
 
   claude: {

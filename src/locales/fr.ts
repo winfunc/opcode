@@ -258,6 +258,7 @@ export const fr: Translations = {
       "Échec du chargement des paramètres. Veuillez vous assurer que le répertoire ~/.claude existe.",
     settingsSavedSuccessfully: "Paramètres enregistrés avec succès !",
     failedToSaveSettings: "Échec de l'enregistrement des paramètres",
+    refresh: "Actualiser",
   },
 
   claude: {

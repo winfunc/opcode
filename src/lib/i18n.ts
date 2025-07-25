@@ -281,6 +281,7 @@ export interface Translations {
     failedToLoadSettings: string;
     settingsSavedSuccessfully: string;
     failedToSaveSettings: string;
+    refresh: string;
   };
 
   // Claude相关

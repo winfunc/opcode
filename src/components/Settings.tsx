@@ -244,7 +244,21 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
       // Save Claude binary path if changed
       if (binaryPathChanged && selectedInstallation) {
         await api.setClaudeBinaryPath(selectedInstallation.path);
-        setCurrentBinaryPath(selectedInstallation.path);
+        // Immediately refresh the binary path cache so the new version is used right away
+        try {
+          const refreshedPath = await api.refreshClaudeBinaryPath();
+          logger.info("Claude binary path refreshed successfully:", refreshedPath);
+          // Update the current binary path immediately to reflect the change
+          setCurrentBinaryPath(selectedInstallation.path);
+          // Notify the Topbar to refresh the Claude version status
+          window.dispatchEvent(new CustomEvent("claude-version-changed"));
+        } catch (refreshError) {
+          logger.warn("Failed to refresh Claude binary path cache:", refreshError);
+          // Still update the UI with the selected path even if refresh fails
+          setCurrentBinaryPath(selectedInstallation.path);
+          // Still notify the Topbar even if refresh fails, as the path has changed
+          window.dispatchEvent(new CustomEvent("claude-version-changed"));
+        }
         setBinaryPathChanged(false);
       }
 

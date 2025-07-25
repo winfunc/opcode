@@ -254,6 +254,7 @@ export const pt: Translations = {
       "Falha ao carregar configurações. Certifique-se de que o diretório ~/.claude existe.",
     settingsSavedSuccessfully: "Configurações salvas com sucesso!",
     failedToSaveSettings: "Falha ao salvar configurações",
+    refresh: "Atualizar",
   },
 
   claude: {

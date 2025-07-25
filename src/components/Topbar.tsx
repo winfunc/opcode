@@ -80,6 +80,18 @@ export const Topbar: React.FC<TopbarProps> = ({
     checkVersion();
   }, []);
 
+  // Listen for Claude version changes from settings
+  useEffect(() => {
+    const handleVersionChanged = () => {
+      checkVersion();
+    };
+
+    window.addEventListener("claude-version-changed", handleVersionChanged);
+    return () => {
+      window.removeEventListener("claude-version-changed", handleVersionChanged);
+    };
+  }, []);
+
   const checkVersion = async () => {
     try {
       setChecking(true);

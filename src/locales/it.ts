@@ -252,6 +252,7 @@ export const it: Translations = {
       "Impossibile caricare le impostazioni. Assicurati che la directory ~/.claude esista.",
     settingsSavedSuccessfully: "Impostazioni salvate con successo!",
     failedToSaveSettings: "Impossibile salvare le impostazioni",
+    refresh: "Aggiorna",
   },
 
   claude: {
