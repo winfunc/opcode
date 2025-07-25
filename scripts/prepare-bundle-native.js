@@ -69,11 +69,16 @@ if (shebangMatch) {
 }
 
 // 2. Replace yoga.wasm loading - handle top-level await properly
-// Handle both 1.0.41 and 1.0.55 patterns
+// Handle both 1.0.41 and 1.0.60 patterns
 // 1.0.41: var k81=await nUA(await VP9(CP9(import.meta.url).resolve("./yoga.wasm")));
-// 1.0.55: var B71=await OPA(await WtB(JtB(import.meta.url).resolve("./yoga.wasm")));
+// 1.0.60: var B71=await OPA(await WtB(JtB(import.meta.url).resolve("./yoga.wasm")));
 
-// Try 1.0.55 pattern first (newer version)
+// Try 1.0.60 pattern first (newer version)
+const yoga160Pattern =
+  /var QV1=await Va0\(await bT9\(fT9\(import\.meta\.url\)\.resolve\("\.\/yoga\.wasm"\)\)\);/;
+const yoga160Replacement = `var QV1=await(async()=>{return await Va0(await Bun.file(__embeddedYogaWasm).arrayBuffer())})();`;
+
+// Try 1.0.55 pattern (older version)  
 const yoga155Pattern =
   /var B71=await OPA\(await WtB\(JtB\(import\.meta\.url\)\.resolve\("\.\/yoga\.wasm"\)\)\);/;
 const yoga155Replacement = `var B71=await(async()=>{return await OPA(await Bun.file(__embeddedYogaWasm).arrayBuffer())})();`;
@@ -83,9 +88,12 @@ const yoga141Pattern =
   /var k81=await nUA\(await VP9\(CP9\(import\.meta\.url\)\.resolve\("\.\/yoga\.wasm"\)\)\);/;
 const yoga141Replacement = `var k81=await(async()=>{return await nUA(await Bun.file(__embeddedYogaWasm).arrayBuffer())})();`;
 
-if (yoga155Pattern.test(cliContent)) {
+if (yoga160Pattern.test(cliContent)) {
+  cliContent = cliContent.replace(yoga160Pattern, yoga160Replacement);
+  log.info("✅Replaced yoga.wasm loading with embedded version (1.0.60 pattern)");
+} else if (yoga155Pattern.test(cliContent)) {
   cliContent = cliContent.replace(yoga155Pattern, yoga155Replacement);
-  log.info("�?Replaced yoga.wasm loading with embedded version (1.0.55 pattern)");
+  log.info("✅Replaced yoga.wasm loading with embedded version (1.0.55 pattern)");
 } else if (yoga141Pattern.test(cliContent)) {
   cliContent = cliContent.replace(yoga141Pattern, yoga141Replacement);
   log.info("�?Replaced yoga.wasm loading with embedded version (1.0.41 pattern)");

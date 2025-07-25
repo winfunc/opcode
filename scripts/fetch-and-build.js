@@ -15,7 +15,7 @@
  * Where platform can be: all, linux, macos, windows, current
  *
  * Version can be specified via:
- *   - CLI argument: --version=1.0.41 (defaults to 1.0.41 if not specified)
+ *   - CLI argument: --version=1.0.60 (defaults to 1.0.60 if not specified)
  */
 
 import { spawn } from "child_process";
@@ -103,7 +103,7 @@ function parseArguments(args) {
  * @returns {string} - The version to use
  */
 function determineClaudeCodeVersion(cliVersion) {
-  const defaultVersion = "1.0.41";
+  const defaultVersion = "1.0.60";
 
   if (cliVersion) {
     log.info(`\n🔍 Using Claude Code version from CLI argument: ${cliVersion}`);
@@ -325,7 +325,7 @@ async function main() {
     log.error("Examples:");
     log.error("  bun run fetch-and-build.js");
     log.error("  bun run fetch-and-build.js linux");
-    log.error("  bun run fetch-and-build.js macos --version=1.0.42");
+    log.error("  bun run fetch-and-build.js macos --version=1.0.60");
     process.exit(1);
   }
 
