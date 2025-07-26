@@ -8,6 +8,7 @@
     "predev": "bun run build:executables:current",
     "dev": "vite",
     "build": "tsc && vite build --config vite.config.production.ts",
+    "build:debug": "tsc && vite build --mode development",
     "prebuild": "bun run build:executables:current",
     "build:executables": "bun run scripts/fetch-and-build.js --version=1.0.60",
     "build:executables:current": "bun run scripts/fetch-and-build.js current --version=1.0.60",

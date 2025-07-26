@@ -6,7 +6,7 @@ import { fileURLToPath, URL } from "node:url";
 const host = process.env.TAURI_DEV_HOST;
 
 // https://vitejs.dev/config/
-export default defineConfig(async () => ({
+export default defineConfig(({ mode }) => ({
   plugins: [react(), tailwindcss()],
 
   // Path resolution
@@ -42,6 +42,9 @@ export default defineConfig(async () => ({
   build: {
     // Increase chunk size warning limit to 2000 KB
     chunkSizeWarningLimit: 2000,
+    
+    // development模式下禁用压缩
+    minify: mode === 'development' ? false : 'terser',
 
     rollupOptions: {
       output: {
