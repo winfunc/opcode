@@ -79,7 +79,7 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [showGitHubBrowser, setShowGitHubBrowser] = useState(false);
-  const { createAgentTab, createCreateAgentTab } = useTabState();
+  const { createAgentTab } = useTabState();
 
   // Load agents when modal opens
   useEffect(() => {
@@ -208,7 +208,7 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
       if (filePath) {
         // Import with agent type based on current tab selection
         const agentType = activeTab === 'native' ? 'native' : 'claudia';
-        const agent = await api.importAgentFromFile(filePath as string, agentType);
+        await api.importAgentFromFile(filePath as string, agentType);
         loadAgents(); // Refresh list
         setToast({ message: t.agents.agentImportedSuccessfully, type: "success" });
       }
@@ -227,7 +227,7 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
       const count = await api.importNativeAgents();
 
       if (count === 0) {
-        setToast({ message: "未找到要导入的原生智能体", type: "info" });
+        setToast({ message: "未找到要导入的原生智能体", type: "error" });
       } else {
         setToast({ message: `成功导入了 ${count} 个原生智能体`, type: "success" });
       }

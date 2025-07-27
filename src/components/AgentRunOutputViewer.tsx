@@ -7,7 +7,6 @@ import {
   RefreshCw,
   RotateCcw,
   ChevronDown,
-  Bot,
   Clock,
   Hash,
   DollarSign,

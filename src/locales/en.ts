@@ -636,10 +636,8 @@ export const en: Translations = {
     deleting: "Deleting...",
     // Native agents related translations
     allAgents: "All Agents",
-    claudiaAgents: "Claudia Agents",
-    nativeAgents: "Native Agents",
-    native: "Native",
     claudia: "Claudia",
+    native: "Native",
     running: "Running",
     createClaudiaAgent: "Create Claudia Agent",
     noClaudiaAgents: "No Claudia agents",

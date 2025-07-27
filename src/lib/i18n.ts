@@ -667,6 +667,23 @@ export interface Translations {
     costEstimate: string;
     pricingDetails: string;
     basedOnOfficialPricing: string;
+    // 新增缺失的翻译键
+    allAgents: string;
+    claudia: string;
+    native: string;
+    running: string;
+    createClaudiaAgent: string;
+    noClaudiaAgents: string;
+    createFirstClaudiaAgent: string;
+    nativeAgentsInfo: string;
+    importNativeAgents: string;
+    cleanDatabase: string;
+    noNativeAgentsFound: string;
+    nativeAgentsDesc: string;
+    noRunningAgents: string;
+    agentExecutionsWillAppear: string;
+    started: string;
+    view: string;
   };
 
   // Thinking modes for Claude AI interaction
