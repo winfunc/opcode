@@ -70,8 +70,9 @@ interface AgentsModalProps {
  */
 export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) => {
   const { t } = useI18n();
-  const [activeTab, setActiveTab] = useState("agents");
+  const [activeTab, setActiveTab] = useState("all");
   const [agents, setAgents] = useState<Agent[]>([]);
+  const [nativeAgents, setNativeAgents] = useState<Agent[]>([]);
   const [runningAgents, setRunningAgents] = useState<AgentRunWithMetrics[]>([]);
   const [loading, setLoading] = useState(true);
   const [agentToDelete, setAgentToDelete] = useState<Agent | null>(null);
@@ -102,8 +103,17 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
   const loadAgents = async () => {
     try {
       setLoading(true);
-      const agentList = await api.listAgents();
-      setAgents(agentList);
+      // Load both database agents and native agents
+      const [dbAgents, nativeAgentsList] = await Promise.all([
+        api.listAgents(),
+        api.listNativeAgents()
+      ]);
+
+      // Database agents (Claudia agents)
+      setAgents(dbAgents);
+
+      // Native agents from .claude/agents folder
+      setNativeAgents(nativeAgentsList);
     } catch (error) {
       await handleError("Failed to load agents:", { context: error });
     } finally {
@@ -173,9 +183,14 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
   };
 
   const handleCreateAgent = () => {
-    // Close modal and create new tab
+    // Close modal and create new tab with prepopulated agent type based on current tab
+    const agentType = activeTab === 'native' ? 'native' : activeTab === 'claudia' ? 'claudia' : 'claudia'; // default to claudia
     onOpenChange(false);
-    createCreateAgentTab();
+
+    // Dispatch event with agent type preference
+    window.dispatchEvent(new globalThis.CustomEvent('open-create-agent-tab', {
+      detail: { defaultAgentType: agentType }
+    }));
   };
 
   const handleImportFromFile = async () => {
@@ -191,7 +206,9 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
       });
 
       if (filePath) {
-        const agent = await api.importAgentFromFile(filePath as string);
+        // Import with agent type based on current tab selection
+        const agentType = activeTab === 'native' ? 'native' : 'claudia';
+        const agent = await api.importAgentFromFile(filePath as string, agentType);
         loadAgents(); // Refresh list
         setToast({ message: `Agent "${agent.name}" imported successfully`, type: "success" });
       }
@@ -204,6 +221,40 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
   const handleImportFromGitHub = () => {
     setShowGitHubBrowser(true);
   };
+
+  const handleDeleteNativeAgents = async () => {
+    if (!confirm('Are you sure you want to delete all native agents from the database? This will not delete the .claude/agents files, but will remove them from the database so they appear properly as native agents.')) {
+      return;
+    }
+
+    try {
+      console.log('Attempting to delete native agents...');
+      const count = await api.deleteNativeAgents();
+      console.log(`Delete operation returned: ${count}`);
+
+      if (count === 0) {
+        setToast({ message: "No native agents found in database to delete", type: "success" });
+      } else {
+        setToast({ message: `Successfully deleted ${count} native agents from database`, type: "success" });
+      }
+
+      await loadAgents(); // Refresh both lists
+    } catch (error) {
+      await handleError("Failed to delete native agents:", { context: error });
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      setToast({ message: `Failed to delete native agents: ${errorMessage}`, type: "error" });
+    }
+  };
+
+  // Filter agents based on active tab
+  const getFilteredAgents = () => {
+    if (activeTab === 'all') return [...agents, ...nativeAgents];
+    if (activeTab === 'native') return nativeAgents;
+    if (activeTab === 'claudia') return agents.filter(agent => !agent.source || agent.source === 'claudia' || agent.source === 'user');
+    return agents;
+  };
+
+  const filteredAgents = getFilteredAgents();
 
   const handleExportAgent = async (agent: Agent) => {
     try {
@@ -257,10 +308,12 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
           </DialogHeader>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-            <TabsList className="mx-6">
-              <TabsTrigger value="agents">{t.agents.availableAgents}</TabsTrigger>
+            <TabsList className="mx-6 mb-4">
+              <TabsTrigger value="all">All Agents</TabsTrigger>
+              <TabsTrigger value="claudia">Claudia</TabsTrigger>
+              <TabsTrigger value="native">Native</TabsTrigger>
               <TabsTrigger value="running" className="relative">
-                {t.agents.runningAgents}
+                Running
                 {runningAgents.length > 0 && (
                   <Badge variant="secondary" className="ml-2 h-5 px-1.5">
                     {runningAgents.length}
@@ -270,105 +323,303 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
             </TabsList>
 
             <div className="flex-1 overflow-hidden">
-              <TabsContent value="agents" className="h-full m-0">
-                <ScrollArea className="h-full px-6 pb-6">
-                  {/* Action buttons at the top */}
-                  <div className="flex gap-2 mb-4 pt-4">
-                    <Button onClick={handleCreateAgent} className="flex-1">
-                      <Plus className="w-4 h-4 mr-2" />
-                      {t.agents.createAgent}
-                    </Button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="flex-1">
-                          <Import className="w-4 h-4 mr-2" />
-                          {t.agents.importAgent}
-                          <ChevronDown className="w-4 h-4 ml-2" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent>
-                        <DropdownMenuItem onClick={handleImportFromFile}>
-                          <FileJson className="w-4 h-4 mr-2" />
-                          From File
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={handleImportFromGitHub}>
-                          <Globe className="w-4 h-4 mr-2" />
-                          From GitHub
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                  {loading ? (
-                    <div className="flex items-center justify-center h-full">
-                      <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+              {/* All Agents Tab */}
+              <TabsContent value="all" className="h-full m-0">
+                {/* Action buttons at the top */}
+                <div className="flex gap-2 mb-4 px-6 pt-4">
+                  <Button onClick={handleCreateAgent} className="flex-1">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create Agent
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" className="flex-1">
+                        <Import className="w-4 h-4 mr-2" />
+                        Import Agent
+                        <ChevronDown className="w-4 h-4 ml-2" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuItem onClick={handleImportFromFile}>
+                        <FileJson className="w-4 h-4 mr-2" />
+                        From File
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleImportFromGitHub}>
+                        <Globe className="w-4 h-4 mr-2" />
+                        From GitHub
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+
+                {/* Scrollable content area */}
+                <ScrollArea className="h-[400px]">
+                    <div className="px-6 pb-6">
+                      {loading ? (
+                        <div className="flex items-center justify-center h-64">
+                          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                        </div>
+                      ) : filteredAgents.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-64 text-center">
+                          <Bot className="w-12 h-12 text-muted-foreground mb-4" />
+                          <p className="text-lg font-medium mb-2">No agents available</p>
+                          <p className="text-sm text-muted-foreground mb-4">
+                            Create your first agent to get started
+                          </p>
+                          <Button onClick={() => {
+                            onOpenChange(false);
+                            window.dispatchEvent(new globalThis.CustomEvent('open-create-agent-tab'));
+                          }}>
+                            <Plus className="w-4 h-4 mr-2" />
+                            Create Agent
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="grid gap-4 py-4">
+                          {filteredAgents.map((agent) => (
+                            <motion.div
+                              key={agent.id}
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                            >
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <h3 className="font-medium flex items-center gap-2">
+                                    <Bot className="w-4 h-4" />
+                                    {agent.name}
+                                    {agent.source === 'native' && (
+                                      <Badge variant="outline" className="text-xs">Native</Badge>
+                                    )}
+                                  </h3>
+                                  {agent.default_task && (
+                                    <p className="text-sm text-muted-foreground mt-1">
+                                      {agent.default_task}
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => handleExportAgent(agent)}
+                                  >
+                                    <Download className="w-3 h-3 mr-1" />
+                                    Export
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => handleDeleteAgent(agent)}
+                                    className="text-destructive hover:text-destructive"
+                                  >
+                                    <Trash2 className="w-3 h-3 mr-1" />
+                                    Delete
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleRunAgent(agent)}
+                                  >
+                                    <Play className="w-3 h-3 mr-1" />
+                                    Run
+                                  </Button>
+                                </div>
+                              </div>
+                            </motion.div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  ) : agents.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full text-center">
-                      <Bot className="w-12 h-12 text-muted-foreground mb-4" />
-                      <p className="text-lg font-medium mb-2">{t.agents.noAgentsAvailable}</p>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        {t.agents.createFirstAgentToGetStarted}
+                  </ScrollArea>
+              </TabsContent>
+
+              {/* Claudia Agents Tab */}
+              <TabsContent value="claudia" className="h-full m-0">
+                {/* Action buttons at the top */}
+                <div className="flex gap-2 mb-4 px-6 pt-4">
+                  <Button onClick={handleCreateAgent} className="flex-1">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create Claudia Agent
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" className="flex-1">
+                        <Import className="w-4 h-4 mr-2" />
+                        Import Agent
+                        <ChevronDown className="w-4 h-4 ml-2" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuItem onClick={handleImportFromFile}>
+                        <FileJson className="w-4 h-4 mr-2" />
+                        From File
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleImportFromGitHub}>
+                        <Globe className="w-4 h-4 mr-2" />
+                        From GitHub
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+
+                {/* Scrollable content area */}
+                <ScrollArea className="h-[400px]">
+                    <div className="px-6 pb-6">
+                      {loading ? (
+                        <div className="flex items-center justify-center h-64">
+                          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                        </div>
+                      ) : filteredAgents.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-64 text-center">
+                          <Bot className="w-12 h-12 text-muted-foreground mb-4" />
+                          <p className="text-lg font-medium mb-2">No Claudia agents</p>
+                          <p className="text-sm text-muted-foreground mb-4">
+                            Create your first Claudia agent
+                          </p>
+                          <Button onClick={handleCreateAgent}>
+                            <Plus className="w-4 h-4 mr-2" />
+                            Create Claudia Agent
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="grid gap-4 py-4">
+                          {filteredAgents.map((agent) => (
+                            <motion.div
+                              key={agent.id}
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                            >
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <h3 className="font-medium flex items-center gap-2">
+                                    <Bot className="w-4 h-4" />
+                                    {agent.name}
+                                    <Badge variant="outline" className="text-xs text-blue-600">Claudia</Badge>
+                                  </h3>
+                                  {agent.default_task && (
+                                    <p className="text-sm text-muted-foreground mt-1">
+                                      {agent.default_task}
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => handleExportAgent(agent)}
+                                  >
+                                    <Download className="w-3 h-3 mr-1" />
+                                    Export
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => handleDeleteAgent(agent)}
+                                    className="text-destructive hover:text-destructive"
+                                  >
+                                    <Trash2 className="w-3 h-3 mr-1" />
+                                    Delete
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleRunAgent(agent)}
+                                  >
+                                    <Play className="w-3 h-3 mr-1" />
+                                    Run
+                                  </Button>
+                                </div>
+                              </div>
+                            </motion.div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </ScrollArea>
+              </TabsContent>
+
+              {/* Native Agents Tab */}
+              <TabsContent value="native" className="h-full m-0">
+                {/* Info message about native agents */}
+                <div className="px-6 pt-4 pb-2">
+                  <div className="p-3 rounded-lg bg-blue-50 border border-blue-200 dark:bg-blue-950 dark:border-blue-800">
+                    <div className="flex justify-between items-center">
+                      <p className="text-sm text-blue-700 dark:text-blue-300">
+                        These are Claude Code native agents imported from your ~/.claude/agents folder.
                       </p>
                       <Button
-                        onClick={() => {
-                          onOpenChange(false);
-                          window.dispatchEvent(new globalThis.CustomEvent("open-create-agent-tab"));
-                        }}
+                        size="sm"
+                        variant="outline"
+                        onClick={handleDeleteNativeAgents}
+                        className="text-xs"
                       >
-                        <Plus className="w-4 h-4 mr-2" />
-                        {t.agents.createAgent}
+                        Clean Database
                       </Button>
                     </div>
-                  ) : (
-                    <div className="grid gap-4 py-4">
-                      {agents.map((agent) => (
-                        <motion.div
-                          key={agent.id}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                        >
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <h3 className="font-medium flex items-center gap-2">
-                                <Bot className="w-4 h-4" />
-                                {agent.name}
-                              </h3>
-                              {agent.default_task && (
-                                <p className="text-sm text-muted-foreground mt-1">
-                                  {agent.default_task}
-                                </p>
-                              )}
-                            </div>
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => handleExportAgent(agent)}
-                              >
-                                <Download className="w-3 h-3 mr-1" />
-                                Export
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => handleDeleteAgent(agent)}
-                                className="text-destructive hover:text-destructive"
-                              >
-                                <Trash2 className="w-3 h-3 mr-1" />
-                                Delete
-                              </Button>
-                              <Button size="sm" onClick={() => handleRunAgent(agent)}>
-                                <Play className="w-3 h-3 mr-1" />
-                                Run
-                              </Button>
-                            </div>
-                          </div>
-                        </motion.div>
-                      ))}
+                  </div>
+                </div>
+
+                {/* Scrollable content area */}
+                <ScrollArea className="h-[400px]">
+                    <div className="px-6 pb-6">
+                      {loading ? (
+                        <div className="flex items-center justify-center h-64">
+                          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                        </div>
+                      ) : filteredAgents.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-64 text-center">
+                          <Bot className="w-12 h-12 text-muted-foreground mb-4" />
+                          <p className="text-lg font-medium mb-2">No native agents found</p>
+                          <p className="text-sm text-muted-foreground">
+                            Place .md agent files in ~/.claude/agents/ to see them here
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="grid gap-4 py-4">
+                          {filteredAgents.map((agent) => (
+                            <motion.div
+                              key={agent.id}
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                            >
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <h3 className="font-medium flex items-center gap-2">
+                                    <Bot className="w-4 h-4" />
+                                    {agent.name}
+                                    <Badge variant="outline" className="text-xs text-green-600">Native</Badge>
+                                  </h3>
+                                  {agent.default_task && (
+                                    <p className="text-sm text-muted-foreground mt-1">
+                                      {agent.default_task}
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => handleExportAgent(agent)}
+                                  >
+                                    <Download className="w-3 h-3 mr-1" />
+                                    Export
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleRunAgent(agent)}
+                                  >
+                                    <Play className="w-3 h-3 mr-1" />
+                                    Run
+                                  </Button>
+                                </div>
+                              </div>
+                            </motion.div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </ScrollArea>
+                  </ScrollArea>
               </TabsContent>
 
               <TabsContent value="running" className="h-full m-0">

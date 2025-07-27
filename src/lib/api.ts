@@ -128,6 +128,7 @@ export interface Agent {
   default_task?: string;
   model: string;
   hooks?: string; // JSON string of HooksConfiguration
+  source?: string; // 'claudia', 'native', 'user', etc.
   created_at: string;
   updated_at: string;
 }
@@ -672,6 +673,19 @@ export const api = {
   },
 
   /**
+   * Lists native agents directly from .claude/agents directory
+   * @returns Promise resolving to an array of native agents
+   */
+  async listNativeAgents(): Promise<Agent[]> {
+    try {
+      return await invoke<Agent[]>("list_native_agents");
+    } catch (error) {
+      logger.error("Failed to list native agents:", error);
+      throw error;
+    }
+  },
+
+  /**
    * Creates a new agent
    * @param name - The agent name
    * @param icon - The icon identifier
@@ -679,6 +693,7 @@ export const api = {
    * @param default_task - Optional default task
    * @param model - Optional model (defaults to 'sonnet')
    * @param hooks - Optional hooks configuration as JSON string
+   * @param source - Optional source type (defaults to 'claudia')
    * @returns Promise resolving to the created agent
    */
   async createAgent(
@@ -687,7 +702,8 @@ export const api = {
     system_prompt: string,
     default_task?: string,
     model?: string,
-    hooks?: string
+    hooks?: string,
+    source?: string
   ): Promise<Agent> {
     try {
       return await invoke<Agent>("create_agent", {
@@ -697,6 +713,7 @@ export const api = {
         defaultTask: default_task,
         model,
         hooks,
+        source: source || 'claudia',
       });
     } catch (error) {
       logger.error("Failed to create agent:", error);
@@ -755,6 +772,19 @@ export const api = {
   },
 
   /**
+   * Deletes all native agents from database (keeping .claude/agents files intact)
+   * @returns Promise resolving to the number of agents deleted
+   */
+  async deleteNativeAgents(): Promise<number> {
+    try {
+      return await invoke<number>("delete_native_agents");
+    } catch (error) {
+      logger.error("Failed to delete native agents:", error);
+      throw error;
+    }
+  },
+
+  /**
    * Gets a single agent by ID
    * @param id - The agent ID
    * @returns Promise resolving to the agent
@@ -799,11 +829,12 @@ export const api = {
   /**
    * Imports an agent from a file
    * @param filePath - The path to the JSON file
+   * @param source - The source type ('claudia' or 'native')
    * @returns Promise resolving to the imported agent
    */
-  async importAgentFromFile(filePath: string): Promise<Agent> {
+  async importAgentFromFile(filePath: string, source: string = 'claudia'): Promise<Agent> {
     try {
-      return await invoke<Agent>("import_agent_from_file", { filePath });
+      return await invoke<Agent>("import_agent_from_file", { filePath, source });
     } catch (error) {
       logger.error("Failed to import agent from file:", error);
       throw error;

@@ -34,6 +34,7 @@ pub struct Agent {
     pub enable_file_write: bool,
     pub enable_network: bool,
     pub hooks: Option<String>, // JSON string of hooks configuration
+    pub source: Option<String>, // 'claudia', 'native', 'user', etc.
     pub created_at: String,
     pub updated_at: String,
 }
@@ -257,6 +258,7 @@ pub fn init_database(app: &AppHandle) -> SqliteResult<Connection> {
         [],
     );
     let _ = conn.execute("ALTER TABLE agents ADD COLUMN hooks TEXT", []);
+    let _ = conn.execute("ALTER TABLE agents ADD COLUMN source TEXT DEFAULT 'claudia'", []);
     let _ = conn.execute(
         "ALTER TABLE agents ADD COLUMN enable_file_read BOOLEAN DEFAULT 1",
         [],
@@ -318,8 +320,8 @@ pub fn init_database(app: &AppHandle) -> SqliteResult<Connection> {
 
     // Create trigger to update the updated_at timestamp
     conn.execute(
-        "CREATE TRIGGER IF NOT EXISTS update_agent_timestamp 
-         AFTER UPDATE ON agents 
+        "CREATE TRIGGER IF NOT EXISTS update_agent_timestamp
+         AFTER UPDATE ON agents
          FOR EACH ROW
          BEGIN
              UPDATE agents SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
@@ -341,8 +343,8 @@ pub fn init_database(app: &AppHandle) -> SqliteResult<Connection> {
 
     // Create trigger to update the updated_at timestamp
     conn.execute(
-        "CREATE TRIGGER IF NOT EXISTS update_app_settings_timestamp 
-         AFTER UPDATE ON app_settings 
+        "CREATE TRIGGER IF NOT EXISTS update_app_settings_timestamp
+         AFTER UPDATE ON app_settings
          FOR EACH ROW
          BEGIN
              UPDATE app_settings SET updated_at = CURRENT_TIMESTAMP WHERE key = NEW.key;
@@ -359,7 +361,7 @@ pub async fn list_agents(db: State<'_, AgentDb>) -> Result<Vec<Agent>, String> {
     let conn = db.0.lock().map_err(|e| e.to_string())?;
 
     let mut stmt = conn
-        .prepare("SELECT id, name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, hooks, created_at, updated_at FROM agents ORDER BY created_at DESC")
+        .prepare("SELECT id, name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, hooks, source, created_at, updated_at FROM agents ORDER BY created_at DESC")
         .map_err(|e| e.to_string())?;
 
     let agents = stmt
@@ -377,8 +379,9 @@ pub async fn list_agents(db: State<'_, AgentDb>) -> Result<Vec<Agent>, String> {
                 enable_file_write: row.get::<_, bool>(7).unwrap_or(true),
                 enable_network: row.get::<_, bool>(8).unwrap_or(false),
                 hooks: row.get(9)?,
-                created_at: row.get(10)?,
-                updated_at: row.get(11)?,
+                source: row.get(10)?,
+                created_at: row.get(11)?,
+                updated_at: row.get(12)?,
             })
         })
         .map_err(|e| e.to_string())?
@@ -401,16 +404,18 @@ pub async fn create_agent(
     enable_file_write: Option<bool>,
     enable_network: Option<bool>,
     hooks: Option<String>,
+    source: Option<String>,
 ) -> Result<Agent, String> {
     let conn = db.0.lock().map_err(|e| e.to_string())?;
     let model = model.unwrap_or_else(|| "sonnet-3-5".to_string());
     let enable_file_read = enable_file_read.unwrap_or(true);
     let enable_file_write = enable_file_write.unwrap_or(true);
     let enable_network = enable_network.unwrap_or(false);
+    let source = source.unwrap_or_else(|| "claudia".to_string());
 
     conn.execute(
-        "INSERT INTO agents (name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, hooks) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
-        params![name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, hooks],
+        "INSERT INTO agents (name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, hooks, source) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+        params![name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, hooks, source],
     )
     .map_err(|e| e.to_string())?;
 
@@ -419,7 +424,7 @@ pub async fn create_agent(
     // Fetch the created agent
     let agent = conn
         .query_row(
-            "SELECT id, name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, hooks, created_at, updated_at FROM agents WHERE id = ?1",
+            "SELECT id, name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, hooks, source, created_at, updated_at FROM agents WHERE id = ?1",
             params![id],
             |row| {
                 Ok(Agent {
@@ -433,8 +438,9 @@ pub async fn create_agent(
                     enable_file_write: row.get(7)?,
                     enable_network: row.get(8)?,
                     hooks: row.get(9)?,
-                    created_at: row.get(10)?,
-                    updated_at: row.get(11)?,
+                    source: row.get(10)?,
+                    created_at: row.get(11)?,
+                    updated_at: row.get(12)?,
                 })
             },
         )
@@ -504,7 +510,7 @@ pub async fn update_agent(
     // Fetch the updated agent
     let agent = conn
         .query_row(
-            "SELECT id, name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, hooks, created_at, updated_at FROM agents WHERE id = ?1",
+            "SELECT id, name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, hooks, source, created_at, updated_at FROM agents WHERE id = ?1",
             params![id],
             |row| {
                 Ok(Agent {
@@ -518,8 +524,9 @@ pub async fn update_agent(
                     enable_file_write: row.get(7)?,
                     enable_network: row.get(8)?,
                     hooks: row.get(9)?,
-                    created_at: row.get(10)?,
-                    updated_at: row.get(11)?,
+                    source: row.get(10)?,
+                    created_at: row.get(11)?,
+                    updated_at: row.get(12)?,
                 })
             },
         )
@@ -546,7 +553,7 @@ pub async fn get_agent(db: State<'_, AgentDb>, id: i64) -> Result<Agent, String>
 
     let agent = conn
         .query_row(
-            "SELECT id, name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, hooks, created_at, updated_at FROM agents WHERE id = ?1",
+            "SELECT id, name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, hooks, source, created_at, updated_at FROM agents WHERE id = ?1",
             params![id],
             |row| {
                 Ok(Agent {
@@ -560,8 +567,9 @@ pub async fn get_agent(db: State<'_, AgentDb>, id: i64) -> Result<Agent, String>
                     enable_file_write: row.get::<_, bool>(7).unwrap_or(true),
                     enable_network: row.get::<_, bool>(8).unwrap_or(false),
                     hooks: row.get(9)?,
-                    created_at: row.get(10)?,
-                    updated_at: row.get(11)?,
+                    source: row.get(10)?,
+                    created_at: row.get(11)?,
+                    updated_at: row.get(12)?,
                 })
             },
         )
@@ -579,10 +587,10 @@ pub async fn list_agent_runs(
     let conn = db.0.lock().map_err(|e| e.to_string())?;
 
     let query = if agent_id.is_some() {
-        "SELECT id, agent_id, agent_name, agent_icon, task, model, project_path, session_id, status, pid, process_started_at, created_at, completed_at 
+        "SELECT id, agent_id, agent_name, agent_icon, task, model, project_path, session_id, status, pid, process_started_at, created_at, completed_at
          FROM agent_runs WHERE agent_id = ?1 ORDER BY created_at DESC"
     } else {
-        "SELECT id, agent_id, agent_name, agent_icon, task, model, project_path, session_id, status, pid, process_started_at, created_at, completed_at 
+        "SELECT id, agent_id, agent_name, agent_icon, task, model, project_path, session_id, status, pid, process_started_at, created_at, completed_at
          FROM agent_runs ORDER BY created_at DESC"
     };
 
@@ -631,7 +639,7 @@ pub async fn get_agent_run(db: State<'_, AgentDb>, id: i64) -> Result<AgentRun, 
 
     let run = conn
         .query_row(
-            "SELECT id, agent_id, agent_name, agent_icon, task, model, project_path, session_id, status, pid, process_started_at, created_at, completed_at 
+            "SELECT id, agent_id, agent_name, agent_icon, task, model, project_path, session_id, status, pid, process_started_at, created_at, completed_at
              FROM agent_runs WHERE id = ?1",
             params![id],
             |row| {
@@ -700,37 +708,37 @@ pub async fn execute_agent(
     // Get the agent from database
     let agent = get_agent(db.clone(), agent_id).await?;
     let execution_model = model.unwrap_or(agent.model.clone());
-    
+
     // Create .claude/settings.json with agent hooks if it doesn't exist
     if let Some(hooks_json) = &agent.hooks {
         let claude_dir = std::path::Path::new(&project_path).join(".claude");
         let settings_path = claude_dir.join("settings.json");
-        
+
         // Create .claude directory if it doesn't exist
         if !claude_dir.exists() {
             std::fs::create_dir_all(&claude_dir)
                 .map_err(|e| format!("Failed to create .claude directory: {}", e))?;
             info!("Created .claude directory at: {:?}", claude_dir);
         }
-        
+
         // Check if settings.json already exists
         if !settings_path.exists() {
             // Parse the hooks JSON
             let hooks: serde_json::Value = serde_json::from_str(hooks_json)
                 .map_err(|e| format!("Failed to parse agent hooks: {}", e))?;
-            
+
             // Create a settings object with just the hooks
             let settings = serde_json::json!({
                 "hooks": hooks
             });
-            
+
             // Write the settings file
             let settings_content = serde_json::to_string_pretty(&settings)
                 .map_err(|e| format!("Failed to serialize settings: {}", e))?;
-            
+
             std::fs::write(&settings_path, settings_content)
                 .map_err(|e| format!("Failed to write settings.json: {}", e))?;
-            
+
             info!("Created settings.json with agent hooks at: {:?}", settings_path);
         } else {
             info!("settings.json already exists at: {:?}", settings_path);
@@ -795,13 +803,13 @@ fn create_agent_sidecar_command(
         .shell()
         .sidecar("claude-code")
         .map_err(|e| format!("Failed to create sidecar command: {}", e))?;
-    
+
     // Add all arguments
     sidecar_cmd = sidecar_cmd.args(args);
-    
+
     // Set working directory
     sidecar_cmd = sidecar_cmd.current_dir(project_path);
-    
+
     Ok(sidecar_cmd)
 }
 
@@ -812,17 +820,17 @@ fn create_agent_system_command(
     project_path: &str,
 ) -> Command {
     let mut cmd = create_command_with_env(claude_path);
-    
+
     // Add all arguments
     for arg in args {
         cmd.arg(arg);
     }
-    
+
     cmd.current_dir(project_path)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
-    
+
     cmd
 }
 
@@ -843,7 +851,7 @@ async fn spawn_agent_sidecar(
 
     // Create the sidecar command
     let sidecar_cmd = create_agent_sidecar_command(&app, args, &project_path)?;
-    
+
     // Spawn the sidecar process
     let (mut rx, child) = sidecar_cmd
         .spawn()
@@ -926,7 +934,7 @@ async fn spawn_agent_sidecar(
                                         if current_session_id.is_none() {
                                             *current_session_id = Some(sid.to_string());
                                             info!("🔑 Extracted session ID: {}", sid);
-                                            
+
                                             // Update database immediately with session ID
                                             if let Ok(conn) = Connection::open(&db_path_for_stream) {
                                                 match conn.execute(
@@ -1174,7 +1182,7 @@ async fn spawn_agent_system(
                             if current_session_id.is_empty() {
                                 *current_session_id = sid.to_string();
                                 info!("🔑 Extracted session ID: {}", sid);
-                                
+
                                 // Update database immediately with session ID
                                 if let Ok(conn) = Connection::open(&db_path_for_stdout) {
                                     match conn.execute(
@@ -1386,7 +1394,7 @@ pub async fn list_running_sessions(
 
     // First get all running sessions from the database
     let mut stmt = conn.prepare(
-        "SELECT id, agent_id, agent_name, agent_icon, task, model, project_path, session_id, status, pid, process_started_at, created_at, completed_at 
+        "SELECT id, agent_id, agent_name, agent_icon, task, model, project_path, session_id, status, pid, process_started_at, created_at, completed_at
          FROM agent_runs WHERE status = 'running' ORDER BY process_started_at DESC"
     ).map_err(|e| e.to_string())?;
 
@@ -1620,7 +1628,7 @@ pub async fn get_session_output(
 
     // Find the correct project directory by searching for the session file
     let projects_dir = claude_dir.join("projects");
-    
+
     // Check if projects directory exists
     if !projects_dir.exists() {
         log::error!("Projects directory not found at: {:?}", projects_dir);
@@ -1630,14 +1638,14 @@ pub async fn get_session_output(
     // Search for the session file in all project directories
     let mut session_file_path = None;
     log::info!("Searching for session file {} in all project directories", run.session_id);
-    
+
     if let Ok(entries) = std::fs::read_dir(&projects_dir) {
         for entry in entries.filter_map(Result::ok) {
             let path = entry.path();
             if path.is_dir() {
                 let dir_name = path.file_name().unwrap_or_default().to_string_lossy();
                 log::debug!("Checking project directory: {}", dir_name);
-                
+
                 let potential_session_file = path.join(format!("{}.jsonl", run.session_id));
                 if potential_session_file.exists() {
                     log::info!("Found session file at: {:?}", potential_session_file);
@@ -1847,7 +1855,7 @@ pub async fn set_claude_binary_path(db: State<'_, AgentDb>, path: String) -> Res
             params![path],
         )
         .map_err(|e| format!("Failed to save Claude binary path: {}", e))?;
-        
+
         info!("✅ Claude binary path updated to bundled sidecar: {}", path);
         return Ok(());
     }
@@ -1886,10 +1894,10 @@ pub async fn set_claude_binary_path(db: State<'_, AgentDb>, path: String) -> Res
 #[tauri::command]
 pub async fn refresh_claude_binary_path(app: AppHandle) -> Result<String, String> {
     info!("🔄 Refreshing Claude binary path...");
-    
+
     // Clear any internal caches and re-read from the database
     let current_path = find_claude_binary(&app)?;
-    
+
     info!("✅ Claude binary path refreshed to: {}", current_path);
     Ok(current_path)
 }
@@ -1906,7 +1914,7 @@ pub async fn list_claude_installations(
         warn!("No Claude Code installations found on the system");
         return Err("No Claude Code installations found on the system".to_string());
     }
-    
+
     info!("Found {} Claude installation(s)", installations.len());
 
     // For bundled installations, execute the sidecar to get the actual version
@@ -1914,10 +1922,10 @@ pub async fn list_claude_installations(
         if installation.installation_type == crate::claude_binary::InstallationType::Bundled {
             // Try to get the version by executing the sidecar
             use tauri_plugin_shell::process::CommandEvent;
-            
+
             // Create a temporary directory for the sidecar to run in
             let temp_dir = std::env::temp_dir();
-            
+
             // Create sidecar command with --version flag
             let sidecar_cmd = match app
                 .shell()
@@ -1928,17 +1936,17 @@ pub async fn list_claude_installations(
                     continue;
                 }
             };
-            
+
             // Spawn the sidecar and collect output
             match sidecar_cmd.spawn() {
                 Ok((mut rx, _child)) => {
                     let mut stdout_output = String::new();
                     let mut stderr_output = String::new();
-                    
+
                     // Set a timeout for version check
                     let timeout = tokio::time::Duration::from_secs(5);
                     let start_time = tokio::time::Instant::now();
-                    
+
                     while let Ok(Some(event)) = tokio::time::timeout_at(
                         start_time + timeout,
                         rx.recv()
@@ -1960,10 +1968,10 @@ pub async fn list_claude_installations(
                             _ => {}
                         }
                     }
-                    
+
                     // Use regex to directly extract version pattern
                     let version_regex = regex::Regex::new(r"(\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?(?:\+[a-zA-Z0-9.-]+)?)").ok();
-                    
+
                     if let Some(regex) = version_regex {
                         if let Some(captures) = regex.captures(&stdout_output) {
                             if let Some(version_match) = captures.get(1) {
@@ -2097,14 +2105,15 @@ pub async fn import_agent(db: State<'_, AgentDb>, json_data: String) -> Result<A
 
     // Create the agent
     conn.execute(
-        "INSERT INTO agents (name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, hooks) VALUES (?1, ?2, ?3, ?4, ?5, 1, 1, 0, ?6)",
+        "INSERT INTO agents (name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, hooks, source) VALUES (?1, ?2, ?3, ?4, ?5, 1, 1, 0, ?6, ?7)",
         params![
             final_name,
             agent_data.icon,
             agent_data.system_prompt,
             agent_data.default_task,
             agent_data.model,
-            agent_data.hooks
+            agent_data.hooks,
+            "claudia"
         ],
     )
     .map_err(|e| format!("Failed to create agent: {}", e))?;
@@ -2114,7 +2123,7 @@ pub async fn import_agent(db: State<'_, AgentDb>, json_data: String) -> Result<A
     // Fetch the created agent
     let agent = conn
         .query_row(
-            "SELECT id, name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, hooks, created_at, updated_at FROM agents WHERE id = ?1",
+            "SELECT id, name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, hooks, source, created_at, updated_at FROM agents WHERE id = ?1",
             params![id],
             |row| {
                 Ok(Agent {
@@ -2128,8 +2137,88 @@ pub async fn import_agent(db: State<'_, AgentDb>, json_data: String) -> Result<A
                     enable_file_write: row.get(7)?,
                     enable_network: row.get(8)?,
                     hooks: row.get(9)?,
-                    created_at: row.get(10)?,
-                    updated_at: row.get(11)?,
+                    source: row.get(10)?,
+                    created_at: row.get(11)?,
+                    updated_at: row.get(12)?,
+                })
+            },
+        )
+        .map_err(|e| format!("Failed to fetch created agent: {}", e))?;
+
+    Ok(agent)
+}
+
+/// Import an agent from JSON data with source
+pub async fn import_agent_with_source(db: State<'_, AgentDb>, json_data: String, source: Option<String>) -> Result<Agent, String> {
+    // Parse the JSON data
+    let export_data: AgentExport =
+        serde_json::from_str(&json_data).map_err(|e| format!("Invalid JSON format: {}", e))?;
+
+    // Validate version
+    if export_data.version != 1 {
+        return Err(format!(
+            "Unsupported export version: {}. This version of the app only supports version 1.",
+            export_data.version
+        ));
+    }
+
+    let agent_data = export_data.agent;
+    let conn = db.0.lock().map_err(|e| e.to_string())?;
+    let source = source.unwrap_or_else(|| "claudia".to_string());
+
+    // Check if an agent with the same name already exists
+    let existing_count: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM agents WHERE name = ?1",
+            params![agent_data.name],
+            |row| row.get(0),
+        )
+        .map_err(|e| e.to_string())?;
+
+    // If agent with same name exists, append a suffix
+    let final_name = if existing_count > 0 {
+        format!("{} (Imported)", agent_data.name)
+    } else {
+        agent_data.name
+    };
+
+    // Create the agent
+    conn.execute(
+        "INSERT INTO agents (name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, hooks, source) VALUES (?1, ?2, ?3, ?4, ?5, 1, 1, 0, ?6, ?7)",
+        params![
+            final_name,
+            agent_data.icon,
+            agent_data.system_prompt,
+            agent_data.default_task,
+            agent_data.model,
+            agent_data.hooks,
+            source
+        ],
+    )
+    .map_err(|e| format!("Failed to create agent: {}", e))?;
+
+    let id = conn.last_insert_rowid();
+
+    // Fetch the created agent
+    let agent = conn
+        .query_row(
+            "SELECT id, name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, hooks, source, created_at, updated_at FROM agents WHERE id = ?1",
+            params![id],
+            |row| {
+                Ok(Agent {
+                    id: Some(row.get(0)?),
+                    name: row.get(1)?,
+                    icon: row.get(2)?,
+                    system_prompt: row.get(3)?,
+                    default_task: row.get(4)?,
+                    model: row.get(5)?,
+                    enable_file_read: row.get(6)?,
+                    enable_file_write: row.get(7)?,
+                    enable_network: row.get(8)?,
+                    hooks: row.get(9)?,
+                    source: row.get(10)?,
+                    created_at: row.get(11)?,
+                    updated_at: row.get(12)?,
                 })
             },
         )
@@ -2143,13 +2232,14 @@ pub async fn import_agent(db: State<'_, AgentDb>, json_data: String) -> Result<A
 pub async fn import_agent_from_file(
     db: State<'_, AgentDb>,
     file_path: String,
+    source: Option<String>,
 ) -> Result<Agent, String> {
     // Read the file
     let json_data =
         std::fs::read_to_string(&file_path).map_err(|e| format!("Failed to read file: {}", e))?;
 
-    // Import the agent
-    import_agent(db, json_data).await
+    // Import the agent with source
+    import_agent_with_source(db, json_data, source).await
 }
 
 // GitHub Agent Import functionality
@@ -2295,7 +2385,7 @@ pub async fn load_agent_session_history(
         .join(".claude");
 
     let projects_dir = claude_dir.join("projects");
-    
+
     if !projects_dir.exists() {
         log::error!("Projects directory not found at: {:?}", projects_dir);
         return Err("Projects directory not found".to_string());
@@ -2304,14 +2394,14 @@ pub async fn load_agent_session_history(
     // Search for the session file in all project directories
     let mut session_file_path = None;
     log::info!("Searching for session file {} in all project directories", session_id);
-    
+
     if let Ok(entries) = std::fs::read_dir(&projects_dir) {
         for entry in entries.filter_map(Result::ok) {
             let path = entry.path();
             if path.is_dir() {
                 let dir_name = path.file_name().unwrap_or_default().to_string_lossy();
                 log::debug!("Checking project directory: {}", dir_name);
-                
+
                 let potential_session_file = path.join(format!("{}.jsonl", session_id));
                 if potential_session_file.exists() {
                     log::info!("Found session file at: {:?}", potential_session_file);
@@ -2345,4 +2435,173 @@ pub async fn load_agent_session_history(
     } else {
         Err(format!("Session file not found: {}", session_id))
     }
+}
+/// Parse agent markdown file to extract metadata and content
+fn parse_agent_markdown(content: &str, file_name: &str) -> Result<(String, String, String, String, String), String> {
+    let lines: Vec<&str> = content.lines().collect();
+    let mut name = file_name.trim_end_matches(".md").to_string();
+    let mut description = String::new();
+    let mut icon = "bot".to_string();
+    let mut color = "blue".to_string();
+    let mut system_prompt = String::new();
+    let mut in_frontmatter = false;
+    let mut frontmatter_ended = false;
+
+    for (i, line) in lines.iter().enumerate() {
+        if i == 0 && line.starts_with("---") {
+            in_frontmatter = true;
+            continue;
+        }
+
+        if in_frontmatter && line.starts_with("---") {
+            in_frontmatter = false;
+            frontmatter_ended = true;
+            continue;
+        }
+
+        if in_frontmatter {
+            if let Some(colon_pos) = line.find(':') {
+                let key = line[..colon_pos].trim();
+                let value = line[colon_pos + 1..].trim().trim_matches('"');
+
+                match key {
+                    "name" => name = value.to_string(),
+                    "description" => description = value.to_string(),
+                    "icon" => icon = value.to_string(),
+                    "color" => color = value.to_string(),
+                    _ => {}
+                }
+            }
+        } else if frontmatter_ended || !in_frontmatter {
+            // This is the system prompt content
+            if !line.trim().is_empty() || !system_prompt.is_empty() {
+                if !system_prompt.is_empty() {
+                    system_prompt.push('\n');
+                }
+                system_prompt.push_str(line);
+            }
+        }
+    }
+
+    // If no description was found in frontmatter, use the first non-empty line as description
+    if description.is_empty() && !system_prompt.is_empty() {
+        if let Some(first_line) = system_prompt.lines().find(|line| !line.trim().is_empty()) {
+            description = first_line.trim().to_string();
+            if description.len() > 100 {
+                description = format!("{}...", &description[..97]);
+            }
+        }
+    }
+
+    Ok((name, description, system_prompt.trim().to_string(), icon, color))
+}
+
+/// List native agents directly from .claude/agents directory (without importing to DB)
+#[tauri::command]
+pub async fn list_native_agents() -> Result<Vec<Agent>, String> {
+    info!("Listing native agents from .claude/agents");
+
+    let home_dir = dirs::home_dir()
+        .ok_or("Could not find home directory")?;
+    let agents_dir = home_dir.join(".claude").join("agents");
+
+    if !agents_dir.exists() {
+        info!("No .claude/agents directory found");
+        return Ok(vec![]);
+    }
+
+    let mut agents = Vec::new();
+    let mut agent_id = 1000; // Use high IDs to avoid conflict with DB agents
+
+    // Read all .md files in the agents directory
+    let entries = std::fs::read_dir(&agents_dir)
+        .map_err(|e| format!("Failed to read agents directory: {}", e))?;
+
+    for entry in entries {
+        let entry = entry.map_err(|e| format!("Failed to read directory entry: {}", e))?;
+        let path = entry.path();
+
+        if let Some(extension) = path.extension() {
+            if extension == "md" {
+                let file_name = path.file_name()
+                    .and_then(|name| name.to_str())
+                    .unwrap_or("unknown");
+
+                info!("Processing native agent file: {}", file_name);
+
+                // Read the file content
+                let content = std::fs::read_to_string(&path)
+                    .map_err(|e| format!("Failed to read {}: {}", file_name, e))?;
+
+                // Parse the frontmatter and content
+                match parse_agent_markdown(&content, file_name) {
+                    Ok((name, description, system_prompt, icon, _color)) => {
+                        agents.push(Agent {
+                            id: Some(agent_id),
+                            name,
+                            icon,
+                            system_prompt,
+                            default_task: Some(description),
+                            model: "claude-3-5-sonnet-20241022".to_string(),
+                            enable_file_read: true,
+                            enable_file_write: true,
+                            enable_network: true,
+                            hooks: None,
+                            source: Some("native".to_string()),
+                            created_at: chrono::Utc::now().to_rfc3339(),
+                            updated_at: chrono::Utc::now().to_rfc3339(),
+                        });
+                        agent_id += 1;
+                    }
+                    Err(e) => {
+                        warn!("Failed to parse agent file {}: {}", file_name, e);
+                    }
+                }
+            }
+        }
+    }
+
+    info!("Found {} native agents", agents.len());
+    Ok(agents)
+}
+
+/// Delete all native agents from database (keeping .claude/agents files intact)
+#[tauri::command]
+pub async fn delete_native_agents(db: State<'_, AgentDb>) -> Result<u32, String> {
+    info!("Deleting native agents from database");
+    let conn = db.0.lock().map_err(|e| e.to_string())?;
+
+    // First, let's debug what's actually in the database
+    let mut stmt = conn
+        .prepare("SELECT id, name, source FROM agents")
+        .map_err(|e| e.to_string())?;
+
+    let agent_rows = stmt
+        .query_map([], |row| {
+            Ok((
+                row.get::<_, i64>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, Option<String>>(2)?,
+            ))
+        })
+        .map_err(|e| e.to_string())?;
+
+    let mut all_agents = Vec::new();
+    for agent in agent_rows {
+        let agent = agent.map_err(|e| e.to_string())?;
+        all_agents.push(agent);
+    }
+
+    info!("Found {} total agents in database", all_agents.len());
+    for (id, name, source) in &all_agents {
+        info!("Agent {}: {} (source: {:?})", id, name, source);
+    }
+
+    // Delete agents where source is 'native'
+    let deleted = conn
+        .execute("DELETE FROM agents WHERE source = 'native'", [])
+        .map_err(|e| e.to_string())?;
+
+    info!("Deleted {} native agents from database", deleted);
+    Ok(deleted as u32)
 }

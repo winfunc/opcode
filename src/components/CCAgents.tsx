@@ -247,8 +247,8 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
         return;
       }
 
-      // Import the agent from the selected file
-      await api.importAgentFromFile(filePath as string);
+      // Import the agent from the selected file (default to claudia)
+      await api.importAgentFromFile(filePath as string, 'claudia');
 
       setToast({ message: t.agents.agentImportedSuccessfully, type: "success" });
       await loadAgents();

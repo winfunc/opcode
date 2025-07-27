@@ -9,13 +9,13 @@ mod process;
 
 use checkpoint::state::CheckpointState;
 use commands::agents::{
-    cleanup_finished_processes, create_agent, delete_agent, execute_agent, export_agent,
+    cleanup_finished_processes, create_agent, delete_agent, delete_native_agents, execute_agent, export_agent,
     export_agent_to_file, fetch_github_agent_content, fetch_github_agents, get_agent,
     get_agent_run, get_agent_run_with_real_time_metrics, get_claude_binary_path, refresh_claude_binary_path,
     get_live_session_output, get_session_output, get_session_status, import_agent,
     import_agent_from_file, import_agent_from_github, init_database, kill_agent_session,
     list_agent_runs, list_agent_runs_with_metrics, list_agents, list_claude_installations,
-    list_running_sessions, load_agent_session_history, set_claude_binary_path, stream_session_output, update_agent, AgentDb,
+    list_native_agents, list_running_sessions, load_agent_session_history, set_claude_binary_path, stream_session_output, update_agent, AgentDb,
 };
 use commands::claude::{
     cancel_claude_execution, check_auto_checkpoint, check_claude_version, cleanup_old_checkpoints,
@@ -117,7 +117,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             get_hooks_config,
             update_hooks_config,
             validate_hook_command,
-            
+
             // Checkpoint Management
             create_checkpoint,
             restore_checkpoint,
@@ -133,12 +133,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             get_checkpoint_settings,
             clear_checkpoint_manager,
             get_checkpoint_state_stats,
-            
+
             // Agent Management
             list_agents,
+            list_native_agents,
             create_agent,
             update_agent,
             delete_agent,
+            delete_native_agents,
             get_agent,
             execute_agent,
             list_agent_runs,
@@ -164,13 +166,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             fetch_github_agents,
             fetch_github_agent_content,
             import_agent_from_github,
-            
+
             // Usage & Analytics
             get_usage_stats,
             get_usage_by_date_range,
             get_usage_details,
             get_session_stats,
-            
+
             // MCP (Model Context Protocol)
             mcp_add,
             mcp_list,
@@ -184,7 +186,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             mcp_get_server_status,
             mcp_read_project_config,
             mcp_save_project_config,
-            
+
             // Storage Management
             storage_list_tables,
             storage_read_table,
@@ -193,7 +195,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             storage_insert_row,
             storage_execute_sql,
             storage_reset_database,
-            
+
             // Slash Commands
             commands::slash_commands::slash_commands_list,
             commands::slash_commands::slash_command_get,
