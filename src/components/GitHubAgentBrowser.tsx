@@ -168,7 +168,7 @@ export const GitHubAgentBrowser: React.FC<GitHubAgentBrowserProps> = ({
    * @returns React icon component
    */
   const renderIcon = (iconName: string) => {
-    const Icon = AGENT_ICONS[iconName] || AGENT_ICONS.Bot;
+    const Icon = AGENT_ICONS[iconName] || AGENT_ICONS.bot;
     return <Icon className="h-8 w-8" />;
   };
 
@@ -264,7 +264,7 @@ export const GitHubAgentBrowser: React.FC<GitHubAgentBrowserProps> = ({
                               <div className="p-2 rounded-lg bg-primary/10 text-primary flex-shrink-0">
                                 {/* Default to bot icon for now, will be loaded from preview */}
                                 {(() => {
-                                  const Icon = AGENT_ICONS.Bot;
+                                  const Icon = AGENT_ICONS.bot;
                                   return <Icon className="h-6 w-6" />;
                                 })()}
                               </div>

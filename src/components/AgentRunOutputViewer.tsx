@@ -18,13 +18,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Toast, ToastContainer } from "@/components/ui/toast";
 import { Popover } from "@/components/ui/popover";
+import { AGENT_ICONS } from "@/constants/agentIcons";
 import { api, type AgentRunWithMetrics } from "@/lib/api";
 import { useOutputCache } from "@/lib/outputCacheHook";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { StreamMessage } from "./StreamMessage";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { formatISOTimestamp } from "@/lib/date-utils";
-import { AGENT_ICONS } from "@/constants/agentIcons";
 import type { ClaudeStreamMessage } from "./AgentExecution";
 import { useTabState } from "@/hooks/useTabState";
 import { logger } from "@/lib/logger";
@@ -599,7 +599,7 @@ export function AgentRunOutputViewer({ agentRunId, tabId, className }: AgentRunO
    * @returns React icon component
    */
   const renderIcon = (iconName: string) => {
-    const Icon = AGENT_ICONS[iconName as keyof typeof AGENT_ICONS] || Bot;
+    const Icon = AGENT_ICONS[iconName as keyof typeof AGENT_ICONS] || AGENT_ICONS.bot;
     return <Icon className="h-5 w-5" />;
   };
 

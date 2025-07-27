@@ -80,7 +80,7 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
 }) => {
   const { t } = useI18n();
   const [name, setName] = useState(agent?.name || "");
-  const [selectedIcon, setSelectedIcon] = useState<string>(agent?.icon || "Bot");
+  const [selectedIcon, setSelectedIcon] = useState<string>(agent?.icon || "bot");
   const [systemPrompt, setSystemPrompt] = useState(agent?.system_prompt || "");
   const [defaultTask, setDefaultTask] = useState(agent?.default_task || "");
   const [model, setModel] = useState(agent?.model || "sonnet-3-5");
@@ -230,7 +230,7 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
                   >
                     <div className="flex items-center gap-2">
                       {(() => {
-                        const Icon = AGENT_ICONS[selectedIcon] || AGENT_ICONS.Bot;
+                        const Icon = AGENT_ICONS[selectedIcon] || AGENT_ICONS.bot;
                         return (
                           <>
                             <Icon className="h-4 w-4" />
