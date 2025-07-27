@@ -1,6 +1,6 @@
 [package]
 name = "claudia"
-version = "0.1.4"
+version = "0.1.5"
 description = "GUI app and Toolkit for Claude Code"
 authors = ["mufeedvh", "123vviekr"]
 license = "AGPL-3.0"
