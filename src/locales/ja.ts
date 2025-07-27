@@ -637,6 +637,25 @@ export const ja: Translations = {
     deleteAgentConfirmation:
       'エージェント"{name}"を削除してもよろしいですか？この操作は元に戻せず、エージェントとそのすべての関連データが永続的に削除されます。',
     deleting: "削除中...",
+    // ネイティブエージェント関連の翻訳
+    allAgents: "すべてのエージェント",
+    claudiaAgents: "Claudiaエージェント",
+    nativeAgents: "ネイティブエージェント",
+    native: "ネイティブ",
+    claudia: "Claudia",
+    running: "実行中",
+    createClaudiaAgent: "Claudiaエージェントを作成",
+    noClaudiaAgents: "Claudiaエージェントがありません",
+    createFirstClaudiaAgent: "最初のClaudiaエージェントを作成",
+    noNativeAgentsFound: "ネイティブエージェントが見つかりません",
+    nativeAgentsDesc: "~/.claude/agents/ ディレクトリに .md エージェントファイルを配置してここで表示",
+    nativeAgentsInfo: "これらは ~/.claude/agents フォルダからインポートされたClaude Codeネイティブエージェントです。",
+    cleanDatabase: "データベースをクリーン",
+    noRunningAgents: "実行中のエージェントがありません",
+    agentExecutionsWillAppear: "エージェントの実行は開始時にここに表示されます",
+    started: "開始時刻",
+    view: "表示",
+    importNativeAgents: "ネイティブエージェントをインポート",
   },
 
   // Claude AI 交互的思考模式

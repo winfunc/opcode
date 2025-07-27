@@ -629,6 +629,25 @@ export const zh: Translations = {
     deleteAgentConfirmation:
       '确定要删除智能体"{name}"吗？此操作无法撤销，将永久删除智能体及其所有相关数据。',
     deleting: "删除中...",
+    // 原生智能体相关翻译
+    allAgents: "所有智能体",
+    claudiaAgents: "Claudia 智能体",
+    nativeAgents: "原生智能体",
+    native: "原生",
+    claudia: "Claudia",
+    running: "运行中",
+    createClaudiaAgent: "创建 Claudia 智能体",
+    noClaudiaAgents: "没有 Claudia 智能体",
+    createFirstClaudiaAgent: "创建您的第一个 Claudia 智能体",
+    noNativeAgentsFound: "未找到原生智能体",
+    nativeAgentsDesc: "将 .md 智能体文件放在 ~/.claude/agents/ 目录中以在此处查看",
+    nativeAgentsInfo: "这些是从您的 ~/.claude/agents 文件夹导入的 Claude Code 原生智能体。",
+    cleanDatabase: "清理数据库",
+    noRunningAgents: "没有运行中的智能体",
+    agentExecutionsWillAppear: "智能体执行将在启动时显示在此处",
+    started: "开始时间",
+    view: "查看",
+    importNativeAgents: "导入原生智能体",
   },
 
   // Claude AI 交互的思考模式

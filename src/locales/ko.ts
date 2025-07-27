@@ -636,6 +636,25 @@ export const ko: Translations = {
     deleteAgentConfirmation:
       '에이전트 "{name}"을(를) 삭제하시겠습니까? 이 작업은 취소할 수 없으며, 에이전트와 관련된 모든 데이터가 영구적으로 제거됩니다.',
     deleting: "삭제 중...",
+    // 네이티브 에이전트 관련 번역
+    allAgents: "모든 에이전트",
+    claudiaAgents: "Claudia 에이전트",
+    nativeAgents: "네이티브 에이전트",
+    native: "네이티브",
+    claudia: "Claudia",
+    running: "실행 중",
+    createClaudiaAgent: "Claudia 에이전트 생성",
+    noClaudiaAgents: "Claudia 에이전트가 없습니다",
+    createFirstClaudiaAgent: "첫 번째 Claudia 에이전트를 생성하세요",
+    noNativeAgentsFound: "네이티브 에이전트를 찾을 수 없습니다",
+    nativeAgentsDesc: "~/.claude/agents/ 디렉토리에 .md 에이전트 파일을 배치하여 여기에서 확인하세요",
+    nativeAgentsInfo: "이들은 ~/.claude/agents 폴더에서 가져온 Claude Code 네이티브 에이전트입니다.",
+    cleanDatabase: "데이터베이스 정리",
+    noRunningAgents: "실행 중인 에이전트가 없습니다",
+    agentExecutionsWillAppear: "에이전트 실행이 시작되면 여기에 표시됩니다",
+    started: "시작됨",
+    view: "보기",
+    importNativeAgents: "네이티브 에이전트 가져오기",
   },
 
   // Claude AI 상호작용의 사고 모드

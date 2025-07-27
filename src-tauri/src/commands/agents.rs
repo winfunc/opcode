@@ -2565,6 +2565,94 @@ pub async fn list_native_agents() -> Result<Vec<Agent>, String> {
     Ok(agents)
 }
 
+/// Import native agents from .claude/agents directory
+#[tauri::command]
+pub async fn import_native_agents(db: State<'_, AgentDb>) -> Result<u32, String> {
+    info!("Importing native agents from .claude/agents");
+
+    let home_dir = dirs::home_dir()
+        .ok_or("Could not find home directory")?;
+    let agents_dir = home_dir.join(".claude").join("agents");
+
+    if !agents_dir.exists() {
+        info!("No .claude/agents directory found");
+        return Ok(0);
+    }
+
+    let conn = db.0.lock().map_err(|e| e.to_string())?;
+    let mut imported_count = 0;
+
+    // Read all .md files in the agents directory
+    let entries = std::fs::read_dir(&agents_dir)
+        .map_err(|e| format!("Failed to read agents directory: {}", e))?;
+
+    for entry in entries {
+        let entry = entry.map_err(|e| format!("Failed to read directory entry: {}", e))?;
+        let path = entry.path();
+
+        if let Some(extension) = path.extension() {
+            if extension == "md" {
+                let file_name = path.file_name()
+                    .and_then(|name| name.to_str())
+                    .unwrap_or("unknown");
+
+                info!("Processing native agent file for import: {}", file_name);
+
+                // Read the file content
+                let content = std::fs::read_to_string(&path)
+                    .map_err(|e| format!("Failed to read {}: {}", file_name, e))?;
+
+                // Parse the frontmatter and content
+                match parse_agent_markdown(&content, file_name) {
+                    Ok((name, description, system_prompt, icon, _color)) => {
+                        // Check if agent already exists
+                        let existing_count: i64 = conn
+                            .query_row(
+                                "SELECT COUNT(*) FROM agents WHERE name = ?1 AND source = 'native'",
+                                params![name],
+                                |row| row.get(0),
+                            )
+                            .map_err(|e| e.to_string())?;
+
+                        if existing_count > 0 {
+                            info!("Agent '{}' already exists, skipping", name);
+                            continue;
+                        }
+
+                        // Insert the agent into database
+                        conn.execute(
+                            "INSERT INTO agents (name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, hooks, source, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
+                            params![
+                                &name,
+                                &icon,
+                                &system_prompt,
+                                &description, // Use description as default_task
+                                "claude-3-5-sonnet-20241022", // Default model
+                                true, // enable_file_read
+                                true, // enable_file_write
+                                true, // enable_network
+                                None::<String>, // hooks
+                                "native", // source
+                                chrono::Utc::now().to_rfc3339(),
+                                chrono::Utc::now().to_rfc3339()
+                            ],
+                        ).map_err(|e| format!("Failed to insert agent '{}': {}", name, e))?;
+
+                        imported_count += 1;
+                        info!("Successfully imported agent: {}", name);
+                    }
+                    Err(e) => {
+                        warn!("Failed to parse agent file {}: {}", file_name, e);
+                    }
+                }
+            }
+        }
+    }
+
+    info!("Imported {} native agents", imported_count);
+    Ok(imported_count)
+}
+
 /// Delete all native agents from database (keeping .claude/agents files intact)
 #[tauri::command]
 pub async fn delete_native_agents(db: State<'_, AgentDb>) -> Result<u32, String> {

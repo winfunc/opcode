@@ -638,6 +638,25 @@ export const hi: Translations = {
     deleteAgentConfirmation:
       'क्या आप वाकई एजेंट "{name}" को हटाना चाहते हैं? यह क्रिया पूर्ववत नहीं की जा सकती और एजेंट और उसके सभी संबंधित डेटा को स्थायी रूप से हटा देगी।',
     deleting: "हटा रहा है...",
+    // मूल एजेंट संबंधित अनुवाद
+    allAgents: "सभी एजेंट",
+    claudiaAgents: "क्लाउडिया एजेंट",
+    nativeAgents: "मूल एजेंट",
+    native: "मूल",
+    claudia: "क्लाउडिया",
+    running: "चल रहा है",
+    createClaudiaAgent: "क्लाउडिया एजेंट बनाएं",
+    noClaudiaAgents: "कोई क्लाउडिया एजेंट नहीं",
+    createFirstClaudiaAgent: "अपना पहला क्लाउडिया एजेंट बनाएं",
+    noNativeAgentsFound: "कोई मूल एजेंट नहीं मिला",
+    nativeAgentsDesc: "उन्हें यहां देखने के लिए ~/.claude/agents/ में .md एजेंट फाइलें रखें",
+    nativeAgentsInfo: "ये आपके ~/.claude/agents फोल्डर से आयात किए गए Claude Code मूल एजेंट हैं।",
+    cleanDatabase: "डेटाबेस साफ करें",
+    noRunningAgents: "कोई चलने वाले एजेंट नहीं",
+    agentExecutionsWillAppear: "एजेंट निष्पादन शुरू होने पर यहां दिखाई देंगे",
+    started: "शुरू किया गया",
+    view: "देखें",
+    importNativeAgents: "मूल एजेंट आयात करें",
   },
 
   // विचार मोड अनुवाद

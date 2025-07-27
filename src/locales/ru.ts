@@ -644,6 +644,25 @@ export const ru: Translations = {
     deleteAgentConfirmation:
       'Вы уверены, что хотите удалить агента "{name}"? Это действие нельзя отменить, и оно навсегда удалит агента и все связанные с ним данные.',
     deleting: "Удаление...",
+    // Переводы для нативных агентов
+    allAgents: "Все Агенты",
+    claudiaAgents: "Агенты Claudia",
+    nativeAgents: "Нативные Агенты",
+    native: "Нативный",
+    claudia: "Claudia",
+    running: "Выполняется",
+    createClaudiaAgent: "Создать Агента Claudia",
+    noClaudiaAgents: "Нет агентов Claudia",
+    createFirstClaudiaAgent: "Создайте своего первого агента Claudia",
+    noNativeAgentsFound: "Нативные агенты не найдены",
+    nativeAgentsDesc: "Поместите файлы агентов .md в ~/.claude/agents/ чтобы увидеть их здесь",
+    nativeAgentsInfo: "Это нативные агенты Claude Code, импортированные из вашей папки ~/.claude/agents.",
+    cleanDatabase: "Очистить Базу Данных",
+    noRunningAgents: "Нет выполняющихся агентов",
+    agentExecutionsWillAppear: "Выполнения агентов будут отображаться здесь при запуске",
+    started: "Запущен",
+    view: "Просмотр",
+    importNativeAgents: "Импортировать Нативные Агенты",
   },
 
   // Переводы режимов мышления

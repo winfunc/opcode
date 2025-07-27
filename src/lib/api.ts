@@ -686,6 +686,19 @@ export const api = {
   },
 
   /**
+   * Import native agents from .claude/agents directory to database
+   * @returns Promise resolving to the number of agents imported
+   */
+  async importNativeAgents(): Promise<number> {
+    try {
+      return await invoke<number>("import_native_agents");
+    } catch (error) {
+      logger.error("Failed to import native agents:", error);
+      throw error;
+    }
+  },
+
+  /**
    * Creates a new agent
    * @param name - The agent name
    * @param icon - The icon identifier

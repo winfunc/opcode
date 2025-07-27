@@ -619,6 +619,25 @@ export const ar: Translations = {
     deleteAgentConfirmation:
       'هل أنت متأكد أنك تريد حذف الوكيل "{name}"؟ لا يمكن التراجع عن هذا الإجراء وسيؤدي إلى إزالة الوكيل وجميع بياناته المرتبطة بشكل دائم.',
     deleting: "جاري الحذف...",
+    // ترجمات متعلقة بالوكلاء الأصليين
+    allAgents: "جميع الوكلاء",
+    claudiaAgents: "وكلاء كلوديا",
+    nativeAgents: "الوكلاء الأصليون",
+    native: "أصلي",
+    claudia: "كلوديا",
+    running: "قيد التشغيل",
+    createClaudiaAgent: "إنشاء وكيل كلوديا",
+    noClaudiaAgents: "لا توجد وكلاء كلوديا",
+    createFirstClaudiaAgent: "أنشئ وكيل كلوديا الأول",
+    noNativeAgentsFound: "لم يتم العثور على وكلاء أصليين",
+    nativeAgentsDesc: "ضع ملفات الوكيل .md في ~/.claude/agents/ لرؤيتها هنا",
+    nativeAgentsInfo: "هؤلاء هم وكلاء Claude Code الأصليون المستوردون من مجلد ~/.claude/agents الخاص بك.",
+    cleanDatabase: "تنظيف قاعدة البيانات",
+    noRunningAgents: "لا توجد وكلاء قيد التشغيل",
+    agentExecutionsWillAppear: "ستظهر عمليات تنفيذ الوكلاء هنا عند بدء التشغيل",
+    started: "بدأ",
+    view: "عرض",
+    importNativeAgents: "استيراد الوكلاء الأصليين",
   },
 
   // ترجمات أنماط التفكير

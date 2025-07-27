@@ -652,6 +652,25 @@ export const de: Translations = {
     deleteAgentConfirmation:
       'Sind Sie sicher, dass Sie den Agenten "{name}" löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden und wird den Agenten und alle zugehörigen Daten dauerhaft entfernen.',
     deleting: "Wird gelöscht...",
+    // Übersetzungen für native Agenten
+    allAgents: "Alle Agenten",
+    claudiaAgents: "Claudia Agenten",
+    nativeAgents: "Native Agenten",
+    native: "Nativ",
+    claudia: "Claudia",
+    running: "Läuft",
+    createClaudiaAgent: "Claudia Agent erstellen",
+    noClaudiaAgents: "Keine Claudia Agenten",
+    createFirstClaudiaAgent: "Erstellen Sie Ihren ersten Claudia Agent",
+    noNativeAgentsFound: "Keine nativen Agenten gefunden",
+    nativeAgentsDesc: "Platzieren Sie .md Agent-Dateien in ~/.claude/agents/ um sie hier zu sehen",
+    nativeAgentsInfo: "Dies sind Claude Code native Agenten, die aus Ihrem ~/.claude/agents Ordner importiert wurden.",
+    cleanDatabase: "Datenbank bereinigen",
+    noRunningAgents: "Keine laufenden Agenten",
+    agentExecutionsWillAppear: "Agent-Ausführungen werden hier angezeigt, wenn sie gestartet werden",
+    started: "Gestartet",
+    view: "Anzeigen",
+    importNativeAgents: "Native Agenten Importieren",
   },
 
   // Denkmodusübersetzungen

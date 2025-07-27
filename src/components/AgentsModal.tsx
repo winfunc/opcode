@@ -210,11 +210,11 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
         const agentType = activeTab === 'native' ? 'native' : 'claudia';
         const agent = await api.importAgentFromFile(filePath as string, agentType);
         loadAgents(); // Refresh list
-        setToast({ message: `Agent "${agent.name}" imported successfully`, type: "success" });
+        setToast({ message: t.agents.agentImportedSuccessfully, type: "success" });
       }
     } catch (error) {
       await handleError("Failed to import agent:", { context: error });
-      setToast({ message: "Failed to import agent", type: "error" });
+      setToast({ message: t.agents.failedToImportAgent, type: "error" });
     }
   };
 
@@ -222,27 +222,45 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
     setShowGitHubBrowser(true);
   };
 
+  const handleImportNativeAgents = async () => {
+    try {
+      const count = await api.importNativeAgents();
+
+      if (count === 0) {
+        setToast({ message: "未找到要导入的原生智能体", type: "info" });
+      } else {
+        setToast({ message: `成功导入了 ${count} 个原生智能体`, type: "success" });
+      }
+
+      await loadAgents(); // Refresh both lists
+    } catch (error) {
+      await handleError("Failed to import native agents:", { context: error });
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      setToast({ message: `导入原生智能体失败: ${errorMessage}`, type: "error" });
+    }
+  };
+
   const handleDeleteNativeAgents = async () => {
-    if (!confirm('Are you sure you want to delete all native agents from the database? This will not delete the .claude/agents files, but will remove them from the database so they appear properly as native agents.')) {
+    if (!confirm('确定要从数据库中删除所有原生智能体吗？这不会删除 .claude/agents 文件，但会将它们从数据库中移除，以便它们正确显示为原生智能体。')) {
       return;
     }
 
     try {
-      console.log('Attempting to delete native agents...');
+
       const count = await api.deleteNativeAgents();
-      console.log(`Delete operation returned: ${count}`);
+
 
       if (count === 0) {
-        setToast({ message: "No native agents found in database to delete", type: "success" });
+        setToast({ message: "数据库中未找到要删除的原生智能体", type: "success" });
       } else {
-        setToast({ message: `Successfully deleted ${count} native agents from database`, type: "success" });
+        setToast({ message: `成功从数据库删除了 ${count} 个原生智能体`, type: "success" });
       }
 
       await loadAgents(); // Refresh both lists
     } catch (error) {
       await handleError("Failed to delete native agents:", { context: error });
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      setToast({ message: `Failed to delete native agents: ${errorMessage}`, type: "error" });
+      setToast({ message: `删除原生智能体失败: ${errorMessage}`, type: "error" });
     }
   };
 
@@ -274,11 +292,11 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
           path: filePath,
           content: JSON.stringify(exportData, null, 2),
         });
-        setToast({ message: "Agent exported successfully", type: "success" });
+        setToast({ message: t.agents.agentExportedSuccessfully, type: "success" });
       }
     } catch (error) {
       await handleError("Failed to export agent:", { context: error });
-      setToast({ message: "Failed to export agent", type: "error" });
+      setToast({ message: t.agents.failedToExportAgent, type: "error" });
     }
   };
 
@@ -309,11 +327,11 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
             <TabsList className="mx-6 mb-4">
-              <TabsTrigger value="all">All Agents</TabsTrigger>
-              <TabsTrigger value="claudia">Claudia</TabsTrigger>
-              <TabsTrigger value="native">Native</TabsTrigger>
+              <TabsTrigger value="all">{t.agents.allAgents}</TabsTrigger>
+              <TabsTrigger value="claudia">{t.agents.claudia}</TabsTrigger>
+              <TabsTrigger value="native">{t.agents.native}</TabsTrigger>
               <TabsTrigger value="running" className="relative">
-                Running
+                {t.agents.running}
                 {runningAgents.length > 0 && (
                   <Badge variant="secondary" className="ml-2 h-5 px-1.5">
                     {runningAgents.length}
@@ -329,24 +347,24 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
                 <div className="flex gap-2 mb-4 px-6 pt-4">
                   <Button onClick={handleCreateAgent} className="flex-1">
                     <Plus className="w-4 h-4 mr-2" />
-                    Create Agent
+                    {t.agents.createAgent}
                   </Button>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="outline" className="flex-1">
                         <Import className="w-4 h-4 mr-2" />
-                        Import Agent
+                        {t.agents.importAgent}
                         <ChevronDown className="w-4 h-4 ml-2" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
                       <DropdownMenuItem onClick={handleImportFromFile}>
                         <FileJson className="w-4 h-4 mr-2" />
-                        From File
+                        {t.agents.fromFile}
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={handleImportFromGitHub}>
                         <Globe className="w-4 h-4 mr-2" />
-                        From GitHub
+                        {t.agents.fromGitHub}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -362,16 +380,16 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
                       ) : filteredAgents.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-64 text-center">
                           <Bot className="w-12 h-12 text-muted-foreground mb-4" />
-                          <p className="text-lg font-medium mb-2">No agents available</p>
+                          <p className="text-lg font-medium mb-2">{t.agents.noAgentsAvailable}</p>
                           <p className="text-sm text-muted-foreground mb-4">
-                            Create your first agent to get started
+                            {t.agents.createFirstAgentToGetStarted}
                           </p>
                           <Button onClick={() => {
                             onOpenChange(false);
                             window.dispatchEvent(new globalThis.CustomEvent('open-create-agent-tab'));
                           }}>
                             <Plus className="w-4 h-4 mr-2" />
-                            Create Agent
+                            {t.agents.createAgent}
                           </Button>
                         </div>
                       ) : (
@@ -389,7 +407,7 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
                                     <Bot className="w-4 h-4" />
                                     {agent.name}
                                     {agent.source === 'native' && (
-                                      <Badge variant="outline" className="text-xs">Native</Badge>
+                                      <Badge variant="outline" className="text-xs">{t.agents.native}</Badge>
                                     )}
                                   </h3>
                                   {agent.default_task && (
@@ -405,7 +423,7 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
                                     onClick={() => handleExportAgent(agent)}
                                   >
                                     <Download className="w-3 h-3 mr-1" />
-                                    Export
+                                    {t.agents.export}
                                   </Button>
                                   <Button
                                     size="sm"
@@ -414,14 +432,14 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
                                     className="text-destructive hover:text-destructive"
                                   >
                                     <Trash2 className="w-3 h-3 mr-1" />
-                                    Delete
+                                    {t.common.delete}
                                   </Button>
                                   <Button
                                     size="sm"
                                     onClick={() => handleRunAgent(agent)}
                                   >
                                     <Play className="w-3 h-3 mr-1" />
-                                    Run
+                                    {t.agents.runAgent}
                                   </Button>
                                 </div>
                               </div>
@@ -439,24 +457,24 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
                 <div className="flex gap-2 mb-4 px-6 pt-4">
                   <Button onClick={handleCreateAgent} className="flex-1">
                     <Plus className="w-4 h-4 mr-2" />
-                    Create Claudia Agent
+                    {t.agents.createClaudiaAgent}
                   </Button>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="outline" className="flex-1">
                         <Import className="w-4 h-4 mr-2" />
-                        Import Agent
+                        {t.agents.importAgent}
                         <ChevronDown className="w-4 h-4 ml-2" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
                       <DropdownMenuItem onClick={handleImportFromFile}>
                         <FileJson className="w-4 h-4 mr-2" />
-                        From File
+                        {t.agents.fromFile}
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={handleImportFromGitHub}>
                         <Globe className="w-4 h-4 mr-2" />
-                        From GitHub
+                        {t.agents.fromGitHub}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -472,13 +490,13 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
                       ) : filteredAgents.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-64 text-center">
                           <Bot className="w-12 h-12 text-muted-foreground mb-4" />
-                          <p className="text-lg font-medium mb-2">No Claudia agents</p>
+                          <p className="text-lg font-medium mb-2">{t.agents.noClaudiaAgents}</p>
                           <p className="text-sm text-muted-foreground mb-4">
-                            Create your first Claudia agent
+                            {t.agents.createFirstClaudiaAgent}
                           </p>
                           <Button onClick={handleCreateAgent}>
                             <Plus className="w-4 h-4 mr-2" />
-                            Create Claudia Agent
+                            {t.agents.createClaudiaAgent}
                           </Button>
                         </div>
                       ) : (
@@ -495,7 +513,7 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
                                   <h3 className="font-medium flex items-center gap-2">
                                     <Bot className="w-4 h-4" />
                                     {agent.name}
-                                    <Badge variant="outline" className="text-xs text-blue-600">Claudia</Badge>
+                                    <Badge variant="outline" className="text-xs text-blue-600">{t.agents.claudia}</Badge>
                                   </h3>
                                   {agent.default_task && (
                                     <p className="text-sm text-muted-foreground mt-1">
@@ -510,7 +528,7 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
                                     onClick={() => handleExportAgent(agent)}
                                   >
                                     <Download className="w-3 h-3 mr-1" />
-                                    Export
+                                    {t.agents.export}
                                   </Button>
                                   <Button
                                     size="sm"
@@ -519,14 +537,14 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
                                     className="text-destructive hover:text-destructive"
                                   >
                                     <Trash2 className="w-3 h-3 mr-1" />
-                                    Delete
+                                    {t.common.delete}
                                   </Button>
                                   <Button
                                     size="sm"
                                     onClick={() => handleRunAgent(agent)}
                                   >
                                     <Play className="w-3 h-3 mr-1" />
-                                    Run
+                                    {t.agents.runAgent}
                                   </Button>
                                 </div>
                               </div>
@@ -545,16 +563,26 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
                   <div className="p-3 rounded-lg bg-blue-50 border border-blue-200 dark:bg-blue-950 dark:border-blue-800">
                     <div className="flex justify-between items-center">
                       <p className="text-sm text-blue-700 dark:text-blue-300">
-                        These are Claude Code native agents imported from your ~/.claude/agents folder.
+                        {t.agents.nativeAgentsInfo}
                       </p>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={handleDeleteNativeAgents}
-                        className="text-xs"
-                      >
-                        Clean Database
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleImportNativeAgents}
+                          className="text-xs"
+                        >
+                          {t.agents.importNativeAgents}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleDeleteNativeAgents}
+                          className="text-xs"
+                        >
+                          {t.agents.cleanDatabase}
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -569,9 +597,9 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
                       ) : filteredAgents.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-64 text-center">
                           <Bot className="w-12 h-12 text-muted-foreground mb-4" />
-                          <p className="text-lg font-medium mb-2">No native agents found</p>
+                          <p className="text-lg font-medium mb-2">{t.agents.noNativeAgentsFound}</p>
                           <p className="text-sm text-muted-foreground">
-                            Place .md agent files in ~/.claude/agents/ to see them here
+                            {t.agents.nativeAgentsDesc}
                           </p>
                         </div>
                       ) : (
@@ -588,7 +616,7 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
                                   <h3 className="font-medium flex items-center gap-2">
                                     <Bot className="w-4 h-4" />
                                     {agent.name}
-                                    <Badge variant="outline" className="text-xs text-green-600">Native</Badge>
+                                    <Badge variant="outline" className="text-xs text-green-600">{t.agents.native}</Badge>
                                   </h3>
                                   {agent.default_task && (
                                     <p className="text-sm text-muted-foreground mt-1">
@@ -603,14 +631,14 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
                                     onClick={() => handleExportAgent(agent)}
                                   >
                                     <Download className="w-3 h-3 mr-1" />
-                                    Export
+                                    {t.agents.export}
                                   </Button>
                                   <Button
                                     size="sm"
                                     onClick={() => handleRunAgent(agent)}
                                   >
                                     <Play className="w-3 h-3 mr-1" />
-                                    Run
+                                    {t.agents.runAgent}
                                   </Button>
                                 </div>
                               </div>
@@ -627,9 +655,9 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
                   {runningAgents.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-center">
                       <Clock className="w-12 h-12 text-muted-foreground mb-4" />
-                      <p className="text-lg font-medium mb-2">No running agents</p>
+                      <p className="text-lg font-medium mb-2">{t.agents.noRunningAgents}</p>
                       <p className="text-sm text-muted-foreground">
-                        Agent executions will appear here when started
+                        {t.agents.agentExecutionsWillAppear}
                       </p>
                     </div>
                   ) : (
@@ -653,7 +681,7 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
                                 </h3>
                                 <p className="text-sm text-muted-foreground mt-1">{run.task}</p>
                                 <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                                  <span>Started: {formatISOTimestamp(run.created_at)}</span>
+                                  <span>{t.agents.started}: {formatISOTimestamp(run.created_at)}</span>
                                   <Badge variant="outline" className="text-xs">
                                     {run.model === "opus" ? "Claude 4 Opus" : "Claude 4 Sonnet"}
                                   </Badge>
@@ -667,7 +695,7 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
                                   handleOpenAgentRun(run);
                                 }}
                               >
-                                View
+                                {t.agents.view}
                               </Button>
                             </div>
                           </motion.div>
@@ -686,9 +714,9 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete Agent</DialogTitle>
+            <DialogTitle>{t.agents.deleteAgentTitle}</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete "{agentToDelete?.name}"? This action cannot be undone.
+              {t.agents.deleteAgentConfirmation.replace("{name}", agentToDelete?.name || "")}
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end gap-3 mt-4">
@@ -699,10 +727,10 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
                 setAgentToDelete(null);
               }}
             >
-              Cancel
+              {t.common.cancel}
             </Button>
             <Button variant="destructive" onClick={confirmDelete}>
-              Delete
+              {t.common.delete}
             </Button>
           </div>
         </DialogContent>

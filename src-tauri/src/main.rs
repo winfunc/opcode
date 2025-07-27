@@ -13,7 +13,7 @@ use commands::agents::{
     export_agent_to_file, fetch_github_agent_content, fetch_github_agents, get_agent,
     get_agent_run, get_agent_run_with_real_time_metrics, get_claude_binary_path, refresh_claude_binary_path,
     get_live_session_output, get_session_output, get_session_status, import_agent,
-    import_agent_from_file, import_agent_from_github, init_database, kill_agent_session,
+    import_agent_from_file, import_agent_from_github, import_native_agents, init_database, kill_agent_session,
     list_agent_runs, list_agent_runs_with_metrics, list_agents, list_claude_installations,
     list_native_agents, list_running_sessions, load_agent_session_history, set_claude_binary_path, stream_session_output, update_agent, AgentDb,
 };
@@ -137,6 +137,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             // Agent Management
             list_agents,
             list_native_agents,
+            import_native_agents,
             create_agent,
             update_agent,
             delete_agent,

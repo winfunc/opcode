@@ -632,6 +632,25 @@ export const it: Translations = {
     deleteAgentConfirmation:
       "Sei sicuro di voler eliminare l'agente \"{name}\"? Questa azione non può essere annullata e rimuoverà permanentemente l'agente e tutti i suoi dati associati.",
     deleting: "Eliminazione in corso...",
+    // Traduzioni relative agli agenti nativi
+    allAgents: "Tutti gli Agenti",
+    claudiaAgents: "Agenti Claudia",
+    nativeAgents: "Agenti Nativi",
+    native: "Nativo",
+    claudia: "Claudia",
+    running: "In esecuzione",
+    createClaudiaAgent: "Crea Agente Claudia",
+    noClaudiaAgents: "Nessun agente Claudia",
+    createFirstClaudiaAgent: "Crea il tuo primo agente Claudia",
+    noNativeAgentsFound: "Nessun agente nativo trovato",
+    nativeAgentsDesc: "Posiziona i file agente .md in ~/.claude/agents/ per vederli qui",
+    nativeAgentsInfo: "Questi sono agenti nativi di Claude Code importati dalla tua cartella ~/.claude/agents.",
+    cleanDatabase: "Pulisci Database",
+    noRunningAgents: "Nessun agente in esecuzione",
+    agentExecutionsWillAppear: "Le esecuzioni degli agenti appariranno qui quando avviate",
+    started: "Avviato",
+    view: "Visualizza",
+    importNativeAgents: "Importa Agenti Nativi",
   },
 
   // Traduzioni delle modalità di pensiero
