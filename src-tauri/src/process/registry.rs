@@ -93,7 +93,6 @@ impl ProcessRegistry {
         project_path: String,
         task: String,
         model: String,
-        child: tauri_plugin_shell::process::Child,
     ) -> Result<(), String> {
         let process_info = ProcessInfo {
             run_id,
