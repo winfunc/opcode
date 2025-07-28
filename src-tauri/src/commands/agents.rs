@@ -2,14 +2,13 @@ use anyhow::Result;
 use chrono;
 use dirs;
 use log::{debug, error, info, warn};
-use regex;
 use reqwest;
 use rusqlite::{params, Connection, Result as SqliteResult};
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use std::io::{BufRead, BufReader};
 use std::process::Stdio;
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_shell::ShellExt;
 use tauri_plugin_shell::process::CommandEvent;
@@ -851,13 +850,13 @@ async fn spawn_agent_sidecar(
 
     // Spawn the process
     info!("🚀 Spawning Claude sidecar process...");
-    let (mut child, mut receiver) = sidecar_cmd.spawn().map_err(|e| {
+    let (mut receiver, child) = sidecar_cmd.spawn().map_err(|e| {
         error!("❌ Failed to spawn Claude sidecar process: {}", e);
         format!("Failed to spawn Claude sidecar: {}", e)
     })?;
 
-    // Get the PID
-    let pid = child.pid() as u32;
+    // Get the PID from child
+    let pid = child.pid();
     let now = chrono::Utc::now().to_rfc3339();
     info!("✅ Claude sidecar process spawned successfully with PID: {}", pid);
 
@@ -881,7 +880,7 @@ async fn spawn_agent_sidecar(
     // Shared state for collecting session ID and live output
     let session_id = std::sync::Arc::new(Mutex::new(String::new()));
     let live_output = std::sync::Arc::new(Mutex::new(String::new()));
-    let start_time = std::time::Instant::now();
+    let _start_time = std::time::Instant::now();
 
     // Register the process in the registry
     registry
@@ -890,11 +889,10 @@ async fn spawn_agent_sidecar(
             run_id,
             agent_id,
             agent_name,
-            pid,
+            pid as u32,
             project_path.clone(),
             task.clone(),
             execution_model.clone(),
-            child,
         )
         .map_err(|e| format!("Failed to register sidecar process: {}", e))?;
     info!("📋 Registered sidecar process in registry");
@@ -914,7 +912,8 @@ async fn spawn_agent_sidecar(
 
         while let Some(event) = receiver.recv().await {
             match event {
-                CommandEvent::Stdout(line) => {
+                CommandEvent::Stdout(line_bytes) => {
+                    let line = String::from_utf8_lossy(&line_bytes);
                     line_count += 1;
 
                     // Log first output
@@ -977,7 +976,8 @@ async fn spawn_agent_sidecar(
                     let _ = app_handle.emit(&format!("agent-output:{}", run_id), &line);
                     let _ = app_handle.emit("agent-output", &line);
                 }
-                CommandEvent::Stderr(line) => {
+                CommandEvent::Stderr(line_bytes) => {
+                    let line = String::from_utf8_lossy(&line_bytes);
                     error!("sidecar stderr: {}", line);
                     let _ = app_handle.emit(&format!("agent-error:{}", run_id), &line);
                     let _ = app_handle.emit("agent-error", &line);
@@ -1822,9 +1822,9 @@ pub async fn set_claude_binary_path(db: State<'_, AgentDb>, path: String) -> Res
 /// List all available Claude installations on the system
 #[tauri::command]
 pub async fn list_claude_installations(
-    app: AppHandle,
+    _app: AppHandle,
 ) -> Result<Vec<crate::claude_binary::ClaudeInstallation>, String> {
-    let mut installations = crate::claude_binary::discover_claude_installations();
+    let installations = crate::claude_binary::discover_claude_installations();
 
     if installations.is_empty() {
         return Err("No Claude Code installations found on the system".to_string());
