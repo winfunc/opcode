@@ -9,8 +9,6 @@ use std::time::SystemTime;
 use tauri::{AppHandle, Emitter, Manager};
 use tokio::process::{Child, Command};
 use tokio::sync::Mutex;
-use tauri_plugin_shell::ShellExt;
-use tauri_plugin_shell::process::CommandEvent;
 use regex;
 
 /// Global state to track current Claude process
@@ -265,7 +263,6 @@ fn create_command_with_env(program: &str) -> Command {
 
     tokio_cmd
 }
-
 
 /// Creates a system binary command with the given arguments
 fn create_system_command(

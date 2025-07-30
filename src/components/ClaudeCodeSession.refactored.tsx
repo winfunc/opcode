@@ -254,7 +254,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         />
 
         {/* Main content area */}
-        <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 flex">
           {showPreview ? (
             <SplitPane
               left={

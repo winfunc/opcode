@@ -451,6 +451,8 @@ fn compare_versions(a: &str, b: &str) -> Ordering {
 /// This ensures commands like Claude can find Node.js and other dependencies
 pub fn create_command_with_env(program: &str) -> Command {
     let mut cmd = Command::new(program);
+    
+    info!("Creating command for: {}", program);
 
     // Inherit essential environment variables from parent process
     for (key, value) in std::env::vars() {
@@ -467,10 +469,24 @@ pub fn create_command_with_env(program: &str) -> Command {
             || key == "NVM_BIN"
             || key == "HOMEBREW_PREFIX"
             || key == "HOMEBREW_CELLAR"
+            // Add proxy environment variables (only uppercase)
+            || key == "HTTP_PROXY"
+            || key == "HTTPS_PROXY"
+            || key == "NO_PROXY"
+            || key == "ALL_PROXY"
         {
             debug!("Inheriting env var: {}={}", key, value);
             cmd.env(&key, &value);
         }
+    }
+    
+    // Log proxy-related environment variables for debugging
+    info!("Command will use proxy settings:");
+    if let Ok(http_proxy) = std::env::var("HTTP_PROXY") {
+        info!("  HTTP_PROXY={}", http_proxy);
+    }
+    if let Ok(https_proxy) = std::env::var("HTTPS_PROXY") {
+        info!("  HTTPS_PROXY={}", https_proxy);
     }
 
     // Add NVM support if the program is in an NVM directory

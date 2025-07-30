@@ -2,16 +2,16 @@ use anyhow::Result;
 use chrono;
 use dirs;
 use log::{debug, error, info, warn};
-use regex;
 use reqwest;
 use rusqlite::{params, Connection, Result as SqliteResult};
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use std::io::{BufRead, BufReader};
 use std::process::Stdio;
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_shell::ShellExt;
+use tauri_plugin_shell::process::CommandEvent;
 use tokio::io::{AsyncBufReadExt, BufReader as TokioBufReader};
 use tokio::process::Command;
 
@@ -766,8 +766,49 @@ pub async fn execute_agent(
         "--dangerously-skip-permissions".to_string(),
     ];
 
-    // Execute using system binary
-    spawn_agent_system(app, run_id, agent_id, agent.name.clone(), claude_path, args, project_path, task, execution_model, db, registry).await
+    // Execute based on whether we should use sidecar or system binary
+    if should_use_sidecar(&claude_path) {
+        spawn_agent_sidecar(app, run_id, agent_id, agent.name.clone(), args, project_path, task, execution_model, db, registry).await
+    } else {
+        spawn_agent_system(app, run_id, agent_id, agent.name.clone(), claude_path, args, project_path, task, execution_model, db, registry).await
+    }
+}
+
+/// Determines whether to use sidecar or system binary execution for agents
+fn should_use_sidecar(claude_path: &str) -> bool {
+    claude_path == "claude-code"
+}
+
+/// Creates a sidecar command for agent execution
+fn create_agent_sidecar_command(
+    app: &AppHandle,
+    args: Vec<String>,
+    project_path: &str,
+) -> Result<tauri_plugin_shell::process::Command, String> {
+    let mut sidecar_cmd = app
+        .shell()
+        .sidecar("claude-code")
+        .map_err(|e| format!("Failed to create sidecar command: {}", e))?;
+    
+    // Add all arguments
+    sidecar_cmd = sidecar_cmd.args(args);
+    
+    // Set working directory
+    sidecar_cmd = sidecar_cmd.current_dir(project_path);
+    
+    // Pass through proxy environment variables if they exist (only uppercase)
+    for (key, value) in std::env::vars() {
+        if key == "HTTP_PROXY"
+            || key == "HTTPS_PROXY"
+            || key == "NO_PROXY"
+            || key == "ALL_PROXY"
+        {
+            debug!("Setting proxy env var for agent sidecar: {}={}", key, value);
+            sidecar_cmd = sidecar_cmd.env(&key, &value);
+        }
+    }
+    
+    Ok(sidecar_cmd)
 }
 
 /// Creates a system binary command for agent execution
@@ -792,6 +833,187 @@ fn create_agent_system_command(
 }
 
 /// Spawn agent using sidecar command
+async fn spawn_agent_sidecar(
+    app: AppHandle,
+    run_id: i64,
+    agent_id: i64,
+    agent_name: String,
+    args: Vec<String>,
+    project_path: String,
+    task: String,
+    execution_model: String,
+    db: State<'_, AgentDb>,
+    registry: State<'_, crate::process::ProcessRegistryState>,
+) -> Result<i64, String> {
+    // Build the sidecar command
+    let sidecar_cmd = create_agent_sidecar_command(&app, args, &project_path)?;
+
+    // Spawn the process
+    info!("🚀 Spawning Claude sidecar process...");
+    let (mut receiver, child) = sidecar_cmd.spawn().map_err(|e| {
+        error!("❌ Failed to spawn Claude sidecar process: {}", e);
+        format!("Failed to spawn Claude sidecar: {}", e)
+    })?;
+
+    // Get the PID from child
+    let pid = child.pid();
+    let now = chrono::Utc::now().to_rfc3339();
+    info!("✅ Claude sidecar process spawned successfully with PID: {}", pid);
+
+    // Update the database with PID and status
+    {
+        let conn = db.0.lock().map_err(|e| e.to_string())?;
+        conn.execute(
+            "UPDATE agent_runs SET status = 'running', pid = ?1, process_started_at = ?2 WHERE id = ?3",
+            params![pid as i64, now, run_id],
+        ).map_err(|e| e.to_string())?;
+        info!("📝 Updated database with running status and PID");
+    }
+
+    // Get app directory for database path
+    let app_dir = app
+        .path()
+        .app_data_dir()
+        .expect("Failed to get app data dir");
+    let db_path = app_dir.join("agents.db");
+
+    // Shared state for collecting session ID and live output
+    let session_id = std::sync::Arc::new(Mutex::new(String::new()));
+    let live_output = std::sync::Arc::new(Mutex::new(String::new()));
+    let _start_time = std::time::Instant::now();
+
+    // Register the process in the registry
+    registry
+        .0
+        .register_sidecar_process(
+            run_id,
+            agent_id,
+            agent_name,
+            pid as u32,
+            project_path.clone(),
+            task.clone(),
+            execution_model.clone(),
+        )
+        .map_err(|e| format!("Failed to register sidecar process: {}", e))?;
+    info!("📋 Registered sidecar process in registry");
+
+    // Handle sidecar events
+    let app_handle = app.clone();
+    let session_id_clone = session_id.clone();
+    let live_output_clone = live_output.clone();
+    let registry_clone = registry.0.clone();
+    let first_output = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let first_output_clone = first_output.clone();
+    let db_path_for_sidecar = db_path.clone();
+
+    tokio::spawn(async move {
+        info!("📖 Starting to read Claude sidecar events...");
+        let mut line_count = 0;
+
+        while let Some(event) = receiver.recv().await {
+            match event {
+                CommandEvent::Stdout(line_bytes) => {
+                    let line = String::from_utf8_lossy(&line_bytes);
+                    line_count += 1;
+
+                    // Log first output
+                    if !first_output_clone.load(std::sync::atomic::Ordering::Relaxed) {
+                        info!(
+                            "🎉 First output received from Claude sidecar process! Line: {}",
+                            line
+                        );
+                        first_output_clone.store(true, std::sync::atomic::Ordering::Relaxed);
+                    }
+
+                    if line_count <= 5 {
+                        info!("sidecar stdout[{}]: {}", line_count, line);
+                    } else {
+                        debug!("sidecar stdout[{}]: {}", line_count, line);
+                    }
+
+                    // Store live output
+                    if let Ok(mut output) = live_output_clone.lock() {
+                        output.push_str(&line);
+                        output.push('\n');
+                    }
+
+                    // Also store in process registry
+                    let _ = registry_clone.append_live_output(run_id, &line);
+
+                    // Extract session ID from JSONL output
+                    if let Ok(json) = serde_json::from_str::<JsonValue>(&line) {
+                        if json.get("type").and_then(|t| t.as_str()) == Some("system") &&
+                           json.get("subtype").and_then(|s| s.as_str()) == Some("init") {
+                            if let Some(sid) = json.get("session_id").and_then(|s| s.as_str()) {
+                                if let Ok(mut current_session_id) = session_id_clone.lock() {
+                                    if current_session_id.is_empty() {
+                                        *current_session_id = sid.to_string();
+                                        info!("🔑 Extracted session ID: {}", sid);
+                                        
+                                        // Update database immediately with session ID
+                                        if let Ok(conn) = Connection::open(&db_path_for_sidecar) {
+                                            match conn.execute(
+                                                "UPDATE agent_runs SET session_id = ?1 WHERE id = ?2",
+                                                params![sid, run_id],
+                                            ) {
+                                                Ok(rows) => {
+                                                    if rows > 0 {
+                                                        info!("✅ Updated agent run {} with session ID immediately", run_id);
+                                                    }
+                                                }
+                                                Err(e) => {
+                                                    error!("❌ Failed to update session ID immediately: {}", e);
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Emit the line to the frontend
+                    let _ = app_handle.emit(&format!("agent-output:{}", run_id), &line);
+                    let _ = app_handle.emit("agent-output", &line);
+                }
+                CommandEvent::Stderr(line_bytes) => {
+                    let line = String::from_utf8_lossy(&line_bytes);
+                    error!("sidecar stderr: {}", line);
+                    let _ = app_handle.emit(&format!("agent-error:{}", run_id), &line);
+                    let _ = app_handle.emit("agent-error", &line);
+                }
+                CommandEvent::Terminated(payload) => {
+                    info!("Claude sidecar process terminated with code: {:?}", payload.code);
+                    
+                    // Get the session ID
+                    let extracted_session_id = if let Ok(sid) = session_id.lock() {
+                        sid.clone()
+                    } else {
+                        String::new()
+                    };
+
+                    // Update database with completion
+                    if let Ok(conn) = Connection::open(&db_path) {
+                        let _ = conn.execute(
+                            "UPDATE agent_runs SET session_id = ?1, status = 'completed', completed_at = CURRENT_TIMESTAMP WHERE id = ?2",
+                            params![extracted_session_id, run_id],
+                        );
+                    }
+
+                    let success = payload.code.unwrap_or(1) == 0;
+                    let _ = app.emit("agent-complete", success);
+                    let _ = app.emit(&format!("agent-complete:{}", run_id), success);
+                    break;
+                }
+                _ => {}
+            }
+        }
+
+        info!("📖 Finished reading Claude sidecar events. Total lines: {}", line_count);
+    });
+
+    Ok(run_id)
+}
 
 /// Spawn agent using system binary command
 async fn spawn_agent_system(
@@ -1600,9 +1822,9 @@ pub async fn set_claude_binary_path(db: State<'_, AgentDb>, path: String) -> Res
 /// List all available Claude installations on the system
 #[tauri::command]
 pub async fn list_claude_installations(
-    app: AppHandle,
+    _app: AppHandle,
 ) -> Result<Vec<crate::claude_binary::ClaudeInstallation>, String> {
-    let mut installations = crate::claude_binary::discover_claude_installations();
+    let installations = crate::claude_binary::discover_claude_installations();
 
     if installations.is_empty() {
         return Err("No Claude Code installations found on the system".to_string());

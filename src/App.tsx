@@ -4,6 +4,7 @@ import { Plus, Loader2, Bot, FolderCode } from "lucide-react";
 import { api, type Project, type Session, type ClaudeMdFile } from "@/lib/api";
 import { OutputCacheProvider } from "@/lib/outputCache";
 import { TabProvider } from "@/contexts/TabContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ProjectList } from "@/components/ProjectList";
@@ -508,11 +509,13 @@ function AppContent() {
  */
 function App() {
   return (
-    <OutputCacheProvider>
-      <TabProvider>
-        <AppContent />
-      </TabProvider>
-    </OutputCacheProvider>
+    <ThemeProvider>
+      <OutputCacheProvider>
+        <TabProvider>
+          <AppContent />
+        </TabProvider>
+      </OutputCacheProvider>
+    </ThemeProvider>
   );
 }
 

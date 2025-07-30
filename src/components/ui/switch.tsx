@@ -52,6 +52,7 @@ const Switch = React.forwardRef<HTMLInputElement, SwitchProps>(
           checked={checked}
           disabled={disabled}
           className="sr-only"
+          onChange={() => {}}
           {...props}
         />
       </button>

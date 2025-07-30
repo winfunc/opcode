@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
+import type { StateCreator } from 'zustand';
 import { api } from '@/lib/api';
 import type { AgentRunWithMetrics } from '@/lib/api';
 
@@ -32,8 +33,12 @@ interface AgentState {
   pollingInterval: NodeJS.Timeout | null;
 }
 
-export const useAgentStore = create<AgentState>()(
-  subscribeWithSelector((set, get) => ({
+const agentStore: StateCreator<
+  AgentState,
+  [],
+  [['zustand/subscribeWithSelector', never]],
+  AgentState
+> = (set, get) => ({
     // Initial state
     agentRuns: [],
     runningAgents: new Set(),
@@ -59,8 +64,8 @@ export const useAgentStore = create<AgentState>()(
       try {
         const runs = await api.listAgentRuns();
         const runningIds = runs
-          .filter(r => r.status === 'running' || r.status === 'pending')
-          .map(r => r.id?.toString() || '')
+          .filter((r) => r.status === 'running' || r.status === 'pending')
+          .map((r) => r.id?.toString() || '')
           .filter(Boolean);
         
         set({
@@ -83,7 +88,7 @@ export const useAgentStore = create<AgentState>()(
       
       try {
         const output = await api.getAgentRunWithRealTimeMetrics(runId).then(run => run.output || '');
-        set(state => ({
+        set((state) => ({
           sessionOutputs: {
             ...state.sessionOutputs,
             [runId]: output
@@ -107,7 +112,7 @@ export const useAgentStore = create<AgentState>()(
         const run = await api.getAgentRun(runId);
         
         // Update local state immediately
-        set(state => ({
+        set((state) => ({
           agentRuns: [run, ...state.agentRuns],
           runningAgents: new Set([...state.runningAgents, runId.toString()])
         }));
@@ -127,8 +132,8 @@ export const useAgentStore = create<AgentState>()(
         await api.killAgentSession(runId);
         
         // Update local state
-        set(state => ({
-          agentRuns: state.agentRuns.map(r =>
+        set((state) => ({
+          agentRuns: state.agentRuns.map((r) =>
             r.id === runId ? { ...r, status: 'cancelled' } : r
           ),
           runningAgents: new Set(
@@ -147,7 +152,7 @@ export const useAgentStore = create<AgentState>()(
     deleteAgentRun: async (runId: number) => {
       try {
         // First ensure the run is cancelled if it's still running
-        const run = get().agentRuns.find(r => r.id === runId);
+        const run = get().agentRuns.find((r) => r.id === runId);
         if (run && (run.status === 'running' || run.status === 'pending')) {
           await api.killAgentSession(runId);
         }
@@ -156,8 +161,8 @@ export const useAgentStore = create<AgentState>()(
         // The run will remain in the database but won't be shown in the UI
         
         // Update local state
-        set(state => ({
-          agentRuns: state.agentRuns.filter(r => r.id !== runId),
+        set((state) => ({
+          agentRuns: state.agentRuns.filter((r) => r.id !== runId),
           runningAgents: new Set(
             [...state.runningAgents].filter(id => id !== runId.toString())
           ),
@@ -178,8 +183,8 @@ export const useAgentStore = create<AgentState>()(
     
     // Handle real-time agent run updates
     handleAgentRunUpdate: (run: AgentRunWithMetrics) => {
-      set(state => {
-        const existingIndex = state.agentRuns.findIndex(r => r.id === run.id);
+      set((state) => {
+        const existingIndex = state.agentRuns.findIndex((r) => r.id === run.id);
         const updatedRuns = [...state.agentRuns];
         
         if (existingIndex >= 0) {
@@ -189,8 +194,8 @@ export const useAgentStore = create<AgentState>()(
         }
         
         const runningIds = updatedRuns
-          .filter(r => r.status === 'running' || r.status === 'pending')
-          .map(r => r.id?.toString() || '')
+          .filter((r) => r.status === 'running' || r.status === 'pending')
+          .map((r) => r.id?.toString() || '')
           .filter(Boolean);
         
         return {
@@ -228,5 +233,8 @@ export const useAgentStore = create<AgentState>()(
         set({ pollingInterval: null });
       }
     }
-  }))
+  });
+
+export const useAgentStore = create<AgentState>()(
+  subscribeWithSelector(agentStore)
 );

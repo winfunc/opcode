@@ -1698,6 +1698,50 @@ export const api = {
     }
   },
 
+  // Theme settings helpers
+
+  /**
+   * Gets a setting from the app_settings table
+   * @param key - The setting key to retrieve
+   * @returns Promise resolving to the setting value or null if not found
+   */
+  async getSetting(key: string): Promise<string | null> {
+    try {
+      // Use storageReadTable to safely query the app_settings table
+      const result = await this.storageReadTable('app_settings', 1, 1000);
+      const setting = result?.data?.find((row: any) => row.key === key);
+      return setting?.value || null;
+    } catch (error) {
+      console.error(`Failed to get setting ${key}:`, error);
+      return null;
+    }
+  },
+
+  /**
+   * Saves a setting to the app_settings table (insert or update)
+   * @param key - The setting key
+   * @param value - The setting value
+   * @returns Promise resolving when the setting is saved
+   */
+  async saveSetting(key: string, value: string): Promise<void> {
+    try {
+      // Try to update first
+      try {
+        await this.storageUpdateRow(
+          'app_settings',
+          { key },
+          { value }
+        );
+      } catch (updateError) {
+        // If update fails (row doesn't exist), insert new row
+        await this.storageInsertRow('app_settings', { key, value });
+      }
+    } catch (error) {
+      console.error(`Failed to save setting ${key}:`, error);
+      throw error;
+    }
+  },
+
   /**
    * Get hooks configuration for a specific scope
    * @param scope - The configuration scope: 'user', 'project', or 'local'

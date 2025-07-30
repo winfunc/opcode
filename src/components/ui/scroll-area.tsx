@@ -25,16 +25,7 @@ export const ScrollArea = React.forwardRef<HTMLDivElement, ScrollAreaProps>(
     return (
       <div
         ref={ref}
-        className={cn(
-          "relative overflow-auto",
-          // Custom scrollbar styling
-          "scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent",
-          "[&::-webkit-scrollbar]:w-2",
-          "[&::-webkit-scrollbar-track]:bg-transparent",
-          "[&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-thumb]:rounded-full",
-          "[&::-webkit-scrollbar-thumb:hover]:bg-border/80",
-          className
-        )}
+        className={cn("relative overflow-auto", className)}
         {...props}
       >
         {children}
