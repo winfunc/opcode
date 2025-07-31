@@ -8,12 +8,12 @@ mod process;
 
 use checkpoint::state::CheckpointState;
 use commands::agents::{
-    cleanup_finished_processes, create_agent, delete_agent, execute_agent, export_agent,
+    cleanup_finished_processes, create_agent, delete_agent, delete_native_agents, execute_agent, export_agent,
     export_agent_to_file, fetch_github_agent_content, fetch_github_agents, get_agent,
     get_agent_run, get_agent_run_with_real_time_metrics, get_claude_binary_path,
     get_live_session_output, get_session_output, get_session_status, import_agent,
-    import_agent_from_file, import_agent_from_github, init_database, kill_agent_session,
-    list_agent_runs, list_agent_runs_with_metrics, list_agents, list_claude_installations,
+    import_agent_from_file, import_agent_from_github, import_native_agents, init_database, kill_agent_session,
+    list_agent_runs, list_agent_runs_with_metrics, list_agents, list_native_agents, list_claude_installations,
     list_running_sessions, load_agent_session_history, set_claude_binary_path, stream_session_output, update_agent, AgentDb,
 };
 use commands::claude::{
@@ -30,9 +30,9 @@ use commands::claude::{
     ClaudeProcessState,
 };
 use commands::mcp::{
-    mcp_add, mcp_add_from_claude_desktop, mcp_add_json, mcp_get, mcp_get_server_status, mcp_list,
+    mcp_add, mcp_add_from_claude_desktop, mcp_add_json, mcp_clear_cache, mcp_get, mcp_get_server_status, mcp_list,
     mcp_read_project_config, mcp_remove, mcp_reset_project_choices, mcp_save_project_config,
-    mcp_serve, mcp_test_connection,
+    mcp_serve, mcp_test_connection, cleanup_orphaned_mcp_processes,
 };
 
 use commands::usage::{
@@ -56,6 +56,9 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
         .setup(|app| {
+            // Cleanup orphaned MCP processes on startup
+            cleanup_orphaned_mcp_processes();
+            
             // Initialize agents database
             let conn = init_database(&app.handle()).expect("Failed to initialize agents database");
             
@@ -108,6 +111,23 @@ fn main() {
             // Re-open the connection for the app to manage
             let conn = init_database(&app.handle()).expect("Failed to initialize agents database");
             app.manage(AgentDb(Mutex::new(conn)));
+            
+            // Proactively discover and cache Claude binary on startup
+            let app_handle_clone = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                log::info!("Proactively discovering Claude binary on startup...");
+                match crate::claude_binary::find_claude_binary(&app_handle_clone) {
+                    Ok(path) => log::info!("Claude binary discovered and cached: {}", path),
+                    Err(e) => log::error!("Failed to discover Claude binary on startup: {}", e),
+                }
+                
+                // Also import native agents on startup
+                log::info!("Importing native agents on startup...");
+                match import_native_agents(app_handle_clone).await {
+                    Ok(count) => log::info!("Imported {} native agents on startup", count),
+                    Err(e) => log::error!("Failed to import native agents on startup: {}", e),
+                }
+            });
 
             // Initialize checkpoint state
             let checkpoint_state = CheckpointState::new();
@@ -183,9 +203,11 @@ fn main() {
             
             // Agent Management
             list_agents,
+            list_native_agents,
             create_agent,
             update_agent,
             delete_agent,
+            delete_native_agents,
             get_agent,
             execute_agent,
             list_agent_runs,
@@ -207,6 +229,7 @@ fn main() {
             export_agent_to_file,
             import_agent,
             import_agent_from_file,
+            import_native_agents,
             fetch_github_agents,
             fetch_github_agent_content,
             import_agent_from_github,
@@ -230,6 +253,7 @@ fn main() {
             mcp_get_server_status,
             mcp_read_project_config,
             mcp_save_project_config,
+            mcp_clear_cache,
             
             // Storage Management
             storage_list_tables,

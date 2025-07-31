@@ -254,7 +254,14 @@ fn get_all_usage_entries(claude_path: &PathBuf) -> Vec<UsageEntry> {
     let mut processed_hashes = HashSet::new();
     let projects_dir = claude_path.join("projects");
 
+    // Check if projects directory exists
+    if !projects_dir.exists() {
+        log::warn!("Claude projects directory not found: {:?}", projects_dir);
+        return all_entries;
+    }
+
     let mut files_to_process: Vec<(PathBuf, String)> = Vec::new();
+    let max_files = 1000; // Limit to prevent excessive scanning
 
     if let Ok(projects) = fs::read_dir(&projects_dir) {
         for project in projects.flatten() {
@@ -262,16 +269,30 @@ fn get_all_usage_entries(claude_path: &PathBuf) -> Vec<UsageEntry> {
                 let project_name = project.file_name().to_string_lossy().to_string();
                 let project_path = project.path();
 
-                walkdir::WalkDir::new(&project_path)
+                // Use max_depth to limit recursion
+                let walker = walkdir::WalkDir::new(&project_path)
+                    .max_depth(3) // Limit directory depth
                     .into_iter()
                     .filter_map(Result::ok)
                     .filter(|e| e.path().extension().and_then(|s| s.to_str()) == Some("jsonl"))
-                    .for_each(|entry| {
-                        files_to_process.push((entry.path().to_path_buf(), project_name.clone()));
-                    });
+                    .take(max_files - files_to_process.len()); // Limit total files
+
+                for entry in walker {
+                    files_to_process.push((entry.path().to_path_buf(), project_name.clone()));
+                    if files_to_process.len() >= max_files {
+                        log::warn!("Reached maximum file limit ({}) for usage scanning", max_files);
+                        break;
+                    }
+                }
+                
+                if files_to_process.len() >= max_files {
+                    break;
+                }
             }
         }
     }
+
+    log::info!("Found {} JSONL files to process", files_to_process.len());
 
     // Sort files by their earliest timestamp to ensure chronological processing
     // and deterministic deduplication.
@@ -289,12 +310,17 @@ fn get_all_usage_entries(claude_path: &PathBuf) -> Vec<UsageEntry> {
 }
 
 #[command]
-pub fn get_usage_stats(days: Option<u32>) -> Result<UsageStats, String> {
+pub async fn get_usage_stats(days: Option<u32>) -> Result<UsageStats, String> {
     let claude_path = dirs::home_dir()
         .ok_or("Failed to get home directory")?
         .join(".claude");
 
-    let all_entries = get_all_usage_entries(&claude_path);
+    // Run the file scanning in a blocking task to avoid blocking the UI
+    let all_entries = tokio::task::spawn_blocking(move || {
+        get_all_usage_entries(&claude_path)
+    })
+    .await
+    .map_err(|e| format!("Failed to scan usage files: {}", e))?;
 
     if all_entries.is_empty() {
         return Ok(UsageStats {
@@ -449,12 +475,17 @@ pub fn get_usage_stats(days: Option<u32>) -> Result<UsageStats, String> {
 }
 
 #[command]
-pub fn get_usage_by_date_range(start_date: String, end_date: String) -> Result<UsageStats, String> {
+pub async fn get_usage_by_date_range(start_date: String, end_date: String) -> Result<UsageStats, String> {
     let claude_path = dirs::home_dir()
         .ok_or("Failed to get home directory")?
         .join(".claude");
 
-    let all_entries = get_all_usage_entries(&claude_path);
+    // Run the file scanning in a blocking task to avoid blocking the UI
+    let all_entries = tokio::task::spawn_blocking(move || {
+        get_all_usage_entries(&claude_path)
+    })
+    .await
+    .map_err(|e| format!("Failed to scan usage files: {}", e))?;
 
     // Parse dates
     let start = NaiveDate::parse_from_str(&start_date, "%Y-%m-%d").or_else(|_| {
@@ -619,7 +650,7 @@ pub fn get_usage_by_date_range(start_date: String, end_date: String) -> Result<U
 }
 
 #[command]
-pub fn get_usage_details(
+pub async fn get_usage_details(
     project_path: Option<String>,
     date: Option<String>,
 ) -> Result<Vec<UsageEntry>, String> {
@@ -627,7 +658,12 @@ pub fn get_usage_details(
         .ok_or("Failed to get home directory")?
         .join(".claude");
 
-    let mut all_entries = get_all_usage_entries(&claude_path);
+    // Run the file scanning in a blocking task to avoid blocking the UI
+    let mut all_entries = tokio::task::spawn_blocking(move || {
+        get_all_usage_entries(&claude_path)
+    })
+    .await
+    .map_err(|e| format!("Failed to scan usage files: {}", e))?;
 
     // Filter by project if specified
     if let Some(project) = project_path {
@@ -643,7 +679,7 @@ pub fn get_usage_details(
 }
 
 #[command]
-pub fn get_session_stats(
+pub async fn get_session_stats(
     since: Option<String>,
     until: Option<String>,
     order: Option<String>,
@@ -652,7 +688,12 @@ pub fn get_session_stats(
         .ok_or("Failed to get home directory")?
         .join(".claude");
 
-    let all_entries = get_all_usage_entries(&claude_path);
+    // Run the file scanning in a blocking task to avoid blocking the UI
+    let all_entries = tokio::task::spawn_blocking(move || {
+        get_all_usage_entries(&claude_path)
+    })
+    .await
+    .map_err(|e| format!("Failed to scan usage files: {}", e))?;
 
     let since_date = since.and_then(|s| NaiveDate::parse_from_str(&s, "%Y%m%d").ok());
     let until_date = until.and_then(|s| NaiveDate::parse_from_str(&s, "%Y%m%d").ok());
