@@ -273,8 +273,8 @@ brew install pkg-config
    **生产版本构建**
 
    ```bash
-   # 构建应用程序
-   bun run tauri build
+   # 构建应用程序（发布模式）
+   bun run tauri:build
 
    # 构建的可执行文件将位于：
    # - Linux: src-tauri/target/release/bundle/
@@ -287,7 +287,7 @@ brew install pkg-config
    **调试构建（编译更快，二进制文件更大）**
 
    ```bash
-   bun run tauri build --debug
+   bun run tauri:build:debug
    ```
 
    **不打包构建（仅创建可执行文件）**

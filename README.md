@@ -284,8 +284,8 @@ brew install pkg-config
    **For Production Build**
 
    ```bash
-   # Build the application
-   bun run tauri build
+   # Build the application (Release mode)
+   bun run tauri:build
 
    # The built executable will be in:
    # - Linux: src-tauri/target/release/bundle/
@@ -298,7 +298,7 @@ brew install pkg-config
    **Debug Build (faster compilation, larger binary)**
 
    ```bash
-   bun run tauri build --debug
+   bun run tauri:build:debug
    ```
 
    **Build without bundling (creates just the executable)**
