@@ -18,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { Project } from "@/lib/api";
+import { ProjectLanguages } from "@/components/ProjectLanguages";
 import { cn } from "@/lib/utils";
 import { formatTimeAgo } from "@/lib/date-utils";
 import { Pagination } from "@/components/ui/pagination";
@@ -120,6 +121,8 @@ export const ProjectList: React.FC<ProjectListProps> = ({
                   <p className="text-sm text-muted-foreground mb-3 font-mono truncate">
                     {project.path}
                   </p>
+                  
+                  <ProjectLanguages projectPath={project.path} />
                 </div>
                 
                 <div className="flex items-center justify-between">

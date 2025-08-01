@@ -5,6 +5,7 @@ mod checkpoint;
 mod claude_binary;
 mod commands;
 mod process;
+mod language_cache;
 
 use checkpoint::state::CheckpointState;
 use commands::agents::{
@@ -43,6 +44,10 @@ use commands::storage::{
     storage_insert_row, storage_execute_sql, storage_reset_database,
 };
 use commands::proxy::{get_proxy_settings, save_proxy_settings, apply_proxy_settings};
+use commands::project_analysis::{
+    analyze_project_languages,
+};
+use language_cache::LanguageCache;
 use process::ProcessRegistryState;
 use std::sync::Mutex;
 use tauri::Manager;
@@ -135,6 +140,9 @@ fn main() {
 
             // Initialize Claude process state
             app.manage(ClaudeProcessState::default());
+
+            // Initialize language analysis cache
+            app.manage(LanguageCache::new(3600)); // 1 hour TTL
 
             Ok(())
         })
@@ -239,6 +247,10 @@ fn main() {
             storage_insert_row,
             storage_execute_sql,
             storage_reset_database,
+            
+            // Project Analysis
+            analyze_project_languages,
+            commands::project_analysis::analyze_projects_batch,
             
             // Slash Commands
             commands::slash_commands::slash_commands_list,
