@@ -71,9 +71,9 @@ const TabItem: React.FC<TabItemProps> = ({ tab, isActive, onClose, onClick, isDr
         "transition-colors duration-100 overflow-hidden border-r border-border/20",
         "before:absolute before:bottom-0 before:left-0 before:right-0 before:h-0.5 before:transition-colors before:duration-100",
         isActive
-          ? "bg-background text-foreground before:bg-accent"
-          : "bg-muted/30 text-muted-foreground hover:bg-muted/50 hover:text-foreground before:bg-transparent",
-        isDragging && "bg-background border-accent/50 shadow-sm z-50",
+          ? "bg-card text-card-foreground before:bg-primary"
+          : "bg-transparent text-muted-foreground hover:bg-muted/40 hover:text-foreground before:bg-transparent",
+        isDragging && "bg-card border-primary/50 shadow-sm z-50",
         "min-w-[120px] max-w-[220px] h-8 px-3"
       )}
       onMouseEnter={() => setIsHovered(true)}
@@ -102,7 +102,7 @@ const TabItem: React.FC<TabItemProps> = ({ tab, isActive, onClose, onClick, isDr
 
         {tab.hasUnsavedChanges && !statusIcon && (
           <span 
-            className="w-1.5 h-1.5 bg-accent rounded-full"
+            className="w-1.5 h-1.5 bg-primary rounded-full"
             title="Unsaved changes"
           />
         )}
@@ -302,10 +302,10 @@ export const TabManager: React.FC<TabManagerProps> = ({ className }) => {
   };
 
   return (
-    <div className={cn("flex items-stretch bg-muted/20 border-b relative", className)}>
+    <div className={cn("flex items-stretch bg-muted/15 border-b relative", className)}>
       {/* Left fade gradient */}
       {showLeftScroll && (
-        <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-muted/20 to-transparent pointer-events-none z-10" />
+        <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-muted/15 to-transparent pointer-events-none z-10" />
       )}
       
       {/* Left scroll button */}
@@ -359,7 +359,7 @@ export const TabManager: React.FC<TabManagerProps> = ({ className }) => {
 
       {/* Right fade gradient */}
       {showRightScroll && (
-        <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-muted/20 to-transparent pointer-events-none z-10" />
+        <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-muted/15 to-transparent pointer-events-none z-10" />
       )}
 
       {/* Right scroll button */}
