@@ -83,7 +83,6 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
   const [selectedIcon, setSelectedIcon] = useState<string>(agent?.icon || "bot");
   const [systemPrompt, setSystemPrompt] = useState(agent?.system_prompt || "");
   const [defaultTask, setDefaultTask] = useState(agent?.default_task || "");
-  const [model, setModel] = useState(agent?.model || "sonnet-3-5");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
@@ -112,11 +111,10 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
           name,
           selectedIcon,
           systemPrompt,
-          defaultTask || undefined,
-          model
+          defaultTask || undefined
         );
       } else {
-        await api.createAgent(name, selectedIcon, systemPrompt, defaultTask || undefined, model);
+        await api.createAgent(name, selectedIcon, systemPrompt, defaultTask || undefined);
       }
 
       onAgentCreated();
@@ -137,8 +135,7 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
       (name !== (agent?.name || "") ||
         selectedIcon !== (agent?.icon || "bot") ||
         systemPrompt !== (agent?.system_prompt || "") ||
-        defaultTask !== (agent?.default_task || "") ||
-        model !== (agent?.model || "sonnet-3-5")) &&
+        defaultTask !== (agent?.default_task || "")) &&
       !globalThis.confirm(t.agents.unsavedChanges)
     ) {
       return;
@@ -244,191 +241,6 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
                 </div>
               </div>
 
-              {/* Model Selection */}
-              <div className="space-y-2">
-                <Label>{t.agents.model}</Label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {/* Claude 3.5 Haiku */}
-                  <button
-                    type="button"
-                    onClick={() => setModel("haiku")}
-                    className={cn(
-                      "px-4 py-3 rounded-lg border-2 font-medium transition-all text-left",
-                      "hover:scale-[1.02] active:scale-[0.98]",
-                      model === "haiku"
-                        ? "border-primary bg-primary text-primary-foreground shadow-lg"
-                        : "border-muted-foreground/30 hover:border-muted-foreground/50"
-                    )}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div
-                        className={cn(
-                          "w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5",
-                          model === "haiku" ? "border-primary-foreground" : "border-current"
-                        )}
-                      >
-                        {model === "haiku" && (
-                          <div className="w-2 h-2 rounded-full bg-primary-foreground" />
-                        )}
-                      </div>
-                      <div>
-                        <div className="text-sm font-semibold">{t.agents.claude35Haiku}</div>
-                        <div className="text-xs opacity-80">{t.agents.fastAffordable}</div>
-                        <div className="text-xs opacity-60 mt-1">
-                          {t.agents.inputTokens}:{" "}
-                          {formatPrice(getModelPricing("haiku")?.inputPrice || 0)}/M •{" "}
-                          {t.agents.outputTokens}:{" "}
-                          {formatPrice(getModelPricing("haiku")?.outputPrice || 0)}/M
-                        </div>
-                      </div>
-                    </div>
-                  </button>
-
-                  {/* Claude 3.5 Sonnet */}
-                  <button
-                    type="button"
-                    onClick={() => setModel("sonnet-3-5")}
-                    className={cn(
-                      "px-4 py-3 rounded-lg border-2 font-medium transition-all text-left",
-                      "hover:scale-[1.02] active:scale-[0.98]",
-                      model === "sonnet-3-5"
-                        ? "border-primary bg-primary text-primary-foreground shadow-lg"
-                        : "border-muted-foreground/30 hover:border-muted-foreground/50"
-                    )}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div
-                        className={cn(
-                          "w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5",
-                          model === "sonnet-3-5" ? "border-primary-foreground" : "border-current"
-                        )}
-                      >
-                        {model === "sonnet-3-5" && (
-                          <div className="w-2 h-2 rounded-full bg-primary-foreground" />
-                        )}
-                      </div>
-                      <div>
-                        <div className="text-sm font-semibold">{t.agents.claude35Sonnet}</div>
-                        <div className="text-xs opacity-80">{t.agents.balancedPerformance}</div>
-                        <div className="text-xs opacity-60 mt-1">
-                          {t.agents.inputTokens}:{" "}
-                          {formatPrice(getModelPricing("sonnet-3-5")?.inputPrice || 0)}/M •{" "}
-                          {t.agents.outputTokens}:{" "}
-                          {formatPrice(getModelPricing("sonnet-3-5")?.outputPrice || 0)}/M
-                        </div>
-                      </div>
-                    </div>
-                  </button>
-
-                  {/* Claude 3.7 Sonnet */}
-                  <button
-                    type="button"
-                    onClick={() => setModel("sonnet-3-7")}
-                    className={cn(
-                      "px-4 py-3 rounded-lg border-2 font-medium transition-all text-left",
-                      "hover:scale-[1.02] active:scale-[0.98]",
-                      model === "sonnet-3-7"
-                        ? "border-primary bg-primary text-primary-foreground shadow-lg"
-                        : "border-muted-foreground/30 hover:border-muted-foreground/50"
-                    )}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div
-                        className={cn(
-                          "w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5",
-                          model === "sonnet-3-7" ? "border-primary-foreground" : "border-current"
-                        )}
-                      >
-                        {model === "sonnet-3-7" && (
-                          <div className="w-2 h-2 rounded-full bg-primary-foreground" />
-                        )}
-                      </div>
-                      <div>
-                        <div className="text-sm font-semibold">{t.agents.claude37Sonnet}</div>
-                        <div className="text-xs opacity-80">{t.agents.advancedReasoning}</div>
-                        <div className="text-xs opacity-60 mt-1">
-                          {t.agents.inputTokens}:{" "}
-                          {formatPrice(getModelPricing("sonnet-3-7")?.inputPrice || 0)}/M •{" "}
-                          {t.agents.outputTokens}:{" "}
-                          {formatPrice(getModelPricing("sonnet-3-7")?.outputPrice || 0)}/M
-                        </div>
-                      </div>
-                    </div>
-                  </button>
-
-                  {/* Legacy Claude 4 Sonnet */}
-                  <button
-                    type="button"
-                    onClick={() => setModel("sonnet")}
-                    className={cn(
-                      "px-4 py-3 rounded-lg border-2 font-medium transition-all text-left",
-                      "hover:scale-[1.02] active:scale-[0.98]",
-                      model === "sonnet"
-                        ? "border-primary bg-primary text-primary-foreground shadow-lg"
-                        : "border-muted-foreground/30 hover:border-muted-foreground/50"
-                    )}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div
-                        className={cn(
-                          "w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5",
-                          model === "sonnet" ? "border-primary-foreground" : "border-current"
-                        )}
-                      >
-                        {model === "sonnet" && (
-                          <div className="w-2 h-2 rounded-full bg-primary-foreground" />
-                        )}
-                      </div>
-                      <div>
-                        <div className="text-sm font-semibold">{t.agents.claude4Sonnet}</div>
-                        <div className="text-xs opacity-80">{t.agents.fasterEfficient}</div>
-                        <div className="text-xs opacity-60 mt-1">
-                          {t.agents.inputTokens}:{" "}
-                          {formatPrice(getModelPricing("sonnet")?.inputPrice || 0)}/M •{" "}
-                          {t.agents.outputTokens}:{" "}
-                          {formatPrice(getModelPricing("sonnet")?.outputPrice || 0)}/M
-                        </div>
-                      </div>
-                    </div>
-                  </button>
-
-                  {/* Legacy Claude 4 Opus */}
-                  <button
-                    type="button"
-                    onClick={() => setModel("opus")}
-                    className={cn(
-                      "px-4 py-3 rounded-lg border-2 font-medium transition-all text-left",
-                      "hover:scale-[1.02] active:scale-[0.98]",
-                      model === "opus"
-                        ? "border-primary bg-primary text-primary-foreground shadow-lg"
-                        : "border-muted-foreground/30 hover:border-muted-foreground/50"
-                    )}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div
-                        className={cn(
-                          "w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5",
-                          model === "opus" ? "border-primary-foreground" : "border-current"
-                        )}
-                      >
-                        {model === "opus" && (
-                          <div className="w-2 h-2 rounded-full bg-primary-foreground" />
-                        )}
-                      </div>
-                      <div>
-                        <div className="text-sm font-semibold">{t.agents.claude4Opus}</div>
-                        <div className="text-xs opacity-80">{t.agents.moreCapable}</div>
-                        <div className="text-xs opacity-60 mt-1">
-                          {t.agents.inputTokens}:{" "}
-                          {formatPrice(getModelPricing("opus")?.inputPrice || 0)}/M •{" "}
-                          {t.agents.outputTokens}:{" "}
-                          {formatPrice(getModelPricing("opus")?.outputPrice || 0)}/M
-                        </div>
-                      </div>
-                    </div>
-                  </button>
-                </div>
-              </div>
 
               {/* Default Task */}
               <div className="space-y-2">

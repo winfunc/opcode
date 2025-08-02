@@ -40,6 +40,7 @@ import { HooksEditor } from "./HooksEditor";
 import { logger } from "@/lib/logger";
 import { handleError } from "@/lib/errorHandler";
 import { useTrackEvent, useComponentMetrics, useFeatureAdoptionTracking } from "@/hooks";
+import { useI18n } from "@/lib/i18n";
 
 interface AgentExecutionProps {
   /**
@@ -99,6 +100,7 @@ export interface ClaudeStreamMessage {
  * <AgentExecution agent={agent} onBack={() => setView('list')} />
  */
 export const AgentExecution: React.FC<AgentExecutionProps> = ({ agent, onBack, className }) => {
+  const { t } = useI18n();
   const [projectPath, setProjectPath] = useState("");
   const [task, setTask] = useState(agent.default_task || "");
   const [model, setModel] = useState<ClaudeModel>((agent.model as ClaudeModel) || "sonnet-3-5");
@@ -691,7 +693,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({ agent, onBack, c
                       {renderIcon()}
                     </div>
                     <div>
-                      <h1 className="text-xl font-bold">Execute: {agent.name}</h1>
+                      <h1 className="text-xl font-bold">{t.agents.execute}: {agent.name}</h1>
                       <p className="text-sm text-muted-foreground">
                         {model === "opus" ? "Claude 4 Opus" : "Claude 4 Sonnet"}
                       </p>
@@ -706,7 +708,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({ agent, onBack, c
                     disabled={messages.length === 0}
                   >
                     <Maximize2 className="h-4 w-4 mr-2" />
-                    Fullscreen
+                    {t.common.fullscreen}
                   </Button>
                 </div>
               </div>
@@ -731,12 +733,12 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({ agent, onBack, c
 
             {/* Project Path */}
             <div className="space-y-2">
-              <Label>Project Path</Label>
+              <Label>{t.common.projectPath}</Label>
               <div className="flex gap-2">
                 <Input
                   value={projectPath}
                   onChange={(e) => setProjectPath(e.target.value)}
-                  placeholder="Select or enter project path"
+                  placeholder={t.agents.selectOrEnterProjectPath}
                   disabled={isRunning}
                   className="flex-1"
                 />
@@ -752,17 +754,17 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({ agent, onBack, c
                   variant="outline"
                   onClick={handleOpenHooksDialog}
                   disabled={isRunning || !projectPath}
-                  title="Configure hooks"
+                  title={t.agents.configureHooks}
                 >
                   <Settings2 className="h-4 w-4 mr-2" />
-                  Hooks
+                  {t.agents.hooks}
                 </Button>
               </div>
             </div>
 
             {/* Model Selection */}
             <div className="space-y-2">
-              <Label>Model</Label>
+              <Label>{t.agents.model}</Label>
               <Popover
                 trigger={
                   <Button
@@ -821,12 +823,12 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({ agent, onBack, c
 
             {/* Task Input */}
             <div className="space-y-2">
-              <Label>Task</Label>
+              <Label>{t.agents.task}</Label>
               <div className="flex gap-2">
                 <Input
                   value={task}
                   onChange={(e) => setTask(e.target.value)}
-                  placeholder="Enter the task for the agent"
+                  placeholder={t.agents.enterTaskForAgent}
                   disabled={isRunning}
                   className="flex-1"
                   onKeyPress={(e) => {
@@ -843,12 +845,12 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({ agent, onBack, c
                   {isRunning ? (
                     <>
                       <StopCircle className="mr-2 h-4 w-4" />
-                      Stop
+                      {t.agents.stop}
                     </>
                   ) : (
                     <>
                       <Play className="mr-2 h-4 w-4" />
-                      Execute
+                      {t.agents.execute}
                     </>
                   )}
                 </Button>
@@ -879,9 +881,9 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({ agent, onBack, c
                 {messages.length === 0 && !isRunning && (
                   <div className="flex flex-col items-center justify-center h-full text-center">
                     <Terminal className="h-16 w-16 text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-medium mb-2">Ready to Execute</h3>
+                    <h3 className="text-lg font-medium mb-2">{t.agents.readyToExecute}</h3>
                     <p className="text-sm text-muted-foreground">
-                      Select a project path and enter a task to run the agent
+                      {t.agents.selectProjectPathAndTask}
                     </p>
                   </div>
                 )}
@@ -890,7 +892,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({ agent, onBack, c
                   <div className="flex items-center justify-center h-full">
                     <div className="flex items-center gap-3">
                       <Loader2 className="h-6 w-6 animate-spin" />
-                      <span className="text-sm text-muted-foreground">Initializing agent...</span>
+                      <span className="text-sm text-muted-foreground">{t.agents.initializingAgent}</span>
                     </div>
                   </div>
                 )}
@@ -944,11 +946,11 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({ agent, onBack, c
           <div className="flex items-center justify-between p-4 border-b border-border">
             <div className="flex items-center gap-2">
               {renderIcon()}
-              <h2 className="text-lg font-semibold">{agent.name} - Output</h2>
+              <h2 className="text-lg font-semibold">{agent.name} - {t.agents.output}</h2>
               {isRunning && (
                 <div className="flex items-center gap-1">
                   <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="text-xs text-green-600 font-medium">Running</span>
+                  <span className="text-xs text-green-600 font-medium">{t.agents.running}</span>
                 </div>
               )}
             </div>
@@ -957,7 +959,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({ agent, onBack, c
                 trigger={
                   <Button variant="ghost" size="sm" className="flex items-center gap-2">
                     <Copy className="h-4 w-4" />
-                    Copy Output
+                    {t.agents.copyOutput}
                     <ChevronDown className="h-3 w-3" />
                   </Button>
                 }
@@ -969,7 +971,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({ agent, onBack, c
                       className="w-full justify-start"
                       onClick={handleCopyAsJsonl}
                     >
-                      Copy as JSONL
+                      {t.agents.copyAsJsonl}
                     </Button>
                     <Button
                       variant="ghost"
@@ -977,7 +979,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({ agent, onBack, c
                       className="w-full justify-start"
                       onClick={handleCopyAsMarkdown}
                     >
-                      Copy as Markdown
+                      {t.agents.copyAsMarkdown}
                     </Button>
                   </div>
                 }
@@ -992,7 +994,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({ agent, onBack, c
                 className="flex items-center gap-2"
               >
                 <X className="h-4 w-4" />
-                Close
+                {t.common.close}
               </Button>
             </div>
           </div>
@@ -1017,9 +1019,9 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({ agent, onBack, c
               {messages.length === 0 && !isRunning && (
                 <div className="flex flex-col items-center justify-center h-full text-center">
                   <Terminal className="h-16 w-16 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-medium mb-2">Ready to Execute</h3>
+                  <h3 className="text-lg font-medium mb-2">{t.agents.readyToExecute}</h3>
                   <p className="text-sm text-muted-foreground">
-                    Select a project path and enter a task to run the agent
+                    {t.agents.selectProjectPathAndTask}
                   </p>
                 </div>
               )}
@@ -1028,7 +1030,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({ agent, onBack, c
                 <div className="flex items-center justify-center h-full">
                   <div className="flex items-center gap-3">
                     <Loader2 className="h-6 w-6 animate-spin" />
-                    <span className="text-sm text-muted-foreground">Initializing agent...</span>
+                    <span className="text-sm text-muted-foreground">{t.agents.initializingAgent}</span>
                   </div>
                 </div>
               )}
@@ -1070,10 +1072,9 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({ agent, onBack, c
       <Dialog open={isHooksDialogOpen} onOpenChange={setIsHooksDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle>Configure Hooks</DialogTitle>
+            <DialogTitle>{t.agents.configureHooks}</DialogTitle>
             <DialogDescription>
-              Configure hooks that run before, during, and after tool executions. Changes are saved
-              immediately.
+              {t.agents.configureHooksDesc}
             </DialogDescription>
           </DialogHeader>
 
@@ -1083,8 +1084,8 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({ agent, onBack, c
             className="flex-1 flex flex-col overflow-hidden"
           >
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="project">Project Settings</TabsTrigger>
-              <TabsTrigger value="local">Local Settings</TabsTrigger>
+              <TabsTrigger value="project">{t.agents.projectSettings}</TabsTrigger>
+              <TabsTrigger value="local">{t.agents.localSettings}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="project" className="flex-1 overflow-auto">
