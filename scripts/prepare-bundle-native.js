@@ -73,12 +73,12 @@ if (shebangMatch) {
 // 1.0.41: var k81=await nUA(await VP9(CP9(import.meta.url).resolve("./yoga.wasm")));
 // 1.0.67: var B71=await OPA(await WtB(JtB(import.meta.url).resolve("./yoga.wasm")));
 
-// Try 1.0.67 pattern first (newer version)
+// Try 1.0.67 pattern first (newer version) - 正确的模式
 const yoga167Pattern =
   /var nV1=await is0\(await Hj9\(zj9\(import\.meta\.url\)\.resolve\("\.\/yoga\.wasm"\)\)\);/;
 const yoga167Replacement = `var nV1=await(async()=>{return await is0(await Bun.file(__embeddedYogaWasm).arrayBuffer())})();`;
 
-// Try 1.0.60 pattern (older version)
+// Try 1.0.60 pattern (older version) - 正确的模式
 const yoga160Pattern =
   /var QV1=await Va0\(await bT9\(fT9\(import\.meta\.url\)\.resolve\("\.\/yoga\.wasm"\)\)\);/;
 const yoga160Replacement = `var QV1=await(async()=>{return await Va0(await Bun.file(__embeddedYogaWasm).arrayBuffer())})();`;
@@ -109,12 +109,24 @@ if (yoga167Pattern.test(cliContent)) {
   log.error("Warning: Could not find yoga.wasm loading pattern");
   // Try a more general pattern that works for both versions
   const generalYogaPattern =
-    /var\s+(\w+)\s*=\s*await\s+(\w+)\s*\(\s*await\s+(\w+)\s*\([^)]+\.resolve\s*\(\s*["']\.\/yoga\.wasm["']\s*\)\s*\)\s*\)/;
+    /var\s+(\w+)\s*=\s*await\s+(\w+)\s*\(\s*await\s+(\w+)\s*\(\s*(\w+)\s*\(\s*import\.meta\.url\s*\)\s*\.resolve\s*\(\s*["']\.\/yoga\.wasm["']\s*\)\s*\)\s*;/;
   if (generalYogaPattern.test(cliContent)) {
-    cliContent = cliContent.replace(generalYogaPattern, (match, varName, func1, _func2) => {
-      return `var ${varName}=await(async()=>{return await ${func1}(await Bun.file(__embeddedYogaWasm).arrayBuffer())})()`;
+    cliContent = cliContent.replace(generalYogaPattern, (match, varName, func1, _func2, _func3) => {
+      return `var ${varName}=await(async()=>{return await ${func1}(await Bun.file(__embeddedYogaWasm).arrayBuffer())})();`;
     });
-    log.info("�?Replaced yoga.wasm loading with embedded version (general pattern)");
+    log.info("✅Replaced yoga.wasm loading with embedded version (general pattern)");
+  } else {
+    // 尝试更宽泛的模式，用于捕获所有可能的变体
+    const veryGeneralPattern = /var\s+(\w+)\s*=\s*await\s+(\w+)\s*\([^;]*yoga\.wasm[^;]*\)\s*;/;
+    if (veryGeneralPattern.test(cliContent)) {
+      log.warn("Found yoga.wasm loading but using fallback replacement pattern");
+      cliContent = cliContent.replace(veryGeneralPattern, (match, varName, func1) => {
+        return `var ${varName}=await(async()=>{return await ${func1}(await Bun.file(__embeddedYogaWasm).arrayBuffer())})();`;
+      });
+      log.info("✅Replaced yoga.wasm loading with embedded version (fallback pattern)");
+    } else {
+      log.error("No yoga.wasm loading pattern found! Bundle may not work correctly.");
+    }
   }
 }
 

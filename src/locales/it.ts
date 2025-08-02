@@ -51,6 +51,7 @@ export const it: Translations = {
     time: "Ora",
     dateTime: "Data e ora",
     today: "Oggi",
+    projectPath: "Percorso progetto",
   },
 
   app: {
@@ -58,7 +59,6 @@ export const it: Translations = {
     welcomeTitle: "Benvenuto in Claudia",
     welcomeSubtitle: "Il tuo assistente di sviluppo basato su IA",
     ccAgents: "Agenti CC",
-    fullscreen: "Schermo intero",
     close: "Chiudi",
     ccProjects: "Progetti CC",
     backToHome: "Torna alla home",
@@ -66,6 +66,7 @@ export const it: Translations = {
     usageDashboard: "Dashboard di utilizzo",
     mcp: "MCP",
     claudeMd: "CLAUDE.md",
+    fullscreen: "Schermo intero",
   },
 
   claudemd: {
@@ -666,7 +667,6 @@ export const it: Translations = {
     allAgents: "Tutti gli Agenti",
     claudia: "Claudia",
     native: "Nativo",
-    running: "In esecuzione",
     createClaudiaAgent: "Crea Agente Claudia",
     noClaudiaAgents: "Nessun agente Claudia",
     createFirstClaudiaAgent: "Crea il tuo primo agente Claudia",
@@ -679,7 +679,6 @@ export const it: Translations = {
     agentExecutionsWillAppear: "Le esecuzioni degli agenti appariranno qui quando avviate",
     
     // Traduzioni dell'interfaccia di esecuzione agente
-    task: "Compito",
     selectOrEnterProjectPath: "Seleziona o inserisci il percorso del progetto",
     configureHooks: "Configura hooks",
     hooks: "Hooks",
@@ -695,6 +694,8 @@ export const it: Translations = {
     configureHooksDesc: "Configura hooks che vengono eseguiti prima, durante e dopo le esecuzioni degli strumenti. Le modifiche vengono salvate immediatamente.",
     projectSettings: "Impostazioni progetto",
     localSettings: "Impostazioni locali",
+    stop: "Ferma",
+    task: "Compito",
     started: "Avviato",
     view: "Visualizza",
   },

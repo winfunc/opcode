@@ -51,6 +51,7 @@ export const zh: Translations = {
     time: "时间",
     dateTime: "日期时间",
     today: "今天",
+    projectPath: "项目路径",
   },
 
   app: {
@@ -58,7 +59,6 @@ export const zh: Translations = {
     welcomeTitle: "欢迎使用 Claudia",
     welcomeSubtitle: "您的AI驱动开发助手",
     ccAgents: "CC 智能体",
-    fullscreen: "全屏",
     close: "关闭",
     ccProjects: "CC 项目",
     backToHome: "返回首页",
@@ -66,6 +66,7 @@ export const zh: Translations = {
     usageDashboard: "使用情况仪表板",
     mcp: "MCP",
     claudeMd: "CLAUDE.md",
+    fullscreen: "全屏",
   },
 
   // CLAUDE.md 编辑器
@@ -663,7 +664,6 @@ export const zh: Translations = {
     allAgents: "所有智能体",
     claudia: "Claudia",
     native: "原生",
-    running: "运行中",
     createClaudiaAgent: "创建Claudia智能体",
     noClaudiaAgents: "没有Claudia智能体",
     createFirstClaudiaAgent: "创建你的第一个Claudia智能体",
@@ -676,7 +676,6 @@ export const zh: Translations = {
     agentExecutionsWillAppear: "智能体执行将在启动时出现在这里",
     
     // AgentExecution 界面翻译
-    task: "任务",
     selectOrEnterProjectPath: "选择或输入项目路径",
     configureHooks: "配置钩子",
     hooks: "钩子",
@@ -692,6 +691,8 @@ export const zh: Translations = {
     configureHooksDesc: "配置在工具执行前、中、后运行的钩子。更改会立即保存。",
     projectSettings: "项目设置",
     localSettings: "本地设置",
+    stop: "停止",
+    task: "任务",
     started: "开始时间",
     view: "查看",
   },

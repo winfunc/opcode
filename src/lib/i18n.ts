@@ -79,6 +79,7 @@ export interface Translations {
     time: string;
     dateTime: string;
     today: string;
+    projectPath: string;
   };
 
   // 应用标题和导航
@@ -93,6 +94,8 @@ export interface Translations {
     usageDashboard: string;
     mcp: string;
     claudeMd: string;
+    fullscreen: string;
+    close: string;
   };
 
   // CLAUDE.md 编辑器
@@ -712,6 +715,23 @@ export interface Translations {
     agentExecutionsWillAppear: string;
     started: string;
     view: string;
+    // AgentExecution interface translations
+    task: string;
+    selectOrEnterProjectPath: string;
+    configureHooks: string;
+    hooks: string;
+    enterTaskForAgent: string;
+    readyToExecute: string;
+    selectProjectPathAndTask: string;
+    initializingAgent: string;
+    output: string;
+    copyOutput: string;
+    copyAsJsonl: string;
+    copyAsMarkdown: string;
+    configureHooksDesc: string;
+    projectSettings: string;
+    localSettings: string;
+    stop: string;
   };
 
   // Thinking modes for Claude AI interaction

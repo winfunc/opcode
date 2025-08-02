@@ -51,6 +51,7 @@ export const hi: Translations = {
     time: "समय",
     dateTime: "तारीख और समय",
     today: "आज",
+    projectPath: "परियोजना पथ",
   },
 
   app: {
@@ -58,7 +59,6 @@ export const hi: Translations = {
     welcomeTitle: "क्लाउडिया में आपका स्वागत है",
     welcomeSubtitle: "आपका AI-संचालित विकास सहायक",
     ccAgents: "CC एजेंट्स",
-    fullscreen: "पूर्ण स्क्रीन",
     close: "बंद करें",
     ccProjects: "CC प्रोजेक्ट्स",
     backToHome: "होम पर वापस जाएं",
@@ -66,6 +66,7 @@ export const hi: Translations = {
     usageDashboard: "उपयोग डैशबोर्ड",
     mcp: "MCP",
     claudeMd: "CLAUDE.md",
+    fullscreen: "पूर्ण स्क्रीन",
   },
 
   // CLAUDE.md संपादक
@@ -672,8 +673,7 @@ export const hi: Translations = {
     allAgents: "सभी एजेंट",
     claudia: "क्लॉडिया",
     native: "मूल",
-    running: "चल रहा है",
-    createClaudiaAgent: "क्लॉडिया एजेंट बनाएं",
+    createClaudiaAgent: "क्लाउडिया एजेंट बनाएं",
     noClaudiaAgents: "कोई क्लॉडिया एजेंट नहीं",
     createFirstClaudiaAgent: "अपना पहला क्लॉडिया एजेंट बनाएं",
     nativeAgentsInfo: "ये आपके ~/.claude/agents फ़ोल्डर से आयातित Claude Code मूल एजेंट हैं।",
@@ -685,7 +685,6 @@ export const hi: Translations = {
     agentExecutionsWillAppear: "एजेंट निष्पादन शुरू होने पर यहाँ दिखाई देंगे",
     
     // एजेंट निष्पादन इंटरफेस अनुवाद
-    task: "कार्य",
     selectOrEnterProjectPath: "प्रोजेक्ट पथ चुनें या दर्ज करें",
     configureHooks: "हुक्स कॉन्फ़िगर करें",
     hooks: "हुक्स",
@@ -701,6 +700,8 @@ export const hi: Translations = {
     configureHooksDesc: "उन हुक्स को कॉन्फ़िगर करें जो टूल निष्पादन से पहले, दौरान और बाद में चलते हैं। परिवर्तन तुरंत सहेजे जाते हैं।",
     projectSettings: "प्रोजेक्ट सेटिंग्स",
     localSettings: "स्थानीय सेटिंग्स",
+    stop: "रोकें",
+    task: "कार्य",
     started: "शुरू किया गया",
     view: "देखें",
   },

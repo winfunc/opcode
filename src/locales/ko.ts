@@ -51,6 +51,7 @@ export const ko: Translations = {
     time: "시간",
     dateTime: "날짜 및 시간",
     today: "오늘",
+    projectPath: "프로젝트 경로",
   },
 
   app: {
@@ -58,7 +59,6 @@ export const ko: Translations = {
     welcomeTitle: "Claudia에 오신 것을 환영합니다",
     welcomeSubtitle: "AI 기반 개발 도우미",
     ccAgents: "CC 에이전트",
-    fullscreen: "전체 화면",
     close: "닫기",
     ccProjects: "CC 프로젝트",
     backToHome: "홈으로 돌아가기",
@@ -66,6 +66,7 @@ export const ko: Translations = {
     usageDashboard: "사용량 대시보드",
     mcp: "MCP",
     claudeMd: "CLAUDE.md",
+    fullscreen: "전체 화면",
   },
 
   // CLAUDE.md 편집기
@@ -670,7 +671,6 @@ export const ko: Translations = {
     allAgents: "모든 에이전트",
     claudia: "Claudia",
     native: "네이티브",
-    running: "실행 중",
     createClaudiaAgent: "Claudia 에이전트 생성",
     noClaudiaAgents: "Claudia 에이전트가 없습니다",
     createFirstClaudiaAgent: "첫 번째 Claudia 에이전트를 생성하세요",
@@ -683,7 +683,6 @@ export const ko: Translations = {
     agentExecutionsWillAppear: "에이전트 실행이 시작되면 여기에 나타납니다",
     
     // 에이전트 실행 인터페이스 번역
-    task: "작업",
     selectOrEnterProjectPath: "프로젝트 경로 선택 또는 입력",
     configureHooks: "훅 구성",
     hooks: "훅",
@@ -699,6 +698,8 @@ export const ko: Translations = {
     configureHooksDesc: "도구 실행 전, 중, 후에 실행되는 훅을 구성합니다. 변경 사항은 즉시 저장됩니다.",
     projectSettings: "프로젝트 설정",
     localSettings: "로컬 설정",
+    stop: "중지",
+    task: "작업",
     started: "시작됨",
     view: "보기",
   },

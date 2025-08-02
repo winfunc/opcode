@@ -51,6 +51,7 @@ export const ja: Translations = {
     time: "時刻",
     dateTime: "日時",
     today: "今日",
+    projectPath: "プロジェクトパス",
   },
 
   app: {
@@ -58,7 +59,6 @@ export const ja: Translations = {
     welcomeTitle: "Claudiaへようこそ",
     welcomeSubtitle: "AI駆動の開発アシスタント",
     ccAgents: "CCエージェント",
-    fullscreen: "フルスクリーン",
     close: "閉じる",
     ccProjects: "CCプロジェクト",
     backToHome: "ホームに戻る",
@@ -66,6 +66,7 @@ export const ja: Translations = {
     usageDashboard: "使用状況ダッシュボード",
     mcp: "MCP",
     claudeMd: "CLAUDE.md",
+    fullscreen: "フルスクリーン",
   },
 
   // CLAUDE.md Editor
@@ -671,7 +672,6 @@ export const ja: Translations = {
     allAgents: "すべてのエージェント",
     claudia: "Claudia",
     native: "ネイティブ",
-    running: "実行中",
     createClaudiaAgent: "Claudiaエージェントを作成",
     noClaudiaAgents: "Claudiaエージェントがありません",
     createFirstClaudiaAgent: "最初のClaudiaエージェントを作成してください",
@@ -684,7 +684,6 @@ export const ja: Translations = {
     agentExecutionsWillAppear: "エージェントの実行が開始されるとここに表示されます",
     
     // エージェント実行インターフェースの翻訳
-    task: "タスク",
     selectOrEnterProjectPath: "プロジェクトパスを選択または入力",
     configureHooks: "フックを設定",
     hooks: "フック",
@@ -700,7 +699,9 @@ export const ja: Translations = {
     configureHooksDesc: "ツール実行の前、中、後に実行されるフックを設定します。変更は即座に保存されます。",
     projectSettings: "プロジェクト設定",
     localSettings: "ローカル設定",
-    started: "開始",
+    stop: "停止",
+    task: "タスク",
+    started: "開始済み",
     view: "表示",
   },
 

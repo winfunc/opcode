@@ -11,7 +11,6 @@ import MDEditor from "@uiw/react-md-editor";
 import { IconPicker } from "./IconPicker";
 import { AGENT_ICONS } from "@/constants/agentIcons";
 import { useI18n } from "@/lib/i18n";
-import { getModelPricing, formatPrice } from "@/config/pricing";
 import { handleError } from "@/lib/errorHandler";
 /**
  * Props interface for the CreateAgent component

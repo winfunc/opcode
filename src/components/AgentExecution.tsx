@@ -708,7 +708,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({ agent, onBack, c
                     disabled={messages.length === 0}
                   >
                     <Maximize2 className="h-4 w-4 mr-2" />
-                    {t.common.fullscreen}
+                    {t.app.fullscreen}
                   </Button>
                 </div>
               </div>

@@ -51,6 +51,7 @@ export const ar: Translations = {
     time: "الوقت",
     dateTime: "التاريخ والوقت",
     today: "اليوم",
+    projectPath: "مسار المشروع",
   },
 
   app: {
@@ -58,7 +59,6 @@ export const ar: Translations = {
     welcomeTitle: "مرحبًا بك في كلاوديا",
     welcomeSubtitle: "مساعد التطوير المدعوم بالذكاء الاصطناعي",
     ccAgents: "وكلاء CC",
-    fullscreen: "ملء الشاشة",
     close: "إغلاق",
     ccProjects: "مشاريع CC",
     backToHome: "العودة إلى الرئيسية",
@@ -66,6 +66,7 @@ export const ar: Translations = {
     usageDashboard: "لوحة الاستخدام",
     mcp: "MCP",
     claudeMd: "CLAUDE.md",
+    fullscreen: "ملء الشاشة",
   },
 
   claudemd: {
@@ -653,8 +654,7 @@ export const ar: Translations = {
     allAgents: "جميع الوكلاء",
     claudia: "كلوديا",
     native: "أصلي",
-    running: "قيد التشغيل",
-    createClaudiaAgent: "إنشاء وكيل كلوديا",
+    createClaudiaAgent: "إنشاء وكيل كلاوديا",
     noClaudiaAgents: "لا توجد وكلاء كلوديا",
     createFirstClaudiaAgent: "أنشئ أول وكيل كلوديا لك",
     nativeAgentsInfo: "هذه هي وكلاء Claude Code الأصليون المستوردون من مجلد ~/.claude/agents الخاص بك.",
@@ -666,7 +666,6 @@ export const ar: Translations = {
     agentExecutionsWillAppear: "ستظهر عمليات تنفيذ الوكيل هنا عند البدء",
     
     // ترجمات واجهة تنفيذ الوكيل
-    task: "المهمة",
     selectOrEnterProjectPath: "اختر أو أدخل مسار المشروع",
     configureHooks: "تكوين الخطافات",
     hooks: "الخطافات",
@@ -682,6 +681,8 @@ export const ar: Translations = {
     configureHooksDesc: "تكوين الخطافات التي تعمل قبل وأثناء وبعد تنفيذ الأدوات. يتم حفظ التغييرات فوراً.",
     projectSettings: "إعدادات المشروع",
     localSettings: "الإعدادات المحلية",
+    stop: "إيقاف",
+    task: "المهمة",
     started: "بدأ",
     view: "عرض",
   },

@@ -51,6 +51,7 @@ export const en: Translations = {
     time: "Time",
     dateTime: "Date & Time",
     today: "Today",
+    projectPath: "Project Path",
   },
 
   app: {
@@ -689,13 +690,13 @@ export const en: Translations = {
     selectProjectPathAndTask: "Select a project path and enter a task to run the agent",
     initializingAgent: "Initializing agent...",
     output: "Output",
-    running: "Running",
     copyOutput: "Copy Output",
     copyAsJsonl: "Copy as JSONL",
     copyAsMarkdown: "Copy as Markdown",
     configureHooksDesc: "Configure hooks that run before, during, and after tool executions. Changes are saved immediately.",
     projectSettings: "Project Settings",
     localSettings: "Local Settings",
+    stop: "Stop",
     started: "Started",
     view: "View",
     importNativeAgents: "Import Native Agents",

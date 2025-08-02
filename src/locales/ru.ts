@@ -51,6 +51,7 @@ export const ru: Translations = {
     time: "Время",
     dateTime: "Дата и время",
     today: "Сегодня",
+    projectPath: "Путь проекта",
   },
 
   app: {
@@ -58,7 +59,6 @@ export const ru: Translations = {
     welcomeTitle: "Добро пожаловать в Claudia",
     welcomeSubtitle: "Ваш помощник разработчика на базе ИИ",
     ccAgents: "CC Агенты",
-    fullscreen: "Полный экран",
     close: "Закрыть",
     ccProjects: "CC Проекты",
     backToHome: "Вернуться на главную",
@@ -66,6 +66,7 @@ export const ru: Translations = {
     usageDashboard: "Панель использования",
     mcp: "MCP",
     claudeMd: "CLAUDE.md",
+    fullscreen: "Полный экран",
   },
 
   // Редактор CLAUDE.md
@@ -678,8 +679,7 @@ export const ru: Translations = {
     allAgents: "Все Агенты",
     claudia: "Claudia",
     native: "Нативный",
-    running: "Выполняется",
-    createClaudiaAgent: "Создать Агента Claudia",
+    createClaudiaAgent: "Создать агента Claudia",
     noClaudiaAgents: "Нет агентов Claudia",
     createFirstClaudiaAgent: "Создайте своего первого агента Claudia",
     nativeAgentsInfo: "Это нативные агенты Claude Code, импортированные из вашей папки ~/.claude/agents.",
@@ -691,7 +691,6 @@ export const ru: Translations = {
     agentExecutionsWillAppear: "Выполнения агентов появятся здесь при запуске",
     
     // Переводы интерфейса выполнения агента
-    task: "Задача",
     selectOrEnterProjectPath: "Выберите или введите путь к проекту",
     configureHooks: "Настроить хуки",
     hooks: "Хуки",
@@ -707,6 +706,8 @@ export const ru: Translations = {
     configureHooksDesc: "Настройте хуки, которые выполняются до, во время и после выполнения инструментов. Изменения сохраняются немедленно.",
     projectSettings: "Настройки проекта",
     localSettings: "Локальные настройки",
+    stop: "Остановить",
+    task: "Задача",
     started: "Запущен",
     view: "Просмотр",
   },
