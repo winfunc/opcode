@@ -43,4 +43,4 @@ export {
   useAsyncPerformanceTracker
 } from './usePerformanceMonitor';
 export { TAB_SCREEN_NAMES } from './useAnalytics';
-export { useTabContext } from './useTabContext';
+export { useTabContext } from '../contexts/hooks';

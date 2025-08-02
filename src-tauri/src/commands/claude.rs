@@ -306,6 +306,7 @@ fn create_command_with_env(program: &str) -> Command {
 }
 
 /// Determines whether to use sidecar or system binary execution
+#[allow(dead_code)]
 fn should_use_sidecar(claude_path: &str) -> bool {
     claude_path == "claude-code"
 }
@@ -1473,6 +1474,7 @@ async fn spawn_claude_process(app: AppHandle, mut cmd: Command, prompt: String, 
 }
 
 /// Helper function to spawn Claude sidecar process and handle streaming
+#[allow(dead_code)]
 async fn spawn_claude_sidecar(
     app: AppHandle,
     args: Vec<String>,

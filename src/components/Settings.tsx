@@ -547,8 +547,8 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
 
               {/* General Settings */}
               <TabsContent value="general" className="space-y-6">
-                <Card className="p-6 space-y-6">
-                  <div>
+                <Card className="p-6">
+                  <div className="space-y-6">
                     <h3 className="text-base font-semibold mb-4">{t.settings.generalSettings}</h3>
 
                     <div className="space-y-4">
@@ -746,37 +746,14 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
                             const value = e.target.value ? parseInt(e.target.value) : undefined;
                             updateSetting("cleanupPeriodDays", value);
                           }}
-                        /> <Label htmlFor="color-destructive" className="text-xs">Destructive</Label>
-                            <div className="flex gap-2">
-                              <Input
-                                id="color-destructive"
-                                type="text"
-                                value={customColors.destructive}
-                                onChange={(e) => setCustomColors({ destructive: e.target.value })}
-                                placeholder="oklch(0.6 0.2 25)"
-                                className="font-mono text-xs"
-                              />
-                              <div
-                                className="w-10 h-10 rounded border"
-                                style={{ backgroundColor: customColors.destructive }}
-                              />
-                            </div>
-                          </div>
-                        </div>
-
-                        <p className="text-xs text-muted-foreground">
-                          Use CSS color values (hex, rgb, oklch, etc.). Changes apply immediately.
-                        </p>
-                      </div>
-                    )}
-
+                        />
                         <p className="text-xs text-muted-foreground">
                           {t.settings.chatRetentionDesc}
                         </p>
                       </div>
 
-                      {/* Claude Binary Path Selector */}
-                      <div className="space-y-4">
+                    {/* Claude Binary Path Selector */}
+                    <div className="space-y-4">
                         <div>
                           <Label className="text-sm font-medium mb-2 block">
                             {t.settings.claudeInstallation}
@@ -789,6 +766,12 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
                           selectedPath={currentBinaryPath}
                           onSelect={handleClaudeInstallationSelect}
                         />
+                        {currentBinaryPath && !binaryPathChanged && (
+                          <p className="text-xs text-green-600 dark:text-green-400 flex items-center gap-2">
+                            <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                            {t.settings.claudeInstallationSelected || "Claude installation selected"}
+                          </p>
+                        )}
                         {binaryPathChanged && (
                           <p className="text-xs text-amber-600 dark:text-amber-400">
                             {t.settings.binaryPathChanged}
@@ -1083,10 +1066,6 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
                           {t.settings.claudeInstallationDesc}
                         </p>
                       </div>
-                      <ClaudeVersionSelector
-                        selectedPath={currentBinaryPath}
-                        onSelect={handleClaudeInstallationSelect}
-                      />
                       {binaryPathChanged && (
                         <p className="text-xs text-amber-600 dark:text-amber-400">
                           {t.settings.binaryPathChanged}
