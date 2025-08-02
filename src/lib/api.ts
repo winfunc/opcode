@@ -1799,7 +1799,7 @@ export const api = {
     try {
       // Use storageReadTable to safely query the app_settings table
       const result = await this.storageReadTable('app_settings', 1, 1000);
-      const setting = result?.data?.find((row: any) => row.key === key);
+      const setting = (result as any)?.data?.find((row: any) => row.key === key);
       return setting?.value || null;
     } catch (error) {
       console.error(`Failed to get setting ${key}:`, error);

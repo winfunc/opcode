@@ -33,7 +33,6 @@ import {
   ThinkingWidget,
   WebSearchWidget,
   WebFetchWidget,
-  type TodoItem,
 } from "./ToolWidgets";
 import { handleError } from "@/lib/errorHandler";
 /**

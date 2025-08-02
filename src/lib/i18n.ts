@@ -276,6 +276,33 @@ export interface Translations {
     customModelName: string;
     disableCostWarnings: string;
 
+    // 主题设置
+    theme: string;
+    themeDesc: string;
+    selectTheme: string;
+    themeDark: string;
+    themeGray: string;
+    themeLight: string;
+    themeCustom: string;
+    customThemeColors: string;
+    colorBackground: string;
+    colorForeground: string;
+    colorCard: string;
+    colorCardForeground: string;
+    colorPrimary: string;
+    colorPrimaryForeground: string;
+    colorSecondary: string;
+    colorSecondaryForeground: string;
+    colorMuted: string;
+    colorMutedForeground: string;
+    colorAccent: string;
+    colorAccentForeground: string;
+    colorDestructive: string;
+    colorDestructiveForeground: string;
+    colorBorder: string;
+    colorInput: string;
+    colorRing: string;
+
     // 字体缩放设置
     fontScale: string;
     fontScaleDesc: string;

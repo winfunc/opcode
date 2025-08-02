@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { api, type ClaudeInstallation } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import { CheckCircle, Package, HardDrive, Settings, RefreshCw } from "lucide-react";
+import { CheckCircle, HardDrive, Settings, RefreshCw } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { handleError } from "@/lib/errorHandler";
 import { logger } from "@/lib/logger";
@@ -249,7 +249,7 @@ export const ClaudeVersionSelector: React.FC<ClaudeVersionSelectorProps> = ({
     );
   }
 
-  const bundledInstallations = installations.filter((i) => i.installation_type === "Bundled");
+  const bundledInstallations = installations.filter((i) => i.installation_type === "System" || i.installation_type === "Custom");
   const systemInstallations = installations.filter((i) => i.installation_type === "System");
   const customInstallations = installations.filter((i) => i.installation_type === "Custom");
 

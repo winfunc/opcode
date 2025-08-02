@@ -738,7 +738,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
 
           // Track enhanced session stopped metrics when session completes
           if (effectiveSession && claudeSessionId) {
-            const sessionStartTimeValue = messages.length > 0 ? messages[0].timestamp || Date.now() : Date.now();
+            const sessionStartTimeValue = messages.length > 0 ? (Number(messages[0].timestamp) || Date.now()) : Date.now();
             const duration = Date.now() - sessionStartTimeValue;
             const metrics = sessionMetrics.current;
             const timeToFirstMessage = metrics.firstMessageTime
@@ -1047,8 +1047,8 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     if (!claudeSessionId || !isLoading) return;
 
     try {
-      const sessionStartTime = messages.length > 0 ? messages[0].timestamp || Date.now() : Date.now();
-      const duration = Date.now() - sessionStartTime;
+      const sessionStartTimeLocal = messages.length > 0 ? (Number(messages[0].timestamp) || Date.now()) : Date.now();
+      const duration = Date.now() - sessionStartTimeLocal;
 
       await api.cancelClaudeExecution(claudeSessionId);
 

@@ -72,10 +72,11 @@ export interface TabsListProps {
 const TabsList = React.forwardRef<HTMLDivElement, TabsListProps>(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("flex h-9 items-center justify-start rounded-lg p-1", className)}
+    className={cn("flex h-9 items-center justify-start rounded-lg p-1 border", className)}
     style={{
-      backgroundColor: "var(--color-muted)",
-      color: "var(--color-muted-foreground)",
+      backgroundColor: "var(--color-card)",
+      color: "var(--color-foreground)",
+      borderColor: "var(--color-border)",
     }}
     {...props}
   />
@@ -123,9 +124,10 @@ const TabsTrigger = React.forwardRef<HTMLButtonElement, TabsTriggerProps>(
           className
         )}
         style={{
-          backgroundColor: isSelected ? "var(--color-background)" : "transparent",
-          color: isSelected ? "var(--color-foreground)" : "inherit",
-          boxShadow: isSelected ? "0 1px 2px rgba(0,0,0,0.1)" : "none",
+          backgroundColor: isSelected ? "var(--color-primary)" : "transparent",
+          color: isSelected ? "var(--color-primary-foreground)" : "var(--color-muted-foreground)",
+          boxShadow: isSelected ? "0 1px 3px rgba(0,0,0,0.2)" : "none",
+          border: isSelected ? "1px solid var(--color-primary)" : "1px solid transparent",
         }}
         {...props}
       />

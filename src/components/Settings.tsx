@@ -554,35 +554,35 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
                     <div className="space-y-4">
                       {/* Theme Selector */}
                       <div className="space-y-2">
-                        <Label htmlFor="theme">Theme</Label>
+                        <Label htmlFor="theme">{t.settings.theme}</Label>
                         <Select
                           value={theme}
                           onValueChange={(value) => setTheme(value as any)}
                         >
                           <SelectTrigger id="theme" className="w-full">
-                            <SelectValue placeholder="Select a theme" />
+                            <SelectValue placeholder={t.settings.selectTheme} />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="dark">Dark</SelectItem>
-                            <SelectItem value="gray">Gray</SelectItem>
-                            <SelectItem value="light">Light</SelectItem>
-                            <SelectItem value="custom">Custom</SelectItem>
+                            <SelectItem value="dark">{t.settings.themeDark}</SelectItem>
+                            <SelectItem value="gray">{t.settings.themeGray}</SelectItem>
+                            <SelectItem value="light">{t.settings.themeLight}</SelectItem>
+                            <SelectItem value="custom">{t.settings.themeCustom}</SelectItem>
                           </SelectContent>
                         </Select>
                         <p className="text-xs text-muted-foreground">
-                          Choose your preferred color theme for the interface
+                          {t.settings.themeDesc}
                         </p>
                       </div>
 
                       {/* Custom Color Editor */}
                       {theme === 'custom' && (
                         <div className="space-y-4 p-4 border rounded-lg bg-muted/20">
-                          <h4 className="text-sm font-medium">Custom Theme Colors</h4>
+                          <h4 className="text-sm font-medium">{t.settings.customThemeColors}</h4>
 
                           <div className="grid grid-cols-2 gap-4">
                             {/* Background Color */}
                             <div className="space-y-2">
-                              <Label htmlFor="color-background" className="text-xs">Background</Label>
+                              <Label htmlFor="color-background" className="text-xs">{t.settings.colorBackground}</Label>
                               <div className="flex gap-2">
                                 <Input
                                   id="color-background"
@@ -601,7 +601,7 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
 
                             {/* Foreground Color */}
                             <div className="space-y-2">
-                              <Label htmlFor="color-foreground" className="text-xs">Foreground</Label>
+                              <Label htmlFor="color-foreground" className="text-xs">{t.settings.colorForeground}</Label>
                               <div className="flex gap-2">
                                 <Input
                                   id="color-foreground"
@@ -620,7 +620,7 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
 
                             {/* Primary Color */}
                             <div className="space-y-2">
-                              <Label htmlFor="color-primary" className="text-xs">Primary</Label>
+                              <Label htmlFor="color-primary" className="text-xs">{t.settings.colorPrimary}</Label>
                               <div className="flex gap-2">
                                 <Input
                                   id="color-primary"
@@ -639,7 +639,7 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
 
                             {/* Card Color */}
                             <div className="space-y-2">
-                              <Label htmlFor="color-card" className="text-xs">Card</Label>
+                              <Label htmlFor="color-card" className="text-xs">{t.settings.colorCard}</Label>
                               <div className="flex gap-2">
                                 <Input
                                   id="color-card"
@@ -658,7 +658,7 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
 
                             {/* Accent Color */}
                             <div className="space-y-2">
-                              <Label htmlFor="color-accent" className="text-xs">Accent</Label>
+                              <Label htmlFor="color-accent" className="text-xs">{t.settings.colorAccent}</Label>
                               <div className="flex gap-2">
                                 <Input
                                   id="color-accent"
@@ -677,7 +677,7 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
 
                             {/* Destructive Color */}
                             <div className="space-y-2">
-                              <Label htmlFor="color-destructive" className="text-xs">Destructive</Label>
+                              <Label htmlFor="color-destructive" className="text-xs">{t.settings.colorDestructive}</Label>
                               <div className="flex gap-2">
                                 <Input
                                   id="color-destructive"
@@ -769,7 +769,7 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
                         {currentBinaryPath && !binaryPathChanged && (
                           <p className="text-xs text-green-600 dark:text-green-400 flex items-center gap-2">
                             <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                            {t.settings.claudeInstallationSelected || "Claude installation selected"}
+                            {t.settings.claudeInstallation || "Claude installation selected"}
                           </p>
                         )}
                         {binaryPathChanged && (
@@ -1304,6 +1304,7 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
                         <Switch
                           id="analytics-enabled"
                           checked={analyticsEnabled}
+                          variant="high-contrast"
                           onCheckedChange={async (checked) => {
                             if (checked && !analyticsConsented) {
                               setShowAnalyticsConsent(true);
@@ -1323,12 +1324,12 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
                       </div>
 
                       {/* Privacy Info */}
-                      <div className="rounded-lg border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/20 p-4">
+                      <div className="rounded-lg border border-blue-300 dark:border-blue-600 bg-blue-100 dark:bg-blue-900/30 p-4">
                         <div className="flex gap-3">
-                          <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                          <Shield className="h-5 w-5 text-blue-700 dark:text-blue-300 flex-shrink-0 mt-0.5" />
                           <div className="space-y-2">
-                            <p className="font-medium text-blue-900 dark:text-blue-100">{t.analytics.privacyProtected}</p>
-                            <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
+                            <p className="font-medium text-blue-900 dark:text-blue-50">{t.analytics.privacyProtected}</p>
+                            <ul className="text-sm text-blue-800 dark:text-blue-100 space-y-1">
                               <li>• {t.analytics.noPersonalInfo}</li>
                               <li>• {t.analytics.noFileContents}</li>
                               <li>• {t.analytics.anonymousIds}</li>
@@ -1342,8 +1343,8 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
                       {analyticsEnabled && (
                         <div className="space-y-4">
                           <div>
-                            <h4 className="text-sm font-medium mb-2">{t.analytics.whatWeCollect}</h4>
-                            <ul className="text-sm text-muted-foreground space-y-1">
+                            <h4 className="text-sm font-medium mb-2 text-foreground">{t.analytics.whatWeCollect}</h4>
+                            <ul className="text-sm text-foreground/80 space-y-1">
                               <li>• {t.analytics.featureUsage}</li>
                               <li>• {t.analytics.performanceMetrics}</li>
                               <li>• {t.analytics.errorReports}</li>

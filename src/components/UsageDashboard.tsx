@@ -19,7 +19,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
 import { handleError } from "@/lib/errorHandler";
-import { formatUnixTimestamp, formatISOTimestamp } from "@/lib/date-utils";
+import { formatUnixTimestamp } from "@/lib/date-utils";
 /**
  * Props interface for the UsageDashboard component
  */

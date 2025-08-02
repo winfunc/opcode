@@ -109,6 +109,7 @@ export function ProxySettings({ setToast, onChange }: ProxySettingsProps) {
             id="proxy-enabled"
             checked={settings.enabled}
             onCheckedChange={(checked) => setSettings(prev => ({ ...prev, enabled: checked }))}
+            variant="high-contrast"
           />
         </div>
 

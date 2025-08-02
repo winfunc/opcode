@@ -7,7 +7,7 @@ import { ThemeMode } from '@/contexts/ThemeContext';
  * @param theme - The current theme mode
  * @returns Prism syntax highlighting theme object
  */
-export const getClaudeSyntaxTheme = (theme: ThemeMode): unknown => {
+export const getClaudeSyntaxTheme = (theme: ThemeMode): { [key: string]: React.CSSProperties } => {
   const themes = {
     dark: {
       base: '#e3e8f0',
