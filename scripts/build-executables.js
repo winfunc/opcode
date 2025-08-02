@@ -166,7 +166,11 @@ async function main() {
     // Find platform by matching the target triple in the output name
     const current = allPlatforms.find((p) => p.output.includes(currentTargetTriple));
     if (current) {
-      platformsToBuild = [current];
+      // For current platform, use simplified name to match Tauri config
+      platformsToBuild = [{ 
+        target: current.target, 
+        output: "claude-code" + (process.platform === "win32" ? ".exe" : "")
+      }];
     } else {
       log.error(`Current platform ${currentTargetTriple} not found in build targets`);
       process.exit(1);

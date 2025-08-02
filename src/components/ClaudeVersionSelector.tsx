@@ -207,6 +207,8 @@ export const ClaudeVersionSelector: React.FC<ClaudeVersionSelectorProps> = ({
    */
   const getInstallationTypeColor = (installation: ClaudeInstallation) => {
     switch (installation.installation_type) {
+      case "Bundled":
+        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
       case "System":
         return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
       case "Custom":
@@ -249,7 +251,7 @@ export const ClaudeVersionSelector: React.FC<ClaudeVersionSelectorProps> = ({
     );
   }
 
-  const bundledInstallations = installations.filter((i) => i.installation_type === "System" || i.installation_type === "Custom");
+  const bundledInstallations = installations.filter((i) => i.installation_type === "Bundled");
   const systemInstallations = installations.filter((i) => i.installation_type === "System");
   const customInstallations = installations.filter((i) => i.installation_type === "Custom");
 
