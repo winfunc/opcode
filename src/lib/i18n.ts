@@ -899,6 +899,60 @@ export interface Translations {
     trueValue: string;
     falseValue: string;
   };
+
+  // 代理设置翻译
+  proxy: {
+    title: string;
+    subtitle: string;
+    enableProxy: string;
+    enableProxyDesc: string;
+    httpProxy: string;
+    httpsProxy: string;
+    noProxy: string;
+    noProxyDesc: string;
+    allProxy: string;
+    allProxyDesc: string;
+    httpProxyPlaceholder: string;
+    httpsProxyPlaceholder: string;
+    noProxyPlaceholder: string;
+    allProxyPlaceholder: string;
+    settingsSaved: string;
+    settingsFailed: string;
+    loadFailed: string;
+  };
+
+  // 分析同意翻译
+  analytics: {
+    title: string;
+    subtitle: string;
+    helpImproveClaudia: string;
+    collectAnonymousData: string;
+    whatWeCollect: string;
+    featureUsage: string;
+    performanceMetrics: string;
+    errorReports: string;
+    usagePatterns: string;
+    privacyProtected: string;
+    noPersonalInfo: string;
+    noFileContents: string;
+    noApiKeys: string;
+    anonymousIds: string;
+    optOutAnytime: string;
+    dataHelpsUs: string;
+    noThanks: string;
+    allowAnalytics: string;
+    helpImprove: string;
+    noPersonalData: string;
+    allow: string;
+    enableAnalytics: string;
+    analyticsSettings: string;
+    privacyInfo: string;
+    dataCollection: string;
+    deleteAllData: string;
+    analyticsEnabled: string;
+    analyticsDisabled: string;
+    allDataDeleted: string;
+  };
 }
 
 // I18n Context

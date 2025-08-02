@@ -541,8 +541,8 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
                 <TabsTrigger value="hooks">{t.settings.hooks}</TabsTrigger>
                 <TabsTrigger value="commands">{t.settings.commands}</TabsTrigger>
                 <TabsTrigger value="storage">{t.settings.storage}</TabsTrigger>
-                <TabsTrigger value="proxy">Proxy</TabsTrigger>
-                <TabsTrigger value="analytics">Analytics</TabsTrigger>
+                <TabsTrigger value="proxy">{t.proxy.title}</TabsTrigger>
+                <TabsTrigger value="analytics">{t.analytics.title}</TabsTrigger>
               </TabsList>
 
               {/* General Settings */}
@@ -1289,14 +1289,14 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
                   <div>
                     <div className="flex items-center gap-3 mb-4">
                       <BarChart3 className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-                      <h3 className="text-base font-semibold">Analytics Settings</h3>
+                      <h3 className="text-base font-semibold">{t.analytics.analyticsSettings}</h3>
                     </div>
 
                     <div className="space-y-6">
                       {/* Analytics Toggle */}
                       <div className="flex items-center justify-between">
                         <div className="space-y-1">
-                          <Label htmlFor="analytics-enabled" className="text-base">Enable Analytics</Label>
+                          <Label htmlFor="analytics-enabled" className="text-base">{t.analytics.enableAnalytics}</Label>
                           <p className="text-sm text-muted-foreground">
                             Help improve Claudia by sharing anonymous usage data
                           </p>
@@ -1311,12 +1311,12 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
                               await analytics.enable();
                               setAnalyticsEnabled(true);
                               trackEvent.settingsChanged('analytics_enabled', true);
-                              setToast({ message: "Analytics enabled", type: "success" });
+                              setToast({ message: t.analytics.analyticsEnabled, type: "success" });
                             } else {
                               await analytics.disable();
                               setAnalyticsEnabled(false);
                               trackEvent.settingsChanged('analytics_enabled', false);
-                              setToast({ message: "Analytics disabled", type: "success" });
+                              setToast({ message: t.analytics.analyticsDisabled, type: "success" });
                             }
                           }}
                         />
@@ -1360,11 +1360,11 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
                                 await analytics.deleteAllData();
                                 setAnalyticsEnabled(false);
                                 setAnalyticsConsented(false);
-                                setToast({ message: "All analytics data deleted", type: "success" });
+                                setToast({ message: t.analytics.allDataDeleted, type: "success" });
                               }}
                             >
                               <Trash className="mr-2 h-4 w-4" />
-                              Delete All Analytics Data
+                              {t.analytics.deleteAllData}
                             </Button>
                           </div>
                         </div>
