@@ -352,6 +352,7 @@ export interface Translations {
     minutesAgo: string;
     hoursAgo: string;
     daysAgo: string;
+    yesterday: string;
   };
 
   // MCP相关

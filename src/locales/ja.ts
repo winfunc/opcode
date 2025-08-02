@@ -321,6 +321,7 @@ export const ja: Translations = {
     minutesAgo: "{count}分前",
     hoursAgo: "{count}時間前",
     daysAgo: "{count}日前",
+    yesterday: "昨日",
   },
 
   mcp: {

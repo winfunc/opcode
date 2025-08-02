@@ -324,6 +324,7 @@ export const pt: Translations = {
     minutesAgo: "há {count} minutos",
     hoursAgo: "há {count} horas",
     daysAgo: "há {count} dias",
+    yesterday: "Ontem",
   },
 
   mcp: {

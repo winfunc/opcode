@@ -311,9 +311,10 @@ export const ar: Translations = {
 
   time: {
     justNow: "الآن",
-    minutesAgo: "منذ {count} دقيقة",
-    hoursAgo: "منذ {count} ساعة",
-    daysAgo: "منذ {count} يوم",
+    minutesAgo: "منذ {count} دقائق",
+    hoursAgo: "منذ {count} ساعات",
+    daysAgo: "منذ {count} أيام",
+    yesterday: "أمس",
   },
 
   mcp: {

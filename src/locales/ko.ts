@@ -320,6 +320,7 @@ export const ko: Translations = {
     minutesAgo: "{count}분 전",
     hoursAgo: "{count}시간 전",
     daysAgo: "{count}일 전",
+    yesterday: "어제",
   },
 
   mcp: {

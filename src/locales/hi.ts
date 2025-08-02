@@ -322,6 +322,7 @@ export const hi: Translations = {
     minutesAgo: "{count} मिनट पहले",
     hoursAgo: "{count} घंटे पहले",
     daysAgo: "{count} दिन पहले",
+    yesterday: "कल",
   },
   mcp: {
     title: "MCP मैनेजर",

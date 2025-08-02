@@ -19,6 +19,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
 import { handleError } from "@/lib/errorHandler";
+import { formatUnixTimestamp, formatISOTimestamp } from "@/lib/date-utils";
 /**
  * Props interface for the UsageDashboard component
  */
@@ -44,7 +45,7 @@ interface UsageDashboardProps {
  * ```
  */
 export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<UsageStats | null>(null);
@@ -127,6 +128,24 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
    */
   const formatNumber = (num: number): string => {
     return new Intl.NumberFormat("en-US").format(num);
+  };
+
+  const getLocaleFromLanguage = (language: string): string => {
+    const localeMap: Record<string, string> = {
+      'zh': 'zh-CN',
+      'ja': 'ja-JP',
+      'ko': 'ko-KR',
+      'es': 'es-ES',
+      'fr': 'fr-FR',
+      'de': 'de-DE',
+      'ru': 'ru-RU',
+      'pt': 'pt-PT',
+      'it': 'it-IT',
+      'ar': 'ar-SA',
+      'hi': 'hi-IN',
+      'en': 'en-US'
+    };
+    return localeMap[language] || 'en-US';
   };
 
   /**
@@ -512,7 +531,11 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                             {formatCurrency(session.total_cost)}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {new Date(session.last_used).toLocaleDateString()}
+                            {formatUnixTimestamp(
+                              Math.floor(new Date(session.last_used).getTime() / 1000),
+                              getLocaleFromLanguage(language),
+                              { yesterday: t.time.yesterday }
+                            )}
                           </p>
                         </div>
                       </div>
@@ -551,7 +574,8 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                                 const heightPercent =
                                   maxCost > 0 ? (day.total_cost / maxCost) * 100 : 0;
                                 const date = new Date(day.date.replace(/-/g, "/"));
-                                const formattedDate = date.toLocaleDateString("en-US", {
+                                const locale = getLocaleFromLanguage(language);
+                                const formattedDate = date.toLocaleDateString(locale, {
                                   weekday: "short",
                                   month: "short",
                                   day: "numeric",
@@ -592,7 +616,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
 
                                     {/* X-axis label – absolutely positioned below the bar so it doesn't affect bar height */}
                                     <div className="absolute left-1/2 top-full mt-1 -translate-x-1/2 text-xs text-muted-foreground -rotate-45 origin-top-left whitespace-nowrap pointer-events-none">
-                                      {date.toLocaleDateString("en-US", {
+                                      {date.toLocaleDateString(locale, {
                                         month: "short",
                                         day: "numeric",
                                       })}

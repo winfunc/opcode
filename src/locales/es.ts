@@ -325,6 +325,7 @@ export const es: Translations = {
     minutesAgo: "hace {count} minutos",
     hoursAgo: "hace {count} horas",
     daysAgo: "hace {count} días",
+    yesterday: "Ayer",
   },
 
   mcp: {

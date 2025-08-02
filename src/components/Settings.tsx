@@ -1298,7 +1298,7 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
                         <div className="space-y-1">
                           <Label htmlFor="analytics-enabled" className="text-base">{t.analytics.enableAnalytics}</Label>
                           <p className="text-sm text-muted-foreground">
-                            Help improve Claudia by sharing anonymous usage data
+                            {t.analytics.helpImprove}
                           </p>
                         </div>
                         <Switch
@@ -1327,12 +1327,12 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
                         <div className="flex gap-3">
                           <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
                           <div className="space-y-2">
-                            <p className="font-medium text-blue-900 dark:text-blue-100">Your privacy is protected</p>
+                            <p className="font-medium text-blue-900 dark:text-blue-100">{t.analytics.privacyProtected}</p>
                             <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
-                              <li>• No personal information is collected</li>
-                              <li>• No file contents, paths, or project names</li>
-                              <li>• All data is anonymous with random IDs</li>
-                              <li>• You can disable analytics at any time</li>
+                              <li>• {t.analytics.noPersonalInfo}</li>
+                              <li>• {t.analytics.noFileContents}</li>
+                              <li>• {t.analytics.anonymousIds}</li>
+                              <li>• {t.analytics.optOutAnytime}</li>
                             </ul>
                           </div>
                         </div>
@@ -1342,12 +1342,12 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
                       {analyticsEnabled && (
                         <div className="space-y-4">
                           <div>
-                            <h4 className="text-sm font-medium mb-2">What we collect:</h4>
+                            <h4 className="text-sm font-medium mb-2">{t.analytics.whatWeCollect}</h4>
                             <ul className="text-sm text-muted-foreground space-y-1">
-                              <li>• Feature usage patterns</li>
-                              <li>• Performance metrics</li>
-                              <li>• Error reports (without sensitive data)</li>
-                              <li>• Session frequency and duration</li>
+                              <li>• {t.analytics.featureUsage}</li>
+                              <li>• {t.analytics.performanceMetrics}</li>
+                              <li>• {t.analytics.errorReports}</li>
+                              <li>• {t.analytics.usagePatterns}</li>
                             </ul>
                           </div>
 

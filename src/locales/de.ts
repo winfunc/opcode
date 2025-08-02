@@ -328,6 +328,7 @@ export const de: Translations = {
     minutesAgo: "vor {count} Minuten",
     hoursAgo: "vor {count} Stunden",
     daysAgo: "vor {count} Tagen",
+    yesterday: "Gestern",
   },
 
   mcp: {

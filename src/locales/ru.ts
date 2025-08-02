@@ -326,6 +326,7 @@ export const ru: Translations = {
     minutesAgo: "{count} минут назад",
     hoursAgo: "{count} часов назад",
     daysAgo: "{count} дней назад",
+    yesterday: "Вчера",
   },
 
   mcp: {
