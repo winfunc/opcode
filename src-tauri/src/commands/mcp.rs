@@ -106,6 +106,14 @@ fn execute_claude_mcp_command(app_handle: &AppHandle, args: Vec<&str>) -> Result
         cmd.arg(arg);
     }
 
+    // On Windows, hide the console window to prevent CMD popup
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+
     let output = cmd.output().context("Failed to execute claude command")?;
 
     if output.status.success() {
@@ -626,6 +634,14 @@ pub async fn mcp_serve(app: AppHandle) -> Result<String, String> {
 
     let mut cmd = create_command_with_env(&claude_path);
     cmd.arg("mcp").arg("serve");
+
+    // On Windows, hide the console window to prevent CMD popup
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
 
     match cmd.spawn() {
         Ok(_) => {

@@ -201,7 +201,18 @@ fn try_which_command() -> Option<ClaudeInstallation> {
 
     debug!("Trying '{} claude' to find binary...", command);
 
-    match Command::new(command).arg(arg).output() {
+    let mut cmd = Command::new(command);
+    cmd.arg(arg);
+    
+    // On Windows, hide the console window to prevent CMD popup
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+    
+    match cmd.output() {
         Ok(output) if output.status.success() => {
             let output_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
 
@@ -420,7 +431,18 @@ fn find_standard_installations() -> Vec<ClaudeInstallation> {
 
     // Also check if claude is available in PATH (without full path)
     let claude_cmd = if cfg!(target_os = "windows") { "claude.exe" } else { "claude" };
-    if let Ok(output) = Command::new(claude_cmd).arg("--version").output() {
+    let mut cmd = Command::new(claude_cmd);
+    cmd.arg("--version");
+    
+    // On Windows, hide the console window to prevent CMD popup
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+    
+    if let Ok(output) = cmd.output() {
         if output.status.success() {
             debug!("claude is available in PATH");
             let version = extract_version_from_output(&output.stdout);
@@ -439,7 +461,18 @@ fn find_standard_installations() -> Vec<ClaudeInstallation> {
 
 /// Get Claude version by running --version command
 fn get_claude_version(path: &str) -> Result<Option<String>, String> {
-    match Command::new(path).arg("--version").output() {
+    let mut cmd = Command::new(path);
+    cmd.arg("--version");
+    
+    // On Windows, hide the console window to prevent CMD popup
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+    
+    match cmd.output() {
         Ok(output) => {
             if output.status.success() {
                 Ok(extract_version_from_output(&output.stdout))
@@ -560,6 +593,14 @@ pub fn create_command_with_env(program: &str) -> Command {
     let mut cmd = Command::new(program);
 
     info!("Creating command for: {}", program);
+
+    // On Windows, hide the console window to prevent CMD popup
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
 
     // Inherit essential environment variables from parent process
     for (key, value) in std::env::vars() {

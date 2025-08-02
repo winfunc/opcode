@@ -1258,10 +1258,11 @@ async fn spawn_agent_system(
                     "🔍 Process likely stuck waiting for input, attempting to kill PID: {}",
                     pid
                 );
-                let kill_result = std::process::Command::new("kill")
-                    .arg("-TERM")
-                    .arg(pid.to_string())
-                    .output();
+                let mut cmd = std::process::Command::new("kill");
+                cmd.arg("-TERM").arg(pid.to_string());
+                
+                // On Unix systems, this doesn't need CREATE_NO_WINDOW
+                let kill_result = cmd.output();
 
                 match kill_result {
                     Ok(output) if output.status.success() => {
@@ -1269,10 +1270,9 @@ async fn spawn_agent_system(
                     }
                     Ok(_) => {
                         warn!("🔍 Failed to kill process with TERM, trying KILL");
-                        let _ = std::process::Command::new("kill")
-                            .arg("-KILL")
-                            .arg(pid.to_string())
-                            .output();
+                        let mut cmd = std::process::Command::new("kill");
+                        cmd.arg("-KILL").arg(pid.to_string());
+                        let _ = cmd.output();
                     }
                     Err(e) => {
                         warn!("🔍 Error killing process: {}", e);
@@ -1511,11 +1511,19 @@ pub async fn cleanup_finished_processes(db: State<'_, AgentDb>) -> Result<Vec<i6
         // Check if the process is still running
         let is_running = if cfg!(target_os = "windows") {
             // On Windows, use tasklist to check if process exists
-            match std::process::Command::new("tasklist")
-                .args(["/FI", &format!("PID eq {}", pid)])
-                .args(["/FO", "CSV"])
-                .output()
+            let mut cmd = std::process::Command::new("tasklist");
+            cmd.args(["/FI", &format!("PID eq {}", pid)])
+               .args(["/FO", "CSV"]);
+            
+            // On Windows, hide the console window to prevent CMD popup
+            #[cfg(target_os = "windows")]
             {
+                use std::os::windows::process::CommandExt;
+                const CREATE_NO_WINDOW: u32 = 0x08000000;
+                cmd.creation_flags(CREATE_NO_WINDOW);
+            }
+            
+            match cmd.output() {
                 Ok(output) => {
                     let output_str = String::from_utf8_lossy(&output.stdout);
                     output_str.lines().count() > 1 // Header + process line if exists
@@ -1524,10 +1532,11 @@ pub async fn cleanup_finished_processes(db: State<'_, AgentDb>) -> Result<Vec<i6
             }
         } else {
             // On Unix-like systems, use kill -0 to check if process exists
-            match std::process::Command::new("kill")
-                .args(["-0", &pid.to_string()])
-                .output()
-            {
+            let mut cmd = std::process::Command::new("kill");
+            cmd.args(["-0", &pid.to_string()]);
+            
+            // On Unix systems, this doesn't need CREATE_NO_WINDOW, but keep consistent structure
+            match cmd.output() {
                 Ok(output) => output.status.success(),
                 Err(_) => false,
             }
@@ -1959,6 +1968,14 @@ fn create_command_with_env(program: &str) -> Command {
 
     // Create a new tokio Command from the program path
     let mut tokio_cmd = Command::new(program);
+
+    // On Windows, hide the console window to prevent CMD popup
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        tokio_cmd.creation_flags(CREATE_NO_WINDOW);
+    }
 
     // Copy over all environment variables from the std::process::Command
     // This is a workaround since we can't directly convert between the two types

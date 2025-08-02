@@ -51,7 +51,9 @@
       "rpm",
       "appimage",
       "app",
-      "dmg"
+      "dmg",
+      "msi",
+      "nsis"
     ],
     "icon": [
       "icons/icon.ico",

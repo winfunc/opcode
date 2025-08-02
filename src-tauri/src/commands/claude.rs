@@ -232,6 +232,14 @@ fn create_command_with_env(program: &str) -> Command {
     // Create a new tokio Command from the program path
     let mut tokio_cmd = Command::new(program);
 
+    // On Windows, hide the console window to prevent CMD popup
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        tokio_cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+
     // Copy over all environment variables
     for (key, value) in std::env::vars() {
         if key == "PATH"
@@ -637,6 +645,14 @@ pub async fn open_new_session(app: AppHandle, path: Option<String>) -> Result<St
     {
         let mut cmd = std::process::Command::new(claude_path);
 
+        // On Windows, hide the console window to prevent CMD popup
+        #[cfg(target_os = "windows")]
+        {
+            use std::os::windows::process::CommandExt;
+            const CREATE_NO_WINDOW: u32 = 0x08000000;
+            cmd.creation_flags(CREATE_NO_WINDOW);
+        }
+
         // If a path is provided, use it; otherwise use current directory
         if let Some(project_path) = path {
             cmd.current_dir(&project_path);
@@ -794,9 +810,18 @@ pub async fn check_claude_version(app: AppHandle) -> Result<ClaudeVersionStatus,
 
     #[cfg(debug_assertions)]
     {
-        let output = std::process::Command::new(claude_path)
-            .arg("--version")
-            .output();
+        let mut cmd = std::process::Command::new(claude_path);
+        cmd.arg("--version");
+        
+        // On Windows, hide the console window to prevent CMD popup
+        #[cfg(target_os = "windows")]
+        {
+            use std::os::windows::process::CommandExt;
+            const CREATE_NO_WINDOW: u32 = 0x08000000;
+            cmd.creation_flags(CREATE_NO_WINDOW);
+        }
+        
+        let output = cmd.output();
 
         match output {
             Ok(output) => {
@@ -1197,13 +1222,28 @@ pub async fn cancel_claude_execution(
                     if let Some(pid) = pid {
                         log::info!("Attempting system kill as last resort for PID: {}", pid);
                         let kill_result = if cfg!(target_os = "windows") {
-                            std::process::Command::new("taskkill")
-                                .args(["/F", "/PID", &pid.to_string()])
-                                .output()
+                            {
+                                let mut cmd = std::process::Command::new("taskkill");
+                                cmd.args(["/F", "/PID", &pid.to_string()]);
+                                
+                                // On Windows, hide the console window to prevent CMD popup
+                                #[cfg(target_os = "windows")]
+                                {
+                                    use std::os::windows::process::CommandExt;
+                                    const CREATE_NO_WINDOW: u32 = 0x08000000;
+                                    cmd.creation_flags(CREATE_NO_WINDOW);
+                                }
+                                
+                                cmd.output()
+                            }
                         } else {
-                            std::process::Command::new("kill")
-                                .args(["-KILL", &pid.to_string()])
-                                .output()
+                            {
+                                let mut cmd = std::process::Command::new("kill");
+                                cmd.args(["-KILL", &pid.to_string()]);
+                                
+                                // On Unix systems, this doesn't need CREATE_NO_WINDOW
+                                cmd.output()
+                            }
                         };
 
                         match kill_result {
@@ -2434,6 +2474,14 @@ pub async fn validate_hook_command(command: String) -> Result<serde_json::Value,
     cmd.arg("-n") // Syntax check only
        .arg("-c")
        .arg(&command);
+
+    // On Windows, hide the console window to prevent CMD popup
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
 
     match cmd.output() {
         Ok(output) => {

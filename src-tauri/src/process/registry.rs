@@ -359,14 +359,27 @@ impl ProcessRegistry {
         info!("Attempting to kill process {} by PID {}", run_id, pid);
 
         let kill_result = if cfg!(target_os = "windows") {
-            std::process::Command::new("taskkill")
-                .args(["/F", "/PID", &pid.to_string()])
-                .output()
+            {
+                let mut cmd = std::process::Command::new("taskkill");
+                cmd.args(["/F", "/PID", &pid.to_string()]);
+                
+                // On Windows, hide the console window to prevent CMD popup
+                #[cfg(target_os = "windows")]
+                {
+                    use std::os::windows::process::CommandExt;
+                    const CREATE_NO_WINDOW: u32 = 0x08000000;
+                    cmd.creation_flags(CREATE_NO_WINDOW);
+                }
+                
+                cmd.output()
+            }
         } else {
             // First try SIGTERM
-            let term_result = std::process::Command::new("kill")
-                .args(["-TERM", &pid.to_string()])
-                .output();
+            let mut cmd = std::process::Command::new("kill");
+            cmd.args(["-TERM", &pid.to_string()]);
+            
+            // On Unix systems, this doesn't need CREATE_NO_WINDOW
+            let term_result = cmd.output();
 
             match &term_result {
                 Ok(output) if output.status.success() => {
@@ -375,9 +388,9 @@ impl ProcessRegistry {
                     std::thread::sleep(std::time::Duration::from_secs(2));
 
                     // Check if still running
-                    let check_result = std::process::Command::new("kill")
-                        .args(["-0", &pid.to_string()])
-                        .output();
+                    let mut cmd = std::process::Command::new("kill");
+                    cmd.args(["-0", &pid.to_string()]);
+                    let check_result = cmd.output();
 
                     if let Ok(output) = check_result {
                         if output.status.success() {
@@ -386,9 +399,11 @@ impl ProcessRegistry {
                                 "Process {} still running after SIGTERM, sending SIGKILL",
                                 pid
                             );
-                            std::process::Command::new("kill")
-                                .args(["-KILL", &pid.to_string()])
-                                .output()
+                            {
+                                let mut cmd = std::process::Command::new("kill");
+                                cmd.args(["-KILL", &pid.to_string()]);
+                                cmd.output()
+                            }
                         } else {
                             term_result
                         }
@@ -399,9 +414,11 @@ impl ProcessRegistry {
                 _ => {
                     // SIGTERM failed, try SIGKILL directly
                     warn!("SIGTERM failed for PID {}, trying SIGKILL", pid);
-                    std::process::Command::new("kill")
-                        .args(["-KILL", &pid.to_string()])
-                        .output()
+                    {
+                        let mut cmd = std::process::Command::new("kill");
+                        cmd.args(["-KILL", &pid.to_string()]);
+                        cmd.output()
+                    }
                 }
             }
         };
