@@ -443,8 +443,22 @@ function AppContent() {
                       <SessionList
                         sessions={sessions}
                         projectPath={selectedProject.path}
+                        projectId={selectedProject.id}
                         onBack={handleBack}
                         onEditClaudeFile={handleEditClaudeFile}
+                        onSessionDeleted={async (sessionId) => {
+                          // Remove the deleted session from the local state
+                          setSessions(prev => prev.filter(s => s.id !== sessionId));
+                          
+                          // Check if this was the last session in the project
+                          const remainingSessions = sessions.filter(s => s.id !== sessionId);
+                          if (remainingSessions.length === 0) {
+                            // If no sessions remain, remove the project from the projects list
+                            setProjects(prev => prev.filter(p => p.id !== selectedProject.id));
+                            // Go back to projects view
+                            handleBack();
+                          }
+                        }}
                       />
                     </motion.div>
                   ) : (

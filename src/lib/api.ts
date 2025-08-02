@@ -1987,4 +1987,22 @@ export const api = {
       throw error;
     }
   },
+
+  /**
+   * Deletes a session and its associated data
+   * @param sessionId - The session ID to delete
+   * @param projectId - The project ID containing the session
+   */
+  async deleteSession(sessionId: string, projectId: string): Promise<void> {
+    try {
+      await invoke("delete_session", { sessionId, projectId });
+    } catch (error) {
+      await handleApiError(error as Error, { operation: 'deleteSession', sessionId, projectId });
+      throw error;
+    }
+  },
+
+  /**
+   * Gets checkpoint state statistics (for debugging/monitoring)
+   */
 };

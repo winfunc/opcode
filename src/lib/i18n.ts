@@ -134,6 +134,12 @@ export interface Translations {
     title: string;
     noSessions: string;
     sessionName: string;
+    deleteSession: string;
+    deleteSessionConfirm: string;
+    deleteSessionDesc: string;
+    deletingSession: string;
+    sessionDeleted: string;
+    failedToDeleteSession: string;
     lastModified: string;
     messages: string;
     tokens: string;

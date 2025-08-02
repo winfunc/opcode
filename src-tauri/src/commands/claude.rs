@@ -495,12 +495,15 @@ pub async fn list_projects() -> Result<Vec<Project>, String> {
                 }
             }
 
-            projects.push(Project {
-                id: dir_name.to_string(),
-                path: project_path,
-                sessions,
-                created_at,
-            });
+            // Only add projects that have at least one session
+            if !sessions.is_empty() {
+                projects.push(Project {
+                    id: dir_name.to_string(),
+                    path: project_path,
+                    sessions,
+                    created_at,
+                });
+            }
         }
     }
 
@@ -2500,4 +2503,63 @@ pub async fn validate_hook_command(command: String) -> Result<serde_json::Value,
         }
         Err(e) => Err(format!("Failed to validate command: {}", e))
     }
+}
+
+/// Deletes a session file and its associated data
+#[tauri::command]
+pub async fn delete_session(
+    app: tauri::State<'_, crate::checkpoint::state::CheckpointState>,
+    session_id: String,
+    project_id: String,
+) -> Result<(), String> {
+    log::info!("Deleting session: {} from project: {}", session_id, project_id);
+
+    let claude_dir = get_claude_dir().map_err(|e| e.to_string())?;
+    let project_dir = claude_dir.join("projects").join(&project_id);
+    let session_file = project_dir.join(format!("{}.jsonl", session_id));
+
+    // Check if session file exists
+    if !session_file.exists() {
+        return Err(format!("Session file not found: {}", session_id));
+    }
+
+    // Delete the session file
+    fs::remove_file(&session_file)
+        .map_err(|e| format!("Failed to delete session file: {}", e))?;
+
+    log::info!("Successfully deleted session file: {:?}", session_file);
+
+    // Clear checkpoint manager for this session if it exists
+    app.remove_manager(&session_id).await;
+
+    // Also try to delete any associated todo data
+    let todos_dir = claude_dir.join("todos");
+    let todo_file = todos_dir.join(format!("{}.json", session_id));
+    if todo_file.exists() {
+        if let Err(e) = fs::remove_file(&todo_file) {
+            log::warn!("Failed to delete todo file for session {}: {}", session_id, e);
+        } else {
+            log::info!("Successfully deleted todo file: {:?}", todo_file);
+        }
+    }
+
+    // Check if this was the last session in the project
+    let remaining_sessions = fs::read_dir(&project_dir)
+        .map_err(|e| format!("Failed to read project directory: {}", e))?
+        .filter_map(|entry| entry.ok())
+        .filter(|entry| {
+            entry.path().is_file() && 
+            entry.path().extension().and_then(|s| s.to_str()) == Some("jsonl")
+        })
+        .count();
+
+    // If no sessions remain, delete the entire project directory
+    if remaining_sessions == 0 {
+        log::info!("No sessions remaining in project {}, deleting project directory", project_id);
+        fs::remove_dir_all(&project_dir)
+            .map_err(|e| format!("Failed to delete project directory: {}", e))?;
+        log::info!("Successfully deleted project directory: {:?}", project_dir);
+    }
+
+    Ok(())
 }

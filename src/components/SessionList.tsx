@@ -1,10 +1,18 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { FileText, ArrowLeft, Calendar, Clock, MessageSquare } from "lucide-react";
+import { FileText, ArrowLeft, Calendar, Clock, MessageSquare, Trash2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
 import { ClaudeMemoriesDropdown } from "@/components/ClaudeMemoriesDropdown";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import {
   formatUnixTimestamp,
@@ -12,6 +20,7 @@ import {
   truncateText,
   getFirstLine,
 } from "@/lib/date-utils";
+import { useI18n } from "@/lib/i18n";
 import type { Session, ClaudeMdFile } from "@/lib/api";
 
 interface SessionListProps {
@@ -24,6 +33,10 @@ interface SessionListProps {
    */
   projectPath: string;
   /**
+   * The current project ID
+   */
+  projectId: string;
+  /**
    * Callback to go back to project list
    */
   onBack: () => void;
@@ -35,6 +48,10 @@ interface SessionListProps {
    * Callback when a CLAUDE.md file should be edited
    */
   onEditClaudeFile?: (file: ClaudeMdFile) => void;
+  /**
+   * Callback when a session is deleted
+   */
+  onSessionDeleted?: (sessionId: string) => void;
   /**
    * Optional className for styling
    */
@@ -77,12 +94,17 @@ const ITEMS_PER_PAGE = 5;
 export const SessionList: React.FC<SessionListProps> = ({
   sessions,
   projectPath,
+  projectId,
   onBack,
   onSessionClick,
   onEditClaudeFile,
+  onSessionDeleted,
   className,
 }) => {
+  const { t } = useI18n();
   const [currentPage, setCurrentPage] = useState(1);
+  const [sessionToDelete, setSessionToDelete] = useState<Session | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Calculate pagination
   const totalPages = Math.ceil(sessions.length / ITEMS_PER_PAGE);
@@ -94,6 +116,31 @@ export const SessionList: React.FC<SessionListProps> = ({
   React.useEffect(() => {
     setCurrentPage(1);
   }, [sessions.length]);
+
+  // Handle session deletion
+  const handleDeleteSession = async () => {
+    if (!sessionToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      // Import the API to use deleteSession
+      const { api } = await import("@/lib/api");
+      await api.deleteSession(sessionToDelete.id, projectId);
+      onSessionDeleted?.(sessionToDelete.id);
+    } catch (error) {
+      console.error("Failed to delete session:", error);
+      // You might want to show a toast notification here
+    } finally {
+      setIsDeleting(false);
+      setSessionToDelete(null);
+    }
+  };
+
+  // Handle delete button click
+  const handleDeleteClick = (e: React.MouseEvent, session: Session) => {
+    e.stopPropagation(); // Prevent session click
+    setSessionToDelete(session);
+  };
 
   return (
     <div className={cn("space-y-4", className)}>
@@ -195,6 +242,16 @@ export const SessionList: React.FC<SessionListProps> = ({
                           </div>
                         </div>
                       </div>
+                      
+                      {/* Delete button */}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                        onClick={(e) => handleDeleteClick(e, session)}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
                     </div>
                   </div>
                 </CardContent>
@@ -205,6 +262,28 @@ export const SessionList: React.FC<SessionListProps> = ({
       </AnimatePresence>
 
       <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!sessionToDelete} onOpenChange={(open) => {
+        if (!open) {
+          setSessionToDelete(null);
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t.sessions.deleteSessionConfirm}</DialogTitle>
+            <DialogDescription>
+              {t.sessions.deleteSessionDesc.replace("{sessionId}", sessionToDelete?.id || "")}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSessionToDelete(null)}>{t.common.cancel}</Button>
+            <Button variant="destructive" onClick={handleDeleteSession} disabled={isDeleting}>
+              {isDeleting ? t.sessions.deletingSession : t.common.delete}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
