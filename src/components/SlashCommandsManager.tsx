@@ -43,6 +43,7 @@ import { cn } from "@/lib/utils";
 import { COMMON_TOOL_MATCHERS } from "@/types/hooks";
 import { useI18n } from "@/lib/i18n";
 import { handleError } from "@/lib/errorHandler";
+import { useTrackEvent } from "@/hooks";
 interface SlashCommandsManagerProps {
   projectPath?: string;
   className?: string;
@@ -166,6 +167,9 @@ export const SlashCommandsManager: React.FC<SlashCommandsManagerProps> = ({
   const [commandToDelete, setCommandToDelete] = useState<SlashCommand | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  // Analytics tracking
+  const trackEvent = useTrackEvent();
+
   // Load commands on mount
   useEffect(() => {
     loadCommands();
@@ -236,6 +240,12 @@ export const SlashCommandsManager: React.FC<SlashCommandsManagerProps> = ({
         commandForm.allowedTools,
         commandForm.scope === "project" ? projectPath : undefined
       );
+
+      // Track command creation
+      trackEvent.slashCommandCreated({
+        command_type: editingCommand ? 'custom' : 'custom',
+        has_parameters: commandForm.content.includes('$ARGUMENTS')
+      });
 
       setEditDialogOpen(false);
       await loadCommands();

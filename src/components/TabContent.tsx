@@ -1,24 +1,28 @@
-import React, { Suspense, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { useTabState } from "@/hooks/useTabState";
-import type { Tab } from "@/contexts/contexts";
-import { Loader2, Plus } from "lucide-react";
-import { api, type Project, type Session, type ClaudeMdFile } from "@/lib/api";
-import type { Agent } from "@/lib/api";
-import { ProjectList } from "@/components/ProjectList";
-import { SessionList } from "@/components/SessionList";
-import { RunningClaudeSessions } from "@/components/RunningClaudeSessions";
-import { Button } from "@/components/ui/button";
-import { useI18n } from "@/lib/i18n";
-import { logger } from "@/lib/logger";
-import { ClaudeCodeSession } from "@/components/ClaudeCodeSession";
-import AgentRunOutputViewer from "@/components/AgentRunOutputViewer";
-import { AgentExecution } from "@/components/AgentExecution";
-import { CreateAgent } from "@/components/CreateAgent";
-import { UsageDashboard } from "@/components/UsageDashboard";
-import { MCPManager } from "@/components/MCPManager";
-import { Settings } from "@/components/Settings";
-import { MarkdownEditor } from "@/components/MarkdownEditor";
+import React, { Suspense, lazy, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useTabState } from '@/hooks/useTabState';
+import { useScreenTracking } from '@/hooks/useAnalytics';
+import type { Tab } from '@/contexts/contexts';
+import type { Agent } from '@/lib/api';
+import { Loader2, Plus } from 'lucide-react';
+import { api, type Project, type Session, type ClaudeMdFile } from '@/lib/api';
+import { ProjectList } from '@/components/ProjectList';
+import { SessionList } from '@/components/SessionList';
+import { RunningClaudeSessions } from '@/components/RunningClaudeSessions';
+import { Button } from '@/components/ui/button';
+import { useI18n } from '@/lib/i18n';
+import { logger } from '@/lib/logger';
+
+// Lazy load heavy components
+const ClaudeCodeSession = lazy(() => import('@/components/ClaudeCodeSession').then(m => ({ default: m.ClaudeCodeSession })));
+const AgentRunOutputViewer = lazy(() => import('@/components/AgentRunOutputViewer'));
+const AgentExecution = lazy(() => import('@/components/AgentExecution').then(m => ({ default: m.AgentExecution })));
+const CreateAgent = lazy(() => import('@/components/CreateAgent').then(m => ({ default: m.CreateAgent })));
+const UsageDashboard = lazy(() => import('@/components/UsageDashboard').then(m => ({ default: m.UsageDashboard })));
+const MCPManager = lazy(() => import('@/components/MCPManager').then(m => ({ default: m.MCPManager })));
+const Settings = lazy(() => import('@/components/Settings').then(m => ({ default: m.Settings })));
+const MarkdownEditor = lazy(() => import('@/components/MarkdownEditor').then(m => ({ default: m.MarkdownEditor })));
+// const ClaudeFileEditor = lazy(() => import('@/components/ClaudeFileEditor').then(m => ({ default: m.ClaudeFileEditor })));
 
 import { handleError } from "@/lib/errorHandler";
 // Import non-lazy components for projects view
@@ -57,6 +61,9 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
   const [sessions, setSessions] = React.useState<Session[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+
+  // Track screen when tab becomes active
+  useScreenTracking(isActive ? tab.type : undefined, isActive ? tab.id : undefined);
 
   // Load projects when tab becomes active and is of type 'projects'
   useEffect(() => {

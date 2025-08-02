@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>NSRequiresAquaSystemAppearance</key>
+  <false/>
+  <key>LSMinimumSystemVersion</key>
+  <string>10.15</string>
+  <key>CFBundleShortVersionString</key>
+  <string>0.1.0</string>
+  <key>CFBundleName</key>
+  <string>Claudia</string>
+  <key>CFBundleDisplayName</key>
+  <string>Claudia</string>
+  <key>CFBundleIdentifier</key>
+  <string>claudia.asterisk.so</string>
+  <key>CFBundleDocumentTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleTypeName</key>
+      <string>Claudia Agent</string>
+      <key>CFBundleTypeRole</key>
+      <string>Editor</string>
+      <key>CFBundleTypeExtensions</key>
+      <array>
+        <string>claudia.json</string>
+      </array>
+      <key>CFBundleTypeIconFile</key>
+      <string>icon.icns</string>
+      <key>LSHandlerRank</key>
+      <string>Owner</string>
+    </dict>
+  </array>
+  <key>NSAppleEventsUsageDescription</key>
+  <string>Claudia needs to send Apple Events to other applications.</string>
+  <key>NSAppleScriptEnabled</key>
+  <true/>
+  <key>NSCameraUsageDescription</key>
+  <string>Claudia needs camera access for capturing images for AI processing.</string>
+  <key>NSMicrophoneUsageDescription</key>
+  <string>Claudia needs microphone access for voice input features.</string>
+</dict>
+</plist>

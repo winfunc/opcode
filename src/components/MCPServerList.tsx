@@ -21,7 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { api, type MCPServer } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import { logger } from "@/lib/logger";
-
+import { useTrackEvent } from "@/hooks";
 import { handleError } from "@/lib/errorHandler";
 interface MCPServerListProps {
   /**
@@ -57,6 +57,10 @@ export const MCPServerList: React.FC<MCPServerListProps> = ({
   const [testingServer, setTestingServer] = useState<string | null>(null);
   const [expandedServers, setExpandedServers] = useState<Set<string>>(new Set());
   const [copiedServer, setCopiedServer] = useState<string | null>(null);
+  const [connectedServers] = useState<string[]>([]);
+
+  // Analytics tracking
+  const trackEvent = useTrackEvent();
 
   // Group servers by scope
   const serversByScope = servers.reduce(
@@ -108,7 +112,18 @@ export const MCPServerList: React.FC<MCPServerListProps> = ({
   const handleRemoveServer = async (name: string) => {
     try {
       setRemovingServer(name);
+
+      // Check if server was connected
+      const wasConnected = connectedServers.includes(name);
+
       await api.mcpRemove(name);
+
+      // Track server removal
+      trackEvent.mcpServerRemoved({
+        server_name: name,
+        was_connected: wasConnected
+      });
+
       onServerRemoved(name);
     } catch (error) {
       await handleError("Failed to remove server:", { context: error });
@@ -124,10 +139,21 @@ export const MCPServerList: React.FC<MCPServerListProps> = ({
     try {
       setTestingServer(name);
       const result = await api.mcpTestConnection(name);
+      const server = servers.find(s => s.name === name);
+
+      // Track connection result - result is a string message
+      trackEvent.mcpServerConnected(name, true, server?.transport || 'unknown');
+
       // TODO: Show result in a toast or modal
       logger.debug("Test result:", result);
     } catch (error) {
       await handleError("Failed to test connection:", { context: error });
+
+      trackEvent.mcpConnectionError({
+        server_name: name,
+        error_type: 'test_failed',
+        retry_attempt: 0
+      });
     } finally {
       setTestingServer(null);
     }

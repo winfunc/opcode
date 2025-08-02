@@ -19,6 +19,7 @@ import {
 import type { SlashCommand } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { logger } from "@/lib/logger";
+import { useTrackEvent, useFeatureAdoptionTracking } from "@/hooks";
 
 interface SlashCommandPickerProps {
   /**
@@ -120,6 +121,9 @@ export const SlashCommandPicker: React.FC<SlashCommandPickerProps> = ({
 
   const commandListRef = useRef<HTMLDivElement>(null);
 
+  // Analytics tracking
+  const trackEvent = useTrackEvent();
+  const slashCommandFeatureTracking = useFeatureAdoptionTracking('slash_commands');
   // Load commands on mount or when project path changes
   useEffect(() => {
     loadCommands();
@@ -202,7 +206,13 @@ export const SlashCommandPicker: React.FC<SlashCommandPickerProps> = ({
         case "Enter":
           e.preventDefault();
           if (filteredCommands.length > 0 && selectedIndex < filteredCommands.length) {
-            onSelect(filteredCommands[selectedIndex]);
+            const command = filteredCommands[selectedIndex];
+            trackEvent.slashCommandSelected({
+              command_name: command.name,
+              selection_method: 'keyboard'
+            });
+            slashCommandFeatureTracking.trackUsage();
+            onSelect(command);
           }
           break;
 
@@ -252,6 +262,11 @@ export const SlashCommandPicker: React.FC<SlashCommandPickerProps> = ({
   }, [projectPath]);
 
   const handleCommandClick = (command: SlashCommand) => {
+    trackEvent.slashCommandSelected({
+      command_name: command.name,
+      selection_method: 'click'
+    });
+    slashCommandFeatureTracking.trackUsage();
     onSelect(command);
   };
 

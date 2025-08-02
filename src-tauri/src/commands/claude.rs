@@ -257,14 +257,14 @@ fn create_command_with_env(program: &str) -> Command {
         // Always set SHELL environment variable on Windows for Claude CLI compatibility
         let shell_candidates = [
             "C:\\Program Files\\Git\\bin\\bash.exe",
-            "C:\\Program Files (x86)\\Git\\bin\\bash.exe", 
+            "C:\\Program Files (x86)\\Git\\bin\\bash.exe",
             "C:\\msys64\\usr\\bin\\bash.exe",
             "C:\\cygwin64\\bin\\bash.exe",
             "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
             "powershell.exe",
             "cmd.exe"
         ];
-        
+
         let mut shell_found = false;
         for shell_path in &shell_candidates {
             if std::path::Path::new(shell_path).exists() {
@@ -274,13 +274,13 @@ fn create_command_with_env(program: &str) -> Command {
                 break;
             }
         }
-        
+
         // If no shell found, default to bash (Claude CLI prefers POSIX shells)
         if !shell_found {
             log::debug!("No suitable shell found, defaulting to bash for Claude CLI compatibility");
             tokio_cmd.env("SHELL", "bash");
         }
-        
+
         // Also set other Windows-specific environment variables that Claude CLI might need
         if let Ok(userprofile) = std::env::var("USERPROFILE") {
             tokio_cmd.env("HOME", userprofile);
@@ -320,26 +320,26 @@ fn create_sidecar_command(
         .shell()
         .sidecar("claude-code")
         .map_err(|e| format!("Failed to create sidecar command: {}", e))?;
-    
+
     // Add all arguments
     sidecar_cmd = sidecar_cmd.args(args);
-    
+
     // Set working directory
     sidecar_cmd = sidecar_cmd.current_dir(project_path);
-    
+
     // Set environment variables for Windows shell compatibility
     if cfg!(target_os = "windows") {
         // Always set SHELL environment variable on Windows for Claude CLI compatibility
         let shell_candidates = [
             "C:\\Program Files\\Git\\bin\\bash.exe",
-            "C:\\Program Files (x86)\\Git\\bin\\bash.exe", 
+            "C:\\Program Files (x86)\\Git\\bin\\bash.exe",
             "C:\\msys64\\usr\\bin\\bash.exe",
             "C:\\cygwin64\\bin\\bash.exe",
             "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
             "powershell.exe",
             "cmd.exe"
         ];
-        
+
         let mut shell_found = false;
         for shell_path in &shell_candidates {
             if std::path::Path::new(shell_path).exists() {
@@ -349,13 +349,13 @@ fn create_sidecar_command(
                 break;
             }
         }
-        
+
         // If no shell found, default to bash (Claude CLI prefers POSIX shells)
         if !shell_found {
             log::debug!("No suitable shell found, defaulting to bash for Claude CLI compatibility");
             sidecar_cmd = sidecar_cmd.env("SHELL", "bash");
         }
-        
+
         // Also set other essential environment variables for Windows
         for (key, value) in std::env::vars() {
             if key == "PATH"
@@ -396,7 +396,7 @@ fn create_sidecar_command(
             }
         }
     }
-    
+
     Ok(sidecar_cmd)
 }
 
@@ -407,16 +407,16 @@ fn create_system_command(
     project_path: &str,
 ) -> Command {
     let mut cmd = create_command_with_env(claude_path);
-    
+
     // Add all arguments
     for arg in args {
         cmd.arg(arg);
     }
-    
+
     cmd.current_dir(project_path)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
-    
+
     cmd
 }
 
@@ -690,10 +690,10 @@ pub async fn check_claude_version(app: AppHandle) -> Result<ClaudeVersionStatus,
     // If the selected path is the special sidecar identifier, execute it to get version
     if claude_path == "claude-code" {
         use tauri_plugin_shell::process::CommandEvent;
-        
+
         // Create a temporary directory for the sidecar to run in
         let temp_dir = std::env::temp_dir();
-        
+
         // Create sidecar command with --version flag
         let sidecar_cmd = match create_sidecar_command(&app, vec!["--version".to_string()], &temp_dir.to_string_lossy()) {
             Ok(cmd) => cmd,
@@ -706,14 +706,14 @@ pub async fn check_claude_version(app: AppHandle) -> Result<ClaudeVersionStatus,
                 });
             }
         };
-        
+
         // Spawn the sidecar and collect output
         match sidecar_cmd.spawn() {
             Ok((mut rx, _child)) => {
                 let mut stdout_output = String::new();
                 let mut stderr_output = String::new();
                 let mut exit_success = false;
-                
+
                 // Collect output from the sidecar
                 while let Some(event) = rx.recv().await {
                     match event {
@@ -732,10 +732,10 @@ pub async fn check_claude_version(app: AppHandle) -> Result<ClaudeVersionStatus,
                         _ => {}
                     }
                 }
-                
+
                 // Use regex to directly extract version pattern (e.g., "1.0.41")
                 let version_regex = regex::Regex::new(r"(\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?(?:\+[a-zA-Z0-9.-]+)?)").ok();
-                
+
                 let version = if let Some(regex) = version_regex {
                     regex.captures(&stdout_output)
                         .and_then(|captures| captures.get(1))
@@ -743,7 +743,7 @@ pub async fn check_claude_version(app: AppHandle) -> Result<ClaudeVersionStatus,
                 } else {
                     None
                 };
-                
+
                 let full_output = if stderr_output.is_empty() {
                     stdout_output.clone()
                 } else {
@@ -769,7 +769,6 @@ pub async fn check_claude_version(app: AppHandle) -> Result<ClaudeVersionStatus,
             }
         }
     }
-
     use log::debug;debug!("Claude path: {}", claude_path);
 
     // In production builds, we can't check the version directly
@@ -802,10 +801,10 @@ pub async fn check_claude_version(app: AppHandle) -> Result<ClaudeVersionStatus,
             Ok(output) => {
                 let stdout = String::from_utf8_lossy(&output.stdout).to_string();
                 let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-                
+
                 // Use regex to directly extract version pattern (e.g., "1.0.41")
                 let version_regex = regex::Regex::new(r"(\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?(?:\+[a-zA-Z0-9.-]+)?)").ok();
-                
+
                 let version = if let Some(regex) = version_regex {
                     regex.captures(&stdout)
                         .and_then(|captures| captures.get(1))
@@ -813,7 +812,7 @@ pub async fn check_claude_version(app: AppHandle) -> Result<ClaudeVersionStatus,
                 } else {
                     None
                 };
-                
+
                 let full_output = if stderr.is_empty() {
                     stdout.clone()
                 } else {
@@ -1046,7 +1045,7 @@ pub async fn execute_claude_code(
     );
 
     let claude_path = find_claude_binary(&app)?;
-    
+
     let args = vec![
         "-p".to_string(),
         prompt.clone(),
@@ -1058,12 +1057,8 @@ pub async fn execute_claude_code(
         "--dangerously-skip-permissions".to_string(),
     ];
 
-    if should_use_sidecar(&claude_path) {
-        spawn_claude_sidecar(app, args, prompt, model, project_path).await
-    } else {
-        let cmd = create_system_command(&claude_path, args, &project_path);
-        spawn_claude_process(app, cmd, prompt, model, project_path).await
-    }
+    let cmd = create_system_command(&claude_path, args, &project_path);
+    spawn_claude_process(app, cmd, prompt, model, project_path).await
 }
 
 /// Continue an existing Claude Code conversation with streaming output
@@ -1081,7 +1076,7 @@ pub async fn continue_claude_code(
     );
 
     let claude_path = find_claude_binary(&app)?;
-    
+
     let args = vec![
         "-c".to_string(), // Continue flag
         "-p".to_string(),
@@ -1094,12 +1089,8 @@ pub async fn continue_claude_code(
         "--dangerously-skip-permissions".to_string(),
     ];
 
-    if should_use_sidecar(&claude_path) {
-        spawn_claude_sidecar(app, args, prompt, model, project_path).await
-    } else {
-        let cmd = create_system_command(&claude_path, args, &project_path);
-        spawn_claude_process(app, cmd, prompt, model, project_path).await
-    }
+    let cmd = create_system_command(&claude_path, args, &project_path);
+    spawn_claude_process(app, cmd, prompt, model, project_path).await
 }
 
 /// Resume an existing Claude Code session by ID with streaming output
@@ -1119,7 +1110,7 @@ pub async fn resume_claude_code(
     );
 
     let claude_path = find_claude_binary(&app)?;
-    
+
     let args = vec![
         "--resume".to_string(),
         session_id.clone(),
@@ -1133,12 +1124,8 @@ pub async fn resume_claude_code(
         "--dangerously-skip-permissions".to_string(),
     ];
 
-    if should_use_sidecar(&claude_path) {
-        spawn_claude_sidecar(app, args, prompt, model, project_path).await
-    } else {
-        let cmd = create_system_command(&claude_path, args, &project_path);
-        spawn_claude_process(app, cmd, prompt, model, project_path).await
-    }
+    let cmd = create_system_command(&claude_path, args, &project_path);
+    spawn_claude_process(app, cmd, prompt, model, project_path).await
 }
 
 /// Cancel the currently running Claude Code execution
@@ -1160,7 +1147,7 @@ pub async fn cancel_claude_execution(
         let registry = app.state::<crate::process::ProcessRegistryState>();
         match registry.0.get_claude_session_by_id(sid) {
             Ok(Some(process_info)) => {
-                log::info!("Found process in registry for session {}: run_id={}, PID={}", 
+                log::info!("Found process in registry for session {}: run_id={}, PID={}",
                     sid, process_info.run_id, process_info.pid);
                 match registry.0.kill_process(process_info.run_id).await {
                     Ok(success) => {
@@ -1204,7 +1191,7 @@ pub async fn cancel_claude_execution(
                 }
                 Err(e) => {
                     log::error!("Failed to kill Claude process via ClaudeProcessState: {}", e);
-                    
+
                     // Method 3: If we have a PID, try system kill as last resort
                     if let Some(pid) = pid {
                         log::info!("Attempting system kill as last resort for PID: {}", pid);
@@ -1217,7 +1204,7 @@ pub async fn cancel_claude_execution(
                                 .args(["-KILL", &pid.to_string()])
                                 .output()
                         };
-                        
+
                         match kill_result {
                             Ok(output) if output.status.success() => {
                                 log::info!("Successfully killed process via system command");
@@ -1250,18 +1237,18 @@ pub async fn cancel_claude_execution(
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
         let _ = app.emit(&format!("claude-complete:{}", sid), false);
     }
-    
+
     // Also emit generic events for backward compatibility
     let _ = app.emit("claude-cancelled", true);
     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
     let _ = app.emit("claude-complete", false);
-    
+
     if killed {
         log::info!("Claude process cancellation completed successfully");
     } else if !attempted_methods.is_empty() {
         log::warn!("Claude process cancellation attempted but process may have already exited. Attempted methods: {:?}", attempted_methods);
     }
-    
+
     Ok(())
 }
 
@@ -1341,7 +1328,7 @@ async fn spawn_claude_process(app: AppHandle, mut cmd: Command, prompt: String, 
         let mut lines = stdout_reader.lines();
         while let Ok(Some(line)) = lines.next_line().await {
             log::debug!("Claude stdout: {}", line);
-            
+
             // Parse the line to check for init message with session ID
             if let Ok(msg) = serde_json::from_str::<serde_json::Value>(&line) {
                 if msg["type"] == "system" && msg["subtype"] == "init" {
@@ -1356,7 +1343,7 @@ async fn spawn_claude_process(app: AppHandle, mut cmd: Command, prompt: String, 
                         if session_id_guard.is_none() {
                             *session_id_guard = Some(claude_session_id.to_string());
                             log::info!("Extracted Claude session ID: {}", claude_session_id);
-                            
+
                             // Now register with ProcessRegistry using Claude's session ID
                             match registry_clone.register_claude_session(
                                 claude_session_id.to_string(),
@@ -1384,7 +1371,7 @@ async fn spawn_claude_process(app: AppHandle, mut cmd: Command, prompt: String, 
                     }
                 }
             }
-            
+
             // Store live output in registry if we have a run_id
             if let Some(run_id) = match run_id_holder_clone.lock() {
                 Ok(guard) => *guard,
@@ -1395,7 +1382,7 @@ async fn spawn_claude_process(app: AppHandle, mut cmd: Command, prompt: String, 
             } {
                 let _ = registry_clone.append_live_output(run_id, &line);
             }
-            
+
             // Emit the line to the frontend with session isolation if we have session ID
             if let Some(ref session_id) = *session_id_holder_clone.lock().unwrap() {
                 let _ = app_handle.emit(&format!("claude-output:{}", session_id), &line);
@@ -1497,7 +1484,7 @@ async fn spawn_claude_sidecar(
 
     // Create the sidecar command
     let sidecar_cmd = create_sidecar_command(&app, args, &project_path)?;
-    
+
     // Spawn the sidecar process
     let (mut rx, child) = sidecar_cmd
         .spawn()
@@ -1522,17 +1509,17 @@ async fn spawn_claude_sidecar(
     let app_handle = app.clone();
     let session_id_holder_clone = session_id_holder.clone();
     let run_id_holder_clone = run_id_holder.clone();
-    
+
     tauri::async_runtime::spawn(async move {
         while let Some(event) = rx.recv().await {
             match event {
                 CommandEvent::Stdout(line_bytes) => {
                     let line = String::from_utf8_lossy(&line_bytes);
                     let line_str = line.trim_end_matches('\n').trim_end_matches('\r');
-                    
+
                     if !line_str.is_empty() {
                         log::debug!("Claude sidecar stdout: {}", line_str);
-                        
+
                         // Parse the line to check for init message with session ID
                         if let Ok(msg) = serde_json::from_str::<serde_json::Value>(line_str) {
                             if msg["type"] == "system" && msg["subtype"] == "init" {
@@ -1541,7 +1528,7 @@ async fn spawn_claude_sidecar(
                                         if session_id_guard.is_none() {
                                             *session_id_guard = Some(claude_session_id.to_string());
                                             log::info!("Extracted Claude session ID: {}", claude_session_id);
-                                        
+
                                             // Register with ProcessRegistry using Claude's session ID
                                             match registry_clone.register_claude_session(
                                                 claude_session_id.to_string(),
@@ -1565,14 +1552,14 @@ async fn spawn_claude_sidecar(
                                 }
                             }
                         }
-                        
+
                         // Store live output in registry if we have a run_id
                         if let Ok(guard) = run_id_holder_clone.lock() {
                             if let Some(run_id) = *guard {
                                 let _ = registry_clone.append_live_output(run_id, line_str);
                             }
                         }
-                        
+
                         // Emit the line to the frontend with session isolation if we have session ID
                         if let Some(ref session_id) = *session_id_holder_clone.lock().unwrap() {
                             let _ = app_handle.emit(&format!("claude-output:{}", session_id), line_str);
@@ -1584,10 +1571,10 @@ async fn spawn_claude_sidecar(
                 CommandEvent::Stderr(line_bytes) => {
                     let line = String::from_utf8_lossy(&line_bytes);
                     let line_str = line.trim_end_matches('\n').trim_end_matches('\r');
-                    
+
                     if !line_str.is_empty() {
                         log::error!("Claude sidecar stderr: {}", line_str);
-                        
+
                         // Emit error lines to the frontend with session isolation if we have session ID
                         if let Some(ref session_id) = *session_id_holder_clone.lock().unwrap() {
                             let _ = app_handle.emit(&format!("claude-error:{}", session_id), line_str);
@@ -1598,25 +1585,25 @@ async fn spawn_claude_sidecar(
                 }
                 CommandEvent::Terminated(payload) => {
                     log::info!("Claude sidecar process terminated with payload: {:?}", payload);
-                    
+
                     // Add a small delay to ensure all messages are processed
                     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-                    
+
                     let success = payload.code.unwrap_or(-1) == 0;
-                    
+
                     if let Some(ref session_id) = *session_id_holder_clone.lock().unwrap() {
                         let _ = app_handle.emit(&format!("claude-complete:{}", session_id), success);
                     }
                     // Also emit to the generic event for backward compatibility
                     let _ = app_handle.emit("claude-complete", success);
-                    
+
                     // Unregister from ProcessRegistry if we have a run_id
                     if let Ok(guard) = run_id_holder_clone.lock() {
                         if let Some(run_id) = *guard {
                             let _ = registry_clone.unregister_process(run_id);
                         }
                     }
-                    
+
                     break;
                 }
                 _ => {
@@ -2373,17 +2360,17 @@ pub async fn get_hooks_config(scope: String, project_path: Option<String>) -> Re
 
     let content = fs::read_to_string(&settings_path)
         .map_err(|e| format!("Failed to read settings: {}", e))?;
-    
+
     let settings: serde_json::Value = serde_json::from_str(&content)
         .map_err(|e| format!("Failed to parse settings: {}", e))?;
-    
+
     Ok(settings.get("hooks").cloned().unwrap_or(serde_json::json!({})))
 }
 
 /// Updates hooks configuration in settings at specified scope
 #[tauri::command]
 pub async fn update_hooks_config(
-    scope: String, 
+    scope: String,
     hooks: serde_json::Value,
     project_path: Option<String>
 ) -> Result<String, String> {
@@ -2428,7 +2415,7 @@ pub async fn update_hooks_config(
     // Write back with pretty formatting
     let json_string = serde_json::to_string_pretty(&settings)
         .map_err(|e| format!("Failed to serialize settings: {}", e))?;
-    
+
     fs::write(&settings_path, json_string)
         .map_err(|e| format!("Failed to write settings: {}", e))?;
 
@@ -2445,7 +2432,7 @@ pub async fn validate_hook_command(command: String) -> Result<serde_json::Value,
     cmd.arg("-n") // Syntax check only
        .arg("-c")
        .arg(&command);
-    
+
     match cmd.output() {
         Ok(output) => {
             if output.status.success() {

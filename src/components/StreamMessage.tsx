@@ -5,6 +5,8 @@ import { cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { getClaudeSyntaxTheme } from "@/lib/claudeSyntaxTheme";
+import { useTheme } from "@/hooks";
 import type { ClaudeStreamMessage } from "./AgentExecution";
 import {
   TodoWidget,
@@ -72,8 +74,11 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
   onLinkDetected,
 }) => {
   // State to track tool results mapped by tool call ID
-  const [toolResults, setToolResults] = useState<Map<string, unknown>>(new Map());
+  const [toolResults, setToolResults] = useState<Map<string, any>>(new Map());
 
+  // Get current theme
+  const { theme } = useTheme();
+  const syntaxTheme = getClaudeSyntaxTheme(theme);
   // Extract all tool results from stream messages
   useEffect(() => {
     const results = new Map<string, unknown>();
@@ -143,299 +148,186 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
             <div className="flex items-start gap-3">
               <Bot className="h-5 w-5 text-primary mt-0.5" />
               <div className="flex-1 space-y-2 min-w-0">
-                {msg.content &&
-                  Array.isArray(msg.content) &&
-                  msg.content.map((content: unknown, idx: number) => {
-                    const contentItem = content as Record<string, unknown>;
-                    // Text content - render as markdown
-                    if (contentItem.type === "text") {
-                      // Ensure we have a string to render
-                      const textContent =
-                        typeof contentItem.text === "string"
-                          ? (contentItem.text as string)
-                          : ((contentItem.text as Record<string, unknown>)?.text as string) ||
-                            JSON.stringify(contentItem.text || contentItem);
+                {msg.content && Array.isArray(msg.content) && msg.content.map((content: any, idx: number) => {
+                  // Text content - render as markdown
+                  if (content.type === "text") {
+                    // Ensure we have a string to render
+                    const textContent = typeof content.text === 'string'
+                      ? content.text
+                      : (content.text?.text || JSON.stringify(content.text || content));
 
-                      renderedSomething = true;
-                      return (
-                        <div key={idx} className="prose prose-sm dark:prose-invert max-w-none">
-                          <ReactMarkdown
-                            remarkPlugins={[remarkGfm]}
-                            components={{
-                              code(
-                                props: React.ComponentProps<"code"> & {
-                                  node?: unknown;
-                                  inline?: boolean;
-                                }
-                              ) {
-                                const {
-                                  node: _node,
-                                  inline,
-                                  className,
-                                  children,
-                                  ref: _ref,
-                                  style: _style,
-                                  ...restProps
-                                } = props;
-                                const match = /language-(\w+)/.exec((className as string) || "");
-                                return !inline && match ? (
-                                  <SyntaxHighlighter
-                                    customStyle={{}}
-                                    language={match[1]}
-                                    PreTag="div"
-                                    {...restProps}
-                                  >
-                                    {String(children).replace(/\n$/, "")}
-                                  </SyntaxHighlighter>
-                                ) : (
-                                  <code className={className as string} {...restProps}>
-                                    {children as React.ReactNode}
-                                  </code>
-                                );
-                              },
-                            }}
-                          >
-                            {textContent}
-                          </ReactMarkdown>
-                        </div>
-                      );
-                    }
+                    renderedSomething = true;
+                    return (
+                      <div key={idx} className="prose prose-sm dark:prose-invert max-w-none">
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
+                          components={{
+                            code({ node, inline, className, children, ...props }: any) {
+                              const match = /language-(\w+)/.exec(className || '');
+                              return !inline && match ? (
+                                <SyntaxHighlighter
+                                  style={syntaxTheme}
+                                  language={match[1]}
+                                  PreTag="div"
+                                  {...props}
+                                >
+                                  {String(children).replace(/\n$/, '')}
+                                </SyntaxHighlighter>
+                              ) : (
+                                <code className={className} {...props}>
+                                  {children}
+                                </code>
+                              );
+                            }
+                          }}
+                        >
+                          {textContent}
+                        </ReactMarkdown>
+                      </div>
+                    );
+                  }
 
-                    // Thinking content - render with ThinkingWidget
-                    const contentObj = content as {
-                      type?: string;
-                      thinking?: string;
-                      signature?: string;
-                    };
-                    if (contentObj.type === "thinking") {
-                      renderedSomething = true;
-                      return (
-                        <div key={idx}>
-                          <ThinkingWidget
-                            thinking={contentObj.thinking || ""}
-                            signature={contentObj.signature}
-                          />
-                        </div>
-                      );
-                    }
+                  // Thinking content - render with ThinkingWidget
+                  if (content.type === "thinking") {
+                    renderedSomething = true;
+                    return (
+                      <div key={idx}>
+                        <ThinkingWidget
+                          thinking={content.thinking || ''}
+                          signature={content.signature}
+                        />
+                      </div>
+                    );
+                  }
 
-                    // Tool use - render custom widgets based on tool name
-                    const toolContent = content as {
-                      type?: string;
-                      name?: string;
-                      input?: unknown;
-                      id?: string;
-                    };
-                    if (toolContent.type === "tool_use") {
-                      const toolName = toolContent.name?.toLowerCase();
-                      const input = toolContent.input as Record<string, unknown>;
-                      const toolId = toolContent.id;
+                  // Tool use - render custom widgets based on tool name
+                  if (content.type === "tool_use") {
+                    const toolName = content.name?.toLowerCase();
+                    const input = content.input;
+                    const toolId = content.id;
 
-                      // Get the tool result if available
-                      const toolResult = getToolResult(toolId);
+                    // Get the tool result if available
+                    const toolResult = getToolResult(toolId);
 
-                      // Function to render the appropriate tool widget
-                      const renderToolWidget = () => {
-                        // Task tool - for sub-agent tasks
-                        if (toolName === "task" && input) {
-                          renderedSomething = true;
-                          return (
-                            <TaskWidget
-                              description={input?.description as string}
-                              prompt={input?.prompt as string}
-                              result={toolResult}
-                            />
-                          );
-                        }
-
-                        // Edit tool
-                        if (toolName === "edit" && input?.file_path) {
-                          renderedSomething = true;
-                          return (
-                            <EditWidget
-                              {...(input as {
-                                file_path: string;
-                                old_string: string;
-                                new_string: string;
-                              })}
-                              result={toolResult}
-                            />
-                          );
-                        }
-
-                        // MultiEdit tool
-                        if (toolName === "multiedit" && input?.file_path && input?.edits) {
-                          renderedSomething = true;
-                          return (
-                            <MultiEditWidget
-                              {...(input as {
-                                file_path: string;
-                                edits: { old_string: string; new_string: string }[];
-                              })}
-                              result={toolResult}
-                            />
-                          );
-                        }
-
-                        // MCP tools (starting with mcp__)
-                        if (toolContent.name?.startsWith("mcp__")) {
-                          renderedSomething = true;
-                          return (
-                            <MCPWidget
-                              toolName={toolContent.name}
-                              input={input}
-                              result={toolResult}
-                            />
-                          );
-                        }
-
-                        // TodoWrite tool
-                        if (toolName === "todowrite" && input?.todos) {
-                          renderedSomething = true;
-                          return (
-                            <TodoWidget
-                              todos={(input?.todos as TodoItem[]) || []}
-                              result={toolResult}
-                            />
-                          );
-                        }
-
-                        // TodoRead tool
-                        if (toolName === "todoread") {
-                          renderedSomething = true;
-                          return (
-                            <TodoReadWidget
-                              todos={input?.todos as TodoItem[]}
-                              result={toolResult}
-                            />
-                          );
-                        }
-
-                        // LS tool
-                        if (toolName === "ls" && input?.path) {
-                          renderedSomething = true;
-                          return (
-                            <LSWidget path={(input?.path as string) || ""} result={toolResult} />
-                          );
-                        }
-
-                        // Read tool
-                        if (toolName === "read" && input?.file_path) {
-                          renderedSomething = true;
-                          return (
-                            <ReadWidget
-                              filePath={(input?.file_path as string) || ""}
-                              result={toolResult}
-                            />
-                          );
-                        }
-
-                        // Glob tool
-                        if (toolName === "glob" && input?.pattern) {
-                          renderedSomething = true;
-                          return (
-                            <GlobWidget
-                              pattern={(input.pattern as string) || ""}
-                              result={toolResult}
-                            />
-                          );
-                        }
-
-                        // Bash tool
-                        if (toolName === "bash" && input?.command) {
-                          renderedSomething = true;
-                          return (
-                            <BashWidget
-                              command={(input.command as string) || ""}
-                              description={input.description as string}
-                              result={toolResult}
-                            />
-                          );
-                        }
-
-                        // Write tool
-                        if (toolName === "write" && input?.file_path && input?.content) {
-                          renderedSomething = true;
-                          return (
-                            <WriteWidget
-                              filePath={(input.file_path as string) || ""}
-                              content={(input.content as string) || ""}
-                              result={toolResult}
-                            />
-                          );
-                        }
-
-                        // Grep tool
-                        if (toolName === "grep" && input?.pattern) {
-                          renderedSomething = true;
-                          return (
-                            <GrepWidget
-                              pattern={(input.pattern as string) || ""}
-                              include={input.include as string}
-                              path={input.path as string}
-                              exclude={input.exclude as string}
-                              result={toolResult}
-                            />
-                          );
-                        }
-
-                        // WebSearch tool
-                        if (toolName === "websearch" && input?.query) {
-                          renderedSomething = true;
-                          return (
-                            <WebSearchWidget
-                              query={(input.query as string) || ""}
-                              result={toolResult}
-                            />
-                          );
-                        }
-
-                        // WebFetch tool
-                        if (toolName === "webfetch" && input?.url) {
-                          renderedSomething = true;
-                          return (
-                            <WebFetchWidget
-                              url={(input.url as string) || ""}
-                              prompt={input.prompt as string}
-                              result={toolResult}
-                            />
-                          );
-                        }
-
-                        // Default - return null
-                        return null;
-                      };
-
-                      // Render the tool widget
-                      const widget = renderToolWidget();
-                      if (widget) {
+                    // Function to render the appropriate tool widget
+                    const renderToolWidget = () => {
+                      // Task tool - for sub-agent tasks
+                      if (toolName === "task" && input) {
                         renderedSomething = true;
-                        return <div key={idx}>{widget}</div>;
+                        return <TaskWidget description={input.description} prompt={input.prompt} result={toolResult} />;
                       }
 
-                      // Fallback to basic tool display
-                      renderedSomething = true;
-                      return (
-                        <div key={idx} className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <Terminal className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm font-medium">
-                              Using tool: <code className="font-mono">{toolContent.name}</code>
-                            </span>
-                          </div>
-                          {toolContent.input ? (
-                            <div className="ml-6 p-2 bg-background rounded-md border">
-                              <pre className="text-xs font-mono overflow-x-auto">
-                                {JSON.stringify(toolContent.input, null, 2)}
-                              </pre>
-                            </div>
-                          ) : null}
-                        </div>
-                      );
+                      // Edit tool
+                      if (toolName === "edit" && input?.file_path) {
+                        renderedSomething = true;
+                        return <EditWidget {...input} result={toolResult} />;
+                      }
+
+                      // MultiEdit tool
+                      if (toolName === "multiedit" && input?.file_path && input?.edits) {
+                        renderedSomething = true;
+                        return <MultiEditWidget {...input} result={toolResult} />;
+                      }
+
+                      // MCP tools (starting with mcp__)
+                      if (content.name?.startsWith("mcp__")) {
+                        renderedSomething = true;
+                        return <MCPWidget toolName={content.name} input={input} result={toolResult} />;
+                      }
+
+                      // TodoWrite tool
+                      if (toolName === "todowrite" && input?.todos) {
+                        renderedSomething = true;
+                        return <TodoWidget todos={input.todos} result={toolResult} />;
+                      }
+
+                      // TodoRead tool
+                      if (toolName === "todoread") {
+                        renderedSomething = true;
+                        return <TodoReadWidget todos={input?.todos} result={toolResult} />;
+                      }
+
+                      // LS tool
+                      if (toolName === "ls" && input?.path) {
+                        renderedSomething = true;
+                        return <LSWidget path={input.path} result={toolResult} />;
+                      }
+
+                      // Read tool
+                      if (toolName === "read" && input?.file_path) {
+                        renderedSomething = true;
+                        return <ReadWidget filePath={input.file_path} result={toolResult} />;
+                      }
+
+                      // Glob tool
+                      if (toolName === "glob" && input?.pattern) {
+                        renderedSomething = true;
+                        return <GlobWidget pattern={input.pattern} result={toolResult} />;
+                      }
+
+                      // Bash tool
+                      if (toolName === "bash" && input?.command) {
+                        renderedSomething = true;
+                        return <BashWidget command={input.command} description={input.description} result={toolResult} />;
+                      }
+
+                      // Write tool
+                      if (toolName === "write" && input?.file_path && input?.content) {
+                        renderedSomething = true;
+                        return <WriteWidget filePath={input.file_path} content={input.content} result={toolResult} />;
+                      }
+
+                      // Grep tool
+                      if (toolName === "grep" && input?.pattern) {
+                        renderedSomething = true;
+                        return <GrepWidget pattern={input.pattern} include={input.include} path={input.path} exclude={input.exclude} result={toolResult} />;
+                      }
+
+                      // WebSearch tool
+                      if (toolName === "websearch" && input?.query) {
+                        renderedSomething = true;
+                        return <WebSearchWidget query={input.query} result={toolResult} />;
+                      }
+
+                      // WebFetch tool
+                      if (toolName === "webfetch" && input?.url) {
+                        renderedSomething = true;
+                        return <WebFetchWidget url={input.url} prompt={input.prompt} result={toolResult} />;
+                      }
+
+                      // Default - return null
+                      return null;
+                    };
+
+                    // Render the tool widget
+                    const widget = renderToolWidget();
+                    if (widget) {
+                      return <div key={idx}>{widget}</div>;
                     }
 
-                    return null;
-                  })}
+                    // Fallback to basic tool display
+                    renderedSomething = true;
+                    return (
+                      <div key={idx} className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Terminal className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm font-medium">
+                            Using tool: <code className="font-mono">{content.name}</code>
+                          </span>
+                        </div>
+                        {content.input ? (
+                          <div className="ml-6 p-2 bg-background rounded-md border">
+                            <pre className="text-xs font-mono overflow-x-auto">
+                              {JSON.stringify(content.input, null, 2)}
+                            </pre>
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  }
+
+                  return null;
+                })}
 
                 {msg.usage && (
                   <div className="text-xs text-muted-foreground mt-2">
@@ -887,7 +779,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
                           const match = /language-(\w+)/.exec((className as string) || "");
                           return !inline && match ? (
                             <SyntaxHighlighter
-                              customStyle={{}}
+                              style={syntaxTheme}
                               language={match[1]}
                               PreTag="div"
                               {...restProps}

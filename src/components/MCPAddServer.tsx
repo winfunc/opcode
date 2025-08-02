@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { api } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import { handleError } from "@/lib/errorHandler";
+import { useTrackEvent } from "@/hooks";
 interface MCPAddServerProps {
   /**
    * Callback when a server is successfully added
@@ -35,6 +36,8 @@ export const MCPAddServer: React.FC<MCPAddServerProps> = ({ onServerAdded, onErr
   const [transport, setTransport] = useState<"stdio" | "sse">("stdio");
   const [saving, setSaving] = useState(false);
 
+  // Analytics tracking
+  const trackEvent = useTrackEvent();
   // Stdio server state
   const [stdioName, setStdioName] = useState("");
   const [stdioCommand, setStdioCommand] = useState("");
@@ -134,6 +137,12 @@ export const MCPAddServer: React.FC<MCPAddServerProps> = ({ onServerAdded, onErr
       );
 
       if (result.success) {
+        // Track server added
+        trackEvent.mcpServerAdded({
+          server_type: "stdio",
+          configuration_method: "manual"
+        });
+
         // Reset form
         setStdioName("");
         setStdioCommand("");
@@ -183,6 +192,12 @@ export const MCPAddServer: React.FC<MCPAddServerProps> = ({ onServerAdded, onErr
       const result = await api.mcpAdd(sseName, "sse", undefined, [], env, sseUrl, sseScope);
 
       if (result.success) {
+        // Track server added
+        trackEvent.mcpServerAdded({
+          server_type: "sse",
+          configuration_method: "manual"
+        });
+
         // Reset form
         setSseName("");
         setSseUrl("");

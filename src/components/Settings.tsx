@@ -1,13 +1,28 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Plus, Trash2, Save, AlertCircle, Loader2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Plus,
+  Trash2,
+  Save,
+  AlertCircle,
+  Loader2,
+  BarChart3,
+  Shield,
+  Trash,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { api, type ClaudeSettings, type ClaudeInstallation } from "@/lib/api";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  api,
+  type ClaudeSettings,
+  type ClaudeInstallation
+} from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { Toast, ToastContainer } from "@/components/ui/toast";
@@ -15,15 +30,19 @@ import { ClaudeVersionSelector } from "./ClaudeVersionSelector";
 import { StorageTab } from "./StorageTab";
 import { HooksEditor } from "./HooksEditor";
 import { SlashCommandsManager } from "./SlashCommandsManager";
+import { ProxySettings } from "./ProxySettings";
+import { AnalyticsConsent } from "./AnalyticsConsent";
+import { useTheme, useTrackEvent } from "@/hooks";
+import { analytics } from "@/lib/analytics";
 import { logger } from "@/lib/logger";
 import { handleError, handleApiError } from "@/lib/errorHandler";
-import { 
-  audioNotificationManager, 
-  loadAudioConfigFromLocalStorage, 
+import {
+  audioNotificationManager,
+  loadAudioConfigFromLocalStorage,
   saveAudioConfigToLocalStorage,
   loadAudioConfigFromSettings,
   type AudioNotificationConfig,
-  type AudioNotificationMode 
+  type AudioNotificationMode
 } from "@/lib/audioNotification";
 import { fontScaleManager, FONT_SCALE_OPTIONS, type FontScale } from "@/lib/fontScale";
 interface SettingsProps {
@@ -92,20 +111,43 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
   // Audio notification state
   const [audioConfig, setAudioConfig] = useState<AudioNotificationConfig>({ mode: "off" });
   const [audioConfigChanged, setAudioConfigChanged] = useState(false);
-  
+
   // Font scale state
   const [fontScale, setFontScale] = useState<FontScale>(fontScaleManager.getCurrentScale());
   const [customMultiplierInput, setCustomMultiplierInput] = useState<string>(fontScaleManager.getCustomMultiplier().toString());
   const [fontScaleChanged, setFontScaleChanged] = useState(false);
-  
+
   const getUserHooks = React.useRef<(() => unknown) | null>(null);
 
+  // Theme hook
+  const { theme, setTheme, customColors, setCustomColors } = useTheme();
+
+  // Proxy state
+  const [proxySettingsChanged, setProxySettingsChanged] = useState(false);
+  const saveProxySettings = React.useRef<(() => Promise<void>) | null>(null);
+
+  // Analytics state
+  const [analyticsEnabled, setAnalyticsEnabled] = useState(false);
+  const [analyticsConsented, setAnalyticsConsented] = useState(false);
+  const [showAnalyticsConsent, setShowAnalyticsConsent] = useState(false);
+  const trackEvent = useTrackEvent();
   // Load settings on mount
   useEffect(() => {
     loadSettings();
     loadClaudeBinaryPath();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    loadAnalyticsSettings();
   }, []);
+
+  /**
+   * Loads analytics settings
+   */
+  const loadAnalyticsSettings = async () => {
+    const settings = analytics.getSettings();
+    if (settings) {
+      setAnalyticsEnabled(settings.enabled);
+      setAnalyticsConsented(settings.hasConsented);
+    }
+  };
 
   /**
    * Loads the current Claude binary path
@@ -185,7 +227,7 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
           saveAudioConfigToLocalStorage(legacyConfig);
           logger.debug("Migrated audio config from Claude settings to localStorage");
         }
-        
+
         // Load from localStorage
         const audioConfig = loadAudioConfigFromLocalStorage();
         setAudioConfig(audioConfig);
@@ -223,18 +265,15 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
       const updatedSettings: ClaudeSettings = {
         ...settings,
         permissions: {
-          allow: allowRules.map((rule) => rule.value).filter((v) => v.trim()),
-          deny: denyRules.map((rule) => rule.value).filter((v) => v.trim()),
+          allow: allowRules.map(rule => rule.value).filter(v => v && String(v).trim()),
+          deny: denyRules.map(rule => rule.value).filter(v => v && String(v).trim()),
         },
-        env: envVars.reduce(
-          (acc, { key, value }) => {
-            if (key.trim() && value.trim()) {
-              acc[key] = value;
-            }
-            return acc;
-          },
-          {} as Record<string, string>
-        ),
+        env: envVars.reduce((acc, { key, value }) => {
+          if (key && String(key).trim() && value && String(value).trim()) {
+            acc[key] = String(value);
+          }
+          return acc;
+        }, {} as Record<string, string>),
       };
 
       // Save audio notification config to localStorage (independent of Claude settings)
@@ -293,6 +332,12 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
         const hooks = getUserHooks.current();
         await api.updateHooksConfig("user", hooks as Record<string, unknown>);
         setUserHooksChanged(false);
+      }
+
+      // Save proxy settings if changed
+      if (proxySettingsChanged && saveProxySettings.current) {
+        await saveProxySettings.current();
+        setProxySettingsChanged(false);
       }
 
       setToast({ message: t.settings.settingsSavedSuccessfully, type: "success" });
@@ -488,7 +533,7 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
         ) : (
           <div className="flex-1 overflow-y-auto p-4">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid grid-cols-7 w-full">
+              <TabsList className="grid grid-cols-9 w-full">
                 <TabsTrigger value="general">{t.settings.general}</TabsTrigger>
                 <TabsTrigger value="permissions">{t.settings.permissions}</TabsTrigger>
                 <TabsTrigger value="environment">{t.settings.environment}</TabsTrigger>
@@ -496,6 +541,8 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
                 <TabsTrigger value="hooks">{t.settings.hooks}</TabsTrigger>
                 <TabsTrigger value="commands">{t.settings.commands}</TabsTrigger>
                 <TabsTrigger value="storage">{t.settings.storage}</TabsTrigger>
+                <TabsTrigger value="proxy">Proxy</TabsTrigger>
+                <TabsTrigger value="analytics">Analytics</TabsTrigger>
               </TabsList>
 
               {/* General Settings */}
@@ -505,6 +552,155 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
                     <h3 className="text-base font-semibold mb-4">{t.settings.generalSettings}</h3>
 
                     <div className="space-y-4">
+                      {/* Theme Selector */}
+                      <div className="space-y-2">
+                        <Label htmlFor="theme">Theme</Label>
+                        <Select
+                          value={theme}
+                          onValueChange={(value) => setTheme(value as any)}
+                        >
+                          <SelectTrigger id="theme" className="w-full">
+                            <SelectValue placeholder="Select a theme" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="dark">Dark</SelectItem>
+                            <SelectItem value="gray">Gray</SelectItem>
+                            <SelectItem value="light">Light</SelectItem>
+                            <SelectItem value="custom">Custom</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground">
+                          Choose your preferred color theme for the interface
+                        </p>
+                      </div>
+
+                      {/* Custom Color Editor */}
+                      {theme === 'custom' && (
+                        <div className="space-y-4 p-4 border rounded-lg bg-muted/20">
+                          <h4 className="text-sm font-medium">Custom Theme Colors</h4>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            {/* Background Color */}
+                            <div className="space-y-2">
+                              <Label htmlFor="color-background" className="text-xs">Background</Label>
+                              <div className="flex gap-2">
+                                <Input
+                                  id="color-background"
+                                  type="text"
+                                  value={customColors.background}
+                                  onChange={(e) => setCustomColors({ background: e.target.value })}
+                                  placeholder="oklch(0.12 0.01 240)"
+                                  className="font-mono text-xs"
+                                />
+                                <div
+                                  className="w-10 h-10 rounded border"
+                                  style={{ backgroundColor: customColors.background }}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Foreground Color */}
+                            <div className="space-y-2">
+                              <Label htmlFor="color-foreground" className="text-xs">Foreground</Label>
+                              <div className="flex gap-2">
+                                <Input
+                                  id="color-foreground"
+                                  type="text"
+                                  value={customColors.foreground}
+                                  onChange={(e) => setCustomColors({ foreground: e.target.value })}
+                                  placeholder="oklch(0.98 0.01 240)"
+                                  className="font-mono text-xs"
+                                />
+                                <div
+                                  className="w-10 h-10 rounded border"
+                                  style={{ backgroundColor: customColors.foreground }}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Primary Color */}
+                            <div className="space-y-2">
+                              <Label htmlFor="color-primary" className="text-xs">Primary</Label>
+                              <div className="flex gap-2">
+                                <Input
+                                  id="color-primary"
+                                  type="text"
+                                  value={customColors.primary}
+                                  onChange={(e) => setCustomColors({ primary: e.target.value })}
+                                  placeholder="oklch(0.98 0.01 240)"
+                                  className="font-mono text-xs"
+                                />
+                                <div
+                                  className="w-10 h-10 rounded border"
+                                  style={{ backgroundColor: customColors.primary }}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Card Color */}
+                            <div className="space-y-2">
+                              <Label htmlFor="color-card" className="text-xs">Card</Label>
+                              <div className="flex gap-2">
+                                <Input
+                                  id="color-card"
+                                  type="text"
+                                  value={customColors.card}
+                                  onChange={(e) => setCustomColors({ card: e.target.value })}
+                                  placeholder="oklch(0.14 0.01 240)"
+                                  className="font-mono text-xs"
+                                />
+                                <div
+                                  className="w-10 h-10 rounded border"
+                                  style={{ backgroundColor: customColors.card }}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Accent Color */}
+                            <div className="space-y-2">
+                              <Label htmlFor="color-accent" className="text-xs">Accent</Label>
+                              <div className="flex gap-2">
+                                <Input
+                                  id="color-accent"
+                                  type="text"
+                                  value={customColors.accent}
+                                  onChange={(e) => setCustomColors({ accent: e.target.value })}
+                                  placeholder="oklch(0.16 0.01 240)"
+                                  className="font-mono text-xs"
+                                />
+                                <div
+                                  className="w-10 h-10 rounded border"
+                                  style={{ backgroundColor: customColors.accent }}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Destructive Color */}
+                            <div className="space-y-2">
+                              <Label htmlFor="color-destructive" className="text-xs">Destructive</Label>
+                              <div className="flex gap-2">
+                                <Input
+                                  id="color-destructive"
+                                  type="text"
+                                  value={customColors.destructive}
+                                  onChange={(e) => setCustomColors({ destructive: e.target.value })}
+                                  placeholder="oklch(0.6 0.2 25)"
+                                  className="font-mono text-xs"
+                                />
+                                <div
+                                  className="w-10 h-10 rounded border"
+                                  style={{ backgroundColor: customColors.destructive }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          <p className="text-xs text-muted-foreground">
+                            Use CSS color values (hex, rgb, oklch, etc.). Changes apply immediately.
+                          </p>
+                        </div>
+                      )}
+
                       {/* Include Co-authored By */}
                       <div className="flex items-center justify-between">
                         <div className="space-y-0.5 flex-1">
@@ -550,7 +746,30 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
                             const value = e.target.value ? parseInt(e.target.value) : undefined;
                             updateSetting("cleanupPeriodDays", value);
                           }}
-                        />
+                        /> <Label htmlFor="color-destructive" className="text-xs">Destructive</Label>
+                            <div className="flex gap-2">
+                              <Input
+                                id="color-destructive"
+                                type="text"
+                                value={customColors.destructive}
+                                onChange={(e) => setCustomColors({ destructive: e.target.value })}
+                                placeholder="oklch(0.6 0.2 25)"
+                                className="font-mono text-xs"
+                              />
+                              <div
+                                className="w-10 h-10 rounded border"
+                                style={{ backgroundColor: customColors.destructive }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <p className="text-xs text-muted-foreground">
+                          Use CSS color values (hex, rgb, oklch, etc.). Changes apply immediately.
+                        </p>
+                      </div>
+                    )}
+
                         <p className="text-xs text-muted-foreground">
                           {t.settings.chatRetentionDesc}
                         </p>
@@ -854,6 +1073,27 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
                       <p className="text-xs text-muted-foreground">{t.settings.apiKeyHelperDesc}</p>
                     </div>
 
+                    {/* Claude Code Installation */}
+                    <div className="space-y-4">
+                      <div>
+                        <Label className="text-sm font-medium mb-2 block">
+                          {t.settings.claudeInstallation}
+                        </Label>
+                        <p className="text-xs text-muted-foreground mb-4">
+                          {t.settings.claudeInstallationDesc}
+                        </p>
+                      </div>
+                      <ClaudeVersionSelector
+                        selectedPath={currentBinaryPath}
+                        onSelect={handleClaudeInstallationSelect}
+                      />
+                      {binaryPathChanged && (
+                        <p className="text-xs text-amber-600 dark:text-amber-400">
+                          {t.settings.binaryPathChanged}
+                        </p>
+                      )}
+                    </div>
+
                     {/* Font Scale */}
                     <div className="space-y-4">
                       <div>
@@ -862,7 +1102,7 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
                           {t.settings.fontScaleDesc}
                         </p>
                       </div>
-                      
+
                       <div className="space-y-3">
                         <div>
                           <Label htmlFor="fontScale" className="text-sm">
@@ -886,7 +1126,7 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
                                 />
                                 <div className="flex-1">
                                   <Label htmlFor={`font-${key}`} className="text-sm font-medium">
-                                    {t.settings[`fontScale${key.charAt(0).toUpperCase() + key.slice(1).replace('-', '')}` as keyof typeof t.settings]} 
+                                    {t.settings[`fontScale${key.charAt(0).toUpperCase() + key.slice(1).replace('-', '')}` as keyof typeof t.settings]}
                                     {key !== 'custom' && ` (${config.multiplier}x)`}
                                   </Label>
                                   <p className="text-xs text-muted-foreground">
@@ -896,7 +1136,7 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
                               </div>
                             ))}
                           </div>
-                          
+
                           {/* Custom multiplier input */}
                           {fontScale === 'custom' && (
                             <div className="mt-4 p-4 border rounded-md bg-muted/50">
@@ -940,7 +1180,7 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
                           {t.settings.audioNotificationsDesc}
                         </p>
                       </div>
-                      
+
                       <div className="space-y-3">
                         <div>
                           <Label htmlFor="audioMode" className="text-sm">
@@ -978,7 +1218,7 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
                             ))}
                           </div>
                         </div>
-                        
+
                         <div className="pt-2">
                           <Label className="text-sm">{t.settings.testAudio}</Label>
                           <p className="text-xs text-muted-foreground mb-2">
@@ -1050,6 +1290,110 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
               <TabsContent value="storage">
                 <StorageTab />
               </TabsContent>
+
+              {/* Proxy Settings */}
+              <TabsContent value="proxy">
+                <Card className="p-6">
+                  <ProxySettings
+                    setToast={setToast}
+                    onChange={(hasChanges, _getSettings, save) => {
+                      setProxySettingsChanged(hasChanges);
+                      saveProxySettings.current = save;
+                    }}
+                  />
+                </Card>
+              </TabsContent>
+
+              {/* Analytics Settings */}
+              <TabsContent value="analytics" className="space-y-6">
+                <Card className="p-6 space-y-6">
+                  <div>
+                    <div className="flex items-center gap-3 mb-4">
+                      <BarChart3 className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                      <h3 className="text-base font-semibold">Analytics Settings</h3>
+                    </div>
+
+                    <div className="space-y-6">
+                      {/* Analytics Toggle */}
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-1">
+                          <Label htmlFor="analytics-enabled" className="text-base">Enable Analytics</Label>
+                          <p className="text-sm text-muted-foreground">
+                            Help improve Claudia by sharing anonymous usage data
+                          </p>
+                        </div>
+                        <Switch
+                          id="analytics-enabled"
+                          checked={analyticsEnabled}
+                          onCheckedChange={async (checked) => {
+                            if (checked && !analyticsConsented) {
+                              setShowAnalyticsConsent(true);
+                            } else if (checked) {
+                              await analytics.enable();
+                              setAnalyticsEnabled(true);
+                              trackEvent.settingsChanged('analytics_enabled', true);
+                              setToast({ message: "Analytics enabled", type: "success" });
+                            } else {
+                              await analytics.disable();
+                              setAnalyticsEnabled(false);
+                              trackEvent.settingsChanged('analytics_enabled', false);
+                              setToast({ message: "Analytics disabled", type: "success" });
+                            }
+                          }}
+                        />
+                      </div>
+
+                      {/* Privacy Info */}
+                      <div className="rounded-lg border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/20 p-4">
+                        <div className="flex gap-3">
+                          <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                          <div className="space-y-2">
+                            <p className="font-medium text-blue-900 dark:text-blue-100">Your privacy is protected</p>
+                            <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
+                              <li>• No personal information is collected</li>
+                              <li>• No file contents, paths, or project names</li>
+                              <li>• All data is anonymous with random IDs</li>
+                              <li>• You can disable analytics at any time</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Data Collection Info */}
+                      {analyticsEnabled && (
+                        <div className="space-y-4">
+                          <div>
+                            <h4 className="text-sm font-medium mb-2">What we collect:</h4>
+                            <ul className="text-sm text-muted-foreground space-y-1">
+                              <li>• Feature usage patterns</li>
+                              <li>• Performance metrics</li>
+                              <li>• Error reports (without sensitive data)</li>
+                              <li>• Session frequency and duration</li>
+                            </ul>
+                          </div>
+
+                          {/* Delete Data Button */}
+                          <div className="pt-4 border-t">
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={async () => {
+                                await analytics.deleteAllData();
+                                setAnalyticsEnabled(false);
+                                setAnalyticsConsented(false);
+                                setToast({ message: "All analytics data deleted", type: "success" });
+                              }}
+                            >
+                              <Trash className="mr-2 h-4 w-4" />
+                              Delete All Analytics Data
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </Card>
+              </TabsContent>
             </Tabs>
           </div>
         )}
@@ -1061,6 +1405,16 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
           <Toast message={toast.message} type={toast.type} onDismiss={() => setToast(null)} />
         )}
       </ToastContainer>
+
+      {/* Analytics Consent Dialog */}
+      <AnalyticsConsent
+        open={showAnalyticsConsent}
+        onOpenChange={setShowAnalyticsConsent}
+        onComplete={async () => {
+          await loadAnalyticsSettings();
+          setShowAnalyticsConsent(false);
+        }}
+      />
     </div>
   );
 };

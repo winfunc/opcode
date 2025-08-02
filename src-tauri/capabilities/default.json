@@ -15,11 +15,6 @@
       "identifier": "shell:allow-execute",
       "allow": [
         {
-          "name": "claude-code",
-          "sidecar": true,
-          "args": true
-        },
-        {
           "name": "claude",
           "sidecar": false,
           "args": true
@@ -29,11 +24,6 @@
     {
       "identifier": "shell:allow-spawn",
       "allow": [
-        {
-          "name": "claude-code",
-          "sidecar": true,
-          "args": true
-        },
         {
           "name": "claude",
           "sidecar": false,

@@ -16,6 +16,7 @@ import { CheckCircle, Package, HardDrive, Settings, RefreshCw } from "lucide-rea
 import { useI18n } from "@/lib/i18n";
 import { handleError } from "@/lib/errorHandler";
 import { logger } from "@/lib/logger";
+
 /**
  * Props interface for the ClaudeVersionSelector component
  */
@@ -112,9 +113,9 @@ export const ClaudeVersionSelector: React.FC<ClaudeVersionSelectorProps> = ({
         setLoading(true);
       }
       setError(null);
-      
+
       let foundInstallations: ClaudeInstallation[];
-      
+
       // Use cache if available and not expired, unless explicitly refreshing
       const now = Date.now();
       if (!isRefresh && installationsCache && (now - cacheTimestamp) < CACHE_DURATION) {
@@ -127,7 +128,7 @@ export const ClaudeVersionSelector: React.FC<ClaudeVersionSelectorProps> = ({
         cacheTimestamp = now;
         logger.debug("Fetched fresh Claude installations and updated cache");
       }
-      
+
       setInstallations(foundInstallations);
 
       // If we have a selected path, find and select it
@@ -174,8 +175,6 @@ export const ClaudeVersionSelector: React.FC<ClaudeVersionSelectorProps> = ({
    */
   const getInstallationIcon = (installation: ClaudeInstallation) => {
     switch (installation.installation_type) {
-      case "Bundled":
-        return <Package className="h-4 w-4" />;
       case "System":
         return <HardDrive className="h-4 w-4" />;
       case "Custom":
@@ -208,8 +207,6 @@ export const ClaudeVersionSelector: React.FC<ClaudeVersionSelectorProps> = ({
    */
   const getInstallationTypeColor = (installation: ClaudeInstallation) => {
     switch (installation.installation_type) {
-      case "Bundled":
-        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
       case "System":
         return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
       case "Custom":

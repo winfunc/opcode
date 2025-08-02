@@ -83,6 +83,40 @@ impl ProcessRegistry {
         self.register_process_internal(run_id, process_info, child)
     }
 
+    /// Register a new running agent process using sidecar (similar to register_process but for sidecar children)
+    pub fn register_sidecar_process(
+        &self,
+        run_id: i64,
+        agent_id: i64,
+        agent_name: String,
+        pid: u32,
+        project_path: String,
+        task: String,
+        model: String,
+    ) -> Result<(), String> {
+        let process_info = ProcessInfo {
+            run_id,
+            process_type: ProcessType::AgentRun { agent_id, agent_name },
+            pid,
+            started_at: Utc::now(),
+            project_path,
+            task,
+            model,
+        };
+
+        // For sidecar processes, we register without the child handle since it's managed differently
+        let mut processes = self.processes.lock().map_err(|e| e.to_string())?;
+        
+        let process_handle = ProcessHandle {
+            info: process_info,
+            child: Arc::new(Mutex::new(None)), // No tokio::process::Child handle for sidecar
+            live_output: Arc::new(Mutex::new(String::new())),
+        };
+
+        processes.insert(run_id, process_handle);
+        Ok(())
+    }
+
     /// Register a new Claude session (without child process - handled separately)
     pub fn register_claude_session(
         &self,

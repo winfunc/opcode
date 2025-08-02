@@ -37,6 +37,8 @@ import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { useI18n } from "@/lib/i18n";
 import { handleError } from "@/lib/errorHandler";
+import { useTrackEvent } from "@/hooks";
+
 /**
  * Props interface for the TimelineNavigator component
  */
@@ -52,6 +54,10 @@ interface TimelineNavigatorProps {
    * are created elsewhere (e.g., auto-checkpoint after tool execution).
    */
   refreshVersion?: number;
+  /**
+   * Callback when a new checkpoint is created
+   */
+  onCheckpointCreated?: () => void;
   className?: string;
 }
 
@@ -97,7 +103,8 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
   onCheckpointSelect,
   onFork,
   refreshVersion = 0,
-  className,
+  onCheckpointCreated,
+  className
 }) => {
   const { t } = useI18n();
   const [timeline, setTimeline] = useState<SessionTimeline | null>(null);
@@ -110,6 +117,9 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [diff, setDiff] = useState<CheckpointDiff | null>(null);
   const [compareCheckpoint, setCompareCheckpoint] = useState<Checkpoint | null>(null);
+
+  // Analytics tracking
+  const trackEvent = useTrackEvent();
 
   // Load timeline on mount and whenever refreshVersion bumps
   const findPathToCheckpoint = useCallback(
@@ -169,6 +179,8 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
       setIsLoading(true);
       setError(null);
 
+      const sessionStartTime = Date.now(); // Using current time as we don't have session start time
+
       await api.createCheckpoint(
         sessionId,
         projectId,
@@ -177,6 +189,17 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
         checkpointDescription || undefined
       );
 
+      // Track checkpoint creation
+      const checkpointNumber = timeline ? timeline.totalCheckpoints + 1 : 1;
+      trackEvent.checkpointCreated({
+        checkpoint_number: checkpointNumber,
+        session_duration_at_checkpoint: Date.now() - sessionStartTime
+      });
+
+      // Call parent callback if provided
+      if (onCheckpointCreated) {
+        onCheckpointCreated();
+      }
       setCheckpointDescription("");
       setShowCreateDialog(false);
       await loadTimeline();
@@ -206,6 +229,9 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
       setIsLoading(true);
       setError(null);
 
+      const checkpointTime = new Date(checkpoint.timestamp).getTime();
+      const timeSinceCheckpoint = Date.now() - checkpointTime;
+
       // First create a checkpoint of current state
       await api.createCheckpoint(
         sessionId,
@@ -218,6 +244,11 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
       // Then restore
       await api.restoreCheckpoint(checkpoint.id, sessionId, projectId, projectPath);
 
+      // Track checkpoint restoration
+      trackEvent.checkpointRestored({
+        checkpoint_id: checkpoint.id,
+        time_since_checkpoint_ms: timeSinceCheckpoint
+      });
       await loadTimeline();
       onCheckpointSelect(checkpoint);
     } catch (err) {

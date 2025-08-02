@@ -5,6 +5,7 @@ import { api, type Project, type Session, type ClaudeMdFile } from "@/lib/api";
 import { OutputCacheProvider } from "@/lib/outputCache";
 import { useI18n } from "@/lib/i18n";
 import { TabProvider } from "@/contexts/TabContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ProjectList } from "@/components/ProjectList";
@@ -29,6 +30,8 @@ import { ToastProvider } from "@/contexts/ToastContext";
 import { handleApiError } from "@/lib/errorHandler";
 import { logger } from "@/lib/logger";
 import { audioNotificationManager, loadAudioConfigFromLocalStorage } from "@/lib/audioNotification";
+import { AnalyticsConsentBanner } from "@/components/AnalyticsConsent";
+import { useAppLifecycle, useTrackEvent } from "@/hooks";
 
 type View =
   | "welcome"
@@ -88,6 +91,26 @@ function AppContent() {
   const [projectForSettings, setProjectForSettings] = useState<Project | null>(null);
   const [previousView] = useState<View>("welcome");
   const [showAgentsModal, setShowAgentsModal] = useState(false);
+
+  // Initialize analytics lifecycle tracking
+  useAppLifecycle();
+  const trackEvent = useTrackEvent();
+
+  // Track user journey milestones
+  const [hasTrackedFirstChat] = useState(false);
+  // const [hasTrackedFirstAgent] = useState(false);
+
+  // Track when user reaches different journey stages
+  useEffect(() => {
+    if (view === "projects" && projects.length > 0 && !hasTrackedFirstChat) {
+      // User has projects - they're past onboarding
+      trackEvent.journeyMilestone({
+        journey_stage: 'onboarding',
+        milestone_reached: 'projects_created',
+        time_to_milestone_ms: Date.now() - performance.timing.navigationStart
+      });
+    }
+  }, [view, projects.length, hasTrackedFirstChat, trackEvent]);
 
   // Initialize audio notification manager on app start
   useEffect(() => {
@@ -526,6 +549,9 @@ function AppContent() {
         onAgentsClick={() => setShowAgentsModal(true)}
       />
 
+      {/* Analytics Consent Banner */}
+      <AnalyticsConsentBanner />
+
       {/* Main Content */}
       <div className="flex-1 overflow-hidden">{renderContent()}</div>
 
@@ -571,13 +597,15 @@ function AppContent() {
  */
 function App() {
   return (
-    <ToastProvider>
-      <OutputCacheProvider>
-        <TabProvider>
-          <AppContent />
-        </TabProvider>
-      </OutputCacheProvider>
-    </ToastProvider>
+    <ThemeProvider>
+      <ToastProvider>
+        <OutputCacheProvider>
+          <TabProvider>
+            <AppContent />
+          </TabProvider>
+        </OutputCacheProvider>
+      </ToastProvider>
+    </ThemeProvider>
   );
 }
 

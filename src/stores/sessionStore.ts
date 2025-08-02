@@ -1,9 +1,10 @@
-import { create } from "zustand";
+import { create } from 'zustand';
+import { subscribeWithSelector } from 'zustand/middleware';
+import type { StateCreator } from 'zustand';
 import { logger } from "@/lib/logger";
-import { subscribeWithSelector } from "zustand/middleware";
-import { api } from "@/lib/api";
+import { api } from '@/lib/api';
 import { handleApiError } from "@/lib/errorHandler";
-import type { Session, Project } from "@/lib/api";
+import type { Session, Project } from '@/lib/api';
 
 /**
  * Session store state interface
@@ -55,30 +56,12 @@ interface SessionState {
   handleOutputUpdate: (sessionId: string, output: string) => void;
 }
 
-/**
- * Zustand store for managing session and project state
- *
- * Provides centralized state management for projects, sessions, and their outputs
- * with real-time updates, error handling, and efficient caching mechanisms.
- *
- * @example
- * ```typescript
- * const {
- *   projects,
- *   sessions,
- *   fetchProjects,
- *   setCurrentSession
- * } = useSessionStore();
- *
- * // Fetch all projects
- * await fetchProjects();
- *
- * // Set active session
- * setCurrentSession('session-id-123');
- * ```
- */
-export const useSessionStore = create<SessionState>()(
-  subscribeWithSelector((set, get) => ({
+const sessionStore: StateCreator<
+  SessionState,
+  [],
+  [['zustand/subscribeWithSelector', never]],
+  SessionState
+> = (set, get) => ({
     // Initial state
     projects: [],
     sessions: {},
@@ -110,7 +93,7 @@ export const useSessionStore = create<SessionState>()(
       set({ isLoadingSessions: true, error: null });
       try {
         const projectSessions = await api.getProjectSessions(projectId);
-        set((state: SessionState) => ({
+        set((state) => ({
           sessions: {
             ...state.sessions,
             [projectId]: projectSessions,
@@ -134,7 +117,7 @@ export const useSessionStore = create<SessionState>()(
       if (sessionId) {
         // Find session across all projects
         for (const projectSessions of Object.values(sessions)) {
-          const found = (projectSessions as Session[]).find((s: Session) => s.id === sessionId);
+          const found = projectSessions.find((s) => s.id === sessionId);
           if (found) {
             currentSession = found;
             break;
@@ -150,7 +133,7 @@ export const useSessionStore = create<SessionState>()(
       set({ isLoadingOutputs: true, error: null });
       try {
         const output = await api.getClaudeSessionOutput(sessionId);
-        set((state: SessionState) => ({
+        set((state) => ({
           sessionOutputs: {
             ...state.sessionOutputs,
             [sessionId]: output,
@@ -172,11 +155,10 @@ export const useSessionStore = create<SessionState>()(
         logger.warn("deleteSession not implemented in API");
 
         // Update local state
-        set((state: SessionState) => ({
+        set((state) => ({
           sessions: {
             ...state.sessions,
-            [projectId]:
-              state.sessions[projectId]?.filter((s: Session) => s.id !== sessionId) || [],
+            [projectId]: state.sessions[projectId]?.filter((s) => s.id !== sessionId) || []
           },
           currentSessionId: state.currentSessionId === sessionId ? null : state.currentSessionId,
           currentSession: state.currentSession?.id === sessionId ? null : state.currentSession,
@@ -197,10 +179,10 @@ export const useSessionStore = create<SessionState>()(
 
     // Handle session update
     handleSessionUpdate: (session: Session) => {
-      set((state: SessionState) => {
+      set((state) => {
         const projectId = session.project_id;
         const projectSessions = state.sessions[projectId] || [];
-        const existingIndex = projectSessions.findIndex((s: Session) => s.id === session.id);
+        const existingIndex = projectSessions.findIndex((s) => s.id === session.id);
 
         let updatedSessions;
         if (existingIndex >= 0) {
@@ -222,12 +204,15 @@ export const useSessionStore = create<SessionState>()(
 
     // Handle output update
     handleOutputUpdate: (sessionId: string, output: string) => {
-      set((state: SessionState) => ({
+      set((state) => ({
         sessionOutputs: {
           ...state.sessionOutputs,
           [sessionId]: output,
         },
       }));
-    },
-  }))
+    }
+  });
+
+export const useSessionStore = create<SessionState>()(
+  subscribeWithSelector(sessionStore)
 );

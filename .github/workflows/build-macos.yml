@@ -1,0 +1,294 @@
+name: Build macOS
+
+on:
+  workflow_call:
+    secrets:
+      APPLE_CERTIFICATE:
+        required: true
+      APPLE_CERTIFICATE_PASSWORD:
+        required: true
+      KEYCHAIN_PASSWORD:
+        required: true
+      APPLE_SIGNING_IDENTITY:
+        required: true
+      APPLE_ID:
+        required: true
+      APPLE_TEAM_ID:
+        required: true
+      APPLE_PASSWORD:
+        required: true
+  workflow_dispatch:
+    inputs:
+      skip_build:
+        description: 'Skip build and use artifacts from a previous run'
+        required: false
+        default: false
+        type: boolean
+      run_id:
+        description: 'Run ID to download artifacts from (leave empty for latest)'
+        required: false
+        type: string
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    name: Build macOS ${{ matrix.target }}
+    if: ${{ !inputs.skip_build }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: macos-13  # Intel
+            target: x86_64-apple-darwin
+            arch: x86_64
+          - os: macos-14  # Apple Silicon
+            target: aarch64-apple-darwin
+            arch: aarch64
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+      
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+      
+      - name: Install dependencies
+        run: bun install
+      
+      - name: Import Apple certificates
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          # Create variables
+          CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          
+          # Import certificate from secrets
+          echo -n "$APPLE_CERTIFICATE" | base64 --decode -o $CERTIFICATE_PATH
+          
+          # Create temporary keychain
+          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          
+          # Import certificate to keychain
+          security import $CERTIFICATE_PATH -P "$APPLE_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security list-keychain -d user -s $KEYCHAIN_PATH
+      
+      - name: Build native
+        env:
+          CI: true
+        run: bun run tauri build
+      
+      - name: Upload architecture-specific artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-${{ matrix.arch }}
+          path: |
+            src-tauri/target/release/bundle/macos/Claudia.app
+            src-tauri/target/release/bundle/dmg/*.dmg
+          retention-days: 1
+  
+  universal:
+    name: Create Universal Binary
+    needs: [build]
+    if: ${{ !cancelled() && (needs.build.result == 'success' || needs.build.result == 'skipped') }}
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download artifacts from current workflow
+        if: ${{ !inputs.skip_build }}
+        uses: actions/download-artifact@v4
+        with:
+          pattern: macos-*
+          path: artifacts
+      
+      - name: Download artifacts from specific run
+        if: ${{ inputs.skip_build && inputs.run_id != '' }}
+        uses: dawidd6/action-download-artifact@v3
+        with:
+          workflow: build-macos.yml
+          run_id: ${{ inputs.run_id }}
+          name: macos-*
+          path: artifacts
+      
+      - name: Download artifacts from latest run
+        if: ${{ inputs.skip_build && inputs.run_id == '' }}
+        uses: dawidd6/action-download-artifact@v3
+        with:
+          workflow: build-macos.yml
+          workflow_conclusion: success
+          name: macos-*
+          path: artifacts
+      
+      - name: List downloaded artifacts
+        run: |
+          echo "📁 Artifact structure:"
+          find artifacts -type f -name "*.app" -o -name "*.dmg" | head -20
+          echo ""
+          echo "📁 Full directory structure:"
+          ls -la artifacts/
+          ls -la artifacts/macos-aarch64/ || echo "macos-aarch64 directory not found"
+          ls -la artifacts/macos-x86_64/ || echo "macos-x86_64 directory not found"
+      
+      - name: Import Apple certificates
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          # Create variables
+          CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          
+          # Import certificate from secrets
+          echo -n "$APPLE_CERTIFICATE" | base64 --decode -o $CERTIFICATE_PATH
+          
+          # Create temporary keychain
+          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          
+          # Import certificate to keychain
+          security import $CERTIFICATE_PATH -P "$APPLE_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security list-keychain -d user -s $KEYCHAIN_PATH
+      
+      - name: Create universal app
+        run: |
+          # Create temp directory
+          mkdir -p dmg_temp
+          
+          # Extract zip files if they exist
+          if [ -f "artifacts/macos-aarch64.zip" ]; then
+            echo "📦 Extracting macos-aarch64.zip..."
+            unzip -q artifacts/macos-aarch64.zip -d artifacts/macos-aarch64/
+          fi
+          
+          if [ -f "artifacts/macos-x86_64.zip" ]; then
+            echo "📦 Extracting macos-x86_64.zip..."
+            unzip -q artifacts/macos-x86_64.zip -d artifacts/macos-x86_64/
+          fi
+          
+          # Find the actual app paths
+          AARCH64_APP=$(find artifacts/macos-aarch64 -name "Claudia.app" -type d | head -1)
+          X86_64_APP=$(find artifacts/macos-x86_64 -name "Claudia.app" -type d | head -1)
+          
+          if [ -z "$AARCH64_APP" ] || [ -z "$X86_64_APP" ]; then
+            echo "❌ Could not find app bundles"
+            echo "AARCH64_APP: $AARCH64_APP"
+            echo "X86_64_APP: $X86_64_APP"
+            exit 1
+          fi
+          
+          echo "✅ Found app bundles:"
+          echo "  ARM64: $AARCH64_APP"
+          echo "  x86_64: $X86_64_APP"
+          
+          # Copy ARM64 app as base
+          cp -R "$AARCH64_APP" dmg_temp/
+          
+          # Create universal binary using lipo
+          lipo -create -output dmg_temp/Claudia.app/Contents/MacOS/claudia \
+            "$AARCH64_APP/Contents/MacOS/claudia" \
+            "$X86_64_APP/Contents/MacOS/claudia"
+          
+          # Ensure executable permissions are set
+          chmod +x dmg_temp/Claudia.app/Contents/MacOS/claudia
+          
+          echo "✅ Universal binary created"
+          lipo -info dmg_temp/Claudia.app/Contents/MacOS/claudia
+      
+      - name: Sign app bundle
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+        run: |
+          codesign --sign "$APPLE_SIGNING_IDENTITY" \
+            --timestamp \
+            --options runtime \
+            --force \
+            --deep \
+            --entitlements src-tauri/entitlements.plist \
+            dmg_temp/Claudia.app
+      
+      - name: Create DMG
+        run: |
+          hdiutil create -volname "Claudia Installer" \
+            -srcfolder dmg_temp \
+            -ov -format UDZO Claudia.dmg
+      
+      - name: Sign DMG
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+        run: |
+          codesign --sign "$APPLE_SIGNING_IDENTITY" \
+            --timestamp \
+            --force Claudia.dmg
+      
+      - name: Notarize DMG
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+        run: |
+          # Store notarization credentials
+          xcrun notarytool store-credentials "notarytool-profile" \
+            --apple-id "$APPLE_ID" \
+            --team-id "$APPLE_TEAM_ID" \
+            --password "$APPLE_PASSWORD"
+          
+          # Submit for notarization
+          xcrun notarytool submit Claudia.dmg \
+            --keychain-profile "notarytool-profile" \
+            --wait
+      
+      - name: Staple notarization
+        run: xcrun stapler staple Claudia.dmg
+      
+      - name: Verify DMG
+        run: |
+          spctl -a -t open -vvv --context context:primary-signature Claudia.dmg
+          echo "✅ DMG verification complete"
+      
+      - name: Create artifacts directory
+        run: |
+          mkdir -p dist/macos-universal
+          cp Claudia.dmg dist/macos-universal/
+          
+          # Also save the app bundle using ditto to preserve permissions and signatures
+          ditto -c -k --sequesterRsrc --keepParent \
+            dmg_temp/Claudia.app dist/macos-universal/Claudia.app.zip
+          
+          # Generate checksum
+          shasum -a 256 dist/macos-universal/* > dist/macos-universal/checksums.txt
+      
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-universal
+          path: dist/macos-universal/*
+      
+      - name: Cleanup
+        if: always()
+        run: |
+          echo "🧹 Cleaning up temporary directories..."
+          rm -rf dmg_temp temp_x86 artifacts
+          
+          # Clean up keychain
+          if [ -n "$RUNNER_TEMP" ] && [ -f "$RUNNER_TEMP/app-signing.keychain-db" ]; then
+            security delete-keychain "$RUNNER_TEMP/app-signing.keychain-db" || true
+          fi
+          
+          echo "✅ Cleanup complete"
