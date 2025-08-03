@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, memo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FileText, ArrowLeft, Calendar, Clock, MessageSquare } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -39,6 +39,95 @@ interface SessionListProps {
 const ITEMS_PER_PAGE = 5;
 
 /**
+ * Individual session card component - Memoized to prevent unnecessary re-renders
+ */
+const SessionCard = memo<{
+  session: Session;
+  index: number;
+  projectPath: string;
+  onSessionClick?: (session: Session) => void;
+}>(({ session, index, projectPath, onSessionClick }) => {
+  const handleClick = useCallback(() => {
+    // Emit a special event for Claude Code session navigation
+    const event = new CustomEvent('claude-session-selected', { 
+      detail: { session, projectPath } 
+    });
+    window.dispatchEvent(event);
+    onSessionClick?.(session);
+  }, [session, projectPath, onSessionClick]);
+  
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{
+        duration: 0.3,
+        delay: index * 0.05,
+        ease: [0.4, 0, 0.2, 1],
+      }}
+    >
+      <Card
+        className={cn(
+          "transition-all hover:shadow-md hover:scale-[1.01] active:scale-[0.99] cursor-pointer",
+          session.todo_data && "border-l-4 border-l-primary"
+        )}
+        onClick={handleClick}
+      >
+        <CardContent className="p-3">
+          <div className="space-y-2">
+            <div className="flex items-start justify-between">
+              <div className="flex items-start space-x-3 flex-1 min-w-0">
+                <FileText className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                <div className="space-y-1 flex-1 min-w-0">
+                  <p className="font-mono text-xs text-muted-foreground">{session.id}</p>
+                  
+                  {/* First message preview */}
+                  {session.first_message && (
+                    <div className="space-y-1">
+                      <div className="flex items-center space-x-1 text-xs text-muted-foreground">
+                        <MessageSquare className="h-3 w-3" />
+                        <span>First message:</span>
+                      </div>
+                      <p className="text-xs line-clamp-2 text-foreground/80">
+                        {truncateText(getFirstLine(session.first_message), 100)}
+                      </p>
+                    </div>
+                  )}
+                  
+                  {/* Metadata */}
+                  <div className="flex items-center space-x-3 text-xs text-muted-foreground">
+                    {/* Message timestamp if available, otherwise file creation time */}
+                    <div className="flex items-center space-x-1">
+                      <Clock className="h-3 w-3" />
+                      <span>
+                        {session.message_timestamp 
+                          ? formatISOTimestamp(session.message_timestamp)
+                          : formatUnixTimestamp(session.created_at)
+                        }
+                      </span>
+                    </div>
+                    
+                    {session.todo_data && (
+                      <div className="flex items-center space-x-1">
+                        <Calendar className="h-3 w-3" />
+                        <span>Has todo</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+});
+
+SessionCard.displayName = 'SessionCard';
+
+/**
  * SessionList component - Displays paginated sessions for a specific project
  * 
  * @example
@@ -49,7 +138,7 @@ const ITEMS_PER_PAGE = 5;
  *   onSessionClick={(session) => console.log('Selected session:', session)}
  * />
  */
-export const SessionList: React.FC<SessionListProps> = ({
+export const SessionList: React.FC<SessionListProps> = memo(({
   sessions,
   projectPath,
   onBack,
@@ -111,79 +200,13 @@ export const SessionList: React.FC<SessionListProps> = ({
       <AnimatePresence mode="popLayout">
         <div className="space-y-2">
           {currentSessions.map((session, index) => (
-            <motion.div
+            <SessionCard
               key={session.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{
-                duration: 0.3,
-                delay: index * 0.05,
-                ease: [0.4, 0, 0.2, 1],
-              }}
-            >
-              <Card
-                className={cn(
-                  "transition-all hover:shadow-md hover:scale-[1.01] active:scale-[0.99] cursor-pointer",
-                  session.todo_data && "border-l-4 border-l-primary"
-                )}
-                onClick={() => {
-                  // Emit a special event for Claude Code session navigation
-                  const event = new CustomEvent('claude-session-selected', { 
-                    detail: { session, projectPath } 
-                  });
-                  window.dispatchEvent(event);
-                  onSessionClick?.(session);
-                }}
-              >
-                <CardContent className="p-3">
-                  <div className="space-y-2">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start space-x-3 flex-1 min-w-0">
-                        <FileText className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                        <div className="space-y-1 flex-1 min-w-0">
-                          <p className="font-mono text-xs text-muted-foreground">{session.id}</p>
-                          
-                          {/* First message preview */}
-                          {session.first_message && (
-                            <div className="space-y-1">
-                              <div className="flex items-center space-x-1 text-xs text-muted-foreground">
-                                <MessageSquare className="h-3 w-3" />
-                                <span>First message:</span>
-                              </div>
-                              <p className="text-xs line-clamp-2 text-foreground/80">
-                                {truncateText(getFirstLine(session.first_message), 100)}
-                              </p>
-                            </div>
-                          )}
-                          
-                          {/* Metadata */}
-                          <div className="flex items-center space-x-3 text-xs text-muted-foreground">
-                            {/* Message timestamp if available, otherwise file creation time */}
-                            <div className="flex items-center space-x-1">
-                              <Clock className="h-3 w-3" />
-                              <span>
-                                {session.message_timestamp 
-                                  ? formatISOTimestamp(session.message_timestamp)
-                                  : formatUnixTimestamp(session.created_at)
-                                }
-                              </span>
-                            </div>
-                            
-                            {session.todo_data && (
-                              <div className="flex items-center space-x-1">
-                                <Calendar className="h-3 w-3" />
-                                <span>Has todo</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
+              session={session}
+              index={index}
+              projectPath={projectPath}
+              onSessionClick={onSessionClick}
+            />
           ))}
         </div>
       </AnimatePresence>
@@ -195,4 +218,6 @@ export const SessionList: React.FC<SessionListProps> = ({
       />
     </div>
   );
-}; 
+});
+
+SessionList.displayName = 'SessionList'; 

@@ -820,6 +820,29 @@ pub async fn execute_claude_code(
     prompt: String,
     model: String,
 ) -> Result<(), String> {
+    // Validate inputs
+    if project_path.is_empty() {
+        return Err("Project path cannot be empty".to_string());
+    }
+    if project_path.contains("..") {
+        return Err("Path traversal not allowed".to_string());
+    }
+    if prompt.is_empty() {
+        return Err("Prompt cannot be empty".to_string());
+    }
+    if prompt.len() > 10000 {
+        return Err("Prompt is too long (max 10000 characters)".to_string());
+    }
+    if !matches!(model.as_str(), 
+        "claude-3-opus-20240229" | 
+        "claude-3-sonnet-20240229" | 
+        "claude-3-haiku-20240307" |
+        "claude-3-5-sonnet-20241022" |
+        "claude-3-5-haiku-20241022"
+    ) {
+        return Err("Invalid model selected".to_string());
+    }
+    
     log::info!(
         "Starting new Claude Code session in: {} with model: {}",
         project_path,
@@ -836,7 +859,6 @@ pub async fn execute_claude_code(
         "--output-format".to_string(),
         "stream-json".to_string(),
         "--verbose".to_string(),
-        "--dangerously-skip-permissions".to_string(),
     ];
 
     let cmd = create_system_command(&claude_path, args, &project_path);
@@ -851,6 +873,29 @@ pub async fn continue_claude_code(
     prompt: String,
     model: String,
 ) -> Result<(), String> {
+    // Validate inputs
+    if project_path.is_empty() {
+        return Err("Project path cannot be empty".to_string());
+    }
+    if project_path.contains("..") {
+        return Err("Path traversal not allowed".to_string());
+    }
+    if prompt.is_empty() {
+        return Err("Prompt cannot be empty".to_string());
+    }
+    if prompt.len() > 10000 {
+        return Err("Prompt is too long (max 10000 characters)".to_string());
+    }
+    if !matches!(model.as_str(), 
+        "claude-3-opus-20240229" | 
+        "claude-3-sonnet-20240229" | 
+        "claude-3-haiku-20240307" |
+        "claude-3-5-sonnet-20241022" |
+        "claude-3-5-haiku-20241022"
+    ) {
+        return Err("Invalid model selected".to_string());
+    }
+    
     log::info!(
         "Continuing Claude Code conversation in: {} with model: {}",
         project_path,
@@ -868,7 +913,6 @@ pub async fn continue_claude_code(
         "--output-format".to_string(),
         "stream-json".to_string(),
         "--verbose".to_string(),
-        "--dangerously-skip-permissions".to_string(),
     ];
 
     let cmd = create_system_command(&claude_path, args, &project_path);
@@ -884,6 +928,36 @@ pub async fn resume_claude_code(
     prompt: String,
     model: String,
 ) -> Result<(), String> {
+    // Validate inputs
+    if project_path.is_empty() {
+        return Err("Project path cannot be empty".to_string());
+    }
+    if project_path.contains("..") {
+        return Err("Path traversal not allowed".to_string());
+    }
+    if session_id.is_empty() {
+        return Err("Session ID cannot be empty".to_string());
+    }
+    // Basic UUID format validation (8-4-4-4-12 format)
+    if session_id.len() != 36 || !session_id.chars().all(|c| c.is_ascii_hexdigit() || c == '-') {
+        return Err("Invalid session ID format".to_string());
+    }
+    if prompt.is_empty() {
+        return Err("Prompt cannot be empty".to_string());
+    }
+    if prompt.len() > 10000 {
+        return Err("Prompt is too long (max 10000 characters)".to_string());
+    }
+    if !matches!(model.as_str(), 
+        "claude-3-opus-20240229" | 
+        "claude-3-sonnet-20240229" | 
+        "claude-3-haiku-20240307" |
+        "claude-3-5-sonnet-20241022" |
+        "claude-3-5-haiku-20241022"
+    ) {
+        return Err("Invalid model selected".to_string());
+    }
+    
     log::info!(
         "Resuming Claude Code session: {} in: {} with model: {}",
         session_id,
@@ -903,7 +977,6 @@ pub async fn resume_claude_code(
         "--output-format".to_string(),
         "stream-json".to_string(),
         "--verbose".to_string(),
-        "--dangerously-skip-permissions".to_string(),
     ];
 
     let cmd = create_system_command(&claude_path, args, &project_path);
@@ -1235,6 +1308,12 @@ pub async fn list_directory_contents(directory_path: String) -> Result<Vec<FileE
         log::error!("Directory path is empty or whitespace");
         return Err("Directory path cannot be empty".to_string());
     }
+    
+    // Prevent path traversal
+    if directory_path.contains("..") {
+        log::error!("Path traversal attempt detected: {}", directory_path);
+        return Err("Path traversal not allowed".to_string());
+    }
 
     let path = PathBuf::from(&directory_path);
     log::debug!("Resolved path: {:?}", path);
@@ -1312,11 +1391,22 @@ pub async fn search_files(base_path: String, query: String) -> Result<Vec<FileEn
         log::error!("Base path is empty or whitespace");
         return Err("Base path cannot be empty".to_string());
     }
+    
+    // Prevent path traversal
+    if base_path.contains("..") {
+        log::error!("Path traversal attempt detected: {}", base_path);
+        return Err("Path traversal not allowed".to_string());
+    }
 
     // Check if query is empty
     if query.trim().is_empty() {
         log::warn!("Search query is empty, returning empty results");
         return Ok(Vec::new());
+    }
+    
+    // Limit query length
+    if query.len() > 100 {
+        return Err("Search query is too long (max 100 characters)".to_string());
     }
 
     let path = PathBuf::from(&base_path);

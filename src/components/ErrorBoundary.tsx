@@ -28,8 +28,33 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    // Log the error to console
-    console.error("Error caught by boundary:", error, errorInfo);
+    // Capture detailed error information
+    const errorDetails = {
+      message: error.message,
+      stack: error.stack,
+      componentStack: errorInfo.componentStack,
+      timestamp: new Date().toISOString(),
+      userAgent: navigator.userAgent,
+      url: window.location.href,
+    };
+    
+    // Log detailed error to console
+    console.error("Error caught by boundary:", errorDetails);
+    
+    // Save error to localStorage for debugging
+    this.saveErrorToLocalStorage(errorDetails);
+  }
+  
+  private saveErrorToLocalStorage(error: any) {
+    try {
+      const errors = JSON.parse(localStorage.getItem('claudia_errors') || '[]');
+      errors.push(error);
+      // Keep only last 10 errors
+      if (errors.length > 10) errors.shift();
+      localStorage.setItem('claudia_errors', JSON.stringify(errors));
+    } catch (e) {
+      console.error('Failed to save error to localStorage:', e);
+    }
   }
 
   reset = () => {
@@ -60,18 +85,39 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                       <summary className="text-sm cursor-pointer text-muted-foreground hover:text-foreground">
                         Error details
                       </summary>
-                      <pre className="mt-2 text-xs bg-muted p-2 rounded overflow-auto">
+                      <pre className="mt-2 text-xs bg-muted p-2 rounded overflow-auto max-h-32">
                         {this.state.error.message}
+                        {this.state.error.stack && (
+                          <>
+                            {"\n\nStack trace:\n"}
+                            {this.state.error.stack}
+                          </>
+                        )}
                       </pre>
                     </details>
                   )}
-                  <Button
-                    onClick={this.reset}
-                    size="sm"
-                    className="mt-4"
-                  >
-                    Try again
-                  </Button>
+                  <div className="flex gap-2 mt-4">
+                    <Button
+                      onClick={this.reset}
+                      size="sm"
+                    >
+                      Try again
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        const errorData = {
+                          message: this.state.error?.message,
+                          stack: this.state.error?.stack,
+                          timestamp: new Date().toISOString(),
+                        };
+                        navigator.clipboard.writeText(JSON.stringify(errorData, null, 2));
+                      }}
+                      size="sm"
+                      variant="outline"
+                    >
+                      Copy error details
+                    </Button>
+                  </div>
                 </div>
               </div>
             </CardContent>

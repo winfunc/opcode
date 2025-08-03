@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Loader2, Bot, FolderCode } from "lucide-react";
 import { api, type Project, type Session, type ClaudeMdFile } from "@/lib/api";
@@ -13,20 +13,29 @@ import { RunningClaudeSessions } from "@/components/RunningClaudeSessions";
 import { Topbar } from "@/components/Topbar";
 import { MarkdownEditor } from "@/components/MarkdownEditor";
 import { ClaudeFileEditor } from "@/components/ClaudeFileEditor";
-import { Settings } from "@/components/Settings";
-import { CCAgents } from "@/components/CCAgents";
-import { UsageDashboard } from "@/components/UsageDashboard";
-import { MCPManager } from "@/components/MCPManager";
-import { NFOCredits } from "@/components/NFOCredits";
-import { ClaudeBinaryDialog } from "@/components/ClaudeBinaryDialog";
 import { Toast, ToastContainer } from "@/components/ui/toast";
-import { ProjectSettings } from '@/components/ProjectSettings';
 import { TabManager } from "@/components/TabManager";
 import { TabContent } from "@/components/TabContent";
-import { AgentsModal } from "@/components/AgentsModal";
 import { useTabState } from "@/hooks/useTabState";
 import { AnalyticsConsentBanner } from "@/components/AnalyticsConsent";
 import { useAppLifecycle, useTrackEvent } from "@/hooks";
+
+// Lazy load heavy components
+const Settings = lazy(() => import("@/components/Settings").then(m => ({ default: m.Settings })));
+const CCAgents = lazy(() => import("@/components/CCAgents").then(m => ({ default: m.CCAgents })));
+const UsageDashboard = lazy(() => import("@/components/UsageDashboard").then(m => ({ default: m.UsageDashboard })));
+const MCPManager = lazy(() => import("@/components/MCPManager").then(m => ({ default: m.MCPManager })));
+const NFOCredits = lazy(() => import("@/components/NFOCredits").then(m => ({ default: m.NFOCredits })));
+const ClaudeBinaryDialog = lazy(() => import("@/components/ClaudeBinaryDialog").then(m => ({ default: m.ClaudeBinaryDialog })));
+const ProjectSettings = lazy(() => import('@/components/ProjectSettings').then(m => ({ default: m.ProjectSettings })));
+const AgentsModal = lazy(() => import("@/components/AgentsModal").then(m => ({ default: m.AgentsModal })));
+
+// Loading fallback component
+const LoadingFallback = () => (
+  <div className="flex items-center justify-center h-full">
+    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+  </div>
+);
 
 type View = 
   | "welcome" 
@@ -293,9 +302,11 @@ function AppContent() {
 
       case "cc-agents":
         return (
-          <CCAgents 
-            onBack={() => handleViewChange("welcome")} 
-          />
+          <Suspense fallback={<LoadingFallback />}>
+            <CCAgents 
+              onBack={() => handleViewChange("welcome")} 
+            />
+          </Suspense>
         );
 
       case "editor":
@@ -308,7 +319,9 @@ function AppContent() {
       case "settings":
         return (
           <div className="flex-1 flex flex-col" style={{ minHeight: 0 }}>
-            <Settings onBack={() => handleViewChange("welcome")} />
+            <Suspense fallback={<LoadingFallback />}>
+              <Settings onBack={() => handleViewChange("welcome")} />
+            </Suspense>
           </div>
         );
       
@@ -447,24 +460,30 @@ function AppContent() {
       
       case "usage-dashboard":
         return (
-          <UsageDashboard onBack={() => handleViewChange("welcome")} />
+          <Suspense fallback={<LoadingFallback />}>
+            <UsageDashboard onBack={() => handleViewChange("welcome")} />
+          </Suspense>
         );
       
       case "mcp":
         return (
-          <MCPManager onBack={() => handleViewChange("welcome")} />
+          <Suspense fallback={<LoadingFallback />}>
+            <MCPManager onBack={() => handleViewChange("welcome")} />
+          </Suspense>
         );
       
       case "project-settings":
         if (projectForSettings) {
           return (
-            <ProjectSettings
-              project={projectForSettings}
-              onBack={() => {
-                setProjectForSettings(null);
-                handleViewChange(previousView || "projects");
-              }}
-            />
+            <Suspense fallback={<LoadingFallback />}>
+              <ProjectSettings
+                project={projectForSettings}
+                onBack={() => {
+                  setProjectForSettings(null);
+                  handleViewChange(previousView || "projects");
+                }}
+              />
+            </Suspense>
           );
         }
         break;
@@ -495,25 +514,33 @@ function AppContent() {
       </div>
       
       {/* NFO Credits Modal */}
-      {showNFO && <NFOCredits onClose={() => setShowNFO(false)} />}
+      {showNFO && (
+        <Suspense fallback={<LoadingFallback />}>
+          <NFOCredits onClose={() => setShowNFO(false)} />
+        </Suspense>
+      )}
       
       {/* Agents Modal */}
-      <AgentsModal 
-        open={showAgentsModal} 
-        onOpenChange={setShowAgentsModal} 
-      />
+      <Suspense fallback={<LoadingFallback />}>
+        <AgentsModal 
+          open={showAgentsModal} 
+          onOpenChange={setShowAgentsModal} 
+        />
+      </Suspense>
       
       {/* Claude Binary Dialog */}
-      <ClaudeBinaryDialog
-        open={showClaudeBinaryDialog}
-        onOpenChange={setShowClaudeBinaryDialog}
-        onSuccess={() => {
-          setToast({ message: "Claude binary path saved successfully", type: "success" });
-          // Trigger a refresh of the Claude version check
-          window.location.reload();
-        }}
-        onError={(message) => setToast({ message, type: "error" })}
-      />
+      <Suspense fallback={<LoadingFallback />}>
+        <ClaudeBinaryDialog
+          open={showClaudeBinaryDialog}
+          onOpenChange={setShowClaudeBinaryDialog}
+          onSuccess={() => {
+            setToast({ message: "Claude binary path saved successfully", type: "success" });
+            // Trigger a refresh of the Claude version check
+            window.location.reload();
+          }}
+          onError={(message) => setToast({ message, type: "error" })}
+        />
+      </Suspense>
       
       {/* Toast Container */}
       <ToastContainer>
