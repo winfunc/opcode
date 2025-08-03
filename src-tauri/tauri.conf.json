@@ -18,7 +18,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; img-src 'self' asset: https://asset.localhost blob: data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-eval' https://app.posthog.com https://*.posthog.com https://*.i.posthog.com https://*.assets.i.posthog.com; connect-src 'self' ipc: https://ipc.localhost https://app.posthog.com https://*.posthog.com https://*.i.posthog.com",
+      "csp": "default-src 'self'; img-src 'self' asset: https://asset.localhost blob: data:; style-src 'self' 'unsafe-inline'; script-src 'self' https://app.posthog.com https://*.posthog.com; connect-src 'self' ipc: https://ipc.localhost https://app.posthog.com https://*.posthog.com https://*.i.posthog.com; font-src 'self'; media-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';",
       "assetProtocol": {
         "enable": true,
         "scope": [
@@ -30,7 +30,27 @@
   "plugins": {
     "fs": {
       "scope": [
-        "$HOME/**"
+        "$HOME/.claude/**",
+        "$HOME/.claudia/**",
+        "$DOCUMENT/**",
+        "$DESKTOP/**",
+        "$HOME/Projects/**",
+        "$HOME/Documents/**",
+        "$HOME/Desktop/**"
+      ],
+      "deny": [
+        "$HOME/.ssh/**",
+        "$HOME/.gnupg/**",
+        "$HOME/.aws/**",
+        "$HOME/.config/gcloud/**",
+        "$HOME/.docker/**",
+        "$HOME/.kube/**",
+        "$HOME/.env",
+        "$HOME/.bashrc",
+        "$HOME/.zshrc",
+        "$HOME/.profile",
+        "$HOME/.gitconfig",
+        "$HOME/.npmrc"
       ],
       "allow": [
         "readFile",

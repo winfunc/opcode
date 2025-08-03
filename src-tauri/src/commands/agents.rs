@@ -763,7 +763,6 @@ pub async fn execute_agent(
         "--output-format".to_string(),
         "stream-json".to_string(),
         "--verbose".to_string(),
-        "--dangerously-skip-permissions".to_string(),
     ];
 
     // Execute based on whether we should use sidecar or system binary
