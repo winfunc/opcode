@@ -176,70 +176,8 @@ export const Topbar: React.FC<TopbarProps> = ({
       {/* Status Indicator */}
       <StatusIndicator />
       
-      {/* Action Buttons */}
-      <div className="flex items-center space-x-2">
-        {onAgentsClick && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onAgentsClick}
-            className="text-xs"
-          >
-            <Bot className="mr-2 h-3 w-3" />
-            Agents
-          </Button>
-        )}
-        
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onUsageClick}
-          className="text-xs"
-        >
-          <BarChart3 className="mr-2 h-3 w-3" />
-          Usage Dashboard
-        </Button>
-        
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onClaudeClick}
-          className="text-xs"
-        >
-          <FileText className="mr-2 h-3 w-3" />
-          CLAUDE.md
-        </Button>
-        
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onMCPClick}
-          className="text-xs"
-        >
-          <Network className="mr-2 h-3 w-3" />
-          MCP
-        </Button>
-        
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onSettingsClick}
-          className="text-xs"
-        >
-          <Settings className="mr-2 h-3 w-3" />
-          Settings
-        </Button>
-        
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onInfoClick}
-          className="h-8 w-8"
-          title="About"
-        >
-          <Info className="h-4 w-4" />
-        </Button>
-      </div>
+      {/* Spacer - Navigation moved to titlebar */}
+      <div></div>
     </motion.div>
   );
 }; 

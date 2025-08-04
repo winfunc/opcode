@@ -390,9 +390,9 @@ export const TabManager: React.FC<TabManagerProps> = ({ className }) => {
         disabled={!canAddTab()}
         className={cn(
           "p-2 mx-2 rounded-md transition-all duration-200 flex items-center justify-center",
-          "border border-border/50 bg-background/50 backdrop-blur-sm",
+          "bg-background/50 backdrop-blur-sm",
           canAddTab()
-            ? "hover:bg-muted/80 hover:border-border text-muted-foreground hover:text-foreground hover:shadow-sm"
+            ? "hover:bg-muted/80 text-muted-foreground hover:text-foreground hover:shadow-sm"
             : "opacity-50 cursor-not-allowed bg-muted/30"
         )}
         title={canAddTab() ? "Browse projects (Ctrl+T)" : `Maximum tabs reached (${tabs.length}/20)`}

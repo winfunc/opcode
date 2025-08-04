@@ -45,22 +45,11 @@ use commands::storage::{
 use commands::proxy::{get_proxy_settings, save_proxy_settings, apply_proxy_settings};
 use process::ProcessRegistryState;
 use std::sync::Mutex;
-use tauri::{Manager, Theme};
+use tauri::Manager;
 
-#[tauri::command]
-async fn set_window_theme(window: tauri::Window, theme: String) -> Result<(), String> {
-    let theme_enum = match theme.as_str() {
-        "dark" => Some(Theme::Dark),
-        "light" => Some(Theme::Light),
-        _ => None,
-    };
-    
-    if let Some(theme) = theme_enum {
-        window.set_theme(Some(theme)).map_err(|e| e.to_string())?;
-    }
-    
-    Ok(())
-}
+#[cfg(target_os = "macos")]
+use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial};
+
 
 fn main() {
     // Initialize logger
@@ -150,6 +139,14 @@ fn main() {
 
             // Initialize Claude process state
             app.manage(ClaudeProcessState::default());
+
+            // Apply window vibrancy with rounded corners on macOS
+            #[cfg(target_os = "macos")]
+            {
+                let window = app.get_webview_window("main").unwrap();
+                apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, Some(12.0))
+                    .expect("Failed to apply window vibrancy");
+            }
 
             Ok(())
         })
@@ -264,9 +261,6 @@ fn main() {
             // Proxy Settings
             get_proxy_settings,
             save_proxy_settings,
-            
-            // Window Theme
-            set_window_theme,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

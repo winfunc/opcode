@@ -11,6 +11,7 @@ import { ProjectList } from "@/components/ProjectList";
 import { SessionList } from "@/components/SessionList";
 import { RunningClaudeSessions } from "@/components/RunningClaudeSessions";
 import { Topbar } from "@/components/Topbar";
+import { CustomTitlebar } from "@/components/CustomTitlebar";
 import { MarkdownEditor } from "@/components/MarkdownEditor";
 import { ClaudeFileEditor } from "@/components/ClaudeFileEditor";
 import { Settings } from "@/components/Settings";
@@ -476,15 +477,25 @@ function AppContent() {
 
   return (
     <div className="h-screen bg-background flex flex-col">
-      {/* Topbar */}
-      <Topbar
+      {/* Custom Titlebar */}
+      <CustomTitlebar
+        onAgentsClick={() => setShowAgentsModal(true)}
+        onUsageClick={() => createUsageTab()}
+        onClaudeClick={() => createClaudeMdTab()}
+        onMCPClick={() => createMCPTab()}
+        onSettingsClick={() => createSettingsTab()}
+        onInfoClick={() => setShowNFO(true)}
+      />
+      
+      {/* Topbar - Commented out since navigation moved to titlebar */}
+      {/* <Topbar
         onClaudeClick={() => createClaudeMdTab()}
         onSettingsClick={() => createSettingsTab()}
         onUsageClick={() => createUsageTab()}
         onMCPClick={() => createMCPTab()}
         onInfoClick={() => setShowNFO(true)}
         onAgentsClick={() => setShowAgentsModal(true)}
-      />
+      /> */}
       
       {/* Analytics Consent Banner */}
       <AnalyticsConsentBanner />

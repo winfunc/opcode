@@ -119,25 +119,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       });
     }
 
-    // Update window theme to match app theme
-    try {
-      // Map themes to window theme (only dark/light supported)
-      let windowTheme: string;
-      switch (themeMode) {
-        case 'light':
-          windowTheme = 'light';
-          break;
-        case 'dark':
-        case 'gray':
-        case 'custom':
-        default:
-          windowTheme = 'dark';
-          break;
-      }
-      await api.setWindowTheme(windowTheme);
-    } catch (error) {
-      console.error('Failed to update window theme:', error);
-    }
+    // Note: Window theme updates removed since we're using custom titlebar
   }, []);
 
   const setTheme = useCallback(async (newTheme: ThemeMode) => {

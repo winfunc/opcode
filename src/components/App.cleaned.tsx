@@ -8,6 +8,7 @@ import { Toast, ToastContainer } from "@/components/ui/toast";
 import { TabManager } from "@/components/TabManager";
 import { TabContent } from "@/components/TabContent";
 import { AgentsModal } from "@/components/AgentsModal";
+import { CustomTitlebar } from "@/components/CustomTitlebar";
 import { useTabState } from "@/hooks/useTabState";
 
 /**
@@ -111,8 +112,21 @@ function AppContent() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="min-h-screen bg-background flex flex-col"
+        className="min-h-screen bg-background flex flex-col rounded-xl overflow-hidden shadow-2xl border border-border/20"
       >
+        {/* Custom Titlebar */}
+        <CustomTitlebar
+          onSettingsClick={() => {
+            // Open settings tab or modal
+            window.dispatchEvent(new CustomEvent('create-settings-tab'));
+          }}
+          onAgentsClick={() => setShowAgentsModal(true)}
+          onMenuClick={() => {
+            // Could open a command palette or menu
+            console.log('Menu clicked');
+          }}
+        />
+        
         {/* Tab-based interface */}
         <div className="flex-1 flex flex-col">
           <TabManager />
