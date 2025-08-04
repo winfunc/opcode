@@ -34,6 +34,7 @@ export const MCPManager: React.FC<MCPManagerProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  
 
   // Load servers on mount
   useEffect(() => {

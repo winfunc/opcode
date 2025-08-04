@@ -8,6 +8,10 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[[bin]]
+name = "claudia"
+path = "src/main.rs"
+
 [lib]
 name = "claudia_lib"
 crate-type = ["lib", "cdylib", "staticlib"]
@@ -39,7 +43,7 @@ regex = "1"
 glob = "0.3"
 base64 = "0.22"
 libc = "0.2"
-reqwest = { version = "0.12", features = ["json"] }
+reqwest = { version = "0.12", features = ["json", "native-tls-vendored"] }
 futures = "0.3"
 async-trait = "0.1"
 tempfile = "3"
@@ -58,3 +62,9 @@ objc = "0.2"
 [features]
 # This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!
 custom-protocol = ["tauri/custom-protocol"]
+
+[profile.release]
+strip = true
+opt-level = "z"
+lto = true
+codegen-units = 1

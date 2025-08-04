@@ -25,6 +25,8 @@ import { TabManager } from "@/components/TabManager";
 import { TabContent } from "@/components/TabContent";
 import { AgentsModal } from "@/components/AgentsModal";
 import { useTabState } from "@/hooks/useTabState";
+import { AnalyticsConsentBanner } from "@/components/AnalyticsConsent";
+import { useAppLifecycle, useTrackEvent } from "@/hooks";
 
 type View = 
   | "welcome" 
@@ -60,6 +62,26 @@ function AppContent() {
   const [projectForSettings, setProjectForSettings] = useState<Project | null>(null);
   const [previousView] = useState<View>("welcome");
   const [showAgentsModal, setShowAgentsModal] = useState(false);
+  
+  // Initialize analytics lifecycle tracking
+  useAppLifecycle();
+  const trackEvent = useTrackEvent();
+  
+  // Track user journey milestones
+  const [hasTrackedFirstChat] = useState(false);
+  // const [hasTrackedFirstAgent] = useState(false);
+  
+  // Track when user reaches different journey stages
+  useEffect(() => {
+    if (view === "projects" && projects.length > 0 && !hasTrackedFirstChat) {
+      // User has projects - they're past onboarding
+      trackEvent.journeyMilestone({
+        journey_stage: 'onboarding',
+        milestone_reached: 'projects_created',
+        time_to_milestone_ms: Date.now() - performance.timing.navigationStart
+      });
+    }
+  }, [view, projects.length, hasTrackedFirstChat, trackEvent]);
 
   // Load projects on mount when in projects view
   useEffect(() => {
@@ -463,6 +485,9 @@ function AppContent() {
         onInfoClick={() => setShowNFO(true)}
         onAgentsClick={() => setShowAgentsModal(true)}
       />
+      
+      {/* Analytics Consent Banner */}
+      <AnalyticsConsentBanner />
       
       {/* Main Content */}
       <div className="flex-1 overflow-hidden">
