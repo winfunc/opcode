@@ -14,7 +14,9 @@
       {
         "title": "Claudia",
         "width": 800,
-        "height": 600
+        "height": 600,
+        "titleBarStyle": "transparent",
+        "theme": "dark"
       }
     ],
     "security": {

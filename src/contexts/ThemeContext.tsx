@@ -72,7 +72,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         if (savedTheme) {
           const themeMode = savedTheme as ThemeMode;
           setThemeState(themeMode);
-          applyTheme(themeMode, customColors);
+          await applyTheme(themeMode, customColors);
         }
 
         // Load custom colors
@@ -82,7 +82,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           const colors = JSON.parse(savedColors) as CustomThemeColors;
           setCustomColorsState(colors);
           if (theme === 'custom') {
-            applyTheme('custom', colors);
+            await applyTheme('custom', colors);
           }
         }
       } catch (error) {
@@ -96,7 +96,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   // Apply theme to document
-  const applyTheme = useCallback((themeMode: ThemeMode, colors: CustomThemeColors) => {
+  const applyTheme = useCallback(async (themeMode: ThemeMode, colors: CustomThemeColors) => {
     const root = document.documentElement;
     
     // Remove all theme classes
@@ -118,6 +118,26 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         root.style.removeProperty(cssVarName);
       });
     }
+
+    // Update window theme to match app theme
+    try {
+      // Map themes to window theme (only dark/light supported)
+      let windowTheme: string;
+      switch (themeMode) {
+        case 'light':
+          windowTheme = 'light';
+          break;
+        case 'dark':
+        case 'gray':
+        case 'custom':
+        default:
+          windowTheme = 'dark';
+          break;
+      }
+      await api.setWindowTheme(windowTheme);
+    } catch (error) {
+      console.error('Failed to update window theme:', error);
+    }
   }, []);
 
   const setTheme = useCallback(async (newTheme: ThemeMode) => {
@@ -126,7 +146,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       
       // Apply theme immediately
       setThemeState(newTheme);
-      applyTheme(newTheme, customColors);
+      await applyTheme(newTheme, customColors);
       
       // Save to storage
       await api.saveSetting(THEME_STORAGE_KEY, newTheme);
@@ -146,7 +166,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       
       // Apply immediately if custom theme is active
       if (theme === 'custom') {
-        applyTheme('custom', newColors);
+        await applyTheme('custom', newColors);
       }
       
       // Save to storage

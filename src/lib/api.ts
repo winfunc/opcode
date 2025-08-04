@@ -1879,5 +1879,19 @@ export const api = {
       console.error("Failed to delete slash command:", error);
       throw error;
     }
+  },
+
+  /**
+   * Sets the window theme to match the app theme
+   * @param theme - The theme to apply: 'dark', 'light', or 'gray'
+   * @returns Promise resolving when the theme is applied
+   */
+  async setWindowTheme(theme: string): Promise<void> {
+    try {
+      return await invoke<void>("set_window_theme", { theme });
+    } catch (error) {
+      console.error("Failed to set window theme:", error);
+      throw error;
+    }
   }
 };
