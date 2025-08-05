@@ -52,7 +52,7 @@ jobs:
             bundle-pattern: "*.exe"
             file-suffix: exe
           - name: macOS Intel
-            os: macos-latest
+            os: macos-13
             rust-target: x86_64-apple-darwin
             artifact-name: macos-x86_64
             bundle-type: dmg
