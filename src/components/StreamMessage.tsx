@@ -1,10 +1,13 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { 
   Terminal, 
   User, 
   Bot, 
   AlertCircle, 
-  CheckCircle2
+  CheckCircle2,
+  Copy,
+  Maximize2,
+  Check
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -14,6 +17,9 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { getClaudeSyntaxTheme } from "@/lib/claudeSyntaxTheme";
 import { useTheme } from "@/hooks";
 import type { ClaudeStreamMessage } from "./AgentExecution";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog";
+import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 import {
   TodoWidget,
   TodoReadWidget,
@@ -40,6 +46,7 @@ import {
   WebSearchWidget,
   WebFetchWidget
 } from "./ToolWidgets";
+import MermaidRenderer from "./MermaidRenderer";
 
 interface StreamMessageProps {
   message: ClaudeStreamMessage;
@@ -48,19 +55,78 @@ interface StreamMessageProps {
   onLinkDetected?: (url: string) => void;
 }
 
+// Component for mermaid code blocks with render and copy buttons
+const MermaidCodeBlock: React.FC<{ code: string; id: string }> = ({ code, id }) => {
+  const [copied, setCopied] = React.useState(false);
+  
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000); // Reset after 2 seconds
+    } catch (err) {
+      console.error('Failed to copy to clipboard:', err);
+    }
+  };
+
+  return (
+    <div className="relative group">
+      <SyntaxHighlighter
+        style={getClaudeSyntaxTheme(useTheme().theme)}
+        language="mermaid"
+        PreTag="div"
+      >
+        {code}
+      </SyntaxHighlighter>
+      <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <Button
+          variant={copied ? "default" : "secondary"}
+          size="sm"
+          onClick={copyToClipboard}
+          className={cn(
+            "h-7 w-7 p-0 transition-colors",
+            copied && "bg-green-600 hover:bg-green-700 text-white"
+          )}
+          title="Copy code"
+        >
+          {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+        </Button>
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-7 w-7 p-0"
+              title="Render diagram"
+            >
+              <Maximize2 className="h-3 w-3" />
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-[95vw] max-h-[95vh] w-full h-full p-0">
+            <VisuallyHidden.Root>
+              <DialogTitle>Mermaid Diagram Viewer</DialogTitle>
+            </VisuallyHidden.Root>
+            <MermaidRenderer chart={code} id={id} fullscreen={true} />
+          </DialogContent>
+        </Dialog>
+      </div>
+    </div>
+  );
+};
+
 /**
  * Component to render a single Claude Code stream message
  */
 const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, className, streamMessages, onLinkDetected }) => {
   // State to track tool results mapped by tool call ID
-  const [toolResults, setToolResults] = useState<Map<string, any>>(new Map());
+  // const [toolResults, setToolResults] = useState<Map<string, any>>(new Map());
   
   // Get current theme
   const { theme } = useTheme();
   const syntaxTheme = getClaudeSyntaxTheme(theme);
   
-  // Extract all tool results from stream messages
-  useEffect(() => {
+  // Extract all tool results from stream messages - memoized to prevent re-computation
+  const toolResults = React.useMemo(() => {
     const results = new Map<string, any>();
     
     // Iterate through all messages to find tool results
@@ -74,7 +140,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
       }
     });
     
-    setToolResults(results);
+    return results;
   }, [streamMessages]);
   
   // Helper to get tool result for a specific tool call ID
@@ -134,14 +200,42 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                           components={{
                             code({ node, inline, className, children, ...props }: any) {
                               const match = /language-(\w+)/.exec(className || '');
+                              const language = match ? match[1] : '';
+                              const code = String(children).replace(/\n$/, '');
+                              
+                              // Check if this is a mermaid code block
+                              if (!inline && language === 'mermaid') {
+                                // Create a stable ID based on content and context
+                                const stableId = (() => {
+                                  if (message.leafUuid) {
+                                    return `${message.leafUuid}-mermaid-${idx}`;
+                                  }
+                                  
+                                  // Create content-based ID if no leafUuid
+                                  const contentForId = `${code}-${message.session_id || ''}-${idx}`;
+                                  let hash = 0;
+                                  for (let i = 0; i < contentForId.length; i++) {
+                                    const char = contentForId.charCodeAt(i);
+                                    hash = ((hash << 5) - hash) + char;
+                                    hash = hash & hash;
+                                  }
+                                  return `mermaid-content-${Math.abs(hash).toString(36)}`;
+                                })();
+                                
+                                return <MermaidCodeBlock 
+                                  code={code} 
+                                  id={stableId}
+                                />;
+                              }
+                              
                               return !inline && match ? (
                                 <SyntaxHighlighter
                                   style={syntaxTheme}
-                                  language={match[1]}
+                                  language={language}
                                   PreTag="div"
                                   {...props}
                                 >
-                                  {String(children).replace(/\n$/, '')}
+                                  {code}
                                 </SyntaxHighlighter>
                               ) : (
                                 <code className={className} {...props}>
@@ -663,14 +757,42 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                       components={{
                         code({ node, inline, className, children, ...props }: any) {
                           const match = /language-(\w+)/.exec(className || '');
+                          const language = match ? match[1] : '';
+                          const code = String(children).replace(/\n$/, '');
+                          
+                          // Check if this is a mermaid code block
+                          if (!inline && language === 'mermaid') {
+                            // Create a stable ID based on content and context
+                            const stableId = (() => {
+                              if (message.leafUuid) {
+                                return `${message.leafUuid}-result-mermaid`;
+                              }
+                              
+                              // Create content-based ID if no leafUuid
+                              const contentForId = `result-${code}-${message.session_id || ''}`;
+                              let hash = 0;
+                              for (let i = 0; i < contentForId.length; i++) {
+                                const char = contentForId.charCodeAt(i);
+                                hash = ((hash << 5) - hash) + char;
+                                hash = hash & hash;
+                              }
+                              return `mermaid-result-${Math.abs(hash).toString(36)}`;
+                            })();
+                            
+                            return <MermaidCodeBlock 
+                              code={code} 
+                              id={stableId}
+                            />;
+                          }
+                          
                           return !inline && match ? (
                             <SyntaxHighlighter
                               style={syntaxTheme}
-                              language={match[1]}
+                              language={language}
                               PreTag="div"
                               {...props}
                             >
-                              {String(children).replace(/\n$/, '')}
+                              {code}
                             </SyntaxHighlighter>
                           ) : (
                             <code className={className} {...props}>
