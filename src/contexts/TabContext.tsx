@@ -15,15 +15,38 @@ interface TabContextType {
   getTabsByType: (type: "chat" | "agent") => Tab[];
 }
 
-// const STORAGE_KEY = 'claudia_tabs'; // No longer needed - persistence disabled
+const STORAGE_KEY = 'claudia_tabs';
 
 export const TabProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
 
-  // Always start with a fresh CC Projects tab
+  // Load tabs from localStorage on mount
   useEffect(() => {
-    // Create default projects tab
+    try {
+      const savedTabs = localStorage.getItem(STORAGE_KEY);
+      if (savedTabs) {
+        const parsedTabs = JSON.parse(savedTabs).map((tab: any) => ({
+          ...tab,
+          createdAt: new Date(tab.createdAt),
+          updatedAt: new Date(tab.updatedAt),
+        }));
+        
+        if (parsedTabs.length > 0) {
+          setTabs(parsedTabs);
+          // Find the last active tab or default to first tab
+          const lastActiveTab = parsedTabs.find((tab: Tab) => tab.status === 'active') || parsedTabs[0];
+          setActiveTabId(lastActiveTab.id);
+          return;
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to load tabs from localStorage:', error);
+      // Clear corrupted data
+      localStorage.removeItem(STORAGE_KEY);
+    }
+
+    // Create default projects tab if no saved tabs
     const defaultTab: Tab = {
       id: generateTabId(),
       type: "projects",
@@ -38,17 +61,24 @@ export const TabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setActiveTabId(defaultTab.id);
   }, []);
 
-  // Tab persistence disabled - no longer saving to localStorage
-  // useEffect(() => {
-  //   if (tabs.length > 0) {
-  //     const tabsToSave = tabs.map(tab => ({
-  //       ...tab,
-  //       createdAt: tab.createdAt.toISOString(),
-  //       updatedAt: tab.updatedAt.toISOString()
-  //     }));
-  //     localStorage.setItem(STORAGE_KEY, JSON.stringify(tabsToSave));
-  //   }
-  // }, [tabs]);
+  // Save tabs to localStorage when tabs change
+  useEffect(() => {
+    if (tabs.length > 0) {
+      try {
+        const tabsToSave = tabs.map(tab => ({
+          ...tab,
+          createdAt: tab.createdAt.toISOString(),
+          updatedAt: tab.updatedAt.toISOString()
+        }));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(tabsToSave));
+      } catch (error) {
+        console.warn('Failed to save tabs to localStorage:', error);
+      }
+    } else {
+      // Remove from localStorage when no tabs
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  }, [tabs]);
 
   const addTab = useCallback(
     (tabData: Omit<Tab, "id" | "order" | "createdAt" | "updatedAt">): string => {
@@ -107,6 +137,14 @@ export const TabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     (id: string) => {
       if (tabs.find((tab) => tab.id === id)) {
         setActiveTabId(id);
+        // Update tab status to track which tab was last active
+        setTabs((prevTabs) =>
+          prevTabs.map((tab) => ({
+            ...tab,
+            status: tab.id === id ? "active" : (tab.status === "active" ? "idle" : tab.status),
+            updatedAt: new Date(),
+          }))
+        );
       }
     },
     [tabs]
@@ -136,7 +174,7 @@ export const TabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const closeAllTabs = useCallback(() => {
     setTabs([]);
     setActiveTabId(null);
-    // localStorage.removeItem(STORAGE_KEY); // Persistence disabled
+    localStorage.removeItem(STORAGE_KEY);
   }, []);
 
   const getTabsByType = useCallback(

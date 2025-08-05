@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Claudia (Dev)",
+        "title": "Claudia",
         "width": 800,
         "height": 600
       }
