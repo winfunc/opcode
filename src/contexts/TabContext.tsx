@@ -66,42 +66,43 @@ export const TabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const removeTab = useCallback(
     (id: string) => {
-      setTabs((prevTabs) => {
-        const tabToRemove = prevTabs.find((tab) => tab.id === id);
-        
-        // If removing a chat tab with an active session, emit cleanup event
-        if (tabToRemove?.type === "chat" && tabToRemove.sessionData) {
-          const event = new CustomEvent("tab-cleanup", {
-            detail: { 
-              tabId: id, 
-              tabType: tabToRemove.type,
-              sessionData: tabToRemove.sessionData 
-            }
-          });
-          window.dispatchEvent(event);
-        }
+      // First, determine what the new active tab should be
+      const currentTabs = tabs;
+      const tabToRemove = currentTabs.find((tab) => tab.id === id);
+      
+      // If removing a chat tab with an active session, emit cleanup event
+      if (tabToRemove?.type === "chat" && tabToRemove.sessionData) {
+        const event = new CustomEvent("tab-cleanup", {
+          detail: { 
+            tabId: id, 
+            tabType: tabToRemove.type,
+            sessionData: tabToRemove.sessionData 
+          }
+        });
+        window.dispatchEvent(event);
+      }
 
-        const filteredTabs = prevTabs.filter((tab) => tab.id !== id);
+      const filteredTabs = currentTabs.filter((tab) => tab.id !== id);
 
-        // Reorder remaining tabs
-        const reorderedTabs = filteredTabs.map((tab, index) => ({
-          ...tab,
-          order: index,
-        }));
+      // Reorder remaining tabs
+      const reorderedTabs = filteredTabs.map((tab, index) => ({
+        ...tab,
+        order: index,
+      }));
 
-        // Update active tab if necessary
-        if (activeTabId === id && reorderedTabs.length > 0) {
-          const removedTabIndex = prevTabs.findIndex((tab) => tab.id === id);
-          const newActiveIndex = Math.min(removedTabIndex, reorderedTabs.length - 1);
-          setActiveTabId(reorderedTabs[newActiveIndex].id);
-        } else if (reorderedTabs.length === 0) {
-          setActiveTabId(null);
-        }
+      // Update active tab if necessary - do this BEFORE updating tabs
+      if (activeTabId === id && reorderedTabs.length > 0) {
+        const removedTabIndex = currentTabs.findIndex((tab) => tab.id === id);
+        const newActiveIndex = Math.min(removedTabIndex, reorderedTabs.length - 1);
+        setActiveTabId(reorderedTabs[newActiveIndex].id);
+      } else if (reorderedTabs.length === 0) {
+        setActiveTabId(null);
+      }
 
-        return reorderedTabs;
-      });
+      // Update tabs after active tab is set
+      setTabs(reorderedTabs);
     },
-    [activeTabId]
+    [activeTabId, tabs]
   );
 
   const updateTab = useCallback((id: string, updates: Partial<Tab>) => {

@@ -111,8 +111,8 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
     createChatTab();
   };
 
-  // Panel visibility - hide when not active
-  const panelVisibilityClass = isActive ? "" : "hidden";
+  // Panel visibility - keep all panels rendered but only show active one
+  const panelVisibilityClass = "";
 
   const renderContent = () => {
     switch (tab.type) {
@@ -477,11 +477,24 @@ export const TabContent: React.FC = () => {
 
   return (
     <div className="flex-1 h-full relative">
-      <AnimatePresence mode="wait">
-        {tabs.map((tab) => (
-          <TabPanel key={tab.id} tab={tab} isActive={tab.id === activeTabId} />
-        ))}
-      </AnimatePresence>
+      {tabs.map((tab) => {
+        const isActive = tab.id === activeTabId;
+        return (
+          <div
+            key={tab.id}
+            className={`absolute inset-0 transition-opacity duration-200 ${
+              isActive 
+                ? 'opacity-100 pointer-events-auto z-10' 
+                : 'opacity-0 pointer-events-none z-0'
+            }`}
+            style={{
+              visibility: isActive ? 'visible' : 'hidden'
+            }}
+          >
+            <TabPanel tab={tab} isActive={isActive} />
+          </div>
+        );
+      })}
 
       {tabs.length === 0 && (
         <div className="flex items-center justify-center h-full text-muted-foreground">
