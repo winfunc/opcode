@@ -343,7 +343,22 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
 
     setIsLoading(true);
     try {
-      const historyOutput = await api.getSessionOutput(parseInt(session.id));
+      logger.debug("[ClaudeCodeSession] Loading session history for:", session.id);
+      
+      // Check if we have a project_id, use appropriate API
+      let historyOutput: string;
+      if (session.project_id) {
+        // For Claude Code sessions with project_id
+        const historyMessages = await api.loadSessionHistory(session.id, session.project_id);
+        // Convert array of messages back to JSONL format for parsing
+        historyOutput = historyMessages.map(msg => 
+          typeof msg === 'string' ? msg : JSON.stringify(msg)
+        ).join('\n');
+      } else {
+        // Fallback to direct session output for other session types
+        historyOutput = await api.getSessionOutput(parseInt(session.id));
+      }
+      
       // Parse the JSONL output into messages
       const lines = historyOutput.split("\n").filter((line) => line.trim());
       const parsedMessages: ClaudeStreamMessage[] = [];
@@ -353,19 +368,23 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
           parsedMessages.push(message);
         } catch (_err) {
           // Skip invalid JSON lines
-          // logger.warn('Failed to parse message:', line);
+          logger.warn('Failed to parse message:', line);
         }
       }
+      
+      logger.debug("[ClaudeCodeSession] Loaded", parsedMessages.length, "messages");
       setMessages(parsedMessages);
     } catch (err) {
+      logger.error("[ClaudeCodeSession] Failed to load session history:", err);
       await handleApiError(err as Error, {
         operation: "loadSessionHistory",
         component: "ClaudeCodeSession",
+        sessionId: session.id,
       });
     } finally {
       setIsLoading(false);
     }
-  }, [session]);
+  }, [session?.id, session?.project_id]);
 
   // Report streaming state changes
   useEffect(() => {
@@ -384,7 +403,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
 
   // Load session history if resuming
   useEffect(() => {
-    if (session) {
+    if (session && session.id) {
       // Set the claudeSessionId immediately when we have a session
       setClaudeSessionId(session.id);
 
@@ -399,7 +418,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
 
       initializeSession();
     }
-  }, [session, loadSessionHistory, checkForActiveSession]);
+  }, [session?.id]); // Only depend on session.id to avoid unnecessary re-runs
 
   // Calculate total tokens from messages
   useEffect(() => {
@@ -548,8 +567,8 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         setClaudeSessionId(effectiveSession.id);
       }
 
-      // Only clean up and set up new listeners if not already listening
-      if (!isListeningRef.current) {
+      // Only clean up and set up new listeners if not already listening for this session
+      if (!isListeningRef.current || claudeSessionId !== extractedSessionInfo?.sessionId) {
         // Clean up previous listeners
         unlistenRefs.current.forEach((unlisten) => unlisten());
         unlistenRefs.current = [];
@@ -734,7 +753,8 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         const processComplete = async (success: boolean) => {
           setIsLoading(false);
           hasActiveSessionRef.current = false;
-          isListeningRef.current = false; // Reset listening state
+          // Don't reset isListeningRef here - keep listeners active for the session
+          // isListeningRef.current = false; // This was causing the issue
 
           // Track enhanced session stopped metrics when session completes
           if (effectiveSession && claudeSessionId) {
@@ -1247,10 +1267,37 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   useEffect(() => {
     isMountedRef.current = true;
 
+    // Listen for tab-cleanup events to determine if we should cancel the session
+    const handleTabCleanup = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const { sessionData } = customEvent.detail;
+      
+      // If this cleanup event is for our session, cancel it
+      if (sessionData?.id === session?.id && claudeSessionId && isLoading) {
+        logger.debug("[ClaudeCodeSession] Cancelling session due to tab closure:", claudeSessionId);
+        api.cancelClaudeExecution(claudeSessionId).catch((err) => {
+          logger.error("Failed to cancel session on tab close:", err);
+        });
+      }
+    };
+
+    window.addEventListener("tab-cleanup", handleTabCleanup);
+
     return () => {
       logger.debug("[ClaudeCodeSession] Component unmounting, cleaning up listeners");
       isMountedRef.current = false;
       isListeningRef.current = false;
+
+      // Remove the tab-cleanup event listener
+      window.removeEventListener("tab-cleanup", handleTabCleanup);
+
+      // Clean up listeners when component unmounts
+      unlistenRefs.current.forEach((unlisten) => unlisten());
+      unlistenRefs.current = [];
+      isListeningRef.current = false;
+
+      // Don't automatically cancel session on component unmount
+      // Session will only be cancelled when tab is actually closed (via tab-cleanup event)
 
       // Track session completion with engagement metrics
       if (effectiveSession) {
@@ -1293,7 +1340,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         });
       }
     };
-  }, [effectiveSession, projectPath]);
+  }, [effectiveSession, projectPath, claudeSessionId, isLoading, session?.id]);
 
   const messagesList = (
     <div

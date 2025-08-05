@@ -119,33 +119,48 @@ export function useClaudeMessages(options: UseClaudeMessagesOptions = {}) {
     accumulatedContentRef.current = {};
   }, []);
 
-  const loadMessages = useCallback(async (sessionId: string) => {
+  const loadMessages = useCallback(async (sessionId: string, projectId?: string) => {
     try {
-      const output = await api.getSessionOutput(parseInt(sessionId));
-      // Note: API returns a string, not an array of outputs
-      const outputs = [{ jsonl: output }];
+      let historyMessages: unknown[];
+      
+      if (projectId) {
+        // Use the correct API function for loading session history with project ID
+        historyMessages = await api.loadSessionHistory(sessionId, projectId);
+      } else {
+        // Fallback to agent session history if no project ID
+        historyMessages = await api.loadAgentSessionHistory(sessionId);
+      }
+      
       const loadedMessages: ClaudeStreamMessage[] = [];
       const loadedRawJsonl: string[] = [];
 
-      outputs.forEach((output) => {
-        if (output.jsonl) {
-          const lines = output.jsonl.split("\n").filter((line) => line.trim());
-          lines.forEach((line) => {
-            try {
-              const msg = JSON.parse(line);
-              loadedMessages.push(msg);
-              loadedRawJsonl.push(line);
-            } catch (_e) {
-              logger.error("Failed to parse JSONL:", _e);
-            }
-          });
+      historyMessages.forEach((message) => {
+        try {
+          let parsedMessage: ClaudeStreamMessage;
+          
+          if (typeof message === 'object' && message !== null) {
+            // Message is already parsed
+            parsedMessage = message as ClaudeStreamMessage;
+            loadedRawJsonl.push(JSON.stringify(message));
+          } else if (typeof message === 'string') {
+            // Message is a JSON string
+            parsedMessage = JSON.parse(message) as ClaudeStreamMessage;
+            loadedRawJsonl.push(message);
+          } else {
+            // Skip invalid message types
+            return;
+          }
+          
+          loadedMessages.push(parsedMessage);
+        } catch (_e) {
+          logger.error("Failed to parse session history message:", _e);
         }
       });
 
       setMessages(loadedMessages);
       setRawJsonlOutput(loadedRawJsonl);
     } catch (error) {
-      logger.error("Failed to load session outputs:", error);
+      logger.error("Failed to load session history:", error);
       throw error;
     }
   }, []);

@@ -213,16 +213,34 @@ const FloatingPromptInputInner = (
       icon: <Brain className="h-4 w-4" />,
     },
     {
+      id: "claude-3-7-sonnet-20250219-thinking",
+      name: "Claude 3.7 Sonnet (Thinking)",
+      description: "Enhanced reasoning with thinking capabilities",
+      icon: <Brain className="h-4 w-4" />,
+    },
+    {
       id: "sonnet",
       name: t.agents.claude4Sonnet,
       description: t.agents.fasterEfficient,
       icon: <Zap className="h-4 w-4" />,
     },
     {
+      id: "claude-sonnet-4-20250514-thinking",
+      name: "Claude 4 Sonnet (Thinking)",
+      description: "Claude 4 Sonnet with enhanced reasoning capabilities",
+      icon: <Brain className="h-4 w-4" />,
+    },
+    {
       id: "opus",
       name: t.agents.claude4Opus,
       description: t.agents.moreCapable,
       icon: <Sparkles className="h-4 w-4" />,
+    },
+    {
+      id: "claude-opus-4-20250514-thinking",
+      name: "Claude 4 Opus (Thinking)",
+      description: "Claude 4 Opus with enhanced reasoning capabilities",
+      icon: <Brain className="h-4 w-4" />,
     },
   ];
 

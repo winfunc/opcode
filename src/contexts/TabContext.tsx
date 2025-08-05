@@ -21,32 +21,9 @@ export const TabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
 
-  // Load tabs from localStorage on mount
+  // Initialize with default projects tab on mount (don't restore previous session)
   useEffect(() => {
-    try {
-      const savedTabs = localStorage.getItem(STORAGE_KEY);
-      if (savedTabs) {
-        const parsedTabs = JSON.parse(savedTabs).map((tab: any) => ({
-          ...tab,
-          createdAt: new Date(tab.createdAt),
-          updatedAt: new Date(tab.updatedAt),
-        }));
-        
-        if (parsedTabs.length > 0) {
-          setTabs(parsedTabs);
-          // Find the last active tab or default to first tab
-          const lastActiveTab = parsedTabs.find((tab: Tab) => tab.status === 'active') || parsedTabs[0];
-          setActiveTabId(lastActiveTab.id);
-          return;
-        }
-      }
-    } catch (error) {
-      console.warn('Failed to load tabs from localStorage:', error);
-      // Clear corrupted data
-      localStorage.removeItem(STORAGE_KEY);
-    }
-
-    // Create default projects tab if no saved tabs
+    // Always start fresh with just the projects tab
     const defaultTab: Tab = {
       id: generateTabId(),
       type: "projects",
@@ -59,26 +36,12 @@ export const TabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     setTabs([defaultTab]);
     setActiveTabId(defaultTab.id);
+    
+    // Clear any existing saved tabs to prevent accumulation
+    localStorage.removeItem(STORAGE_KEY);
   }, []);
 
-  // Save tabs to localStorage when tabs change
-  useEffect(() => {
-    if (tabs.length > 0) {
-      try {
-        const tabsToSave = tabs.map(tab => ({
-          ...tab,
-          createdAt: tab.createdAt.toISOString(),
-          updatedAt: tab.updatedAt.toISOString()
-        }));
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(tabsToSave));
-      } catch (error) {
-        console.warn('Failed to save tabs to localStorage:', error);
-      }
-    } else {
-      // Remove from localStorage when no tabs
-      localStorage.removeItem(STORAGE_KEY);
-    }
-  }, [tabs]);
+  // Note: Tabs are no longer persisted to localStorage for a fresh start each session
 
   const addTab = useCallback(
     (tabData: Omit<Tab, "id" | "order" | "createdAt" | "updatedAt">): string => {
@@ -104,6 +67,20 @@ export const TabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const removeTab = useCallback(
     (id: string) => {
       setTabs((prevTabs) => {
+        const tabToRemove = prevTabs.find((tab) => tab.id === id);
+        
+        // If removing a chat tab with an active session, emit cleanup event
+        if (tabToRemove?.type === "chat" && tabToRemove.sessionData) {
+          const event = new CustomEvent("tab-cleanup", {
+            detail: { 
+              tabId: id, 
+              tabType: tabToRemove.type,
+              sessionData: tabToRemove.sessionData 
+            }
+          });
+          window.dispatchEvent(event);
+        }
+
         const filteredTabs = prevTabs.filter((tab) => tab.id !== id);
 
         // Reorder remaining tabs
@@ -174,7 +151,6 @@ export const TabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const closeAllTabs = useCallback(() => {
     setTabs([]);
     setActiveTabId(null);
-    localStorage.removeItem(STORAGE_KEY);
   }, []);
 
   const getTabsByType = useCallback(

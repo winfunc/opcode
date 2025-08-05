@@ -35,9 +35,21 @@ export const RunningClaudeSessions: React.FC<RunningClaudeSessionsProps> = ({
   useEffect(() => {
     loadRunningSessions();
 
-    // Poll for updates every 5 seconds
-    const interval = window.setInterval(loadRunningSessions, 5000);
-    return () => window.clearInterval(interval);
+    // Poll for updates every 3 seconds (more frequent to catch session changes)
+    const interval = window.setInterval(loadRunningSessions, 3000);
+    
+    // Listen for tab cleanup events to immediately refresh the list
+    const handleTabCleanup = () => {
+      // Small delay to allow backend to process the cancellation
+      setTimeout(loadRunningSessions, 500);
+    };
+    
+    window.addEventListener("tab-cleanup", handleTabCleanup);
+    
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("tab-cleanup", handleTabCleanup);
+    };
   }, []);
 
   /**

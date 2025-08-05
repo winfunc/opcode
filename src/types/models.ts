@@ -16,6 +16,9 @@ export type ClaudeModel =
   | "claude-3-5-haiku-20241022" // Fast, cost-effective model for simple tasks
   | "claude-3-5-sonnet-20241022" // Balanced performance and capability
   | "claude-3-7-sonnet-20250219" // Latest model with enhanced capabilities
+  | "claude-sonnet-4-20250514-thinking" // Claude 4 Sonnet with thinking capabilities
+  | "claude-opus-4-20250514-thinking" // Claude 4 Opus with thinking capabilities
+  | "claude-3-7-sonnet-20250219-thinking" // Claude 3.7 Sonnet with thinking capabilities
   | "sonnet" // Legacy Claude 4 Sonnet alias
   | "opus" // Legacy Claude 4 Opus alias
   | "haiku" // Claude 3.5 Haiku shorthand

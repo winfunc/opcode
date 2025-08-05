@@ -192,11 +192,8 @@ export const SessionList: React.FC<SessionListProps> = ({
                   session.todo_data ? "border-l-4 border-l-primary" : ""
                 )}
                 onClick={() => {
-                  // Emit a special event for Claude Code session navigation
-                  const event = new window.CustomEvent("claude-session-selected", {
-                    detail: { session, projectPath },
-                  });
-                  window.dispatchEvent(event);
+                  // Only call the onSessionClick callback, don't emit the event
+                  // The event is used by RunningClaudeSessions, not SessionList
                   onSessionClick?.(session);
                 }}
               >

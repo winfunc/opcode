@@ -161,12 +161,12 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
                         projectId={selectedProject.id}
                         onBack={handleBack}
                         onSessionClick={(session) => {
-                          // Update tab to show this session
-                          updateTab(tab.id, {
-                            type: "chat",
-                            title: session.project_path.split("/").pop() || "Session",
-                            sessionId: session.id,
-                            sessionData: session, // Store full session object
+                          // Create a new chat tab instead of modifying the current projects tab
+                          const projectName = session.project_path.split("/").pop() || "Session";
+                          const newTabId = createChatTab(session.id, projectName);
+                          // Update the new tab with session data
+                          updateTab(newTabId, {
+                            sessionData: session,
                             initialProjectPath: session.project_path,
                           });
                         }}
@@ -252,7 +252,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
         return (
           <ClaudeCodeSession
             session={tab.sessionData as Session} // Pass the full session object if available
-            initialProjectPath={tab.initialProjectPath || tab.sessionId}
+            initialProjectPath={tab.initialProjectPath || (tab.sessionData as Session)?.project_path || ""}
             onBack={() => {
               // Go back to projects view in the same tab
               updateTab(tab.id, {
@@ -427,7 +427,8 @@ export const TabContent: React.FC = () => {
     const handleClaudeSessionSelected = (event: Event) => {
       const customEvent = event as CustomEvent;
       const { session } = customEvent.detail;
-      // Reuse same logic as handleOpenSessionInTab
+      // This event is only used by RunningClaudeSessions component
+      // Regular SessionList uses the onSessionClick callback instead
       const existingTab = findTabBySessionId(session.id);
       if (existingTab) {
         updateTab(existingTab.id, {

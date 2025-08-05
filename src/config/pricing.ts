@@ -46,16 +46,16 @@ export const MODEL_PRICING: Record<string, ModelPricing> = {
 
   // Claude 3.7 Sonnet - 最新最强性能
   "claude-3-7-sonnet-20250219": {
-    inputPrice: 4.0,
-    outputPrice: 20.0,
-    cacheWritePrice: 5.0,
-    cacheReadPrice: 0.4,
+    inputPrice: 3.0,
+    outputPrice: 15.0,
+    cacheWritePrice: 3.75,
+    cacheReadPrice: 0.3,
   },
   "sonnet-3-7": {
-    inputPrice: 4.0,
-    outputPrice: 20.0,
-    cacheWritePrice: 5.0,
-    cacheReadPrice: 0.4,
+    inputPrice: 3.0,
+    outputPrice: 15.0,
+    cacheWritePrice: 3.75,
+    cacheReadPrice: 0.3,
   },
 
   // Claude 4 Sonnet - 最新 Claude 4 系列
@@ -85,6 +85,26 @@ export const MODEL_PRICING: Record<string, ModelPricing> = {
     outputPrice: 75.0,
     cacheWritePrice: 18.75,
     cacheReadPrice: 1.5,
+  },
+
+  // Claude 4 Thinking Models - Enhanced reasoning capabilities
+  "claude-sonnet-4-20250514-thinking": {
+    inputPrice: 3.0,
+    outputPrice: 15.0,
+    cacheWritePrice: 3.75,
+    cacheReadPrice: 0.3,
+  },
+  "claude-opus-4-20250514-thinking": {
+    inputPrice: 15.0,
+    outputPrice: 75.0,
+    cacheWritePrice: 18.75,
+    cacheReadPrice: 1.5,
+  },
+  "claude-3-7-sonnet-20250219-thinking": {
+    inputPrice: 3.0,
+    outputPrice: 15.0,
+    cacheWritePrice: 3.75,
+    cacheReadPrice: 0.3,
   },
 };
 
