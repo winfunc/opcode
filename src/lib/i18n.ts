@@ -632,6 +632,9 @@ export interface Translations {
     claude35Haiku: string;
     claude35Sonnet: string;
     claude37Sonnet: string;
+    claude37SonnetThinkingDesc: string;
+    claude4SonnetThinkingDesc: string;
+    claude4OpusThinkingDesc: string;
     fasterEfficient: string;
     moreCapable: string;
     fastAffordable: string;

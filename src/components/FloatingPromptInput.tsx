@@ -215,7 +215,7 @@ const FloatingPromptInputInner = (
     {
       id: "claude-3-7-sonnet-20250219-thinking",
       name: "Claude 3.7 Sonnet (Thinking)",
-      description: "Enhanced reasoning with thinking capabilities",
+      description: t.agents.claude37SonnetThinkingDesc,
       icon: <Brain className="h-4 w-4" />,
     },
     {
@@ -227,7 +227,7 @@ const FloatingPromptInputInner = (
     {
       id: "claude-sonnet-4-20250514-thinking",
       name: "Claude 4 Sonnet (Thinking)",
-      description: "Claude 4 Sonnet with enhanced reasoning capabilities",
+      description: t.agents.claude4SonnetThinkingDesc,
       icon: <Brain className="h-4 w-4" />,
     },
     {
@@ -239,7 +239,7 @@ const FloatingPromptInputInner = (
     {
       id: "claude-opus-4-20250514-thinking",
       name: "Claude 4 Opus (Thinking)",
-      description: "Claude 4 Opus with enhanced reasoning capabilities",
+      description: t.agents.claude4OpusThinkingDesc,
       icon: <Brain className="h-4 w-4" />,
     },
   ];

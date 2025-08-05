@@ -1,0 +1,16 @@
+warning: in the working copy of 'src-tauri/Cargo.toml', LF will be replaced by CRLF the next time Git touches it
+src/components/FloatingPromptInput.tsx
+src/lib/i18n.ts
+src/locales/ar.ts
+src/locales/de.ts
+src/locales/en.ts
+src/locales/es.ts
+src/locales/fr.ts
+src/locales/hi.ts
+src/locales/it.ts
+src/locales/ja.ts
+src/locales/ko.ts
+src/locales/pt.ts
+src/locales/ru.ts
+src/locales/zh.ts
+src/types/models.ts

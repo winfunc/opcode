@@ -65,6 +65,9 @@ export const MODEL_DISPLAY_NAMES: Record<ClaudeModel, string> = {
   "claude-3-5-haiku-20241022": "Claude 3.5 Haiku",
   "claude-3-5-sonnet-20241022": "Claude 3.5 Sonnet",
   "claude-3-7-sonnet-20250219": "Claude 3.7 Sonnet",
+  "claude-sonnet-4-20250514-thinking": "Claude 4 Sonnet (Thinking)",
+  "claude-opus-4-20250514-thinking": "Claude 4 Opus (Thinking)",
+  "claude-3-7-sonnet-20250219-thinking": "Claude 3.7 Sonnet (Thinking)",
   sonnet: "Claude 4 Sonnet",
   opus: "Claude 4 Opus",
   haiku: "Claude 3.5 Haiku",
@@ -118,6 +121,9 @@ export const MODEL_API_MAPPING: Record<ClaudeModel, string> = {
   "claude-3-5-haiku-20241022": "claude-3-5-haiku-20241022",
   "claude-3-5-sonnet-20241022": "claude-3-5-sonnet-20241022",
   "claude-3-7-sonnet-20250219": "claude-3-7-sonnet-20250219",
+  "claude-sonnet-4-20250514-thinking": "claude-sonnet-4-20250514-thinking",
+  "claude-opus-4-20250514-thinking": "claude-opus-4-20250514-thinking",
+  "claude-3-7-sonnet-20250219-thinking": "claude-3-7-sonnet-20250219-thinking",
   sonnet: "claude-sonnet-4-20250514", // Legacy mapping to Claude 4 Sonnet
   opus: "claude-opus-4-20250514", // Legacy mapping to Claude 4 Opus
   haiku: "claude-3-5-haiku-20241022",
