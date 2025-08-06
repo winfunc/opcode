@@ -31,6 +31,8 @@ tauri-plugin-clipboard-manager = "2"
 tauri-plugin-global-shortcut = "2"
 tauri-plugin-http = "2"
 window-vibrancy = "0.5"
+cocoa = "0.25"
+objc = "0.2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["full"] }

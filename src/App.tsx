@@ -476,7 +476,7 @@ function AppContent() {
   };
 
   return (
-    <div className="h-screen bg-background flex flex-col">
+    <div className="h-screen bg-background flex flex-col rounded-xl overflow-hidden" style={{ borderRadius: '12px' }}>
       {/* Custom Titlebar */}
       <CustomTitlebar
         onAgentsClick={() => setShowAgentsModal(true)}

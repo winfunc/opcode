@@ -65,7 +65,8 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
 
   return (
     <div 
-      className="h-11 bg-background border-b border-border flex items-center justify-between select-none"
+      className="h-11 bg-background flex items-center justify-between select-none"
+      style={{ borderTopLeftRadius: '12px', borderTopRightRadius: '12px' }}
       data-tauri-drag-region
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -117,13 +118,13 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
         </div>
       </div>
 
-      {/* Center - Title */}
-      <div 
+      {/* Center - Title (hidden) */}
+      {/* <div 
         className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none"
         data-tauri-drag-region
       >
         <span className="text-sm font-medium text-foreground/80">{title}</span>
-      </div>
+      </div> */}
 
       {/* Right side - Navigation icons */}
       <div className="flex items-center space-x-1 pr-5">

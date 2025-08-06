@@ -144,8 +144,29 @@ fn main() {
             #[cfg(target_os = "macos")]
             {
                 let window = app.get_webview_window("main").unwrap();
-                apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, Some(12.0))
-                    .expect("Failed to apply window vibrancy");
+                
+                // Try different vibrancy materials that support rounded corners
+                let materials = [
+                    NSVisualEffectMaterial::UnderWindowBackground,
+                    NSVisualEffectMaterial::WindowBackground,
+                    NSVisualEffectMaterial::Popover,
+                    NSVisualEffectMaterial::Menu,
+                    NSVisualEffectMaterial::Sidebar,
+                ];
+                
+                let mut applied = false;
+                for material in materials.iter() {
+                    if apply_vibrancy(&window, *material, None, Some(12.0)).is_ok() {
+                        applied = true;
+                        break;
+                    }
+                }
+                
+                if !applied {
+                    // Fallback without rounded corners
+                    apply_vibrancy(&window, NSVisualEffectMaterial::WindowBackground, None, None)
+                        .expect("Failed to apply any window vibrancy");
+                }
             }
 
             Ok(())

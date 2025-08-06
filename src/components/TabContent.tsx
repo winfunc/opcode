@@ -401,7 +401,7 @@ export const TabContent: React.FC = () => {
   }, [createChatTab, findTabBySessionId, createClaudeFileTab, createAgentExecutionTab, createCreateAgentTab, createImportAgentTab, closeTab, updateTab]);
   
   return (
-    <div className="flex-1 h-full relative">
+    <div className="flex-1 h-full relative" style={{ borderBottomLeftRadius: '12px', borderBottomRightRadius: '12px', overflow: 'hidden' }}>
       <AnimatePresence mode="wait">
         {tabs.map((tab) => (
           <TabPanel
