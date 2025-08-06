@@ -139,7 +139,6 @@ export const TabManager: React.FC<TabManagerProps> = ({ className }) => {
     tabs,
     activeTabId,
     createChatTab,
-    createProjectsTab,
     closeTab,
     switchToTab,
     canAddTab
@@ -281,8 +280,8 @@ export const TabManager: React.FC<TabManagerProps> = ({ className }) => {
 
   const handleNewTab = () => {
     if (canAddTab()) {
-      createProjectsTab();
-      trackEvent.tabCreated('projects');
+      createChatTab();
+      trackEvent.tabCreated('chat');
     }
   };
 
@@ -336,25 +335,43 @@ export const TabManager: React.FC<TabManagerProps> = ({ className }) => {
         className="flex-1 flex overflow-x-auto scrollbar-hide"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
-        <Reorder.Group
-          axis="x"
-          values={tabs}
-          onReorder={handleReorder}
-          className="flex items-stretch h-8"
-          layoutScroll={false}
-        >
-          {tabs.map((tab) => (
-            <TabItem
-              key={tab.id}
-              tab={tab}
-              isActive={tab.id === activeTabId}
-              onClose={handleCloseTab}
-              onClick={switchToTab}
-              isDragging={draggedTabId === tab.id}
-              setDraggedTabId={setDraggedTabId}
-            />
-          ))}
-        </Reorder.Group>
+        <div className="flex items-stretch h-8">
+          <Reorder.Group
+            axis="x"
+            values={tabs}
+            onReorder={handleReorder}
+            className="flex items-stretch"
+            layoutScroll={false}
+          >
+            {tabs.map((tab) => (
+              <TabItem
+                key={tab.id}
+                tab={tab}
+                isActive={tab.id === activeTabId}
+                onClose={handleCloseTab}
+                onClick={switchToTab}
+                isDragging={draggedTabId === tab.id}
+                setDraggedTabId={setDraggedTabId}
+              />
+            ))}
+          </Reorder.Group>
+          
+          {/* New tab button - positioned right after tabs */}
+          <button
+            onClick={handleNewTab}
+            disabled={!canAddTab()}
+            className={cn(
+              "px-2 mx-1 rounded-md transition-all duration-200 flex items-center justify-center flex-shrink-0",
+              "bg-background/50 backdrop-blur-sm h-8",
+              canAddTab()
+                ? "hover:bg-muted/60 text-muted-foreground hover:text-foreground"
+                : "opacity-50 cursor-not-allowed text-muted-foreground"
+            )}
+            title={canAddTab() ? "New tab (Ctrl+T)" : "Maximum tabs reached"}
+          >
+            <Plus className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {/* Right fade gradient */}
@@ -384,21 +401,6 @@ export const TabManager: React.FC<TabManagerProps> = ({ className }) => {
         )}
       </AnimatePresence>
 
-      {/* New tab button */}
-      <button
-        onClick={handleNewTab}
-        disabled={!canAddTab()}
-        className={cn(
-          "p-2 mx-2 rounded-md transition-all duration-200 flex items-center justify-center",
-          "bg-background/50 backdrop-blur-sm",
-          canAddTab()
-            ? "hover:bg-muted/80 text-muted-foreground hover:text-foreground hover:shadow-sm"
-            : "opacity-50 cursor-not-allowed bg-muted/30"
-        )}
-        title={canAddTab() ? "Browse projects (Ctrl+T)" : `Maximum tabs reached (${tabs.length}/20)`}
-      >
-        <Plus className="w-3.5 h-3.5" />
-      </button>
     </div>
   );
 };

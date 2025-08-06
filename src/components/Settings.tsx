@@ -10,6 +10,7 @@ import {
   BarChart3,
   Shield,
   Trash,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -328,51 +329,36 @@ export const Settings: React.FC<SettingsProps> = ({
   };
 
   return (
-    <div className={cn("flex flex-col h-full bg-background text-foreground", className)}>
-      <div className="max-w-4xl mx-auto w-full flex flex-col h-full">
+    <div className={cn("h-full overflow-y-auto", className)}>
+      <div className="max-w-6xl mx-auto flex flex-col h-full">
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          className="flex items-center justify-between p-4 border-b border-border"
-        >
-        <div className="flex items-center gap-3">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onBack}
-          className="h-8 w-8"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div>
-          <h2 className="text-lg font-semibold">Settings</h2>
-          <p className="text-xs text-muted-foreground">
-              Configure Claude Code preferences
-          </p>
+        <div className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Configure Claude Code preferences
+              </p>
+            </div>
+            <Button
+              onClick={saveSettings}
+              disabled={saving || loading}
+              size="default"
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  Save Settings
+                </>
+              )}
+            </Button>
           </div>
         </div>
-        
-        <Button
-          onClick={saveSettings}
-          disabled={saving || loading}
-          size="sm"
-          className="gap-2 bg-primary hover:bg-primary/90"
-        >
-          {saving ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            <>
-              <Save className="h-4 w-4" />
-              Save Settings
-            </>
-          )}
-        </Button>
-      </motion.div>
       
       {/* Error message */}
       <AnimatePresence>
@@ -417,25 +403,63 @@ export const Settings: React.FC<SettingsProps> = ({
                   
                   <div className="space-y-4">
                     {/* Theme Selector */}
-                    <div className="space-y-2">
-                      <Label htmlFor="theme">Theme</Label>
-                      <Select
-                        value={theme}
-                        onValueChange={(value) => setTheme(value as any)}
-                      >
-                        <SelectTrigger id="theme" className="w-full">
-                          <SelectValue placeholder="Select a theme" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="dark">Dark</SelectItem>
-                          <SelectItem value="gray">Gray</SelectItem>
-                          <SelectItem value="light">Light</SelectItem>
-                          <SelectItem value="custom">Custom</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <p className="text-xs text-muted-foreground">
-                        Choose your preferred color theme for the interface
-                      </p>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label>Theme</Label>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Choose your preferred color theme
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1 p-1 bg-muted/30 rounded-lg">
+                        <button
+                          onClick={() => setTheme('dark')}
+                          className={cn(
+                            "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all",
+                            theme === 'dark' 
+                              ? "bg-background shadow-sm" 
+                              : "hover:bg-background/50"
+                          )}
+                        >
+                          {theme === 'dark' && <Check className="h-3 w-3" />}
+                          Dark
+                        </button>
+                        <button
+                          onClick={() => setTheme('gray')}
+                          className={cn(
+                            "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all",
+                            theme === 'gray' 
+                              ? "bg-background shadow-sm" 
+                              : "hover:bg-background/50"
+                          )}
+                        >
+                          {theme === 'gray' && <Check className="h-3 w-3" />}
+                          Gray
+                        </button>
+                        <button
+                          onClick={() => setTheme('light')}
+                          className={cn(
+                            "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all",
+                            theme === 'light' 
+                              ? "bg-background shadow-sm" 
+                              : "hover:bg-background/50"
+                          )}
+                        >
+                          {theme === 'light' && <Check className="h-3 w-3" />}
+                          Light
+                        </button>
+                        <button
+                          onClick={() => setTheme('custom')}
+                          className={cn(
+                            "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all",
+                            theme === 'custom' 
+                              ? "bg-background shadow-sm" 
+                              : "hover:bg-background/50"
+                          )}
+                        >
+                          {theme === 'custom' && <Check className="h-3 w-3" />}
+                          Custom
+                        </button>
+                      </div>
                     </div>
                     
                     {/* Custom Color Editor */}

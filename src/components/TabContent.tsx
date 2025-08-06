@@ -67,6 +67,12 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
       const sessionList = await api.getProjectSessions(project.id);
       setSessions(sessionList);
       setSelectedProject(project);
+      
+      // Update tab title to show project name
+      const projectName = project.path.split('/').pop() || 'Project';
+      updateTab(tab.id, {
+        title: projectName
+      });
     } catch (err) {
       console.error("Failed to load sessions:", err);
       setError("Failed to load sessions for this project.");
@@ -76,12 +82,24 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
   };
   
   const handleNewSession = () => {
-    // Create a new chat tab with the current project path if available
+    // Update current tab to show new chat session instead of creating a new tab
     if (selectedProject) {
       const projectName = selectedProject.path.split('/').pop() || 'Session';
-      createChatTab(undefined, projectName, selectedProject.path);
+      updateTab(tab.id, {
+        type: 'chat',
+        title: projectName,
+        sessionId: undefined,
+        sessionData: undefined,
+        initialProjectPath: selectedProject.path
+      });
     } else {
-      createChatTab();
+      updateTab(tab.id, {
+        type: 'chat',
+        title: 'New Session',
+        sessionId: undefined,
+        sessionData: undefined,
+        initialProjectPath: undefined
+      });
     }
   };
   
@@ -103,6 +121,10 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
                     onClick={() => {
                       setSelectedProject(null);
                       setSessions([]);
+                      // Restore tab title to "Projects"
+                      updateTab(tab.id, {
+                        title: 'Projects'
+                      });
                     }}
                     className="mb-4 -ml-1"
                   >
@@ -164,8 +186,14 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
                         sessions={sessions}
                         projectPath={selectedProject.path}
                         onSessionClick={(session) => {
-                          // Don't update current tab, let the event handler create a new tab
-                          // The claude-session-selected event will be fired from SessionList
+                          // Update current tab to show the selected session
+                          updateTab(tab.id, {
+                            type: 'chat',
+                            title: session.project_path.split('/').pop() || 'Session',
+                            sessionId: session.id,
+                            sessionData: session,
+                            initialProjectPath: session.project_path
+                          });
                         }}
                         onEditClaudeFile={(file: ClaudeMdFile) => {
                           // Open CLAUDE.md file in a new tab
@@ -223,6 +251,13 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
               updateTab(tab.id, {
                 type: 'projects',
                 title: 'Projects',
+              });
+            }}
+            onProjectPathChange={(path: string) => {
+              // Update tab title with directory name
+              const dirName = path.split('/').pop() || path.split('\\').pop() || 'Session';
+              updateTab(tab.id, {
+                title: dirName
               });
             }}
           />
@@ -369,21 +404,35 @@ export const TabContent: React.FC = () => {
 
     const handleClaudeSessionSelected = (event: CustomEvent) => {
       const { session } = event.detail;
-      // Reuse same logic as handleOpenSessionInTab
+      // Check if there's an existing tab for this session
       const existingTab = findTabBySessionId(session.id);
       if (existingTab) {
+        // If tab exists, just switch to it
         updateTab(existingTab.id, {
           sessionData: session,
           title: session.project_path.split('/').pop() || 'Session',
         });
         window.dispatchEvent(new CustomEvent('switch-to-tab', { detail: { tabId: existingTab.id } }));
       } else {
-        const projectName = session.project_path.split('/').pop() || 'Session';
-        const newTabId = createChatTab(session.id, projectName, session.project_path);
-        updateTab(newTabId, {
-          sessionData: session,
-          initialProjectPath: session.project_path,
-        });
+        // If we're in a projects tab, update it to show the session
+        // Otherwise create a new tab (for compatibility with other parts of the app)
+        const currentTab = tabs.find(t => t.id === activeTabId);
+        if (currentTab && currentTab.type === 'projects') {
+          updateTab(currentTab.id, {
+            type: 'chat',
+            title: session.project_path.split('/').pop() || 'Session',
+            sessionId: session.id,
+            sessionData: session,
+            initialProjectPath: session.project_path
+          });
+        } else {
+          const projectName = session.project_path.split('/').pop() || 'Session';
+          const newTabId = createChatTab(session.id, projectName, session.project_path);
+          updateTab(newTabId, {
+            sessionData: session,
+            initialProjectPath: session.project_path,
+          });
+        }
       }
     };
 

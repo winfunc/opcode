@@ -92,13 +92,7 @@ export const useTabState = (): UseTabStateReturn => {
   }, [addTab, tabs, setActiveTab]);
 
   const createProjectsTab = useCallback((): string | null => {
-    // Check if projects tab already exists (singleton)
-    const existingTab = tabs.find(tab => tab.type === 'projects');
-    if (existingTab) {
-      setActiveTab(existingTab.id);
-      return existingTab.id;
-    }
-
+    // Allow multiple projects tabs
     return addTab({
       type: 'projects',
       title: 'Projects',
@@ -106,7 +100,7 @@ export const useTabState = (): UseTabStateReturn => {
       hasUnsavedChanges: false,
       icon: 'folder'
     });
-  }, [addTab, tabs, setActiveTab]);
+  }, [addTab]);
 
   const createUsageTab = useCallback((): string | null => {
     // Check if usage tab already exists (singleton)

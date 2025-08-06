@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Settings, Users, Menu, Minus, Square, X, Bot, BarChart3, FileText, Network, Info } from 'lucide-react';
+import { Settings, Users, Menu, Minus, Square, X, Bot, BarChart3, FileText, Network, Info, Folder } from 'lucide-react';
 import { useThemeContext } from '@/contexts/ThemeContext';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 
@@ -11,6 +11,7 @@ interface CustomTitlebarProps {
   onClaudeClick?: () => void;
   onMCPClick?: () => void;
   onInfoClick?: () => void;
+  onProjectsClick?: () => void;
   onMenuClick?: () => void;
 }
 
@@ -22,6 +23,7 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
   onClaudeClick,
   onMCPClick,
   onInfoClick,
+  onProjectsClick,
   onMenuClick
 }) => {
   const { theme } = useThemeContext();
@@ -128,6 +130,16 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
 
       {/* Right side - Navigation icons */}
       <div className="flex items-center space-x-1 pr-5">
+        {onProjectsClick && (
+          <button
+            onClick={onProjectsClick}
+            className="p-2 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
+            title="Projects"
+          >
+            <Folder size={16} />
+          </button>
+        )}
+        
         {onAgentsClick && (
           <button
             onClick={onAgentsClick}

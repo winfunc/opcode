@@ -61,6 +61,10 @@ interface ClaudeCodeSessionProps {
    * Callback when streaming state changes
    */
   onStreamingChange?: (isStreaming: boolean, sessionId: string | null) => void;
+  /**
+   * Callback when project path changes
+   */
+  onProjectPathChange?: (path: string) => void;
 }
 
 /**
@@ -76,6 +80,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   onProjectSettings,
   className,
   onStreamingChange,
+  onProjectPathChange,
 }) => {
   const [projectPath, setProjectPath] = useState(initialProjectPath || session?.project_path || "");
   const [messages, setMessages] = useState<ClaudeStreamMessage[]>([]);
@@ -140,6 +145,13 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   useComponentMetrics('ClaudeCodeSession');
   // const aiTracking = useAIInteractionTracking('sonnet'); // Default model
   const workflowTracking = useWorkflowTracking('claude_session');
+  
+  // Call onProjectPathChange when component mounts with initial path
+  useEffect(() => {
+    if (onProjectPathChange && projectPath) {
+      onProjectPathChange(projectPath);
+    }
+  }, []); // Only run on mount
   
   // Keep ref in sync with state
   useEffect(() => {
@@ -422,8 +434,13 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       });
       
       if (selected) {
-        setProjectPath(selected as string);
+        const selectedPath = selected as string;
+        setProjectPath(selectedPath);
         setError(null);
+        // Call the callback to update tab title
+        if (onProjectPathChange) {
+          onProjectPathChange(selectedPath);
+        }
       }
     } catch (err) {
       console.error("Failed to select directory:", err);
@@ -1213,7 +1230,14 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         <Input
           id="project-path"
           value={projectPath}
-          onChange={(e) => setProjectPath(e.target.value)}
+          onChange={(e) => {
+            const newPath = e.target.value;
+            setProjectPath(newPath);
+            // Call the callback to update tab title
+            if (onProjectPathChange && newPath) {
+              onProjectPathChange(newPath);
+            }
+          }}
           placeholder="/path/to/your/project"
           className="flex-1"
           disabled={isLoading}

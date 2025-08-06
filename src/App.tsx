@@ -50,7 +50,7 @@ type View =
  */
 function AppContent() {
   const [view, setView] = useState<View>("tabs");
-  const { createClaudeMdTab, createSettingsTab, createUsageTab, createMCPTab } = useTabState();
+  const { createClaudeMdTab, createSettingsTab, createUsageTab, createMCPTab, createProjectsTab } = useTabState();
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -470,6 +470,7 @@ function AppContent() {
     <div className="h-screen bg-background flex flex-col rounded-xl overflow-hidden" style={{ borderRadius: '12px' }}>
       {/* Custom Titlebar */}
       <CustomTitlebar
+        onProjectsClick={() => createProjectsTab()}
         onAgentsClick={() => setShowAgentsModal(true)}
         onUsageClick={() => createUsageTab()}
         onClaudeClick={() => createClaudeMdTab()}
