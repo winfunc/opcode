@@ -381,22 +381,22 @@ export const Settings: React.FC<SettingsProps> = ({
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       ) : (
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 overflow-y-auto p-6">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-9 w-full">
-              <TabsTrigger value="general">General</TabsTrigger>
-              <TabsTrigger value="permissions">Permissions</TabsTrigger>
-              <TabsTrigger value="environment">Environment</TabsTrigger>
-              <TabsTrigger value="advanced">Advanced</TabsTrigger>
-              <TabsTrigger value="hooks">Hooks</TabsTrigger>
-              <TabsTrigger value="commands">Commands</TabsTrigger>
-              <TabsTrigger value="storage">Storage</TabsTrigger>
-              <TabsTrigger value="proxy">Proxy</TabsTrigger>
-              <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            <TabsList className="grid grid-cols-9 w-full mb-6 h-auto p-1">
+              <TabsTrigger value="general" className="py-2.5 px-3">General</TabsTrigger>
+              <TabsTrigger value="permissions" className="py-2.5 px-3">Permissions</TabsTrigger>
+              <TabsTrigger value="environment" className="py-2.5 px-3">Environment</TabsTrigger>
+              <TabsTrigger value="advanced" className="py-2.5 px-3">Advanced</TabsTrigger>
+              <TabsTrigger value="hooks" className="py-2.5 px-3">Hooks</TabsTrigger>
+              <TabsTrigger value="commands" className="py-2.5 px-3">Commands</TabsTrigger>
+              <TabsTrigger value="storage" className="py-2.5 px-3">Storage</TabsTrigger>
+              <TabsTrigger value="proxy" className="py-2.5 px-3">Proxy</TabsTrigger>
+              <TabsTrigger value="analytics" className="py-2.5 px-3">Analytics</TabsTrigger>
             </TabsList>
             
             {/* General Settings */}
-            <TabsContent value="general" className="space-y-6">
+            <TabsContent value="general" className="space-y-6 mt-6">
               <Card className="p-6 space-y-6">
                 <div>
                   <h3 className="text-base font-semibold mb-4">General Settings</h3>
