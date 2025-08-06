@@ -93,7 +93,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
       case 'projects':
         return (
           <div className="h-full overflow-y-auto">
-            <div className="container mx-auto p-6">
+            <div className="max-w-6xl mx-auto p-6">
               {/* Header */}
               <div className="mb-6">
                 {selectedProject && (

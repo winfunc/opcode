@@ -11,7 +11,8 @@ import {
   ChevronUp,
   X,
   Hash,
-  Command
+  Command,
+  Wrench
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1140,7 +1141,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       }}
     >
       <div
-        className="relative w-full max-w-5xl mx-auto px-4 pt-8 pb-4"
+        className="relative w-full max-w-6xl mx-auto px-4 pt-8 pb-4"
         style={{
           height: `${Math.max(rowVirtualizer.getTotalSize(), 100)}px`,
           minHeight: '100px',
@@ -1190,7 +1191,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive mb-40 w-full max-w-5xl mx-auto"
+          className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive mb-40 w-full max-w-6xl mx-auto"
         >
           {error}
         </motion.div>
@@ -1256,140 +1257,6 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   return (
     <div className={cn("flex flex-col h-full bg-background", className)}>
       <div className="w-full h-full flex flex-col">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          className="flex items-center justify-between p-4 border-b border-border"
-        >
-          <div className="flex items-center space-x-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onBack}
-              className="h-8 w-8"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div className="flex items-center gap-2">
-              <Terminal className="h-5 w-5 text-muted-foreground" />
-              <div className="flex-1">
-                <h1 className="text-xl font-bold">Claude Code Session</h1>
-                <p className="text-sm text-muted-foreground">
-                  {projectPath ? `${projectPath}` : "No project selected"}
-                </p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            {projectPath && onProjectSettings && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onProjectSettings(projectPath)}
-                disabled={isLoading}
-              >
-                <Settings className="h-4 w-4 mr-2" />
-                Hooks
-              </Button>
-            )}
-            {projectPath && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowSlashCommandsSettings(true)}
-                disabled={isLoading}
-              >
-                <Command className="h-4 w-4 mr-2" />
-                Commands
-              </Button>
-            )}
-            <div className="flex items-center gap-2">
-              {showSettings && (
-                <CheckpointSettings
-                  sessionId={effectiveSession?.id || ''}
-                  projectId={effectiveSession?.project_id || ''}
-                  projectPath={projectPath}
-                />
-              )}
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setShowSettings(!showSettings)}
-                      className="h-8 w-8"
-                    >
-                      <Settings className={cn("h-4 w-4", showSettings && "text-primary")} />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Checkpoint Settings</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              {effectiveSession && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setShowTimeline(!showTimeline)}
-                        className="h-8 w-8"
-                      >
-                        <GitBranch className={cn("h-4 w-4", showTimeline && "text-primary")} />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Timeline Navigator</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
-              {messages.length > 0 && (
-                <Popover
-                  trigger={
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="flex items-center gap-2"
-                    >
-                      <Copy className="h-4 w-4" />
-                      Copy Output
-                      <ChevronDown className="h-3 w-3" />
-                    </Button>
-                  }
-                  content={
-                    <div className="w-44 p-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleCopyAsMarkdown}
-                        className="w-full justify-start"
-                      >
-                        Copy as Markdown
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleCopyAsJsonl}
-                        className="w-full justify-start"
-                      >
-                        Copy as JSONL
-                      </Button>
-                    </div>
-                  }
-                  open={copyPopoverOpen}
-                  onOpenChange={setCopyPopoverOpen}
-                />
-              )}
-            </div>
-          </div>
-        </motion.div>
 
         {/* Main Content Area */}
         <div className={cn(
@@ -1422,7 +1289,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
             />
           ) : (
             // Original layout when no preview
-            <div className="h-full flex flex-col max-w-5xl mx-auto">
+            <div className="h-full flex flex-col max-w-6xl mx-auto">
               {projectPathInput}
               {messagesList}
               
@@ -1571,13 +1438,99 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
               isLoading={isLoading}
               disabled={!projectPath}
               projectPath={projectPath}
+              extraMenuItems={
+                <>
+                  {effectiveSession && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setShowTimeline(!showTimeline)}
+                            className="h-9 w-9 text-muted-foreground hover:text-foreground"
+                          >
+                            <GitBranch className={cn("h-3.5 w-3.5", showTimeline && "text-primary")} />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="text-xs">Timeline</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                  {messages.length > 0 && (
+                    <Popover
+                      trigger={
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-9 w-9 text-muted-foreground hover:text-foreground"
+                              >
+                                <Copy className="h-3.5 w-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="text-xs">Copy</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      }
+                      content={
+                        <div className="w-44 p-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleCopyAsMarkdown}
+                            className="w-full justify-start text-xs"
+                          >
+                            Copy as Markdown
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleCopyAsJsonl}
+                            className="w-full justify-start text-xs"
+                          >
+                            Copy as JSONL
+                          </Button>
+                        </div>
+                      }
+                      open={copyPopoverOpen}
+                      onOpenChange={setCopyPopoverOpen}
+                      side="top"
+                      align="end"
+                    />
+                  )}
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setShowSettings(!showSettings)}
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        >
+                          <Wrench className={cn("h-3.5 w-3.5", showSettings && "text-primary")} />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">Checkpoint Settings</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </>
+              }
             />
           </div>
 
           {/* Token Counter - positioned under the Send button */}
           {totalTokens > 0 && (
             <div className="fixed bottom-0 left-0 right-0 z-30 pointer-events-none">
-              <div className="max-w-5xl mx-auto">
+              <div className="max-w-6xl mx-auto">
                 <div className="flex justify-end px-4 pb-2">
                   <motion.div
                     initial={{ opacity: 0, scale: 0.8 }}

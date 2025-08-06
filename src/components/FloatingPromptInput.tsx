@@ -8,7 +8,11 @@ import {
   Sparkles,
   Zap,
   Square,
-  Brain
+  Brain,
+  Lightbulb,
+  Cpu,
+  Rocket,
+  Zap as Lightning
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -50,6 +54,10 @@ interface FloatingPromptInputProps {
    * Callback when cancel is clicked (only during loading)
    */
   onCancel?: () => void;
+  /**
+   * Extra menu items to display in the prompt bar
+   */
+  extraMenuItems?: React.ReactNode;
 }
 
 export interface FloatingPromptInputRef {
@@ -70,6 +78,9 @@ type ThinkingModeConfig = {
   description: string;
   level: number; // 0-4 for visual indicator
   phrase?: string; // The phrase to append
+  icon: React.ReactNode;
+  color: string;
+  shortName: string;
 };
 
 const THINKING_MODES: ThinkingModeConfig[] = [
@@ -77,50 +88,71 @@ const THINKING_MODES: ThinkingModeConfig[] = [
     id: "auto",
     name: "Auto",
     description: "Let Claude decide",
-    level: 0
+    level: 0,
+    icon: <Sparkles className="h-3.5 w-3.5" />,
+    color: "text-muted-foreground",
+    shortName: "A"
   },
   {
     id: "think",
     name: "Think",
     description: "Basic reasoning",
     level: 1,
-    phrase: "think"
+    phrase: "think",
+    icon: <Lightbulb className="h-3.5 w-3.5" />,
+    color: "text-primary",
+    shortName: "T"
   },
   {
     id: "think_hard",
     name: "Think Hard",
     description: "Deeper analysis",
     level: 2,
-    phrase: "think hard"
+    phrase: "think hard",
+    icon: <Brain className="h-3.5 w-3.5" />,
+    color: "text-primary",
+    shortName: "T+"
   },
   {
     id: "think_harder",
     name: "Think Harder",
     description: "Extensive reasoning",
     level: 3,
-    phrase: "think harder"
+    phrase: "think harder",
+    icon: <Cpu className="h-3.5 w-3.5" />,
+    color: "text-primary",
+    shortName: "T++"
   },
   {
     id: "ultrathink",
     name: "Ultrathink",
     description: "Maximum computation",
     level: 4,
-    phrase: "ultrathink"
+    phrase: "ultrathink",
+    icon: <Rocket className="h-3.5 w-3.5" />,
+    color: "text-primary",
+    shortName: "Ultra"
   }
 ];
 
 /**
  * ThinkingModeIndicator component - Shows visual indicator bars for thinking level
  */
-const ThinkingModeIndicator: React.FC<{ level: number }> = ({ level }) => {
+const ThinkingModeIndicator: React.FC<{ level: number; color?: string }> = ({ level, color }) => {
+  const getBarColor = (barIndex: number) => {
+    if (barIndex > level) return "bg-muted";
+    return "bg-primary";
+  };
+  
   return (
     <div className="flex items-center gap-0.5">
       {[1, 2, 3, 4].map((i) => (
         <div
           key={i}
           className={cn(
-            "w-1 h-3 rounded-full transition-colors",
-            i <= level ? "bg-blue-500" : "bg-muted"
+            "w-1 h-3 rounded-full transition-all duration-200",
+            getBarColor(i),
+            i <= level && "shadow-sm"
           )}
         />
       ))}
@@ -133,6 +165,8 @@ type Model = {
   name: string;
   description: string;
   icon: React.ReactNode;
+  shortName: string;
+  color: string;
 };
 
 const MODELS: Model[] = [
@@ -140,13 +174,17 @@ const MODELS: Model[] = [
     id: "sonnet",
     name: "Claude 4 Sonnet",
     description: "Faster, efficient for most tasks",
-    icon: <Zap className="h-4 w-4" />
+    icon: <Zap className="h-3.5 w-3.5" />,
+    shortName: "S",
+    color: "text-primary"
   },
   {
     id: "opus",
     name: "Claude 4 Opus",
     description: "More capable, better for complex tasks",
-    icon: <Sparkles className="h-4 w-4" />
+    icon: <Zap className="h-3.5 w-3.5" />,
+    shortName: "O",
+    color: "text-primary"
   }
 ];
 
@@ -170,6 +208,7 @@ const FloatingPromptInputInner = (
     projectPath,
     className,
     onCancel,
+    extraMenuItems,
   }: FloatingPromptInputProps,
   ref: React.Ref<FloatingPromptInputRef>,
 ) => {
@@ -190,6 +229,7 @@ const FloatingPromptInputInner = (
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const expandedTextareaRef = useRef<HTMLTextAreaElement>(null);
   const unlistenDragDropRef = useRef<(() => void) | null>(null);
+  const [textareaHeight, setTextareaHeight] = useState<number>(48);
 
   // Expose a method to add images programmatically
   React.useImperativeHandle(
@@ -294,7 +334,16 @@ const FloatingPromptInputInner = (
     const imagePaths = extractImagePaths(prompt);
     console.log('[useEffect] Setting embeddedImages to:', imagePaths);
     setEmbeddedImages(imagePaths);
-  }, [prompt, projectPath]);
+    
+    // Auto-resize on prompt change (handles paste, programmatic changes, etc.)
+    if (textareaRef.current && !isExpanded) {
+      textareaRef.current.style.height = 'auto';
+      const scrollHeight = textareaRef.current.scrollHeight;
+      const newHeight = Math.min(Math.max(scrollHeight, 48), 240);
+      setTextareaHeight(newHeight);
+      textareaRef.current.style.height = `${newHeight}px`;
+    }
+  }, [prompt, projectPath, isExpanded]);
 
   // Set up Tauri drag-drop event listener
   useEffect(() => {
@@ -396,12 +445,24 @@ const FloatingPromptInputInner = (
       onSend(finalPrompt, selectedModel);
       setPrompt("");
       setEmbeddedImages([]);
+      setTextareaHeight(48); // Reset height after sending
     }
   };
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = e.target.value;
     const newCursorPosition = e.target.selectionStart || 0;
+    
+    // Auto-resize textarea based on content
+    if (textareaRef.current && !isExpanded) {
+      // Reset height to auto to get the actual scrollHeight
+      textareaRef.current.style.height = 'auto';
+      const scrollHeight = textareaRef.current.scrollHeight;
+      // Set min height to 48px and max to 240px (about 10 lines)
+      const newHeight = Math.min(Math.max(scrollHeight, 48), 240);
+      setTextareaHeight(newHeight);
+      textareaRef.current.style.height = `${newHeight}px`;
+    }
 
     // Check if / was just typed at the beginning of input or after whitespace
     if (newValue.length > prompt.length && newValue[newCursorPosition - 1] === '/') {
@@ -611,6 +672,13 @@ const FloatingPromptInputInner = (
       return;
     }
 
+    // Add keyboard shortcut for expanding
+    if (e.key === 'e' && (e.ctrlKey || e.metaKey) && e.shiftKey) {
+      e.preventDefault();
+      setIsExpanded(true);
+      return;
+    }
+
     if (e.key === "Enter" && !e.shiftKey && !isExpanded && !showFilePicker && !showSlashCommandPicker) {
       e.preventDefault();
       handleSend();
@@ -758,7 +826,7 @@ const FloatingPromptInputInner = (
                 value={prompt}
                 onChange={handleTextChange}
                 onPaste={handlePaste}
-                placeholder="Type your prompt here..."
+                placeholder="Type your message..."
                 className="min-h-[200px] resize-none"
                 disabled={disabled}
                 onDragEnter={handleDrag}
@@ -777,7 +845,9 @@ const FloatingPromptInputInner = (
                       onClick={() => setModelPickerOpen(!modelPickerOpen)}
                       className="gap-2"
                     >
-                      {selectedModelData.icon}
+                      <span className={selectedModelData.color}>
+                        {selectedModelData.icon}
+                      </span>
                       {selectedModelData.name}
                     </Button>
                   </div>
@@ -795,7 +865,9 @@ const FloatingPromptInputInner = (
                                 onClick={() => setThinkingModePickerOpen(!thinkingModePickerOpen)}
                                 className="gap-2"
                               >
-                                <Brain className="h-4 w-4" />
+                                <span className={THINKING_MODES.find(m => m.id === selectedThinkingMode)?.color}>
+                                  {THINKING_MODES.find(m => m.id === selectedThinkingMode)?.icon}
+                                </span>
                                 <ThinkingModeIndicator 
                                   level={THINKING_MODES.find(m => m.id === selectedThinkingMode)?.level || 0} 
                                 />
@@ -823,7 +895,9 @@ const FloatingPromptInputInner = (
                                 selectedThinkingMode === mode.id && "bg-accent"
                               )}
                             >
-                              <Brain className="h-4 w-4 mt-0.5" />
+                              <span className={cn("mt-0.5", mode.color)}>
+                                {mode.icon}
+                              </span>
                               <div className="flex-1 space-y-1">
                                 <div className="font-medium text-sm">
                                   {mode.name}
@@ -866,7 +940,7 @@ const FloatingPromptInputInner = (
       {/* Fixed Position Input Bar */}
       <div
         className={cn(
-          "fixed bottom-0 left-0 right-0 z-40 bg-background border-t border-border",
+          "fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-sm border-t border-border shadow-lg",
           dragActive && "ring-2 ring-primary ring-offset-2",
           className
         )}
@@ -875,7 +949,7 @@ const FloatingPromptInputInner = (
         onDragOver={handleDrag}
         onDrop={handleDrop}
       >
-        <div className="max-w-5xl mx-auto">
+        <div className="container mx-auto">
           {/* Image previews */}
           {embeddedImages.length > 0 && (
             <ImagePreview
@@ -885,22 +959,37 @@ const FloatingPromptInputInner = (
             />
           )}
 
-          <div className="p-4">
-            <div className="flex items-end gap-3">
-              {/* Model Picker */}
-              <Popover
-                trigger={
-                  <Button
-                    variant="outline"
-                    size="default"
-                    disabled={disabled}
-                    className="gap-2 min-w-[180px] justify-start"
-                  >
-                    {selectedModelData.icon}
-                    <span className="flex-1 text-left">{selectedModelData.name}</span>
-                    <ChevronUp className="h-4 w-4 opacity-50" />
-                  </Button>
-                }
+          <div className="p-3">
+            <div className="flex items-end gap-2">
+              {/* Model & Thinking Mode Selectors - Left side, fixed at bottom */}
+              <div className="flex items-center gap-1 shrink-0 mb-1">
+                <Popover
+                  trigger={
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={disabled}
+                            className="h-9 px-2 hover:bg-accent/50 gap-1"
+                          >
+                            <span className={selectedModelData.color}>
+                              {selectedModelData.icon}
+                            </span>
+                            <span className="text-[10px] font-bold opacity-70">
+                              {selectedModelData.shortName}
+                            </span>
+                            <ChevronUp className="h-3 w-3 ml-0.5 opacity-50" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">
+                          <p className="text-xs font-medium">{selectedModelData.name}</p>
+                          <p className="text-xs text-muted-foreground">{selectedModelData.description}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  }
                 content={
                   <div className="w-[300px] p-1">
                     {MODELS.map((model) => (
@@ -916,7 +1005,11 @@ const FloatingPromptInputInner = (
                           selectedModel === model.id && "bg-accent"
                         )}
                       >
-                        <div className="mt-0.5">{model.icon}</div>
+                        <div className="mt-0.5">
+                          <span className={model.color}>
+                            {model.icon}
+                          </span>
+                        </div>
                         <div className="flex-1 space-y-1">
                           <div className="font-medium text-sm">{model.name}</div>
                           <div className="text-xs text-muted-foreground">
@@ -933,31 +1026,33 @@ const FloatingPromptInputInner = (
                 side="top"
               />
 
-              {/* Thinking Mode Picker */}
-              <Popover
-                trigger={
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="default"
-                          disabled={disabled}
-                          className="gap-2"
-                        >
-                          <Brain className="h-4 w-4" />
-                          <ThinkingModeIndicator 
-                            level={THINKING_MODES.find(m => m.id === selectedThinkingMode)?.level || 0} 
-                          />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="font-medium">{THINKING_MODES.find(m => m.id === selectedThinkingMode)?.name || "Auto"}</p>
-                        <p className="text-xs text-muted-foreground">{THINKING_MODES.find(m => m.id === selectedThinkingMode)?.description}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                }
+                <Popover
+                  trigger={
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={disabled}
+                            className="h-9 px-2 hover:bg-accent/50 gap-1"
+                          >
+                            <span className={THINKING_MODES.find(m => m.id === selectedThinkingMode)?.color}>
+                              {THINKING_MODES.find(m => m.id === selectedThinkingMode)?.icon}
+                            </span>
+                            <span className="text-[10px] font-semibold opacity-70">
+                              {THINKING_MODES.find(m => m.id === selectedThinkingMode)?.shortName}
+                            </span>
+                            <ChevronUp className="h-3 w-3 ml-0.5 opacity-50" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">
+                          <p className="text-xs font-medium">Thinking: {THINKING_MODES.find(m => m.id === selectedThinkingMode)?.name || "Auto"}</p>
+                          <p className="text-xs text-muted-foreground">{THINKING_MODES.find(m => m.id === selectedThinkingMode)?.description}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  }
                 content={
                   <div className="w-[280px] p-1">
                     {THINKING_MODES.map((mode) => (
@@ -973,7 +1068,9 @@ const FloatingPromptInputInner = (
                           selectedThinkingMode === mode.id && "bg-accent"
                         )}
                       >
-                        <Brain className="h-4 w-4 mt-0.5" />
+                        <span className={cn("mt-0.5", mode.color)}>
+                          {mode.icon}
+                        </span>
                         <div className="flex-1 space-y-1">
                           <div className="font-medium text-sm">
                             {mode.name}
@@ -993,7 +1090,9 @@ const FloatingPromptInputInner = (
                 side="top"
               />
 
-              {/* Prompt Input */}
+              </div>
+
+              {/* Prompt Input - Center */}
               <div className="flex-1 relative">
                 <Textarea
                   ref={textareaRef}
@@ -1001,24 +1100,57 @@ const FloatingPromptInputInner = (
                   onChange={handleTextChange}
                   onKeyDown={handleKeyDown}
                   onPaste={handlePaste}
-                  placeholder={dragActive ? "Drop images here..." : "Ask Claude anything..."}
+                  placeholder={dragActive ? "Drop images here..." : "Message Claude (@ for files, / for commands)..."}
                   disabled={disabled}
                   className={cn(
-                    "min-h-[44px] max-h-[120px] resize-none pr-10",
-                    dragActive && "border-primary"
+                    "resize-none pr-20 pl-3 py-2.5 transition-all duration-150",
+                    dragActive && "border-primary",
+                    textareaHeight >= 240 && "overflow-y-auto scrollbar-thin"
                   )}
-                  rows={1}
+                  style={{ 
+                    height: `${textareaHeight}px`,
+                    overflowY: textareaHeight >= 240 ? 'auto' : 'hidden'
+                  }}
                 />
 
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setIsExpanded(true)}
-                  disabled={disabled}
-                  className="absolute right-1 bottom-1 h-8 w-8"
-                >
-                  <Maximize2 className="h-4 w-4" />
-                </Button>
+                {/* Action buttons inside input - fixed at bottom right */}
+                <div className="absolute right-1.5 bottom-1.5 flex items-center gap-0.5">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setIsExpanded(true)}
+                          disabled={disabled}
+                          className="h-8 w-8 hover:bg-accent/50 transition-colors"
+                        >
+                          <Maximize2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">
+                        <p className="text-xs">Expand (Ctrl+Shift+E)</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+
+                  <Button
+                    onClick={isLoading ? onCancel : handleSend}
+                    disabled={isLoading ? false : (!prompt.trim() || disabled)}
+                    variant={isLoading ? "destructive" : prompt.trim() ? "default" : "ghost"}
+                    size="icon"
+                    className={cn(
+                      "h-8 w-8 transition-all",
+                      prompt.trim() && !isLoading && "shadow-sm"
+                    )}
+                  >
+                    {isLoading ? (
+                      <Square className="h-4 w-4" />
+                    ) : (
+                      <Send className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
 
                 {/* File Picker */}
                 <AnimatePresence>
@@ -1045,27 +1177,12 @@ const FloatingPromptInputInner = (
                 </AnimatePresence>
               </div>
 
-              {/* Send/Stop Button */}
-              <Button
-                onClick={isLoading ? onCancel : handleSend}
-                disabled={isLoading ? false : (!prompt.trim() || disabled)}
-                variant={isLoading ? "destructive" : "default"}
-                size="default"
-                className="min-w-[60px]"
-              >
-                {isLoading ? (
-                  <>
-                    <Square className="h-4 w-4 mr-1" />
-                    Stop
-                  </>
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
-
-            <div className="mt-2 text-xs text-muted-foreground">
-              Press Enter to send, Shift+Enter for new line{projectPath?.trim() && ", @ to mention files, / for commands, drag & drop or paste images"}
+              {/* Extra menu items - Right side, fixed at bottom */}
+              {extraMenuItems && (
+                <div className="flex items-center gap-0.5 shrink-0 mb-1">
+                  {extraMenuItems}
+                </div>
+              )}
             </div>
           </div>
         </div>
