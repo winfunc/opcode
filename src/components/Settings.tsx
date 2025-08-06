@@ -621,38 +621,39 @@ export const Settings: React.FC<SettingsProps> = ({
                     
                     {/* Cleanup Period */}
                     <div className="space-y-2">
-                      <Label htmlFor="cleanup">Chat Transcript Retention (days)</Label>
-                      <Input
-                        id="cleanup"
-                        type="number"
-                        min="1"
-                        placeholder="30"
-                        value={settings?.cleanupPeriodDays || ""}
-                        onChange={(e) => {
-                          const value = e.target.value ? parseInt(e.target.value) : undefined;
-                          updateSetting("cleanupPeriodDays", value);
-                        }}
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        How long to retain chat transcripts locally (default: 30 days)
-                      </p>
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <Label htmlFor="cleanup">Chat Transcript Retention (days)</Label>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            How long to retain chat transcripts locally (default: 30 days)
+                          </p>
+                        </div>
+                        <Input
+                          id="cleanup"
+                          type="number"
+                          min="1"
+                          placeholder="30"
+                          value={settings?.cleanupPeriodDays || ""}
+                          onChange={(e) => {
+                            const value = e.target.value ? parseInt(e.target.value) : undefined;
+                            updateSetting("cleanupPeriodDays", value);
+                          }}
+                          className="w-24"
+                        />
+                      </div>
                     </div>
                     
                     {/* Claude Binary Path Selector */}
-                    <div className="space-y-4">
-                      <div>
-                        <Label className="text-sm font-medium mb-2 block">Claude Code Installation</Label>
-                        <p className="text-xs text-muted-foreground mb-4">
-                          Select which Claude Code installation to use.
-                        </p>
-                      </div>
+                    <div className="space-y-3">
                       <ClaudeVersionSelector
                         selectedPath={currentBinaryPath}
                         onSelect={handleClaudeInstallationSelect}
+                        simplified={true}
                       />
                       {binaryPathChanged && (
-                        <p className="text-xs text-amber-600 dark:text-amber-400">
-                          ⚠️ Claude binary path has been changed. Remember to save your settings.
+                        <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                          <AlertCircle className="h-3 w-3" />
+                          Changes will be applied when you save settings.
                         </p>
                       )}
                     </div>
