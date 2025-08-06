@@ -270,7 +270,7 @@ function AppContent() {
                   </Card>
                 </motion.div>
 
-                {/* CC Projects Card */}
+                {/* Projects Card */}
                 <motion.div
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -282,7 +282,7 @@ function AppContent() {
                   >
                     <div className="h-full flex flex-col items-center justify-center p-8">
                       <FolderCode className="h-16 w-16 mb-4 text-primary" />
-                      <h2 className="text-xl font-semibold">CC Projects</h2>
+                      <h2 className="text-xl font-semibold">Projects</h2>
                     </div>
                   </Card>
                 </motion.div>
@@ -333,7 +333,7 @@ function AppContent() {
                   ← Back to Home
                 </Button>
                 <div className="mb-4">
-                  <h1 className="text-3xl font-bold tracking-tight">CC Projects</h1>
+                  <h1 className="text-3xl font-bold tracking-tight">Projects</h1>
                   <p className="mt-1 text-sm text-muted-foreground">
                     Browse your Claude Code sessions
                   </p>

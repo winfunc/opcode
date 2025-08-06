@@ -100,7 +100,7 @@ export const useTabState = (): UseTabStateReturn => {
 
     return addTab({
       type: 'projects',
-      title: 'CC Projects',
+      title: 'Projects',
       status: 'idle',
       hasUnsavedChanges: false,
       icon: 'folder'

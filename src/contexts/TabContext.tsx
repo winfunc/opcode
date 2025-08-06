@@ -40,13 +40,13 @@ export const TabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
 
-  // Always start with a fresh CC Projects tab
+  // Always start with a fresh Projects tab
   useEffect(() => {
     // Create default projects tab
     const defaultTab: Tab = {
       id: generateTabId(),
       type: 'projects',
-      title: 'CC Projects',
+      title: 'Projects',
       status: 'idle',
       hasUnsavedChanges: false,
       order: 0,

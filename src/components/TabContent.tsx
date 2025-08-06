@@ -96,10 +96,21 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
             <div className="container mx-auto p-6">
               {/* Header */}
               <div className="mb-6">
-                <h1 className="text-3xl font-bold tracking-tight">CC Projects</h1>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Browse your Claude Code sessions
-                </p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h1 className="text-3xl font-bold tracking-tight">Projects</h1>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Browse your Claude Code sessions
+                    </p>
+                  </div>
+                  <Button
+                    onClick={handleNewSession}
+                    size="default"
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    New session
+                  </Button>
+                </div>
               </div>
 
               {/* Error display */}
@@ -161,23 +172,6 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
                       exit={{ opacity: 0, x: 20 }}
                       transition={{ duration: 0.3 }}
                     >
-                      {/* New session button at the top */}
-                      <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5 }}
-                        className="mb-4"
-                      >
-                        <Button
-                          onClick={handleNewSession}
-                          size="default"
-                          className="w-full max-w-md"
-                        >
-                          <Plus className="mr-2 h-4 w-4" />
-                          New Claude Code session
-                        </Button>
-                      </motion.div>
-
                       {/* Running Claude Sessions */}
                       <RunningClaudeSessions />
 
@@ -217,7 +211,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
               // Go back to projects view in the same tab
               updateTab(tab.id, {
                 type: 'projects',
-                title: 'CC Projects',
+                title: 'Projects',
               });
             }}
           />

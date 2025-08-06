@@ -102,13 +102,13 @@ Think of Claudia as your command center for Claude Code - bridging the gap betwe
 ### Getting Started
 
 1. **Launch Claudia**: Open the application after installation
-2. **Welcome Screen**: Choose between CC Agents or CC Projects
+2. **Welcome Screen**: Choose between CC Agents or Projects
 3. **First Time Setup**: Claudia will automatically detect your `~/.claude` directory
 
 ### Managing Projects
 
 ```
-CC Projects → Select Project → View Sessions → Resume or Start New
+Projects → Select Project → View Sessions → Resume or Start New
 ```
 
 - Click on any project to view its sessions
