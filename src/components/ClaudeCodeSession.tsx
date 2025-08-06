@@ -306,6 +306,13 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       
       // After loading history, we're continuing a conversation
       setIsFirstPrompt(false);
+      
+      // Scroll to bottom after loading history
+      setTimeout(() => {
+        if (loadedMessages.length > 0) {
+          rowVirtualizer.scrollToIndex(loadedMessages.length - 1, { align: 'end', behavior: 'auto' });
+        }
+      }, 100);
     } catch (err) {
       console.error("Failed to load session history:", err);
       setError("Failed to load session history");

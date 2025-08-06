@@ -75,14 +75,14 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
     }
   };
   
-  const handleBack = () => {
-    setSelectedProject(null);
-    setSessions([]);
-  };
-  
   const handleNewSession = () => {
-    // Create a new chat tab
-    createChatTab();
+    // Create a new chat tab with the current project path if available
+    if (selectedProject) {
+      const projectName = selectedProject.path.split('/').pop() || 'Session';
+      createChatTab(undefined, projectName, selectedProject.path);
+    } else {
+      createChatTab();
+    }
   };
   
   // Panel visibility - hide when not active
@@ -96,11 +96,29 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
             <div className="container mx-auto p-6">
               {/* Header */}
               <div className="mb-6">
+                {selectedProject && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedProject(null);
+                      setSessions([]);
+                    }}
+                    className="mb-4 -ml-1"
+                  >
+                    ← Back to Projects
+                  </Button>
+                )}
                 <div className="flex items-center justify-between">
                   <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Projects</h1>
+                    <h1 className="text-3xl font-bold tracking-tight">
+                      {selectedProject ? selectedProject.path.split('/').pop() : 'Projects'}
+                    </h1>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      Browse your Claude Code sessions
+                      {selectedProject 
+                        ? `${sessions.length} session${sessions.length !== 1 ? 's' : ''}`
+                        : 'Browse your Claude Code sessions'
+                      }
                     </p>
                   </div>
                   <Button
@@ -145,16 +163,9 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
                       <SessionList
                         sessions={sessions}
                         projectPath={selectedProject.path}
-                        onBack={handleBack}
                         onSessionClick={(session) => {
-                          // Update tab to show this session
-                          updateTab(tab.id, {
-                            type: 'chat',
-                            title: session.project_path.split('/').pop() || 'Session',
-                            sessionId: session.id,
-                            sessionData: session, // Store full session object
-                            initialProjectPath: session.project_path,
-                          });
+                          // Don't update current tab, let the event handler create a new tab
+                          // The claude-session-selected event will be fired from SessionList
                         }}
                         onEditClaudeFile={(file: ClaudeMdFile) => {
                           // Open CLAUDE.md file in a new tab
@@ -324,7 +335,7 @@ export const TabContent: React.FC = () => {
       } else {
         // Create new tab for this session
         const projectName = session.project_path.split('/').pop() || 'Session';
-        const newTabId = createChatTab(session.id, projectName);
+        const newTabId = createChatTab(session.id, projectName, session.project_path);
         // Update the new tab with session data
         updateTab(newTabId, {
           sessionData: session,
@@ -368,7 +379,7 @@ export const TabContent: React.FC = () => {
         window.dispatchEvent(new CustomEvent('switch-to-tab', { detail: { tabId: existingTab.id } }));
       } else {
         const projectName = session.project_path.split('/').pop() || 'Session';
-        const newTabId = createChatTab(session.id, projectName);
+        const newTabId = createChatTab(session.id, projectName, session.project_path);
         updateTab(newTabId, {
           sessionData: session,
           initialProjectPath: session.project_path,

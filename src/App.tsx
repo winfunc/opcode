@@ -192,14 +192,6 @@ function AppContent() {
   };
 
   /**
-   * Returns to project list view
-   */
-  const handleBack = () => {
-    setSelectedProject(null);
-    setSessions([]);
-  };
-
-  /**
    * Handles editing a CLAUDE.md file from a project
    */
   const handleEditClaudeFile = (file: ClaudeMdFile) => {
@@ -372,7 +364,6 @@ function AppContent() {
                       <SessionList
                         sessions={sessions}
                         projectPath={selectedProject.path}
-                        onBack={handleBack}
                         onEditClaudeFile={handleEditClaudeFile}
                       />
                     </motion.div>

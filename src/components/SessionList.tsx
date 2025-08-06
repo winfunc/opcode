@@ -1,8 +1,7 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { FileText, ArrowLeft, Calendar, Clock, MessageSquare, Info } from "lucide-react";
+import { FileText, Calendar, Clock, MessageSquare, Info } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
 import { ClaudeMemoriesDropdown } from "@/components/ClaudeMemoriesDropdown";
 import {
@@ -25,9 +24,9 @@ interface SessionListProps {
    */
   projectPath: string;
   /**
-   * Callback to go back to project list
+   * Optional callback to go back to project list (deprecated - use tabs instead)
    */
-  onBack: () => void;
+  onBack?: () => void;
   /**
    * Callback when a session is clicked
    */
@@ -79,40 +78,6 @@ export const SessionList: React.FC<SessionListProps> = ({
   return (
     <TooltipProvider>
       <div className={cn("space-y-4", className)}>
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.3 }}
-          className="flex items-center space-x-3"
-        >
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onBack}
-            className="h-8 w-8"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <div className="flex-1 min-w-0">
-              <h2 className="text-base font-medium">
-                {projectPath.split('/').pop() || 'Project'}
-              </h2>
-              <p className="text-xs text-muted-foreground">
-                {sessions.length} session{sessions.length !== 1 ? 's' : ''}
-              </p>
-            </div>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Info className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors cursor-help" />
-              </TooltipTrigger>
-              <TooltipContent side="left" className="max-w-sm">
-                <p className="font-mono text-xs">{projectPath}</p>
-              </TooltipContent>
-            </Tooltip>
-          </div>
-        </motion.div>
-
       {/* CLAUDE.md Memories Dropdown */}
       {onEditClaudeFile && (
         <motion.div
