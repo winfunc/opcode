@@ -67,7 +67,7 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
 
   return (
     <div 
-      className="h-11 bg-background flex items-center justify-between select-none"
+      className="h-11 bg-background flex items-center justify-between select-none border-b border-border/50"
       style={{ borderTopLeftRadius: '12px', borderTopRightRadius: '12px' }}
       data-tauri-drag-region
       onMouseEnter={() => setIsHovered(true)}

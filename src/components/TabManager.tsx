@@ -301,7 +301,7 @@ export const TabManager: React.FC<TabManagerProps> = ({ className }) => {
   };
 
   return (
-    <div className={cn("flex items-stretch bg-muted/15 relative", className)}>
+    <div className={cn("flex items-stretch bg-muted/15 relative border-b border-border/50", className)}>
       {/* Left fade gradient */}
       {showLeftScroll && (
         <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-muted/15 to-transparent pointer-events-none z-10" />
