@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useTabState } from '@/hooks/useTabState';
 import { useScreenTracking } from '@/hooks/useAnalytics';
 import { Tab } from '@/contexts/TabContext';
-import { Loader2, Plus } from 'lucide-react';
+import { Loader2, Plus, ArrowLeft } from 'lucide-react';
 import { api, type Project, type Session, type ClaudeMdFile } from '@/lib/api';
 import { ProjectList } from '@/components/ProjectList';
 import { SessionList } from '@/components/SessionList';
@@ -15,6 +15,7 @@ const ClaudeCodeSession = lazy(() => import('@/components/ClaudeCodeSession').th
 const AgentRunOutputViewer = lazy(() => import('@/components/AgentRunOutputViewer'));
 const AgentExecution = lazy(() => import('@/components/AgentExecution').then(m => ({ default: m.AgentExecution })));
 const CreateAgent = lazy(() => import('@/components/CreateAgent').then(m => ({ default: m.CreateAgent })));
+const Agents = lazy(() => import('@/components/Agents').then(m => ({ default: m.Agents })));
 const UsageDashboard = lazy(() => import('@/components/UsageDashboard').then(m => ({ default: m.UsageDashboard })));
 const MCPManager = lazy(() => import('@/components/MCPManager').then(m => ({ default: m.MCPManager })));
 const Settings = lazy(() => import('@/components/Settings').then(m => ({ default: m.Settings })));
@@ -141,29 +142,32 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
               {/* Header for selected project only */}
               {selectedProject && (
                 <div className="mb-6">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setSelectedProject(null);
-                      setSessions([]);
-                      // Restore tab title to "Projects"
-                      updateTab(tab.id, {
-                        title: 'Projects'
-                      });
-                    }}
-                    className="mb-4 -ml-1"
-                  >
-                    ← Back to Projects
-                  </Button>
                   <div className="flex items-center justify-between">
-                    <div>
-                      <h1 className="text-3xl font-bold tracking-tight">
-                        {selectedProject.path.split('/').pop()}
-                      </h1>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {`${sessions.length} session${sessions.length !== 1 ? 's' : ''}`}
-                      </p>
+                    <div className="flex items-center gap-3">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setSelectedProject(null);
+                          setSessions([]);
+                          // Restore tab title to "Projects"
+                          updateTab(tab.id, {
+                            title: 'Projects'
+                          });
+                        }}
+                        className="h-8 w-8 -ml-2"
+                        title="Back to Projects"
+                      >
+                        <ArrowLeft className="h-4 w-4" />
+                      </Button>
+                      <div>
+                        <h1 className="text-3xl font-bold tracking-tight">
+                          {selectedProject.path.split('/').pop()}
+                        </h1>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          {`${sessions.length} session${sessions.length !== 1 ? 's' : ''}`}
+                        </p>
+                      </div>
                     </div>
                     <Button
                       onClick={handleNewSession}
@@ -286,6 +290,8 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
           />
         );
       
+      case 'agents':
+        return <Agents />;
       
       case 'usage':
         return <UsageDashboard onBack={() => {}} />;

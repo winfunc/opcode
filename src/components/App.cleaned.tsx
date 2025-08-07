@@ -120,11 +120,7 @@ function AppContent() {
             // Open settings tab or modal
             window.dispatchEvent(new CustomEvent('create-settings-tab'));
           }}
-          onAgentsClick={() => setShowAgentsModal(true)}
-          onMenuClick={() => {
-            // Could open a command palette or menu
-            console.log('Menu clicked');
-          }}
+          onAgentsClick={() => {}}
         />
         
         {/* Tab-based interface */}

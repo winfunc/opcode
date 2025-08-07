@@ -16,6 +16,7 @@ interface UseTabStateReturn {
   createAgentTab: (agentRunId: string, agentName: string) => string;
   createAgentExecutionTab: (agent: any, tabId: string) => string;
   createProjectsTab: () => string | null;
+  createAgentsTab: () => string | null;
   createUsageTab: () => string | null;
   createMCPTab: () => string | null;
   createSettingsTab: () => string | null;
@@ -101,6 +102,23 @@ export const useTabState = (): UseTabStateReturn => {
       icon: 'folder'
     });
   }, [addTab]);
+
+  const createAgentsTab = useCallback((): string | null => {
+    // Check if agents tab already exists (singleton)
+    const existingTab = tabs.find(tab => tab.type === 'agents');
+    if (existingTab) {
+      setActiveTab(existingTab.id);
+      return existingTab.id;
+    }
+
+    return addTab({
+      type: 'agents',
+      title: 'Agents',
+      status: 'idle',
+      hasUnsavedChanges: false,
+      icon: 'bot'
+    });
+  }, [addTab, tabs, setActiveTab]);
 
   const createUsageTab = useCallback((): string | null => {
     // Check if usage tab already exists (singleton)
@@ -317,6 +335,7 @@ export const useTabState = (): UseTabStateReturn => {
     createAgentTab,
     createAgentExecutionTab,
     createProjectsTab,
+    createAgentsTab,
     createUsageTab,
     createMCPTab,
     createSettingsTab,

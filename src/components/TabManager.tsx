@@ -23,6 +23,7 @@ const TabItem: React.FC<TabItemProps> = ({ tab, isActive, onClose, onClick, isDr
       case 'chat':
         return MessageSquare;
       case 'agent':
+      case 'agents':
         return Bot;
       case 'projects':
         return Folder;
@@ -36,11 +37,9 @@ const TabItem: React.FC<TabItemProps> = ({ tab, isActive, onClose, onClick, isDr
       case 'claude-file':
         return FileText;
       case 'agent-execution':
-        return Bot;
       case 'create-agent':
-        return Plus;
       case 'import-agent':
-        return Plus;
+        return Bot;
       default:
         return MessageSquare;
     }

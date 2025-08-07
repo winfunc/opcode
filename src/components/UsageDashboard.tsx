@@ -6,14 +6,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { api, type UsageStats, type ProjectUsage } from "@/lib/api";
 import { 
-  ArrowLeft, 
-  TrendingUp, 
   Calendar, 
   Filter,
   Loader2,
-  DollarSign,
-  Activity,
-  FileText,
   Briefcase
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -31,12 +26,12 @@ interface UsageDashboardProps {
  * @example
  * <UsageDashboard onBack={() => setView('welcome')} />
  */
-export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
+export const UsageDashboard: React.FC<UsageDashboardProps> = ({ }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<UsageStats | null>(null);
   const [sessionStats, setSessionStats] = useState<ProjectUsage[] | null>(null);
-  const [selectedDateRange, setSelectedDateRange] = useState<"all" | "7d" | "30d">("all");
+  const [selectedDateRange, setSelectedDateRange] = useState<"all" | "7d" | "30d">("7d");
   const [activeTab, setActiveTab] = useState("overview");
 
   useEffect(() => {
@@ -127,148 +122,116 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
   };
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
-      {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-        className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
-      >
-        <div className="flex items-center justify-between px-4 py-3">
-          <div className="flex items-center space-x-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onBack}
-              className="h-8 w-8"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
+    <div className="h-full overflow-y-auto">
+      <div className="max-w-6xl mx-auto flex flex-col h-full">
+        {/* Header */}
+        <div className="p-6">
+          <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-lg font-semibold">Usage Dashboard</h1>
-              <p className="text-xs text-muted-foreground">
+              <h1 className="text-3xl font-bold tracking-tight">Usage Dashboard</h1>
+              <p className="mt-1 text-sm text-muted-foreground">
                 Track your Claude Code usage and costs
               </p>
             </div>
-          </div>
-          
-          {/* Date Range Filter */}
-          <div className="flex items-center space-x-2">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            <div className="flex space-x-1">
-              {(["all", "30d", "7d"] as const).map((range) => (
-                <Button
-                  key={range}
-                  variant={selectedDateRange === range ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setSelectedDateRange(range)}
-                  className="text-xs"
-                >
-                  {range === "all" ? "All Time" : range === "7d" ? "Last 7 Days" : "Last 30 Days"}
-                </Button>
-              ))}
+            {/* Date Range Filter */}
+            <div className="flex items-center space-x-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <div className="flex space-x-1">
+                {(["7d", "30d", "all"] as const).map((range) => (
+                  <Button
+                    key={range}
+                    variant={selectedDateRange === range ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setSelectedDateRange(range)}
+                  >
+                    {range === "all" ? "All Time" : range === "7d" ? "Last 7 Days" : "Last 30 Days"}
+                  </Button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
-      </motion.div>
 
-      {/* Main Content */}
-      <div className="flex-1 overflow-auto p-4">
-        {loading ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mx-auto mb-4" />
-              <p className="text-sm text-muted-foreground">Loading usage statistics...</p>
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6">
+          {loading ? (
+            <div className="flex items-center justify-center h-64">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
-          </div>
-        ) : error ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center max-w-md">
-              <p className="text-sm text-destructive mb-4">{error}</p>
-              <Button onClick={loadUsageStats} size="sm">
+          ) : error ? (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/50 text-sm text-destructive"
+            >
+              {error}
+              <Button onClick={loadUsageStats} size="sm" className="ml-4">
                 Try Again
               </Button>
-            </div>
-          </div>
-        ) : stats ? (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.3 }}
-            className="max-w-6xl mx-auto space-y-6"
+            </motion.div>
+          ) : stats ? (
+            <div className="space-y-6"
           >
             {/* Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               {/* Total Cost Card */}
               <Card className="p-4 shimmer-hover">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Total Cost</p>
-                    <p className="text-2xl font-bold mt-1">
-                      {formatCurrency(stats.total_cost)}
-                    </p>
-                  </div>
-                  <DollarSign className="h-8 w-8 text-muted-foreground/20 rotating-symbol" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Total Cost</p>
+                  <p className="text-2xl font-bold mt-1">
+                    {formatCurrency(stats.total_cost)}
+                  </p>
                 </div>
               </Card>
 
               {/* Total Sessions Card */}
               <Card className="p-4 shimmer-hover">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Total Sessions</p>
-                    <p className="text-2xl font-bold mt-1">
-                      {formatNumber(stats.total_sessions)}
-                    </p>
-                  </div>
-                  <FileText className="h-8 w-8 text-muted-foreground/20 rotating-symbol" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Total Sessions</p>
+                  <p className="text-2xl font-bold mt-1">
+                    {formatNumber(stats.total_sessions)}
+                  </p>
                 </div>
               </Card>
 
               {/* Total Tokens Card */}
               <Card className="p-4 shimmer-hover">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Total Tokens</p>
-                    <p className="text-2xl font-bold mt-1">
-                      {formatTokens(stats.total_tokens)}
-                    </p>
-                  </div>
-                  <Activity className="h-8 w-8 text-muted-foreground/20 rotating-symbol" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Total Tokens</p>
+                  <p className="text-2xl font-bold mt-1">
+                    {formatTokens(stats.total_tokens)}
+                  </p>
                 </div>
               </Card>
 
               {/* Average Cost per Session Card */}
               <Card className="p-4 shimmer-hover">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Avg Cost/Session</p>
-                    <p className="text-2xl font-bold mt-1">
-                      {formatCurrency(
-                        stats.total_sessions > 0 
-                          ? stats.total_cost / stats.total_sessions 
-                          : 0
-                      )}
-                    </p>
-                  </div>
-                  <TrendingUp className="h-8 w-8 text-muted-foreground/20 rotating-symbol" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Avg Cost/Session</p>
+                  <p className="text-2xl font-bold mt-1">
+                    {formatCurrency(
+                      stats.total_sessions > 0 
+                        ? stats.total_cost / stats.total_sessions 
+                        : 0
+                    )}
+                  </p>
                 </div>
               </Card>
             </div>
 
             {/* Tabs for different views */}
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-5">
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="models">By Model</TabsTrigger>
-                <TabsTrigger value="projects">By Project</TabsTrigger>
-                <TabsTrigger value="sessions">By Session</TabsTrigger>
-                <TabsTrigger value="timeline">Timeline</TabsTrigger>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid grid-cols-5 w-full mb-6 h-auto p-1">
+                <TabsTrigger value="overview" className="py-2.5 px-3">Overview</TabsTrigger>
+                <TabsTrigger value="models" className="py-2.5 px-3">By Model</TabsTrigger>
+                <TabsTrigger value="projects" className="py-2.5 px-3">By Project</TabsTrigger>
+                <TabsTrigger value="sessions" className="py-2.5 px-3">By Session</TabsTrigger>
+                <TabsTrigger value="timeline" className="py-2.5 px-3">Timeline</TabsTrigger>
               </TabsList>
 
               {/* Overview Tab */}
-              <TabsContent value="overview" className="space-y-4">
+              <TabsContent value="overview" className="space-y-6 mt-6">
                 <Card className="p-6">
                   <h3 className="text-sm font-semibold mb-4">Token Breakdown</h3>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -338,7 +301,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
               </TabsContent>
 
               {/* Models Tab */}
-              <TabsContent value="models">
+              <TabsContent value="models" className="space-y-6 mt-6">
                 <Card className="p-6">
                   <h3 className="text-sm font-semibold mb-4">Usage by Model</h3>
                   <div className="space-y-4">
@@ -385,7 +348,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
               </TabsContent>
 
               {/* Projects Tab */}
-              <TabsContent value="projects">
+              <TabsContent value="projects" className="space-y-6 mt-6">
                 <Card className="p-6">
                   <h3 className="text-sm font-semibold mb-4">Usage by Project</h3>
                   <div className="space-y-3">
@@ -417,7 +380,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
               </TabsContent>
 
               {/* Sessions Tab */}
-              <TabsContent value="sessions">
+              <TabsContent value="sessions" className="space-y-6 mt-6">
                   <Card className="p-6">
                       <h3 className="text-sm font-semibold mb-4">Usage by Session</h3>
                       <div className="space-y-3">
@@ -447,7 +410,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
               </TabsContent>
 
               {/* Timeline Tab */}
-              <TabsContent value="timeline">
+              <TabsContent value="timeline" className="space-y-6 mt-6">
                 <Card className="p-6">
                   <h3 className="text-sm font-semibold mb-6 flex items-center space-x-2">
                     <Calendar className="h-4 w-4" />
@@ -529,8 +492,9 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
                 </Card>
               </TabsContent>
             </Tabs>
-          </motion.div>
+          </div>
         ) : null}
+        </div>
       </div>
     </div>
   );

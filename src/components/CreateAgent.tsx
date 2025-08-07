@@ -4,6 +4,7 @@ import { ArrowLeft, Save, Loader2, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Card } from "@/components/ui/card";
 import { Toast, ToastContainer } from "@/components/ui/toast";
 import { api, type Agent } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -115,74 +116,69 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
   };
 
   return (
-    <div className={cn("flex flex-col h-full bg-background", className)}>
-      <div className="w-full max-w-5xl mx-auto flex flex-col h-full">
+    <div className={cn("h-full overflow-y-auto", className)}>
+      <div className="max-w-6xl mx-auto flex flex-col h-full">
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          className="flex items-center justify-between p-4 border-b border-border"
-        >
-          <div className="flex items-center space-x-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleBack}
-              className="h-8 w-8"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div>
-              <h2 className="text-lg font-semibold">
-                {isEditMode ? "Edit CC Agent" : "Create CC Agent"}
-              </h2>
-              <p className="text-xs text-muted-foreground">
-                {isEditMode ? "Update your Claude Code agent" : "Create a new Claude Code agent"}
-              </p>
+        <div className="p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleBack}
+                className="h-8 w-8 -ml-2"
+                title="Back to Agents"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <div>
+                <h1 className="text-3xl font-bold tracking-tight">
+                  {isEditMode ? "Edit Agent" : "Create New Agent"}
+                </h1>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {isEditMode ? "Update your Claude Code agent configuration" : "Configure a new Claude Code agent"}
+                </p>
+              </div>
             </div>
+            
+            <Button
+              onClick={handleSave}
+              disabled={saving || !name.trim() || !systemPrompt.trim()}
+              size="default"
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  Save Agent
+                </>
+              )}
+            </Button>
           </div>
-          
-          <Button
-            onClick={handleSave}
-            disabled={saving || !name.trim() || !systemPrompt.trim()}
-            size="sm"
-          >
-            {saving ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Save className="mr-2 h-4 w-4" />
-            )}
-            {saving ? "Saving..." : "Save"}
-          </Button>
-        </motion.div>
+        </div>
         
         {/* Error display */}
         {error && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="mx-4 mt-4 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-xs text-destructive"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="mx-6 mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/50 text-sm text-destructive"
           >
             {error}
           </motion.div>
         )}
         
-        {/* Form */}
-        <div className="flex-1 overflow-y-auto px-4 py-6">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.1 }}
-            className="space-y-6"
-          >
-                {/* Basic Information */}
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-sm font-medium mb-4">Basic Information</h3>
-                  </div>
-              
-              {/* Name and Icon */}
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6">
+          <div className="space-y-6">
+            {/* Basic Information */}
+            <Card className="p-6">
+              <h3 className="text-lg font-medium mb-4">Basic Information</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Agent Name</Label>
@@ -276,8 +272,11 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
                   </button>
                 </div>
               </div>
+            </Card>
 
-              {/* Default Task */}
+            {/* Configuration */}
+            <Card className="p-6">
+              <h3 className="text-lg font-medium mb-4">Configuration</h3>
               <div className="space-y-2">
                 <Label htmlFor="default-task">Default Task (Optional)</Label>
                 <Input
@@ -286,55 +285,54 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
                   placeholder="e.g., Review this code for security issues"
                   value={defaultTask}
                   onChange={(e) => setDefaultTask(e.target.value)}
-                  className="max-w-md"
                 />
-                <p className="text-xs text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   This will be used as the default task placeholder when executing the agent
                 </p>
               </div>
+            </Card>
 
-              {/* System Prompt Editor */}
-              <div className="space-y-2">
-                <Label>System Prompt</Label>
-                <p className="text-xs text-muted-foreground mb-2">
-                  Define the behavior and capabilities of your CC Agent
-                </p>
-                <div className="rounded-lg border border-border overflow-hidden shadow-sm" data-color-mode="dark">
-                  <MDEditor
-                    value={systemPrompt}
-                    onChange={(val) => setSystemPrompt(val || "")}
-                    preview="edit"
-                    height={400}
-                    visibleDragbar={false}
-                  />
-                </div>
+            {/* System Prompt */}
+            <Card className="p-6">
+              <h3 className="text-lg font-medium mb-4">System Prompt</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Define the behavior and capabilities of your Claude Code agent
+              </p>
+              <div className="rounded-lg border border-border overflow-hidden shadow-sm" data-color-mode="dark">
+                <MDEditor
+                  value={systemPrompt}
+                  onChange={(val) => setSystemPrompt(val || "")}
+                  preview="edit"
+                  height={400}
+                  visibleDragbar={false}
+                />
               </div>
-            </div>
-          </motion.div>
+            </Card>
+          </div>
         </div>
       </div>
   
-  {/* Toast Notification */}
-  <ToastContainer>
-    {toast && (
-      <Toast
-        message={toast.message}
-        type={toast.type}
-        onDismiss={() => setToast(null)}
-      />
-    )}
-  </ToastContainer>
+      {/* Toast Notification */}
+      <ToastContainer>
+        {toast && (
+          <Toast
+            message={toast.message}
+            type={toast.type}
+            onDismiss={() => setToast(null)}
+          />
+        )}
+      </ToastContainer>
 
-  {/* Icon Picker Dialog */}
-  <IconPicker
-    value={selectedIcon}
-    onSelect={(iconName) => {
-      setSelectedIcon(iconName as AgentIconName);
-      setShowIconPicker(false);
-    }}
-    isOpen={showIconPicker}
-    onClose={() => setShowIconPicker(false)}
-  />
-</div>
+      {/* Icon Picker Dialog */}
+      <IconPicker
+        value={selectedIcon}
+        onSelect={(iconName) => {
+          setSelectedIcon(iconName as AgentIconName);
+          setShowIconPicker(false);
+        }}
+        isOpen={showIconPicker}
+        onClose={() => setShowIconPicker(false)}
+      />
+    </div>
   );
 }; 

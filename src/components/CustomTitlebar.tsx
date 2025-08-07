@@ -1,32 +1,24 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Settings, Users, Menu, Minus, Square, X, Bot, BarChart3, FileText, Network, Info, Folder, MoreVertical, ChevronDown } from 'lucide-react';
-import { useThemeContext } from '@/contexts/ThemeContext';
+import { Settings, Minus, Square, X, Bot, BarChart3, FileText, Network, Info, MoreVertical } from 'lucide-react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 
 interface CustomTitlebarProps {
-  title?: string;
   onSettingsClick?: () => void;
   onAgentsClick?: () => void;
   onUsageClick?: () => void;
   onClaudeClick?: () => void;
   onMCPClick?: () => void;
   onInfoClick?: () => void;
-  onProjectsClick?: () => void;
-  onMenuClick?: () => void;
 }
 
 export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
-  title = "Claudia",
   onSettingsClick,
   onAgentsClick,
   onUsageClick,
   onClaudeClick,
   onMCPClick,
-  onInfoClick,
-  onProjectsClick,
-  onMenuClick
+  onInfoClick
 }) => {
-  const { theme } = useThemeContext();
   const [isHovered, setIsHovered] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -145,16 +137,6 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
       <div className="flex items-center pr-5 gap-3">
         {/* Primary actions group */}
         <div className="flex items-center gap-1">
-          {onProjectsClick && (
-            <button
-              onClick={onProjectsClick}
-              className="p-2 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
-              title="Projects"
-            >
-              <Folder size={16} />
-            </button>
-          )}
-          
           {onAgentsClick && (
             <button
               onClick={onAgentsClick}
