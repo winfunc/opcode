@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Settings, Users, Menu, Minus, Square, X, Bot, BarChart3, FileText, Network, Info, Folder } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Settings, Users, Menu, Minus, Square, X, Bot, BarChart3, FileText, Network, Info, Folder, MoreVertical, ChevronDown } from 'lucide-react';
 import { useThemeContext } from '@/contexts/ThemeContext';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 
@@ -28,6 +28,19 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
 }) => {
   const { theme } = useThemeContext();
   const [isHovered, setIsHovered] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleMinimize = async () => {
     try {
@@ -128,77 +141,112 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
         <span className="text-sm font-medium text-foreground/80">{title}</span>
       </div> */}
 
-      {/* Right side - Navigation icons */}
-      <div className="flex items-center space-x-1 pr-5">
-        {onProjectsClick && (
-          <button
-            onClick={onProjectsClick}
-            className="p-2 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
-            title="Projects"
-          >
-            <Folder size={16} />
-          </button>
-        )}
-        
-        {onAgentsClick && (
-          <button
-            onClick={onAgentsClick}
-            className="p-2 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
-            title="Agents"
-          >
-            <Bot size={16} />
-          </button>
-        )}
-        
-        {onUsageClick && (
-          <button
-            onClick={onUsageClick}
-            className="p-2 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
-            title="Usage Dashboard"
-          >
-            <BarChart3 size={16} />
-          </button>
-        )}
-        
-        {onClaudeClick && (
-          <button
-            onClick={onClaudeClick}
-            className="p-2 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
-            title="CLAUDE.md"
-          >
-            <FileText size={16} />
-          </button>
-        )}
-        
-        {onMCPClick && (
-          <button
-            onClick={onMCPClick}
-            className="p-2 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
-            title="MCP"
-          >
-            <Network size={16} />
-          </button>
-        )}
-        
-        {onSettingsClick && (
-          <button
-            onClick={onSettingsClick}
-            className="p-2 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
-            title="Settings"
-          >
-            <Settings size={16} />
-          </button>
-        )}
-        
-        {onInfoClick && (
-          <button
-            onClick={onInfoClick}
-            className="p-2 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
-            title="About"
-          >
-            <Info size={16} />
-          </button>
-        )}
+      {/* Right side - Navigation icons with improved spacing */}
+      <div className="flex items-center pr-5 gap-3">
+        {/* Primary actions group */}
+        <div className="flex items-center gap-1">
+          {onProjectsClick && (
+            <button
+              onClick={onProjectsClick}
+              className="p-2 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
+              title="Projects"
+            >
+              <Folder size={16} />
+            </button>
+          )}
+          
+          {onAgentsClick && (
+            <button
+              onClick={onAgentsClick}
+              className="p-2 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
+              title="Agents"
+            >
+              <Bot size={16} />
+            </button>
+          )}
+          
+          {onUsageClick && (
+            <button
+              onClick={onUsageClick}
+              className="p-2 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
+              title="Usage Dashboard"
+            >
+              <BarChart3 size={16} />
+            </button>
+          )}
+        </div>
+
+        {/* Visual separator */}
+        <div className="w-px h-5 bg-border/50" />
+
+        {/* Secondary actions group */}
+        <div className="flex items-center gap-1">
+          {onSettingsClick && (
+            <button
+              onClick={onSettingsClick}
+              className="p-2 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
+              title="Settings"
+            >
+              <Settings size={16} />
+            </button>
+          )}
+
+          {/* Dropdown menu for additional options */}
+          <div className="relative" ref={dropdownRef}>
+            <button
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              className="p-2 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors flex items-center gap-1"
+              title="More options"
+            >
+              <MoreVertical size={16} />
+            </button>
+
+            {isDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-48 bg-popover border border-border rounded-lg shadow-lg z-50">
+                <div className="py-1">
+                  {onClaudeClick && (
+                    <button
+                      onClick={() => {
+                        onClaudeClick();
+                        setIsDropdownOpen(false);
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground transition-colors flex items-center gap-3"
+                    >
+                      <FileText size={14} />
+                      <span>CLAUDE.md</span>
+                    </button>
+                  )}
+                  
+                  {onMCPClick && (
+                    <button
+                      onClick={() => {
+                        onMCPClick();
+                        setIsDropdownOpen(false);
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground transition-colors flex items-center gap-3"
+                    >
+                      <Network size={14} />
+                      <span>MCP Servers</span>
+                    </button>
+                  )}
+                  
+                  {onInfoClick && (
+                    <button
+                      onClick={() => {
+                        onInfoClick();
+                        setIsDropdownOpen(false);
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground transition-colors flex items-center gap-3"
+                    >
+                      <Info size={14} />
+                      <span>About</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
