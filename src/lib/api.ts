@@ -29,6 +29,8 @@ export interface Project {
   sessions: string[];
   /** Unix timestamp when the project directory was created */
   created_at: number;
+  /** Unix timestamp of the most recent session (if any) */
+  most_recent_session?: number;
 }
 
 /**
@@ -445,6 +447,19 @@ export interface ImportServerResult {
  */
 export const api = {
   /**
+   * Gets the user's home directory path
+   * @returns Promise resolving to the home directory path
+   */
+  async getHomeDirectory(): Promise<string> {
+    try {
+      return await invoke<string>("get_home_directory");
+    } catch (error) {
+      console.error("Failed to get home directory:", error);
+      return "/";
+    }
+  },
+
+  /**
    * Lists all projects in the ~/.claude/projects directory
    * @returns Promise resolving to an array of projects
    */
@@ -453,6 +468,20 @@ export const api = {
       return await invoke<Project[]>("list_projects");
     } catch (error) {
       console.error("Failed to list projects:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Creates a new project for the given directory path
+   * @param path - The directory path to create a project for
+   * @returns Promise resolving to the created project
+   */
+  async createProject(path: string): Promise<Project> {
+    try {
+      return await invoke<Project>('create_project', { path });
+    } catch (error) {
+      console.error("Failed to create project:", error);
       throw error;
     }
   },

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Loader2, Bot, FolderCode } from "lucide-react";
+import { Loader2, Bot, FolderCode } from "lucide-react";
 import { api, type Project, type Session, type ClaudeMdFile } from "@/lib/api";
 import { OutputCacheProvider } from "@/lib/outputCache";
 import { TabProvider } from "@/contexts/TabContext";
@@ -8,6 +8,7 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ProjectList } from "@/components/ProjectList";
+import { FilePicker } from "@/components/FilePicker";
 import { SessionList } from "@/components/SessionList";
 import { RunningClaudeSessions } from "@/components/RunningClaudeSessions";
 import { Topbar } from "@/components/Topbar";
@@ -59,6 +60,8 @@ function AppContent() {
   const [error, setError] = useState<string | null>(null);
   const [showNFO, setShowNFO] = useState(false);
   const [showClaudeBinaryDialog, setShowClaudeBinaryDialog] = useState(false);
+  const [showProjectPicker, setShowProjectPicker] = useState(false);
+  const [homeDirectory, setHomeDirectory] = useState<string>('/');
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
   const [projectForSettings, setProjectForSettings] = useState<Project | null>(null);
   const [previousView] = useState<View>("welcome");
@@ -181,6 +184,16 @@ function AppContent() {
     } finally {
       setLoading(false);
     }
+  };
+
+  /**
+   * Opens the project directory picker
+   */
+  const handleOpenProject = async () => {
+    // Get home directory before showing picker
+    const homeDir = await api.getHomeDirectory();
+    setHomeDirectory(homeDir);
+    setShowProjectPicker(true);
   };
 
   /**
@@ -309,28 +322,6 @@ function AppContent() {
         return (
           <div className="flex-1 overflow-y-auto">
             <div className="container mx-auto p-6">
-              {/* Header with back button */}
-              <motion.div
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                className="mb-6"
-              >
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleViewChange("welcome")}
-                  className="mb-4"
-                >
-                  ← Back to Home
-                </Button>
-                <div className="mb-4">
-                  <h1 className="text-3xl font-bold tracking-tight">Projects</h1>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Browse your Claude Code sessions
-                  </p>
-                </div>
-              </motion.div>
 
               {/* Error display */}
               {error && (
@@ -375,23 +366,6 @@ function AppContent() {
                       exit={{ opacity: 0, x: 20 }}
                       transition={{ duration: 0.3 }}
                     >
-                      {/* New session button at the top */}
-                      <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5 }}
-                        className="mb-4"
-                      >
-                        <Button
-                          onClick={handleNewSession}
-                          size="default"
-                          className="w-full max-w-md"
-                        >
-                          <Plus className="mr-2 h-4 w-4" />
-                          New Claude Code session
-                        </Button>
-                      </motion.div>
-
                       {/* Running Claude Sessions */}
                       <RunningClaudeSessions />
 
@@ -400,7 +374,7 @@ function AppContent() {
                         <ProjectList
                           projects={projects}
                           onProjectClick={handleProjectClick}
-                          onProjectSettings={handleProjectSettings}
+                          onOpenProject={handleOpenProject}
                           loading={loading}
                           className="animate-fade-in"
                         />
@@ -517,6 +491,32 @@ function AppContent() {
         }}
         onError={(message) => setToast({ message, type: "error" })}
       />
+
+      {/* File picker modal for selecting project directory */}
+      {showProjectPicker && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="w-full max-w-2xl h-[600px] bg-background border rounded-lg shadow-lg">
+            <FilePicker
+              basePath={homeDirectory}
+              onSelect={async (entry) => {
+                if (entry.is_directory) {
+                  // Create or open a project for this directory
+                  try {
+                    const project = await api.createProject(entry.path);
+                    setShowProjectPicker(false);
+                    await loadProjects();
+                    await handleProjectClick(project);
+                  } catch (err) {
+                    console.error('Failed to create project:', err);
+                    setError('Failed to create project for the selected directory.');
+                  }
+                }
+              }}
+              onClose={() => setShowProjectPicker(false)}
+            />
+          </div>
+        </div>
+      )}
       
       {/* Toast Container */}
       <ToastContainer>
@@ -528,6 +528,33 @@ function AppContent() {
           />
         )}
       </ToastContainer>
+
+      {/* File picker modal for selecting project directory */}
+      {showProjectPicker && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="w-full max-w-2xl h-[600px] bg-background border rounded-lg shadow-lg">
+            <FilePicker
+              basePath={homeDirectory}
+              onSelect={async (entry) => {
+                if (entry.is_directory) {
+                  // Create or open a project for this directory
+                  try {
+                    const project = await api.createProject(entry.path);
+                    setShowProjectPicker(false);
+                    await loadProjects();
+                    // Load sessions for the selected project
+                    await handleProjectClick(project);
+                  } catch (err) {
+                    console.error('Failed to create project:', err);
+                    setError('Failed to create project for the selected directory.');
+                  }
+                }
+              }}
+              onClose={() => setShowProjectPicker(false)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

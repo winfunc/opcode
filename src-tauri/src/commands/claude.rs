@@ -5,7 +5,7 @@ use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 use std::process::Stdio;
 use std::sync::Arc;
-use std::time::SystemTime;
+use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Emitter, Manager};
 use tokio::process::{Child, Command};
 use tokio::sync::Mutex;
@@ -35,6 +35,8 @@ pub struct Project {
     pub sessions: Vec<String>,
     /// Unix timestamp when the project directory was created
     pub created_at: u64,
+    /// Unix timestamp of the most recent session (if any)
+    pub most_recent_session: Option<u64>,
 }
 
 /// Represents a session with its metadata
@@ -284,6 +286,24 @@ fn create_system_command(
     cmd
 }
 
+/// Gets the user's home directory path
+#[tauri::command]
+pub async fn get_home_directory() -> Result<String, String> {
+    dirs::home_dir()
+        .and_then(|path| path.to_str().map(|s| s.to_string()))
+        .ok_or_else(|| "Could not determine home directory".to_string())
+}
+
+/// Opens native folder picker and returns selected path
+#[tauri::command]
+pub async fn pick_folder() -> Result<Option<String>, String> {
+    use tauri_plugin_dialog::DialogExt;
+    
+    // Note: This requires the dialog plugin to be initialized in main.rs
+    // The actual dialog will be shown from the frontend using the plugin
+    Ok(None)
+}
+
 /// Lists all projects in the ~/.claude/projects directory
 #[tauri::command]
 pub async fn list_projects() -> Result<Vec<Project>, String> {
@@ -336,6 +356,8 @@ pub async fn list_projects() -> Result<Vec<Project>, String> {
 
             // List all JSONL files (sessions) in this project directory
             let mut sessions = Vec::new();
+            let mut most_recent_session: Option<u64> = None;
+            
             if let Ok(session_entries) = fs::read_dir(&path) {
                 for session_entry in session_entries.flatten() {
                     let session_path = session_entry.path();
@@ -345,6 +367,21 @@ pub async fn list_projects() -> Result<Vec<Project>, String> {
                         if let Some(session_id) = session_path.file_stem().and_then(|s| s.to_str())
                         {
                             sessions.push(session_id.to_string());
+                            
+                            // Track the most recent session timestamp
+                            if let Ok(metadata) = fs::metadata(&session_path) {
+                                let modified = metadata
+                                    .modified()
+                                    .unwrap_or(SystemTime::UNIX_EPOCH)
+                                    .duration_since(UNIX_EPOCH)
+                                    .unwrap_or_default()
+                                    .as_secs();
+                                
+                                most_recent_session = Some(match most_recent_session {
+                                    Some(current) => current.max(modified),
+                                    None => modified,
+                                });
+                            }
                         }
                     }
                 }
@@ -355,15 +392,71 @@ pub async fn list_projects() -> Result<Vec<Project>, String> {
                 path: project_path,
                 sessions,
                 created_at,
+                most_recent_session,
             });
         }
     }
 
-    // Sort projects by creation time (newest first)
-    projects.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+    // Sort projects by most recent session activity, then by creation time
+    projects.sort_by(|a, b| {
+        // First compare by most recent session
+        match (a.most_recent_session, b.most_recent_session) {
+            (Some(a_time), Some(b_time)) => b_time.cmp(&a_time),
+            (Some(_), None) => std::cmp::Ordering::Less,
+            (None, Some(_)) => std::cmp::Ordering::Greater,
+            (None, None) => b.created_at.cmp(&a.created_at),
+        }
+    });
 
     log::info!("Found {} projects", projects.len());
     Ok(projects)
+}
+
+/// Creates a new project for the given directory path
+#[tauri::command]
+pub async fn create_project(path: String) -> Result<Project, String> {
+    log::info!("Creating project for path: {}", path);
+    
+    // Encode the path to create a project ID
+    let project_id = path.replace('/', "-");
+    
+    // Get claude directory
+    let claude_dir = get_claude_dir().map_err(|e| e.to_string())?;
+    let projects_dir = claude_dir.join("projects");
+    
+    // Create projects directory if it doesn't exist
+    if !projects_dir.exists() {
+        fs::create_dir_all(&projects_dir)
+            .map_err(|e| format!("Failed to create projects directory: {}", e))?;
+    }
+    
+    // Create project directory if it doesn't exist
+    let project_dir = projects_dir.join(&project_id);
+    if !project_dir.exists() {
+        fs::create_dir_all(&project_dir)
+            .map_err(|e| format!("Failed to create project directory: {}", e))?;
+    }
+    
+    // Get creation time
+    let metadata = fs::metadata(&project_dir)
+        .map_err(|e| format!("Failed to read directory metadata: {}", e))?;
+    
+    let created_at = metadata
+        .created()
+        .or_else(|_| metadata.modified())
+        .unwrap_or(SystemTime::UNIX_EPOCH)
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+    
+    // Return the created project
+    Ok(Project {
+        id: project_id,
+        path,
+        sessions: Vec::new(),
+        created_at,
+        most_recent_session: None,
+    })
 }
 
 /// Gets sessions for a specific project

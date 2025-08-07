@@ -1,34 +1,13 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { 
-  FolderOpen, 
-  Calendar, 
-  FileText, 
-  ChevronRight, 
-  Settings,
-  MoreVertical,
-  Clock,
-  Activity
+  FolderOpen,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import type { Project } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import { formatTimeAgo } from "@/lib/date-utils";
-import { Pagination } from "@/components/ui/pagination";
 
 interface ProjectListProps {
   /**
@@ -40,9 +19,9 @@ interface ProjectListProps {
    */
   onProjectClick: (project: Project) => void;
   /**
-   * Callback when hooks configuration is clicked
+   * Callback when open project is clicked
    */
-  onProjectSettings?: (project: Project) => void;
+  onOpenProject?: () => void | Promise<void>;
   /**
    * Whether the list is currently loading
    */
@@ -53,8 +32,6 @@ interface ProjectListProps {
   className?: string;
 }
 
-const ITEMS_PER_PAGE = 12;
-
 /**
  * Extracts the project name from the full path
  */
@@ -64,10 +41,12 @@ const getProjectName = (path: string): string => {
 };
 
 /**
- * Formats path to be more readable
+ * Formats path to be more readable - shows full path relative to home
+ * Truncates long paths with ellipsis in the middle
  */
-const getDisplayPath = (path: string): string => {
+const getDisplayPath = (path: string, maxLength: number = 30): string => {
   // Try to make path home-relative
+  let displayPath = path;
   const homeIndicators = ['/Users/', '/home/'];
   for (const indicator of homeIndicators) {
     if (path.includes(indicator)) {
@@ -76,166 +55,172 @@ const getDisplayPath = (path: string): string => {
         i > 0 && parts[i - 1] === indicator.split('/')[1]
       );
       if (userIndex > 0) {
-        return '~/' + parts.slice(userIndex + 1).join('/');
+        const relativePath = parts.slice(userIndex + 1).join('/');
+        displayPath = `~/${relativePath}`;
+        break;
       }
     }
   }
   
-  // Fallback to showing last 2-3 segments for very long paths
-  const parts = path.split('/').filter(Boolean);
-  if (parts.length > 3) {
-    return '.../' + parts.slice(-2).join('/');
+  // Truncate if too long
+  if (displayPath.length > maxLength) {
+    const start = displayPath.substring(0, Math.floor(maxLength / 2) - 2);
+    const end = displayPath.substring(displayPath.length - Math.floor(maxLength / 2) + 2);
+    return `${start}...${end}`;
   }
   
-  return path;
+  return displayPath;
 };
 
 /**
- * ProjectList component - Displays a paginated list of projects with hover animations
+ * ProjectList component - Displays recent projects in a Cursor-like interface
  * 
  * @example
  * <ProjectList
  *   projects={projects}
  *   onProjectClick={(project) => console.log('Selected:', project)}
+ *   onOpenProject={() => console.log('Open project')}
  * />
  */
 export const ProjectList: React.FC<ProjectListProps> = ({
   projects,
   onProjectClick,
-  onProjectSettings,
+  onOpenProject,
   className,
 }) => {
+  const [showAll, setShowAll] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   
-  // Calculate pagination
-  const totalPages = Math.ceil(projects.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const endIndex = startIndex + ITEMS_PER_PAGE;
-  const currentProjects = projects.slice(startIndex, endIndex);
+  // Determine how many projects to show
+  const projectsPerPage = showAll ? 10 : 5;
+  const totalPages = Math.ceil(projects.length / projectsPerPage);
   
-  // Reset to page 1 if projects change
-  React.useEffect(() => {
+  // Calculate which projects to display
+  const startIndex = showAll ? (currentPage - 1) * projectsPerPage : 0;
+  const endIndex = startIndex + projectsPerPage;
+  const displayedProjects = projects.slice(startIndex, endIndex);
+  
+  const handleViewAll = () => {
+    setShowAll(true);
     setCurrentPage(1);
-  }, [projects.length]);
+  };
   
-  // Get the most recent session for each project
-  const getRecentActivity = (project: Project) => {
-    if (project.sessions.length === 0) return null;
-    // Assuming sessions are sorted by date, get the most recent one
-    return project.sessions[0];
+  const handleViewLess = () => {
+    setShowAll(false);
+    setCurrentPage(1);
   };
 
   return (
-    <TooltipProvider>
-      <div className={cn("space-y-4", className)}>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3">
-          {currentProjects.map((project, index) => {
-            const recentSession = getRecentActivity(project);
-            const hasActivity = project.sessions.length > 0;
-            
-            return (
+    <div className={cn("flex flex-col items-center justify-center min-h-[60vh] max-w-2xl mx-auto px-4", className)}>
+      {/* Logo and title section */}
+      <div className="text-center mb-8">
+        <div className="flex items-center justify-center gap-3 mb-2">
+          <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
+            <FolderOpen className="h-6 w-6 text-primary" />
+          </div>
+          <h1 className="text-2xl font-semibold">Claudia</h1>
+        </div>
+      </div>
+
+      {/* Action button */}
+      <div className="mb-12">
+        <Button
+          onClick={onOpenProject}
+          variant="outline"
+          className="flex flex-col items-center gap-2 h-auto py-4 px-8 min-w-[160px]"
+        >
+          <FolderOpen className="h-5 w-5" />
+          <span className="text-sm">Open project</span>
+        </Button>
+      </div>
+
+      {/* Recent projects section */}
+      {displayedProjects.length > 0 && (
+        <div className="w-full">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-medium text-muted-foreground">Recent projects</h2>
+            {!showAll ? (
+              <button 
+                onClick={handleViewAll}
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                View all ({projects.length})
+              </button>
+            ) : (
+              <button 
+                onClick={handleViewLess}
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                View less
+              </button>
+            )}
+          </div>
+          
+          <div className="space-y-1">
+            {displayedProjects.map((project, index) => (
               <motion.div
                 key={project.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
                 transition={{
-                  duration: 0.3,
-                  delay: index * 0.05,
-                  ease: [0.4, 0, 0.2, 1],
+                  duration: 0.2,
+                  delay: index * 0.03,
                 }}
+                className="group"
               >
-                <Card
-                  className={cn(
-                    "p-3 hover:bg-accent/50 transition-all duration-200 cursor-pointer group h-full"
-                  )}
+                <button
                   onClick={() => onProjectClick(project)}
+                  className="w-full text-left px-3 py-2 rounded-md hover:bg-accent/50 transition-colors flex items-center justify-between"
                 >
-                  <div className="flex flex-col h-full">
-                    <div className="flex-1">
-                      {/* Project header */}
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                          <FolderOpen className="h-4 w-4 text-primary shrink-0" />
-                          <h3 className="font-medium text-sm truncate">
-                            {getProjectName(project.path)}
-                          </h3>
-                        </div>
-                        {project.sessions.length > 0 && (
-                          <Badge 
-                            variant={project.sessions.length > 5 ? "default" : "secondary"} 
-                            className="text-xs px-1.5 py-0 h-5"
-                          >
-                            {project.sessions.length}
-                          </Badge>
-                        )}
-                      </div>
-                      
-                      {/* Path display */}
-                      <p className="text-xs text-muted-foreground font-mono truncate mb-2">
-                        {getDisplayPath(project.path)}
-                      </p>
-
-                      {/* Activity indicator */}
-                      {hasActivity && recentSession && (
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
-                          <Activity className="h-3 w-3" />
-                          <span className="truncate">
-                            {recentSession.first_message 
-                              ? recentSession.first_message.slice(0, 40) + '...'
-                              : 'Active session'}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    
-                    {/* Footer */}
-                    <div className="flex items-center justify-between pt-2 border-t">
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Clock className="h-3 w-3" />
-                        <span>{formatTimeAgo(project.created_at * 1000)}</span>
-                      </div>
-                      
-                      <div className="flex items-center gap-1">
-                        {onProjectSettings && (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                              >
-                                <MoreVertical className="h-3 w-3" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onProjectSettings(project);
-                                }}
-                              >
-                                <Settings className="h-3 w-3 mr-2" />
-                                Hooks
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        )}
-                        <ChevronRight className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </div>
-                    </div>
-                  </div>
-                </Card>
+                  <span className="text-sm font-medium">
+                    {getProjectName(project.path)}
+                  </span>
+                  <span className="text-xs text-muted-foreground font-mono text-right" style={{ minWidth: '200px' }}>
+                    {getDisplayPath(project.path, 35)}
+                  </span>
+                </button>
               </motion.div>
-            );
-          })}
+            ))}
+          </div>
+          
+          {/* Pagination controls */}
+          {showAll && totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 mt-6">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <Button
+                    key={page}
+                    variant={currentPage === page ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setCurrentPage(page)}
+                    className="w-8 h-8 p-0"
+                  >
+                    {page}
+                  </Button>
+                ))}
+              </div>
+              
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </div>
-        
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={setCurrentPage}
-        />
-      </div>
-    </TooltipProvider>
+      )}
+    </div>
   );
 }; 

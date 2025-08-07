@@ -80,6 +80,32 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
       setLoading(false);
     }
   };
+
+  const handleOpenProject = async () => {
+    console.log('handleOpenProject called');
+    try {
+      // Use native dialog to pick folder
+      const { open } = await import('@tauri-apps/plugin-dialog');
+      const selected = await open({
+        directory: true,
+        multiple: false,
+        title: 'Select Project Folder',
+        defaultPath: await api.getHomeDirectory(),
+      });
+      
+      console.log('Selected folder:', selected);
+      
+      if (selected && typeof selected === 'string') {
+        // Create or open project for the selected directory
+        const project = await api.createProject(selected);
+        await loadProjects();
+        await handleProjectClick(project);
+      }
+    } catch (err) {
+      console.error('Failed to open folder picker:', err);
+      setError('Failed to open folder picker');
+    }
+  };
   
   const handleNewSession = () => {
     // Update current tab to show new chat session instead of creating a new tab
@@ -112,9 +138,9 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
         return (
           <div className="h-full overflow-y-auto">
             <div className="max-w-6xl mx-auto p-6">
-              {/* Header */}
-              <div className="mb-6">
-                {selectedProject && (
+              {/* Header for selected project only */}
+              {selectedProject && (
+                <div className="mb-6">
                   <Button
                     variant="ghost"
                     size="sm"
@@ -130,28 +156,25 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
                   >
                     ← Back to Projects
                   </Button>
-                )}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h1 className="text-3xl font-bold tracking-tight">
-                      {selectedProject ? selectedProject.path.split('/').pop() : 'Projects'}
-                    </h1>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {selectedProject 
-                        ? `${sessions.length} session${sessions.length !== 1 ? 's' : ''}`
-                        : 'Browse your Claude Code sessions'
-                      }
-                    </p>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h1 className="text-3xl font-bold tracking-tight">
+                        {selectedProject.path.split('/').pop()}
+                      </h1>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {`${sessions.length} session${sessions.length !== 1 ? 's' : ''}`}
+                      </p>
+                    </div>
+                    <Button
+                      onClick={handleNewSession}
+                      size="default"
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      New session
+                    </Button>
                   </div>
-                  <Button
-                    onClick={handleNewSession}
-                    size="default"
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    New session
-                  </Button>
                 </div>
-              </div>
+              )}
 
               {/* Error display */}
               {error && (
@@ -215,24 +238,13 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
                       <RunningClaudeSessions />
 
                       {/* Project list */}
-                      {projects.length > 0 ? (
-                        <ProjectList
-                          projects={projects}
-                          onProjectClick={handleProjectClick}
-                          onProjectSettings={(project) => {
-                            // Project settings functionality can be added here if needed
-                            console.log('Project settings clicked for:', project);
-                          }}
-                          loading={loading}
-                          className="animate-fade-in"
-                        />
-                      ) : (
-                        <div className="py-8 text-center">
-                          <p className="text-sm text-muted-foreground">
-                            No projects found in ~/.claude/projects
-                          </p>
-                        </div>
-                      )}
+                      <ProjectList
+                        projects={projects}
+                        onProjectClick={handleProjectClick}
+                        onOpenProject={handleOpenProject}
+                        loading={loading}
+                        className="animate-fade-in"
+                      />
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -330,23 +342,26 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
-      transition={{ duration: 0.2 }}
-      className={`h-full w-full ${panelVisibilityClass}`}
-    >
-      <Suspense
-        fallback={
-          <div className="flex items-center justify-center h-full">
-            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-          </div>
-        }
+    <>
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -10 }}
+        transition={{ duration: 0.2 }}
+        className={`h-full w-full ${panelVisibilityClass}`}
       >
-        {renderContent()}
-      </Suspense>
-    </motion.div>
+        <Suspense
+          fallback={
+            <div className="flex items-center justify-center h-full">
+              <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            </div>
+          }
+        >
+          {renderContent()}
+        </Suspense>
+      </motion.div>
+
+    </>
   );
 };
 
