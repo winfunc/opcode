@@ -1216,43 +1216,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     </div>
   );
 
-  const projectPathInput = !session && (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ delay: 0.1 }}
-      className="p-4 border-b border-border flex-shrink-0"
-    >
-      <Label htmlFor="project-path" className="text-sm font-medium">
-        Project Directory
-      </Label>
-      <div className="flex items-center gap-2 mt-1">
-        <Input
-          id="project-path"
-          value={projectPath}
-          onChange={(e) => {
-            const newPath = e.target.value;
-            setProjectPath(newPath);
-            // Call the callback to update tab title
-            if (onProjectPathChange && newPath) {
-              onProjectPathChange(newPath);
-            }
-          }}
-          placeholder="/path/to/your/project"
-          className="flex-1"
-          disabled={isLoading}
-        />
-        <Button
-          onClick={handleSelectPath}
-          size="icon"
-          variant="outline"
-          disabled={isLoading}
-        >
-          <FolderOpen className="h-4 w-4" />
-        </Button>
-      </div>
-    </motion.div>
-  );
+  const projectPathInput = null; // Removed project path display
 
   // If preview is maximized, render only the WebviewPreview in full screen
   if (showPreview && isPreviewMaximized) {

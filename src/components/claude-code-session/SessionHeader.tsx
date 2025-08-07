@@ -73,12 +73,6 @@ export const SessionHeader: React.FC<SessionHeaderProps> = React.memo(({
             <span className="font-semibold">Claude Code Session</span>
           </div>
 
-          {projectPath && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <FolderOpen className="h-4 w-4" />
-              <span className="font-mono max-w-md truncate">{projectPath}</span>
-            </div>
-          )}
           
           {!projectPath && (
             <Button

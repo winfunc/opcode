@@ -139,6 +139,7 @@ export const TabManager: React.FC<TabManagerProps> = ({ className }) => {
     tabs,
     activeTabId,
     createChatTab,
+    createProjectsTab,
     closeTab,
     switchToTab,
     canAddTab
@@ -171,8 +172,8 @@ export const TabManager: React.FC<TabManagerProps> = ({ className }) => {
   // Listen for keyboard shortcut events
   useEffect(() => {
     const handleCreateTab = () => {
-      createChatTab();
-      trackEvent.tabCreated('chat');
+      createProjectsTab();
+      trackEvent.tabCreated('projects');
     };
 
     const handleCloseTab = async () => {
@@ -280,8 +281,8 @@ export const TabManager: React.FC<TabManagerProps> = ({ className }) => {
 
   const handleNewTab = () => {
     if (canAddTab()) {
-      createChatTab();
-      trackEvent.tabCreated('chat');
+      createProjectsTab();
+      trackEvent.tabCreated('projects');
     }
   };
 
@@ -367,7 +368,7 @@ export const TabManager: React.FC<TabManagerProps> = ({ className }) => {
                 ? "hover:bg-muted/60 text-muted-foreground hover:text-foreground"
                 : "opacity-50 cursor-not-allowed text-muted-foreground"
             )}
-            title={canAddTab() ? "New tab (Ctrl+T)" : "Maximum tabs reached"}
+            title={canAddTab() ? "New project (Ctrl+T)" : "Maximum tabs reached"}
           >
             <Plus className="w-4 h-4" />
           </button>
