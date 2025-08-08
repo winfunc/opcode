@@ -1,5 +1,38 @@
 @import "tailwindcss";
 
+/* Tauri Transparent Window with Rounded Corners - Official Approach */
+html, body {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  /* Transparent background for window transparency */
+  background-color: rgba(0, 0, 0, 0);
+}
+
+/* Apply rounded corners and background to body */
+body {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background-color: var(--color-background);
+}
+
+#root {
+  height: 100%;
+  width: 100%;
+  /* Ensure root also clips fixed-position descendants */
+  border-radius: inherit;
+  overflow: hidden;
+}
+
+/* Ensure the viewport itself clips fixed-position elements */
+html {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  /* Robust clipping for fixed descendants and backdrop filters */
+  clip-path: inset(0 round var(--radius-lg));
+}
+
 /* Inter Font - Local */
 @font-face {
   font-family: 'Inter';

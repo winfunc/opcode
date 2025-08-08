@@ -248,51 +248,79 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
       
       case 'chat':
         return (
-          <ClaudeCodeSession
-            session={tab.sessionData} // Pass the full session object if available
-            initialProjectPath={tab.initialProjectPath || tab.sessionId}
-            onBack={() => {
-              // Go back to projects view in the same tab
-              updateTab(tab.id, {
-                type: 'projects',
-                title: 'Projects',
-              });
-            }}
-            onProjectPathChange={(path: string) => {
-              // Update tab title with directory name
-              const dirName = path.split('/').pop() || path.split('\\').pop() || 'Session';
-              updateTab(tab.id, {
-                title: dirName
-              });
-            }}
-          />
+          <div className="h-full">
+            <ClaudeCodeSession
+              session={tab.sessionData} // Pass the full session object if available
+              initialProjectPath={tab.initialProjectPath || tab.sessionId}
+              onBack={() => {
+                // Go back to projects view in the same tab
+                updateTab(tab.id, {
+                  type: 'projects',
+                  title: 'Projects',
+                });
+              }}
+              onProjectPathChange={(path: string) => {
+                // Update tab title with directory name
+                const dirName = path.split('/').pop() || path.split('\\').pop() || 'Session';
+                updateTab(tab.id, {
+                  title: dirName
+                });
+              }}
+            />
+          </div>
         );
       
       case 'agent':
         if (!tab.agentRunId) {
-          return <div className="p-4">No agent run ID specified</div>;
+          return (
+            <div className="h-full">
+              <div className="p-4">No agent run ID specified</div>
+            </div>
+          );
         }
         return (
-          <AgentRunOutputViewer
-            agentRunId={tab.agentRunId}
-            tabId={tab.id}
-          />
+          <div className="h-full">
+            <AgentRunOutputViewer
+              agentRunId={tab.agentRunId}
+              tabId={tab.id}
+            />
+          </div>
         );
       
       case 'agents':
-        return <Agents />;
+        return (
+          <div className="h-full">
+            <Agents />
+          </div>
+        );
       
       case 'usage':
-        return <UsageDashboard onBack={() => {}} />;
+        return (
+          <div className="h-full">
+            <UsageDashboard onBack={() => {}} />
+          </div>
+        );
       
       case 'mcp':
-        return <MCPManager onBack={() => {}} />;
+        return (
+          <div className="h-full">
+            <MCPManager onBack={() => {}} />
+          </div>
+        );
       
       case 'settings':
-        return <Settings onBack={() => {}} />;
+        return (
+          <div className="h-full">
+            <Settings onBack={() => {}} />
+          </div>
+        );
       
       case 'claude-md':
-        return <MarkdownEditor onBack={() => {}} />;
+        return (
+          <div className="h-full">
+            <MarkdownEditor onBack={() => {}} />
+          </div>
+        );
       
       case 'claude-file':
         if (!tab.claudeFileId) {
@@ -331,10 +359,18 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
       
       case 'import-agent':
         // TODO: Implement import agent component
-        return <div className="p-4">Import agent functionality coming soon...</div>;
+        return (
+          <div className="h-full">
+            <div className="p-4">Import agent functionality coming soon...</div>
+          </div>
+        );
       
       default:
-        return <div className="p-4">Unknown tab type: {tab.type}</div>;
+        return (
+          <div className="h-full">
+            <div className="p-4">Unknown tab type: {tab.type}</div>
+          </div>
+        );
     }
   };
 
@@ -467,7 +503,7 @@ export const TabContent: React.FC = () => {
   }, [createChatTab, findTabBySessionId, createClaudeFileTab, createAgentExecutionTab, createCreateAgentTab, createImportAgentTab, closeTab, updateTab]);
   
   return (
-    <div className="flex-1 h-full relative" style={{ borderBottomLeftRadius: '12px', borderBottomRightRadius: '12px', overflow: 'hidden' }}>
+    <div className="flex-1 h-full relative">
       <AnimatePresence mode="wait">
         {tabs.map((tab) => (
           <TabPanel

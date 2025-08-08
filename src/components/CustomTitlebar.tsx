@@ -75,8 +75,11 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
   return (
     <TooltipProvider>
     <div 
-      className="h-11 bg-background flex items-center justify-between select-none border-b border-border/50"
-      style={{ borderTopLeftRadius: '12px', borderTopRightRadius: '12px' }}
+      className="relative z-[200] h-11 bg-background/95 backdrop-blur-sm flex items-center justify-between select-none border-b border-border/50"
+      style={{ 
+        WebkitAppRegion: 'drag',
+        userSelect: 'none'
+      }}
       data-tauri-drag-region
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -90,7 +93,8 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
               e.stopPropagation();
               handleClose();
             }}
-            className="group relative w-3 h-3 rounded-full bg-red-500 hover:bg-red-600 transition-all duration-200 flex items-center justify-center z-10"
+            className="group relative w-3 h-3 rounded-full bg-red-500 hover:bg-red-600 transition-all duration-200 flex items-center justify-center"
+            style={{ WebkitAppRegion: 'no-drag' }}
             title="Close"
           >
             {isHovered && (
@@ -104,7 +108,8 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
               e.stopPropagation();
               handleMinimize();
             }}
-            className="group relative w-3 h-3 rounded-full bg-yellow-500 hover:bg-yellow-600 transition-all duration-200 flex items-center justify-center z-10"
+            className="group relative w-3 h-3 rounded-full bg-yellow-500 hover:bg-yellow-600 transition-all duration-200 flex items-center justify-center"
+            style={{ WebkitAppRegion: 'no-drag' }}
             title="Minimize"
           >
             {isHovered && (
@@ -118,7 +123,8 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
               e.stopPropagation();
               handleMaximize();
             }}
-            className="group relative w-3 h-3 rounded-full bg-green-500 hover:bg-green-600 transition-all duration-200 flex items-center justify-center z-10"
+            className="group relative w-3 h-3 rounded-full bg-green-500 hover:bg-green-600 transition-all duration-200 flex items-center justify-center"
+            style={{ WebkitAppRegion: 'no-drag' }}
             title="Maximize"
           >
             {isHovered && (
@@ -137,7 +143,7 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
       </div> */}
 
       {/* Right side - Navigation icons with improved spacing */}
-      <div className="flex items-center pr-5 gap-3">
+      <div className="flex items-center pr-5 gap-3" style={{ WebkitAppRegion: 'no-drag' }}>
         {/* Primary actions group */}
         <div className="flex items-center gap-1">
           {onAgentsClick && (
@@ -147,6 +153,7 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
                 whileTap={{ scale: 0.97 }}
                 transition={{ duration: 0.15 }}
                 className="p-2 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
+                style={{ WebkitAppRegion: 'no-drag' }}
               >
                 <Bot size={16} />
               </motion.button>
@@ -160,6 +167,7 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
                 whileTap={{ scale: 0.97 }}
                 transition={{ duration: 0.15 }}
                 className="p-2 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
+                style={{ WebkitAppRegion: 'no-drag' }}
               >
                 <BarChart3 size={16} />
               </motion.button>
@@ -179,6 +187,7 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
                 whileTap={{ scale: 0.97 }}
                 transition={{ duration: 0.15 }}
                 className="p-2 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
+                style={{ WebkitAppRegion: 'no-drag' }}
               >
                 <Settings size={16} />
               </motion.button>
@@ -199,7 +208,7 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
             </TooltipSimple>
 
             {isDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-48 bg-popover border border-border rounded-lg shadow-lg z-50">
+              <div className="absolute right-0 mt-2 w-48 bg-popover border border-border rounded-lg shadow-lg z-[250]">
                 <div className="py-1">
                   {onClaudeClick && (
                     <button
