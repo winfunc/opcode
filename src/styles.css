@@ -37,25 +37,25 @@
 /* Dark theme configuration */
 @theme {
   /* Colors */
-  --color-background: oklch(0.12 0.01 240);
-  --color-foreground: oklch(0.98 0.01 240);
+  --color-background: oklch(0.10 0.01 240);
+  --color-foreground: oklch(0.95 0.01 240);
   --color-card: oklch(0.14 0.01 240);
-  --color-card-foreground: oklch(0.98 0.01 240);
-  --color-popover: oklch(0.12 0.01 240);
-  --color-popover-foreground: oklch(0.98 0.01 240);
-  --color-primary: oklch(0.98 0.01 240);
-  --color-primary-foreground: oklch(0.17 0.01 240);
-  --color-secondary: oklch(0.16 0.01 240);
-  --color-secondary-foreground: oklch(0.98 0.01 240);
+  --color-card-foreground: oklch(0.95 0.01 240);
+  --color-popover: oklch(0.13 0.01 240);
+  --color-popover-foreground: oklch(0.95 0.01 240);
+  --color-primary: oklch(0.95 0.01 240);
+  --color-primary-foreground: oklch(0.14 0.01 240);
+  --color-secondary: oklch(0.18 0.01 240);
+  --color-secondary-foreground: oklch(0.95 0.01 240);
   --color-muted: oklch(0.16 0.01 240);
-  --color-muted-foreground: oklch(0.68 0.01 240);
-  --color-accent: oklch(0.16 0.01 240);
-  --color-accent-foreground: oklch(0.98 0.01 240);
+  --color-muted-foreground: oklch(0.65 0.01 240);
+  --color-accent: oklch(0.18 0.01 240);
+  --color-accent-foreground: oklch(0.95 0.01 240);
   --color-destructive: oklch(0.6 0.2 25);
   --color-destructive-foreground: oklch(0.98 0.01 240);
-  --color-border: oklch(0.16 0.01 240);
-  --color-input: oklch(0.16 0.01 240);
-  --color-ring: oklch(0.52 0.015 240);
+  --color-border: oklch(0.20 0.01 240);
+  --color-input: oklch(0.20 0.01 240);
+  --color-ring: oklch(0.50 0.015 240);
   
   /* Additional colors for status messages */
   --color-green-500: oklch(0.72 0.20 142);
@@ -109,25 +109,25 @@
 
 /* Gray Theme */
 .theme-gray {
-  --color-background: oklch(0.22 0.01 240);
-  --color-foreground: oklch(0.98 0.01 240);
-  --color-card: oklch(0.26 0.01 240);
-  --color-card-foreground: oklch(0.98 0.01 240);
-  --color-popover: oklch(0.22 0.01 240);
-  --color-popover-foreground: oklch(0.98 0.01 240);
-  --color-primary: oklch(0.98 0.01 240);
-  --color-primary-foreground: oklch(0.22 0.01 240);
-  --color-secondary: oklch(0.30 0.01 240);
-  --color-secondary-foreground: oklch(0.98 0.01 240);
-  --color-muted: oklch(0.30 0.01 240);
-  --color-muted-foreground: oklch(0.70 0.01 240);
-  --color-accent: oklch(0.30 0.01 240);
-  --color-accent-foreground: oklch(0.98 0.01 240);
+  --color-background: oklch(0.18 0.01 240);
+  --color-foreground: oklch(0.95 0.01 240);
+  --color-card: oklch(0.23 0.01 240);
+  --color-card-foreground: oklch(0.95 0.01 240);
+  --color-popover: oklch(0.21 0.01 240);
+  --color-popover-foreground: oklch(0.95 0.01 240);
+  --color-primary: oklch(0.95 0.01 240);
+  --color-primary-foreground: oklch(0.23 0.01 240);
+  --color-secondary: oklch(0.27 0.01 240);
+  --color-secondary-foreground: oklch(0.95 0.01 240);
+  --color-muted: oklch(0.27 0.01 240);
+  --color-muted-foreground: oklch(0.65 0.01 240);
+  --color-accent: oklch(0.27 0.01 240);
+  --color-accent-foreground: oklch(0.95 0.01 240);
   --color-destructive: oklch(0.6 0.2 25);
   --color-destructive-foreground: oklch(0.98 0.01 240);
-  --color-border: oklch(0.30 0.01 240);
-  --color-input: oklch(0.30 0.01 240);
-  --color-ring: oklch(0.60 0.015 240);
+  --color-border: oklch(0.32 0.01 240);
+  --color-input: oklch(0.32 0.01 240);
+  --color-ring: oklch(0.55 0.015 240);
   
   /* Additional colors for status messages */
   --color-green-500: oklch(0.72 0.20 142);
@@ -136,25 +136,25 @@
 
 /* White Theme (High Contrast Light) */
 .theme-white {
-  --color-background: oklch(1.0 0 240);
-  --color-foreground: oklch(0.0 0 240);
-  --color-card: oklch(0.98 0.01 240);
-  --color-card-foreground: oklch(0.0 0 240);
+  --color-background: oklch(0.99 0 240);
+  --color-foreground: oklch(0.10 0 240);
+  --color-card: oklch(1.0 0 240);
+  --color-card-foreground: oklch(0.10 0 240);
   --color-popover: oklch(1.0 0 240);
-  --color-popover-foreground: oklch(0.0 0 240);
-  --color-primary: oklch(0.0 0 240);
+  --color-popover-foreground: oklch(0.10 0 240);
+  --color-primary: oklch(0.10 0 240);
   --color-primary-foreground: oklch(1.0 0 240);
-  --color-secondary: oklch(0.96 0.01 240);
-  --color-secondary-foreground: oklch(0.0 0 240);
-  --color-muted: oklch(0.96 0.01 240);
-  --color-muted-foreground: oklch(0.35 0.01 240);
-  --color-accent: oklch(0.96 0.01 240);
-  --color-accent-foreground: oklch(0.0 0 240);
+  --color-secondary: oklch(0.95 0.01 240);
+  --color-secondary-foreground: oklch(0.10 0 240);
+  --color-muted: oklch(0.93 0.01 240);
+  --color-muted-foreground: oklch(0.40 0.01 240);
+  --color-accent: oklch(0.95 0.01 240);
+  --color-accent-foreground: oklch(0.10 0 240);
   --color-destructive: oklch(0.55 0.25 25);
   --color-destructive-foreground: oklch(1.0 0 240);
-  --color-border: oklch(0.85 0.01 240);
-  --color-input: oklch(0.85 0.01 240);
-  --color-ring: oklch(0.40 0.015 240);
+  --color-border: oklch(0.88 0.01 240);
+  --color-input: oklch(0.88 0.01 240);
+  --color-ring: oklch(0.45 0.015 240);
   
   /* Additional colors for status messages */
   --color-green-500: oklch(0.55 0.25 142);
