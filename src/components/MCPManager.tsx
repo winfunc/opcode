@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Network, Plus, Download, AlertCircle, Loader2 } from "lucide-react";
+import { Download, AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
@@ -26,7 +26,6 @@ interface MCPManagerProps {
  * Provides a comprehensive UI for adding, configuring, and managing MCP servers
  */
 export const MCPManager: React.FC<MCPManagerProps> = ({
-  onBack,
   className,
 }) => {
   const [activeTab, setActiveTab] = useState("servers");
@@ -97,35 +96,19 @@ export const MCPManager: React.FC<MCPManagerProps> = ({
   };
 
   return (
-    <div className={`flex flex-col h-full bg-background text-foreground ${className || ""}`}>
-      <div className="max-w-5xl mx-auto w-full flex flex-col h-full">
+    <div className="h-full overflow-y-auto">
+      <div className="max-w-6xl mx-auto flex flex-col h-full">
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          className="flex items-center justify-between p-4 border-b border-border"
-        >
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onBack}
-              className="h-8 w-8"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
+        <div className="p-6">
+          <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-semibold flex items-center gap-2">
-                <Network className="h-5 w-5 text-blue-500" />
-                MCP Servers
-              </h2>
-              <p className="text-xs text-muted-foreground">
+              <h1 className="text-3xl font-bold tracking-tight">MCP Servers</h1>
+              <p className="mt-1 text-sm text-muted-foreground">
                 Manage Model Context Protocol servers
               </p>
             </div>
           </div>
-        </motion.div>
+        </div>
 
         {/* Error Display */}
         <AnimatePresence>
@@ -134,7 +117,7 @@ export const MCPManager: React.FC<MCPManagerProps> = ({
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="mx-4 mt-4 p-3 rounded-lg bg-destructive/10 border border-destructive/50 flex items-center gap-2 text-sm text-destructive"
+              className="mx-6 mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/50 flex items-center gap-2 text-sm text-destructive"
             >
               <AlertCircle className="h-4 w-4" />
               {error}
@@ -142,31 +125,28 @@ export const MCPManager: React.FC<MCPManagerProps> = ({
           )}
         </AnimatePresence>
 
-        {/* Main Content */}
+        {/* Content */}
         {loading ? (
           <div className="flex-1 flex items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         ) : (
-          <div className="flex-1 overflow-y-auto p-4">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-              <TabsList className="grid w-full max-w-md grid-cols-3">
-                <TabsTrigger value="servers" className="gap-2">
-                  <Network className="h-4 w-4 text-blue-500" />
+          <div className="flex-1 overflow-y-auto p-6">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid grid-cols-3 w-full max-w-md mb-6 h-auto p-1">
+                <TabsTrigger value="servers" className="py-2.5 px-3">
                   Servers
                 </TabsTrigger>
-                <TabsTrigger value="add" className="gap-2">
-                  <Plus className="h-4 w-4 text-green-500" />
+                <TabsTrigger value="add" className="py-2.5 px-3">
                   Add Server
                 </TabsTrigger>
-                <TabsTrigger value="import" className="gap-2">
-                  <Download className="h-4 w-4 text-purple-500" />
+                <TabsTrigger value="import" className="py-2.5 px-3">
                   Import/Export
                 </TabsTrigger>
               </TabsList>
 
               {/* Servers Tab */}
-              <TabsContent value="servers" className="mt-6">
+              <TabsContent value="servers" className="space-y-6 mt-6">
                 <Card>
                   <MCPServerList
                     servers={servers}
@@ -178,7 +158,7 @@ export const MCPManager: React.FC<MCPManagerProps> = ({
               </TabsContent>
 
               {/* Add Server Tab */}
-              <TabsContent value="add" className="mt-6">
+              <TabsContent value="add" className="space-y-6 mt-6">
                 <Card>
                   <MCPAddServer
                     onServerAdded={handleServerAdded}
@@ -188,7 +168,7 @@ export const MCPManager: React.FC<MCPManagerProps> = ({
               </TabsContent>
 
               {/* Import/Export Tab */}
-              <TabsContent value="import" className="mt-6">
+              <TabsContent value="import" className="space-y-6 mt-6">
                 <Card className="overflow-hidden">
                   <MCPImportExport
                     onImportCompleted={handleImportCompleted}
