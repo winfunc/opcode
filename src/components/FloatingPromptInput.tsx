@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Popover } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { TooltipProvider, TooltipSimple, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip-modern";
 import { FilePicker } from "./FilePicker";
 import { SlashCommandPicker } from "./SlashCommandPicker";
 import { ImagePreview } from "./ImagePreview";
@@ -782,6 +782,7 @@ const FloatingPromptInputInner = (
   const selectedModelData = MODELS.find(m => m.id === selectedModel) || MODELS[0];
 
   return (
+    <TooltipProvider>
     <>
       {/* Expanded Modal */}
       <AnimatePresence>
@@ -803,19 +804,21 @@ const FloatingPromptInputInner = (
             >
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-medium">Compose your prompt</h3>
-                <motion.div
-                  whileTap={{ scale: 0.97 }}
-                  transition={{ duration: 0.15 }}
-                >
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setIsExpanded(false)}
-                    className="h-8 w-8"
+                <TooltipSimple content="Minimize" side="bottom">
+                  <motion.div
+                    whileTap={{ scale: 0.97 }}
+                    transition={{ duration: 0.15 }}
                   >
-                    <Minimize2 className="h-4 w-4" />
-                  </Button>
-                </motion.div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setIsExpanded(false)}
+                      className="h-8 w-8"
+                    >
+                      <Minimize2 className="h-4 w-4" />
+                    </Button>
+                  </motion.div>
+                </TooltipSimple>
               </div>
 
               {/* Image previews in expanded mode */}
@@ -900,11 +903,10 @@ const FloatingPromptInputInner = (
                     <span className="text-xs text-muted-foreground">Thinking:</span>
                     <Popover
                       trigger={
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="outline"
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="outline"
                                 size="sm"
                                 onClick={() => setThinkingModePickerOpen(!thinkingModePickerOpen)}
                                 className="gap-2"
@@ -922,7 +924,6 @@ const FloatingPromptInputInner = (
                               <p className="text-xs text-muted-foreground">{THINKING_MODES.find(m => m.id === selectedThinkingMode)?.description}</p>
                             </TooltipContent>
                           </Tooltip>
-                        </TooltipProvider>
                       }
                       content={
                         <div className="w-[280px] p-1">
@@ -963,23 +964,25 @@ const FloatingPromptInputInner = (
                   </div>
                 </div>
 
-                <motion.div
-                  whileTap={{ scale: 0.97 }}
-                  transition={{ duration: 0.15 }}
-                >
-                  <Button
-                    onClick={handleSend}
-                    disabled={!prompt.trim() || disabled}
-                    size="default"
-                    className="min-w-[60px]"
+                <TooltipSimple content="Send message" side="top">
+                  <motion.div
+                    whileTap={{ scale: 0.97 }}
+                    transition={{ duration: 0.15 }}
                   >
-                    {isLoading ? (
-                      <div className="rotating-symbol text-primary-foreground" />
-                    ) : (
-                      <Send className="h-4 w-4" />
-                    )}
-                  </Button>
-                </motion.div>
+                    <Button
+                      onClick={handleSend}
+                      disabled={!prompt.trim() || disabled}
+                      size="default"
+                      className="min-w-[60px]"
+                    >
+                      {isLoading ? (
+                        <div className="rotating-symbol text-primary-foreground" />
+                      ) : (
+                        <Send className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </motion.div>
+                </TooltipSimple>
               </div>
             </motion.div>
           </motion.div>
@@ -1014,11 +1017,10 @@ const FloatingPromptInputInner = (
               <div className="flex items-center gap-1 shrink-0 mb-1">
                 <Popover
                   trigger={
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <motion.div
-                            whileTap={{ scale: 0.97 }}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <motion.div
+                          whileTap={{ scale: 0.97 }}
                             transition={{ duration: 0.15 }}
                           >
                             <Button
@@ -1042,7 +1044,6 @@ const FloatingPromptInputInner = (
                           <p className="text-xs text-muted-foreground">{selectedModelData.description}</p>
                         </TooltipContent>
                       </Tooltip>
-                    </TooltipProvider>
                   }
                 content={
                   <div className="w-[300px] p-1">
@@ -1082,11 +1083,10 @@ const FloatingPromptInputInner = (
 
                 <Popover
                   trigger={
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <motion.div
-                            whileTap={{ scale: 0.97 }}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <motion.div
+                          whileTap={{ scale: 0.97 }}
                             transition={{ duration: 0.15 }}
                           >
                             <Button
@@ -1110,7 +1110,6 @@ const FloatingPromptInputInner = (
                           <p className="text-xs text-muted-foreground">{THINKING_MODES.find(m => m.id === selectedThinkingMode)?.description}</p>
                         </TooltipContent>
                       </Tooltip>
-                    </TooltipProvider>
                   }
                 content={
                   <div className="w-[280px] p-1">
@@ -1174,51 +1173,46 @@ const FloatingPromptInputInner = (
 
                 {/* Action buttons inside input - fixed at bottom right */}
                 <div className="absolute right-1.5 bottom-1.5 flex items-center gap-0.5">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <motion.div
-                          whileTap={{ scale: 0.97 }}
-                          transition={{ duration: 0.15 }}
-                        >
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setIsExpanded(true)}
-                            disabled={disabled}
-                            className="h-8 w-8 hover:bg-accent/50 transition-colors"
-                          >
-                            <Maximize2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </motion.div>
-                      </TooltipTrigger>
-                      <TooltipContent side="top">
-                        <p className="text-xs">Expand (Ctrl+Shift+E)</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-
-                  <motion.div
-                    whileTap={{ scale: 0.97 }}
-                    transition={{ duration: 0.15 }}
-                  >
-                    <Button
-                      onClick={isLoading ? onCancel : handleSend}
-                      disabled={isLoading ? false : (!prompt.trim() || disabled)}
-                      variant={isLoading ? "destructive" : prompt.trim() ? "default" : "ghost"}
-                      size="icon"
-                      className={cn(
-                        "h-8 w-8 transition-all",
-                        prompt.trim() && !isLoading && "shadow-sm"
-                      )}
+                  <TooltipSimple content="Expand (Ctrl+Shift+E)" side="top">
+                    <motion.div
+                      whileTap={{ scale: 0.97 }}
+                      transition={{ duration: 0.15 }}
                     >
-                      {isLoading ? (
-                        <Square className="h-4 w-4" />
-                      ) : (
-                        <Send className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </motion.div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setIsExpanded(true)}
+                        disabled={disabled}
+                        className="h-8 w-8 hover:bg-accent/50 transition-colors"
+                      >
+                        <Maximize2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </motion.div>
+                  </TooltipSimple>
+
+                  <TooltipSimple content={isLoading ? "Stop generation" : "Send message (Enter)"} side="top">
+                    <motion.div
+                      whileTap={{ scale: 0.97 }}
+                      transition={{ duration: 0.15 }}
+                    >
+                      <Button
+                        onClick={isLoading ? onCancel : handleSend}
+                        disabled={isLoading ? false : (!prompt.trim() || disabled)}
+                        variant={isLoading ? "destructive" : prompt.trim() ? "default" : "ghost"}
+                        size="icon"
+                        className={cn(
+                          "h-8 w-8 transition-all",
+                          prompt.trim() && !isLoading && "shadow-sm"
+                        )}
+                      >
+                        {isLoading ? (
+                          <Square className="h-4 w-4" />
+                        ) : (
+                          <Send className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </motion.div>
+                  </TooltipSimple>
                 </div>
 
                 {/* File Picker */}
@@ -1257,6 +1251,7 @@ const FloatingPromptInputInner = (
         </div>
       </div>
     </>
+    </TooltipProvider>
   );
 };
 

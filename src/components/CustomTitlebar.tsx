@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Settings, Minus, Square, X, Bot, BarChart3, FileText, Network, Info, MoreVertical } from 'lucide-react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { TooltipProvider, TooltipSimple } from '@/components/ui/tooltip-modern';
 
 interface CustomTitlebarProps {
   onSettingsClick?: () => void;
@@ -72,6 +73,7 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
   };
 
   return (
+    <TooltipProvider>
     <div 
       className="h-11 bg-background flex items-center justify-between select-none border-b border-border/50"
       style={{ borderTopLeftRadius: '12px', borderTopRightRadius: '12px' }}
@@ -139,27 +141,29 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
         {/* Primary actions group */}
         <div className="flex items-center gap-1">
           {onAgentsClick && (
-            <motion.button
-              onClick={onAgentsClick}
-              whileTap={{ scale: 0.97 }}
-              transition={{ duration: 0.15 }}
-              className="p-2 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
-              title="Agents"
-            >
-              <Bot size={16} />
-            </motion.button>
+            <TooltipSimple content="Agents" side="bottom">
+              <motion.button
+                onClick={onAgentsClick}
+                whileTap={{ scale: 0.97 }}
+                transition={{ duration: 0.15 }}
+                className="p-2 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
+              >
+                <Bot size={16} />
+              </motion.button>
+            </TooltipSimple>
           )}
           
           {onUsageClick && (
-            <motion.button
-              onClick={onUsageClick}
-              whileTap={{ scale: 0.97 }}
-              transition={{ duration: 0.15 }}
-              className="p-2 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
-              title="Usage Dashboard"
-            >
-              <BarChart3 size={16} />
-            </motion.button>
+            <TooltipSimple content="Usage Dashboard" side="bottom">
+              <motion.button
+                onClick={onUsageClick}
+                whileTap={{ scale: 0.97 }}
+                transition={{ duration: 0.15 }}
+                className="p-2 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
+              >
+                <BarChart3 size={16} />
+              </motion.button>
+            </TooltipSimple>
           )}
         </div>
 
@@ -169,28 +173,30 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
         {/* Secondary actions group */}
         <div className="flex items-center gap-1">
           {onSettingsClick && (
-            <motion.button
-              onClick={onSettingsClick}
-              whileTap={{ scale: 0.97 }}
-              transition={{ duration: 0.15 }}
-              className="p-2 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
-              title="Settings"
-            >
-              <Settings size={16} />
-            </motion.button>
+            <TooltipSimple content="Settings" side="bottom">
+              <motion.button
+                onClick={onSettingsClick}
+                whileTap={{ scale: 0.97 }}
+                transition={{ duration: 0.15 }}
+                className="p-2 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
+              >
+                <Settings size={16} />
+              </motion.button>
+            </TooltipSimple>
           )}
 
           {/* Dropdown menu for additional options */}
           <div className="relative" ref={dropdownRef}>
-            <motion.button
-              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              whileTap={{ scale: 0.97 }}
-              transition={{ duration: 0.15 }}
-              className="p-2 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors flex items-center gap-1"
-              title="More options"
-            >
-              <MoreVertical size={16} />
-            </motion.button>
+            <TooltipSimple content="More options" side="bottom">
+              <motion.button
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                whileTap={{ scale: 0.97 }}
+                transition={{ duration: 0.15 }}
+                className="p-2 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors flex items-center gap-1"
+              >
+                <MoreVertical size={16} />
+              </motion.button>
+            </TooltipSimple>
 
             {isDropdownOpen && (
               <div className="absolute right-0 mt-2 w-48 bg-popover border border-border rounded-lg shadow-lg z-50">
@@ -240,5 +246,6 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
         </div>
       </div>
     </div>
+    </TooltipProvider>
   );
 };
