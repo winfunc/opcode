@@ -1277,7 +1277,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
             />
           ) : (
             // Original layout when no preview
-            <div className="h-full flex flex-col max-w-6xl mx-auto">
+            <div className="h-full flex flex-col max-w-6xl mx-auto px-6">
               {projectPathInput}
               {messagesList}
               
@@ -1311,9 +1311,14 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                     <div className="text-xs font-medium text-muted-foreground mb-1">
                       Queued Prompts ({queuedPrompts.length})
                     </div>
-                    <Button variant="ghost" size="icon" onClick={() => setQueuedPromptsCollapsed(prev => !prev)}>
-                      {queuedPromptsCollapsed ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                    </Button>
+                    <motion.div
+                      whileTap={{ scale: 0.97 }}
+                      transition={{ duration: 0.15 }}
+                    >
+                      <Button variant="ghost" size="icon" onClick={() => setQueuedPromptsCollapsed(prev => !prev)}>
+                        {queuedPromptsCollapsed ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                      </Button>
+                    </motion.div>
                   </div>
                   {!queuedPromptsCollapsed && queuedPrompts.map((queuedPrompt, index) => (
                     <motion.div
@@ -1333,14 +1338,19 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                         </div>
                         <p className="text-sm line-clamp-2 break-words">{queuedPrompt.prompt}</p>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 flex-shrink-0"
-                        onClick={() => setQueuedPrompts(prev => prev.filter(p => p.id !== queuedPrompt.id))}
+                      <motion.div
+                        whileTap={{ scale: 0.97 }}
+                        transition={{ duration: 0.15 }}
                       >
-                        <X className="h-3 w-3" />
-                      </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 flex-shrink-0"
+                          onClick={() => setQueuedPrompts(prev => prev.filter(p => p.id !== queuedPrompt.id))}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </motion.div>
                     </motion.div>
                   ))}
                 </div>
@@ -1358,59 +1368,69 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
               className="fixed bottom-32 right-6 z-50"
             >
               <div className="flex items-center bg-background/95 backdrop-blur-md border rounded-full shadow-lg overflow-hidden">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    // Use virtualizer to scroll to the first item
-                    if (displayableMessages.length > 0) {
-                      // Scroll to top of the container
-                      parentRef.current?.scrollTo({
-                        top: 0,
-                        behavior: 'smooth'
-                      });
-                      
-                      // After smooth scroll completes, trigger a small scroll to ensure rendering
-                      setTimeout(() => {
-                        if (parentRef.current) {
-                          // Scroll down 1px then back to 0 to trigger virtualizer update
-                          parentRef.current.scrollTop = 1;
-                          requestAnimationFrame(() => {
-                            if (parentRef.current) {
-                              parentRef.current.scrollTop = 0;
-                            }
-                          });
-                        }
-                      }, 500); // Wait for smooth scroll to complete
-                    }
-                  }}
-                  className="px-3 py-2 hover:bg-accent rounded-none"
-                  title="Scroll to top"
+                <motion.div
+                  whileTap={{ scale: 0.97 }}
+                  transition={{ duration: 0.15 }}
                 >
-                  <ChevronUp className="h-4 w-4" />
-                </Button>
-                <div className="w-px h-4 bg-border" />
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    // Use virtualizer to scroll to the last item
-                    if (displayableMessages.length > 0) {
-                      // Scroll to bottom of the container
-                      const scrollElement = parentRef.current;
-                      if (scrollElement) {
-                        scrollElement.scrollTo({
-                          top: scrollElement.scrollHeight,
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      // Use virtualizer to scroll to the first item
+                      if (displayableMessages.length > 0) {
+                        // Scroll to top of the container
+                        parentRef.current?.scrollTo({
+                          top: 0,
                           behavior: 'smooth'
                         });
+                        
+                        // After smooth scroll completes, trigger a small scroll to ensure rendering
+                        setTimeout(() => {
+                          if (parentRef.current) {
+                            // Scroll down 1px then back to 0 to trigger virtualizer update
+                            parentRef.current.scrollTop = 1;
+                            requestAnimationFrame(() => {
+                              if (parentRef.current) {
+                                parentRef.current.scrollTop = 0;
+                              }
+                            });
+                          }
+                        }, 500); // Wait for smooth scroll to complete
                       }
-                    }
-                  }}
-                  className="px-3 py-2 hover:bg-accent rounded-none"
-                  title="Scroll to bottom"
+                    }}
+                    className="px-3 py-2 hover:bg-accent rounded-none"
+                    title="Scroll to top"
+                  >
+                    <ChevronUp className="h-4 w-4" />
+                  </Button>
+                </motion.div>
+                <div className="w-px h-4 bg-border" />
+                <motion.div
+                  whileTap={{ scale: 0.97 }}
+                  transition={{ duration: 0.15 }}
                 >
-                  <ChevronDown className="h-4 w-4" />
-                </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      // Use virtualizer to scroll to the last item
+                      if (displayableMessages.length > 0) {
+                        // Scroll to bottom of the container
+                        const scrollElement = parentRef.current;
+                        if (scrollElement) {
+                          scrollElement.scrollTo({
+                            top: scrollElement.scrollHeight,
+                            behavior: 'smooth'
+                          });
+                        }
+                      }
+                    }}
+                    className="px-3 py-2 hover:bg-accent rounded-none"
+                    title="Scroll to bottom"
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </motion.div>
               </div>
             </motion.div>
           )}
@@ -1432,14 +1452,19 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setShowTimeline(!showTimeline)}
-                            className="h-9 w-9 text-muted-foreground hover:text-foreground"
+                          <motion.div
+                            whileTap={{ scale: 0.97 }}
+                            transition={{ duration: 0.15 }}
                           >
-                            <GitBranch className={cn("h-3.5 w-3.5", showTimeline && "text-primary")} />
-                          </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setShowTimeline(!showTimeline)}
+                              className="h-9 w-9 text-muted-foreground hover:text-foreground"
+                            >
+                              <GitBranch className={cn("h-3.5 w-3.5", showTimeline && "text-primary")} />
+                            </Button>
+                          </motion.div>
                         </TooltipTrigger>
                         <TooltipContent>
                           <p className="text-xs">Timeline</p>
@@ -1453,13 +1478,18 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-9 w-9 text-muted-foreground hover:text-foreground"
+                              <motion.div
+                                whileTap={{ scale: 0.97 }}
+                                transition={{ duration: 0.15 }}
                               >
-                                <Copy className="h-3.5 w-3.5" />
-                              </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-9 w-9 text-muted-foreground hover:text-foreground"
+                                >
+                                  <Copy className="h-3.5 w-3.5" />
+                                </Button>
+                              </motion.div>
                             </TooltipTrigger>
                             <TooltipContent>
                               <p className="text-xs">Copy</p>
@@ -1496,14 +1526,19 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setShowSettings(!showSettings)}
-                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        <motion.div
+                          whileTap={{ scale: 0.97 }}
+                          transition={{ duration: 0.15 }}
                         >
-                          <Wrench className={cn("h-3.5 w-3.5", showSettings && "text-primary")} />
-                        </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setShowSettings(!showSettings)}
+                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                          >
+                            <Wrench className={cn("h-3.5 w-3.5", showSettings && "text-primary")} />
+                          </Button>
+                        </motion.div>
                       </TooltipTrigger>
                       <TooltipContent>
                         <p className="text-xs">Checkpoint Settings</p>

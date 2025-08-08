@@ -357,11 +357,13 @@ export const TabManager: React.FC<TabManagerProps> = ({ className }) => {
           </Reorder.Group>
           
           {/* New tab button - positioned right after tabs */}
-          <button
+          <motion.button
             onClick={handleNewTab}
             disabled={!canAddTab()}
+            whileTap={canAddTab() ? { scale: 0.97 } : {}}
+            transition={{ duration: 0.15 }}
             className={cn(
-              "px-2 mx-1 rounded-md transition-all duration-200 flex items-center justify-center flex-shrink-0",
+              "px-2 mx-1 rounded-md flex items-center justify-center flex-shrink-0",
               "bg-background/50 backdrop-blur-sm h-8",
               canAddTab()
                 ? "hover:bg-muted/60 text-muted-foreground hover:text-foreground"
@@ -370,7 +372,7 @@ export const TabManager: React.FC<TabManagerProps> = ({ className }) => {
             title={canAddTab() ? "New project (Ctrl+T)" : "Maximum tabs reached"}
           >
             <Plus className="w-4 h-4" />
-          </button>
+          </motion.button>
         </div>
       </div>
 

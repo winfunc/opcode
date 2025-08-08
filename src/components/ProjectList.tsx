@@ -6,6 +6,7 @@ import {
   ChevronRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import type { Project } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -111,34 +112,40 @@ export const ProjectList: React.FC<ProjectListProps> = ({
   };
 
   return (
-    <div className={cn("flex flex-col items-center justify-center min-h-[60vh] max-w-2xl mx-auto px-4", className)}>
-      {/* Logo and title section */}
-      <div className="text-center mb-8">
-        <div className="flex items-center justify-center gap-3 mb-2">
-          <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-            <FolderOpen className="h-6 w-6 text-primary" />
+    <div className={cn("h-full overflow-y-auto", className)}>
+      <div className="max-w-6xl mx-auto flex flex-col h-full">
+        {/* Header */}
+        <div className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-heading-1">Projects</h1>
+              <p className="mt-1 text-body-small text-muted-foreground">
+                Select a project to start working with Claude Code
+              </p>
+            </div>
+            <motion.div
+              whileTap={{ scale: 0.97 }}
+              transition={{ duration: 0.15 }}
+            >
+              <Button
+                onClick={onOpenProject}
+                size="default"
+                className="flex items-center gap-2"
+              >
+                <FolderOpen className="h-4 w-4" />
+                Open Project
+              </Button>
+            </motion.div>
           </div>
-          <h1 className="text-heading-2">Claudia</h1>
         </div>
-      </div>
 
-      {/* Action button */}
-      <div className="mb-12">
-        <Button
-          onClick={onOpenProject}
-          variant="outline"
-          className="flex flex-col items-center gap-2 h-auto py-4 px-8 min-w-[160px]"
-        >
-          <FolderOpen className="h-5 w-5" />
-          <span className="text-button">Open project</span>
-        </Button>
-      </div>
-
-      {/* Recent projects section */}
-      {displayedProjects.length > 0 && (
-        <div className="w-full">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-overline text-muted-foreground">Recent projects</h2>
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6">
+          {/* Recent projects section */}
+          {displayedProjects.length > 0 ? (
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-heading-4">Recent Projects</h2>
             {!showAll ? (
               <button 
                 onClick={handleViewAll}
@@ -168,8 +175,10 @@ export const ProjectList: React.FC<ProjectListProps> = ({
                 }}
                 className="group"
               >
-                <button
+                <motion.button
                   onClick={() => onProjectClick(project)}
+                  whileTap={{ scale: 0.97 }}
+                  transition={{ duration: 0.15 }}
                   className="w-full text-left px-3 py-2 rounded-md hover:bg-accent/50 transition-colors flex items-center justify-between"
                 >
                   <span className="text-body-small font-medium">
@@ -178,7 +187,7 @@ export const ProjectList: React.FC<ProjectListProps> = ({
                   <span className="text-caption text-muted-foreground font-mono text-right" style={{ minWidth: '200px' }}>
                     {getDisplayPath(project.path, 35)}
                   </span>
-                </button>
+                </motion.button>
               </motion.div>
             ))}
           </div>
@@ -186,14 +195,19 @@ export const ProjectList: React.FC<ProjectListProps> = ({
           {/* Pagination controls */}
           {showAll && totalPages > 1 && (
             <div className="flex items-center justify-center gap-2 mt-6">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                disabled={currentPage === 1}
+              <motion.div
+                whileTap={{ scale: 0.97 }}
+                transition={{ duration: 0.15 }}
               >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+              </motion.div>
               
               <div className="flex items-center gap-1">
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
@@ -209,18 +223,50 @@ export const ProjectList: React.FC<ProjectListProps> = ({
                 ))}
               </div>
               
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                disabled={currentPage === totalPages}
+              <motion.div
+                whileTap={{ scale: 0.97 }}
+                transition={{ duration: 0.15 }}
               >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </motion.div>
             </div>
           )}
+            </Card>
+          ) : (
+            <Card className="p-12">
+              <div className="flex flex-col items-center justify-center text-center">
+                <div className="w-16 h-16 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
+                  <FolderOpen className="h-8 w-8 text-primary" />
+                </div>
+                <h3 className="text-heading-3 mb-2">No recent projects</h3>
+                <p className="text-body-small text-muted-foreground mb-6">
+                  Open a project to get started with Claude Code
+                </p>
+                <motion.div
+                  whileTap={{ scale: 0.97 }}
+                  transition={{ duration: 0.15 }}
+                >
+                  <Button
+                    onClick={onOpenProject}
+                    size="default"
+                    className="flex items-center gap-2"
+                  >
+                    <FolderOpen className="h-4 w-4" />
+                    Open Your First Project
+                  </Button>
+                </motion.div>
+              </div>
+            </Card>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }; 

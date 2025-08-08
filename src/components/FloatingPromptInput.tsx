@@ -802,14 +802,19 @@ const FloatingPromptInputInner = (
             >
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-medium">Compose your prompt</h3>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setIsExpanded(false)}
-                  className="h-8 w-8"
+                <motion.div
+                  whileTap={{ scale: 0.97 }}
+                  transition={{ duration: 0.15 }}
                 >
-                  <Minimize2 className="h-4 w-4" />
-                </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setIsExpanded(false)}
+                    className="h-8 w-8"
+                  >
+                    <Minimize2 className="h-4 w-4" />
+                  </Button>
+                </motion.div>
               </div>
 
               {/* Image previews in expanded mode */}
@@ -839,17 +844,55 @@ const FloatingPromptInputInner = (
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-muted-foreground">Model:</span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setModelPickerOpen(!modelPickerOpen)}
-                      className="gap-2"
-                    >
-                      <span className={selectedModelData.color}>
-                        {selectedModelData.icon}
-                      </span>
-                      {selectedModelData.name}
-                    </Button>
+                    <Popover
+                      trigger={
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setModelPickerOpen(!modelPickerOpen)}
+                          className="gap-2"
+                        >
+                          <span className={selectedModelData.color}>
+                            {selectedModelData.icon}
+                          </span>
+                          {selectedModelData.name}
+                        </Button>
+                      }
+                      content={
+                        <div className="w-[300px] p-1">
+                          {MODELS.map((model) => (
+                            <button
+                              key={model.id}
+                              onClick={() => {
+                                setSelectedModel(model.id);
+                                setModelPickerOpen(false);
+                              }}
+                              className={cn(
+                                "w-full flex items-start gap-3 p-3 rounded-md transition-colors text-left",
+                                "hover:bg-accent",
+                                selectedModel === model.id && "bg-accent"
+                              )}
+                            >
+                              <div className="mt-0.5">
+                                <span className={model.color}>
+                                  {model.icon}
+                                </span>
+                              </div>
+                              <div className="flex-1 space-y-1">
+                                <div className="font-medium text-sm">{model.name}</div>
+                                <div className="text-xs text-muted-foreground">
+                                  {model.description}
+                                </div>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      }
+                      open={modelPickerOpen}
+                      onOpenChange={setModelPickerOpen}
+                      align="start"
+                      side="top"
+                    />
                   </div>
 
                   <div className="flex items-center gap-2">
@@ -919,18 +962,23 @@ const FloatingPromptInputInner = (
                   </div>
                 </div>
 
-                <Button
-                  onClick={handleSend}
-                  disabled={!prompt.trim() || disabled}
-                  size="default"
-                  className="min-w-[60px]"
+                <motion.div
+                  whileTap={{ scale: 0.97 }}
+                  transition={{ duration: 0.15 }}
                 >
-                  {isLoading ? (
-                    <div className="rotating-symbol text-primary-foreground" />
-                  ) : (
-                    <Send className="h-4 w-4" />
-                  )}
-                </Button>
+                  <Button
+                    onClick={handleSend}
+                    disabled={!prompt.trim() || disabled}
+                    size="default"
+                    className="min-w-[60px]"
+                  >
+                    {isLoading ? (
+                      <div className="rotating-symbol text-primary-foreground" />
+                    ) : (
+                      <Send className="h-4 w-4" />
+                    )}
+                  </Button>
+                </motion.div>
               </div>
             </motion.div>
           </motion.div>
@@ -968,20 +1016,25 @@ const FloatingPromptInputInner = (
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            disabled={disabled}
-                            className="h-9 px-2 hover:bg-accent/50 gap-1"
+                          <motion.div
+                            whileTap={{ scale: 0.97 }}
+                            transition={{ duration: 0.15 }}
                           >
-                            <span className={selectedModelData.color}>
-                              {selectedModelData.icon}
-                            </span>
-                            <span className="text-[10px] font-bold opacity-70">
-                              {selectedModelData.shortName}
-                            </span>
-                            <ChevronUp className="h-3 w-3 ml-0.5 opacity-50" />
-                          </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={disabled}
+                              className="h-9 px-2 hover:bg-accent/50 gap-1"
+                            >
+                              <span className={selectedModelData.color}>
+                                {selectedModelData.icon}
+                              </span>
+                              <span className="text-[10px] font-bold opacity-70">
+                                {selectedModelData.shortName}
+                              </span>
+                              <ChevronUp className="h-3 w-3 ml-0.5 opacity-50" />
+                            </Button>
+                          </motion.div>
                         </TooltipTrigger>
                         <TooltipContent side="top">
                           <p className="text-xs font-medium">{selectedModelData.name}</p>
@@ -1031,20 +1084,25 @@ const FloatingPromptInputInner = (
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            disabled={disabled}
-                            className="h-9 px-2 hover:bg-accent/50 gap-1"
+                          <motion.div
+                            whileTap={{ scale: 0.97 }}
+                            transition={{ duration: 0.15 }}
                           >
-                            <span className={THINKING_MODES.find(m => m.id === selectedThinkingMode)?.color}>
-                              {THINKING_MODES.find(m => m.id === selectedThinkingMode)?.icon}
-                            </span>
-                            <span className="text-[10px] font-semibold opacity-70">
-                              {THINKING_MODES.find(m => m.id === selectedThinkingMode)?.shortName}
-                            </span>
-                            <ChevronUp className="h-3 w-3 ml-0.5 opacity-50" />
-                          </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={disabled}
+                              className="h-9 px-2 hover:bg-accent/50 gap-1"
+                            >
+                              <span className={THINKING_MODES.find(m => m.id === selectedThinkingMode)?.color}>
+                                {THINKING_MODES.find(m => m.id === selectedThinkingMode)?.icon}
+                              </span>
+                              <span className="text-[10px] font-semibold opacity-70">
+                                {THINKING_MODES.find(m => m.id === selectedThinkingMode)?.shortName}
+                              </span>
+                              <ChevronUp className="h-3 w-3 ml-0.5 opacity-50" />
+                            </Button>
+                          </motion.div>
                         </TooltipTrigger>
                         <TooltipContent side="top">
                           <p className="text-xs font-medium">Thinking: {THINKING_MODES.find(m => m.id === selectedThinkingMode)?.name || "Auto"}</p>
@@ -1118,15 +1176,20 @@ const FloatingPromptInputInner = (
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setIsExpanded(true)}
-                          disabled={disabled}
-                          className="h-8 w-8 hover:bg-accent/50 transition-colors"
+                        <motion.div
+                          whileTap={{ scale: 0.97 }}
+                          transition={{ duration: 0.15 }}
                         >
-                          <Maximize2 className="h-3.5 w-3.5" />
-                        </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setIsExpanded(true)}
+                            disabled={disabled}
+                            className="h-8 w-8 hover:bg-accent/50 transition-colors"
+                          >
+                            <Maximize2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </motion.div>
                       </TooltipTrigger>
                       <TooltipContent side="top">
                         <p className="text-xs">Expand (Ctrl+Shift+E)</p>
@@ -1134,22 +1197,27 @@ const FloatingPromptInputInner = (
                     </Tooltip>
                   </TooltipProvider>
 
-                  <Button
-                    onClick={isLoading ? onCancel : handleSend}
-                    disabled={isLoading ? false : (!prompt.trim() || disabled)}
-                    variant={isLoading ? "destructive" : prompt.trim() ? "default" : "ghost"}
-                    size="icon"
-                    className={cn(
-                      "h-8 w-8 transition-all",
-                      prompt.trim() && !isLoading && "shadow-sm"
-                    )}
+                  <motion.div
+                    whileTap={{ scale: 0.97 }}
+                    transition={{ duration: 0.15 }}
                   >
-                    {isLoading ? (
-                      <Square className="h-4 w-4" />
-                    ) : (
-                      <Send className="h-4 w-4" />
-                    )}
-                  </Button>
+                    <Button
+                      onClick={isLoading ? onCancel : handleSend}
+                      disabled={isLoading ? false : (!prompt.trim() || disabled)}
+                      variant={isLoading ? "destructive" : prompt.trim() ? "default" : "ghost"}
+                      size="icon"
+                      className={cn(
+                        "h-8 w-8 transition-all",
+                        prompt.trim() && !isLoading && "shadow-sm"
+                      )}
+                    >
+                      {isLoading ? (
+                        <Square className="h-4 w-4" />
+                      ) : (
+                        <Send className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </motion.div>
                 </div>
 
                 {/* File Picker */}

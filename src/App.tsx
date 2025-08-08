@@ -310,85 +310,25 @@ function AppContent() {
         );
       
       case "settings":
-        return (
-          <div className="flex-1 flex flex-col" style={{ minHeight: 0 }}>
-            <Settings onBack={() => handleViewChange("welcome")} />
-          </div>
-        );
+        return <Settings onBack={() => handleViewChange("welcome")} />;
       
       case "projects":
+        if (selectedProject) {
+          return (
+            <SessionList
+              sessions={sessions}
+              projectPath={selectedProject.path}
+              onEditClaudeFile={handleEditClaudeFile}
+            />
+          );
+        }
         return (
-          <div className="flex-1 overflow-y-auto">
-            <div className="container mx-auto p-6">
-
-              {/* Error display */}
-              {error && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="mb-4 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-xs text-destructive max-w-2xl"
-                >
-                  {error}
-                </motion.div>
-              )}
-
-              {/* Loading state */}
-              {loading && (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              )}
-
-              {/* Content */}
-              {!loading && (
-                <AnimatePresence mode="wait">
-                  {selectedProject ? (
-                    <motion.div
-                      key="sessions"
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -20 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <SessionList
-                        sessions={sessions}
-                        projectPath={selectedProject.path}
-                        onEditClaudeFile={handleEditClaudeFile}
-                      />
-                    </motion.div>
-                  ) : (
-                    <motion.div
-                      key="projects"
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      {/* Running Claude Sessions */}
-                      <RunningClaudeSessions />
-
-                      {/* Project list */}
-                      {projects.length > 0 ? (
-                        <ProjectList
-                          projects={projects}
-                          onProjectClick={handleProjectClick}
-                          onOpenProject={handleOpenProject}
-                          loading={loading}
-                          className="animate-fade-in"
-                        />
-                      ) : (
-                        <div className="py-8 text-center">
-                          <p className="text-sm text-muted-foreground">
-                            No projects found in ~/.claude/projects
-                          </p>
-                        </div>
-                      )}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              )}
-            </div>
-          </div>
+          <ProjectList
+            projects={projects}
+            onProjectClick={handleProjectClick}
+            onOpenProject={handleOpenProject}
+            loading={loading}
+          />
         );
       
       case "claude-file-editor":

@@ -137,78 +137,79 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
     switch (tab.type) {
       case 'projects':
         return (
-          <div className="h-full overflow-y-auto">
-            <div className="max-w-6xl mx-auto p-6">
-              {/* Header for selected project only */}
-              {selectedProject && (
-                <div className="mb-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          setSelectedProject(null);
-                          setSessions([]);
-                          // Restore tab title to "Projects"
-                          updateTab(tab.id, {
-                            title: 'Projects'
-                          });
-                        }}
-                        className="h-8 w-8 -ml-2"
-                        title="Back to Projects"
-                      >
-                        <ArrowLeft className="h-4 w-4" />
-                      </Button>
-                      <div>
-                        <h1 className="text-3xl font-bold tracking-tight">
-                          {selectedProject.path.split('/').pop()}
-                        </h1>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          {`${sessions.length} session${sessions.length !== 1 ? 's' : ''}`}
-                        </p>
+          <div className="h-full">
+              {/* Content based on selection */}
+              {selectedProject ? (
+                <div className="h-full overflow-y-auto">
+                  <div className="max-w-6xl mx-auto p-6">
+                    <div className="mb-6">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <motion.div
+                            whileTap={{ scale: 0.97 }}
+                            transition={{ duration: 0.15 }}
+                          >
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                setSelectedProject(null);
+                                setSessions([]);
+                                // Restore tab title to "Projects"
+                                updateTab(tab.id, {
+                                  title: 'Projects'
+                                });
+                              }}
+                              className="h-8 w-8 -ml-2"
+                              title="Back to Projects"
+                            >
+                              <ArrowLeft className="h-4 w-4" />
+                            </Button>
+                          </motion.div>
+                          <div>
+                            <h1 className="text-3xl font-bold tracking-tight">
+                              {selectedProject.path.split('/').pop()}
+                            </h1>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                              {`${sessions.length} session${sessions.length !== 1 ? 's' : ''}`}
+                            </p>
+                          </div>
+                        </div>
+                        <motion.div
+                          whileTap={{ scale: 0.97 }}
+                          transition={{ duration: 0.15 }}
+                        >
+                          <Button
+                            onClick={handleNewSession}
+                            size="default"
+                          >
+                            <Plus className="mr-2 h-4 w-4" />
+                            New session
+                          </Button>
+                        </motion.div>
                       </div>
                     </div>
-                    <Button
-                      onClick={handleNewSession}
-                      size="default"
-                    >
-                      <Plus className="mr-2 h-4 w-4" />
-                      New session
-                    </Button>
-                  </div>
-                </div>
-              )}
 
-              {/* Error display */}
-              {error && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="mb-4 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-xs text-destructive max-w-2xl"
-                >
-                  {error}
-                </motion.div>
-              )}
+                    {/* Error display */}
+                    {error && (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="mb-4 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-xs text-destructive"
+                      >
+                        {error}
+                      </motion.div>
+                    )}
 
-              {/* Loading state */}
-              {loading && (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              )}
+                    {/* Loading state */}
+                    {loading && (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                      </div>
+                    )}
 
-              {/* Content */}
-              {!loading && (
-                <AnimatePresence mode="wait">
-                  {selectedProject ? (
-                    <motion.div
-                      key="sessions"
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -20 }}
-                      transition={{ duration: 0.3 }}
-                    >
+                    {/* Session List */}
+                    {!loading && (
                       <SessionList
                         sessions={sessions}
                         projectPath={selectedProject.path}
@@ -229,31 +230,18 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
                           }));
                         }}
                       />
-                    </motion.div>
-                  ) : (
-                    <motion.div
-                      key="projects"
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      {/* Running Claude Sessions */}
-                      <RunningClaudeSessions />
-
-                      {/* Project list */}
-                      <ProjectList
-                        projects={projects}
-                        onProjectClick={handleProjectClick}
-                        onOpenProject={handleOpenProject}
-                        loading={loading}
-                        className="animate-fade-in"
-                      />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                /* Projects List View */
+                <ProjectList
+                  projects={projects}
+                  onProjectClick={handleProjectClick}
+                  onOpenProject={handleOpenProject}
+                  loading={loading}
+                />
               )}
-            </div>
           </div>
         );
       

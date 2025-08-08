@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { Settings, Minus, Square, X, Bot, BarChart3, FileText, Network, Info, MoreVertical } from 'lucide-react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 
@@ -138,23 +139,27 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
         {/* Primary actions group */}
         <div className="flex items-center gap-1">
           {onAgentsClick && (
-            <button
+            <motion.button
               onClick={onAgentsClick}
+              whileTap={{ scale: 0.97 }}
+              transition={{ duration: 0.15 }}
               className="p-2 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
               title="Agents"
             >
               <Bot size={16} />
-            </button>
+            </motion.button>
           )}
           
           {onUsageClick && (
-            <button
+            <motion.button
               onClick={onUsageClick}
+              whileTap={{ scale: 0.97 }}
+              transition={{ duration: 0.15 }}
               className="p-2 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
               title="Usage Dashboard"
             >
               <BarChart3 size={16} />
-            </button>
+            </motion.button>
           )}
         </div>
 
@@ -164,24 +169,28 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
         {/* Secondary actions group */}
         <div className="flex items-center gap-1">
           {onSettingsClick && (
-            <button
+            <motion.button
               onClick={onSettingsClick}
+              whileTap={{ scale: 0.97 }}
+              transition={{ duration: 0.15 }}
               className="p-2 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
               title="Settings"
             >
               <Settings size={16} />
-            </button>
+            </motion.button>
           )}
 
           {/* Dropdown menu for additional options */}
           <div className="relative" ref={dropdownRef}>
-            <button
+            <motion.button
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              whileTap={{ scale: 0.97 }}
+              transition={{ duration: 0.15 }}
               className="p-2 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors flex items-center gap-1"
               title="More options"
             >
               <MoreVertical size={16} />
-            </button>
+            </motion.button>
 
             {isDropdownOpen && (
               <div className="absolute right-0 mt-2 w-48 bg-popover border border-border rounded-lg shadow-lg z-50">

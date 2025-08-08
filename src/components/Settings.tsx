@@ -340,23 +340,28 @@ export const Settings: React.FC<SettingsProps> = ({
                 Configure Claude Code preferences
               </p>
             </div>
-            <Button
-              onClick={saveSettings}
-              disabled={saving || loading}
-              size="default"
+            <motion.div
+              whileTap={{ scale: 0.97 }}
+              transition={{ duration: 0.15 }}
             >
-              {saving ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="mr-2 h-4 w-4" />
-                  Save Settings
-                </>
-              )}
-            </Button>
+              <Button
+                onClick={saveSettings}
+                disabled={saving || loading}
+                size="default"
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Settings
+                  </>
+                )}
+              </Button>
+            </motion.div>
           </div>
         </div>
       
