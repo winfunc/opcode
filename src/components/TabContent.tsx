@@ -363,7 +363,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
 };
 
 export const TabContent: React.FC = () => {
-  const { tabs, activeTabId, createChatTab, findTabBySessionId, createClaudeFileTab, createAgentExecutionTab, createCreateAgentTab, createImportAgentTab, closeTab, updateTab } = useTabState();
+  const { tabs, activeTabId, createChatTab, createProjectsTab, findTabBySessionId, createClaudeFileTab, createAgentExecutionTab, createCreateAgentTab, createImportAgentTab, closeTab, updateTab } = useTabState();
   
   // Listen for events to open sessions in tabs
   useEffect(() => {
@@ -481,8 +481,15 @@ export const TabContent: React.FC = () => {
       {tabs.length === 0 && (
         <div className="flex items-center justify-center h-full text-muted-foreground">
           <div className="text-center">
-            <p className="text-lg mb-2">No tabs open</p>
-            <p className="text-sm">Click the + button to start a new chat</p>
+            <p className="text-lg mb-2">No projects open</p>
+            <p className="text-sm mb-4">Click to start a new project</p>
+            <Button
+              onClick={() => createProjectsTab()}
+              size="default"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              New Project
+            </Button>
           </div>
         </div>
       )}
