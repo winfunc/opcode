@@ -168,13 +168,7 @@ export class SessionPersistenceService {
       project_id: data.projectId,
       project_path: data.projectPath,
       created_at: data.timestamp / 1000, // Convert to seconds
-      first_message: "Restored session",
-      last_message: "Restored session",
-      message_count: data.lastMessageCount || 0,
-      total_tokens: 0,
-      model: "unknown",
-      cost: 0,
-      has_error: false
+      first_message: "Restored session"
     };
   }
 }
