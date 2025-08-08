@@ -34,6 +34,7 @@ import { ProxySettings } from "./ProxySettings";
 import { AnalyticsConsent } from "./AnalyticsConsent";
 import { useTheme, useTrackEvent } from "@/hooks";
 import { analytics } from "@/lib/analytics";
+import { TabPersistenceService } from "@/services/tabPersistence";
 
 interface SettingsProps {
   /**
@@ -99,11 +100,16 @@ export const Settings: React.FC<SettingsProps> = ({
   const [showAnalyticsConsent, setShowAnalyticsConsent] = useState(false);
   const trackEvent = useTrackEvent();
   
+  // Tab persistence state
+  const [tabPersistenceEnabled, setTabPersistenceEnabled] = useState(true);
+  
   // Load settings on mount
   useEffect(() => {
     loadSettings();
     loadClaudeBinaryPath();
     loadAnalyticsSettings();
+    // Load tab persistence setting
+    setTabPersistenceEnabled(TabPersistenceService.isEnabled());
   }, []);
 
   /**
@@ -711,6 +717,31 @@ export const Settings: React.FC<SettingsProps> = ({
                         </div>
                       </div>
                     )}
+                    
+                    {/* Tab Persistence Toggle */}
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <Label htmlFor="tab-persistence">Remember Open Tabs</Label>
+                        <p className="text-caption text-muted-foreground">
+                          Restore your tabs when you restart the app
+                        </p>
+                      </div>
+                      <Switch
+                        id="tab-persistence"
+                        checked={tabPersistenceEnabled}
+                        onCheckedChange={(checked) => {
+                          TabPersistenceService.setEnabled(checked);
+                          setTabPersistenceEnabled(checked);
+                          trackEvent.settingsChanged('tab_persistence_enabled', checked);
+                          setToast({ 
+                            message: checked 
+                              ? "Tab persistence enabled - your tabs will be restored on restart" 
+                              : "Tab persistence disabled - tabs will not be saved", 
+                            type: "success" 
+                          });
+                        }}
+                      />
+                    </div>
                   </div>
                 </div>
               </Card>

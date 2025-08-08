@@ -179,6 +179,8 @@ export interface AgentRunWithMetrics {
   session_id: string;
   status: string; // 'pending', 'running', 'completed', 'failed', 'cancelled'
   pid?: number;
+  duration_ms?: number;
+  total_tokens?: number;
   process_started_at?: string;
   created_at: string;
   completed_at?: string;

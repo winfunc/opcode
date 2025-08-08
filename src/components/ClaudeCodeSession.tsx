@@ -35,6 +35,7 @@ import { WebviewPreview } from "./WebviewPreview";
 import type { ClaudeStreamMessage } from "./AgentExecution";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useTrackEvent, useComponentMetrics, useWorkflowTracking } from "@/hooks";
+import { SessionPersistenceService } from "@/services/sessionPersistence";
 
 interface ClaudeCodeSessionProps {
   /**
@@ -83,6 +84,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   onProjectPathChange,
 }) => {
   const [projectPath, setProjectPath] = useState(initialProjectPath || session?.project_path || "");
+  const [sessionRestoreData, setSessionRestoreData] = useState<{ projectId: string } | null>(null);
   const [messages, setMessages] = useState<ClaudeStreamMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -307,6 +309,16 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       setError(null);
       
       const history = await api.loadSessionHistory(session.id, session.project_id);
+      
+      // Save session data for restoration
+      if (history && history.length > 0) {
+        SessionPersistenceService.saveSession(
+          session.id,
+          session.project_id,
+          session.project_path,
+          history.length
+        );
+      }
       
       // Convert history to messages format
       const loadedMessages: ClaudeStreamMessage[] = history.map(entry => ({
@@ -544,6 +556,14 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                 if (!extractedSessionInfo) {
                   const projectId = projectPath.replace(/[^a-zA-Z0-9]/g, '-');
                   setExtractedSessionInfo({ sessionId: msg.session_id, projectId });
+                  
+                  // Save session data for restoration
+                  SessionPersistenceService.saveSession(
+                    msg.session_id,
+                    projectId,
+                    projectPath,
+                    messages.length
+                  );
                 }
 
                 // Switch to session-specific listeners
