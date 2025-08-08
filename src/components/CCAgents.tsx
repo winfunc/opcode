@@ -308,8 +308,8 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
                 <ArrowLeft className="h-4 w-4" />
               </Button>
               <div>
-                <h1 className="text-2xl font-bold">CC Agents</h1>
-                <p className="text-sm text-muted-foreground">
+                <h1 className="text-heading-2">CC Agents</h1>
+                <p className="text-body-small text-muted-foreground">
                   Manage your Claude Code agents
                 </p>
               </div>
@@ -355,8 +355,7 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="mb-4 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive"
-          >
+            className="mb-4 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-body-small text-destructive">
             {error}
           </motion.div>
         )}
@@ -381,8 +380,8 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
                 ) : agents.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-64 text-center">
                     <Bot className="h-16 w-16 text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-medium mb-2">No agents yet</h3>
-                    <p className="text-sm text-muted-foreground mb-4">
+                    <h3 className="text-heading-4 mb-2">No agents yet</h3>
+                    <p className="text-body-small text-muted-foreground mb-4">
                       Create your first CC Agent to get started
                     </p>
                     <Button onClick={() => setView("create")} size="default">
@@ -407,10 +406,10 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
                                 <div className="mb-4 p-4 rounded-full bg-primary/10 text-primary">
                                   {renderIcon(agent.icon)}
                                 </div>
-                                <h3 className="text-lg font-semibold mb-2">
+                                <h3 className="text-heading-4 mb-2">
                                   {agent.name}
                                 </h3>
-                                <p className="text-xs text-muted-foreground">
+                                <p className="text-caption text-muted-foreground">
                                   Created: {new Date(agent.created_at).toLocaleDateString()}
                                 </p>
                               </CardContent>
@@ -473,7 +472,7 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
                         >
                           Previous
                         </Button>
-                        <span className="flex items-center px-3 text-sm">
+                        <span className="flex items-center px-3 text-body-small">
                           Page {currentPage} of {totalPages}
                         </span>
                         <Button
@@ -495,7 +494,7 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
                 <div className="overflow-hidden">
                   <div className="flex items-center gap-2 mb-4">
                     <History className="h-5 w-5 text-muted-foreground" />
-                    <h2 className="text-lg font-semibold">Recent Executions</h2>
+                    <h2 className="text-heading-4">Recent Executions</h2>
                   </div>
                   {runsLoading ? (
                     <div className="flex items-center justify-center h-32">

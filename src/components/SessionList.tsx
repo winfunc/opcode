@@ -127,7 +127,7 @@ export const SessionList: React.FC<SessionListProps> = ({
                       <div className="flex items-start gap-1.5 flex-1 min-w-0">
                         <Clock className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm">
+                          <p className="text-body-small font-medium">
                             Session on {session.message_timestamp 
                               ? new Date(session.message_timestamp).toLocaleDateString('en-US', { 
                                   month: 'short', 
@@ -144,7 +144,7 @@ export const SessionList: React.FC<SessionListProps> = ({
                         </div>
                       </div>
                       {session.todo_data && (
-                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary">
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-caption font-medium bg-primary/10 text-primary">
                           Todo
                         </span>
                       )}
@@ -152,11 +152,11 @@ export const SessionList: React.FC<SessionListProps> = ({
                     
                     {/* First message preview */}
                     {session.first_message ? (
-                      <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
+                      <p className="text-caption text-muted-foreground line-clamp-2 mb-2">
                         {truncateText(getFirstLine(session.first_message), 120)}
                       </p>
                     ) : (
-                      <p className="text-xs text-muted-foreground/60 italic mb-2">
+                      <p className="text-caption text-muted-foreground/60 italic mb-2">
                         No messages yet
                       </p>
                     )}
@@ -164,7 +164,7 @@ export const SessionList: React.FC<SessionListProps> = ({
                   
                   {/* Metadata footer */}
                   <div className="flex items-center justify-between pt-2 border-t">
-                    <p className="text-xs text-muted-foreground font-mono">
+                    <p className="text-caption text-muted-foreground font-mono">
                       {session.id.slice(-8)}
                     </p>
                     {session.todo_data && (

@@ -102,8 +102,8 @@ export const MCPManager: React.FC<MCPManagerProps> = ({
         <div className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">MCP Servers</h1>
-              <p className="mt-1 text-sm text-muted-foreground">
+              <h1 className="text-heading-1">MCP Servers</h1>
+              <p className="mt-1 text-body-small text-muted-foreground">
                 Manage Model Context Protocol servers
               </p>
             </div>
@@ -117,7 +117,7 @@ export const MCPManager: React.FC<MCPManagerProps> = ({
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="mx-6 mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/50 flex items-center gap-2 text-sm text-destructive"
+              className="mx-6 mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/50 flex items-center gap-2 text-body-small text-destructive"
             >
               <AlertCircle className="h-4 w-4" />
               {error}

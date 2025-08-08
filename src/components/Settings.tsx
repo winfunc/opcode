@@ -335,8 +335,8 @@ export const Settings: React.FC<SettingsProps> = ({
         <div className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-              <p className="mt-1 text-sm text-muted-foreground">
+              <h1 className="text-heading-1">Settings</h1>
+              <p className="mt-1 text-body-small text-muted-foreground">
                 Configure Claude Code preferences
               </p>
             </div>
@@ -367,7 +367,7 @@ export const Settings: React.FC<SettingsProps> = ({
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="mx-4 mt-4 p-3 rounded-lg bg-destructive/10 border border-destructive/50 flex items-center gap-2 text-sm text-destructive"
+            className="mx-4 mt-4 p-3 rounded-lg bg-destructive/10 border border-destructive/50 flex items-center gap-2 text-body-small text-destructive"
           >
             <AlertCircle className="h-4 w-4" />
             {error}
@@ -399,14 +399,14 @@ export const Settings: React.FC<SettingsProps> = ({
             <TabsContent value="general" className="space-y-6 mt-6">
               <Card className="p-6 space-y-6">
                 <div>
-                  <h3 className="text-base font-semibold mb-4">General Settings</h3>
+                  <h3 className="text-heading-4 mb-4">General Settings</h3>
                   
                   <div className="space-y-4">
                     {/* Theme Selector */}
                     <div className="flex items-center justify-between">
                       <div>
                         <Label>Theme</Label>
-                        <p className="text-xs text-muted-foreground mt-1">
+                        <p className="text-caption text-muted-foreground mt-1">
                           Choose your preferred color theme
                         </p>
                       </div>
@@ -465,12 +465,12 @@ export const Settings: React.FC<SettingsProps> = ({
                     {/* Custom Color Editor */}
                     {theme === 'custom' && (
                       <div className="space-y-4 p-4 border rounded-lg bg-muted/20">
-                        <h4 className="text-sm font-medium">Custom Theme Colors</h4>
+                        <h4 className="text-label">Custom Theme Colors</h4>
                         
                         <div className="grid grid-cols-2 gap-4">
                           {/* Background Color */}
                           <div className="space-y-2">
-                            <Label htmlFor="color-background" className="text-xs">Background</Label>
+                            <Label htmlFor="color-background" className="text-caption">Background</Label>
                             <div className="flex gap-2">
                               <Input
                                 id="color-background"
@@ -489,7 +489,7 @@ export const Settings: React.FC<SettingsProps> = ({
                           
                           {/* Foreground Color */}
                           <div className="space-y-2">
-                            <Label htmlFor="color-foreground" className="text-xs">Foreground</Label>
+                            <Label htmlFor="color-foreground" className="text-caption">Foreground</Label>
                             <div className="flex gap-2">
                               <Input
                                 id="color-foreground"
@@ -508,7 +508,7 @@ export const Settings: React.FC<SettingsProps> = ({
                           
                           {/* Primary Color */}
                           <div className="space-y-2">
-                            <Label htmlFor="color-primary" className="text-xs">Primary</Label>
+                            <Label htmlFor="color-primary" className="text-caption">Primary</Label>
                             <div className="flex gap-2">
                               <Input
                                 id="color-primary"
@@ -527,7 +527,7 @@ export const Settings: React.FC<SettingsProps> = ({
                           
                           {/* Card Color */}
                           <div className="space-y-2">
-                            <Label htmlFor="color-card" className="text-xs">Card</Label>
+                            <Label htmlFor="color-card" className="text-caption">Card</Label>
                             <div className="flex gap-2">
                               <Input
                                 id="color-card"
@@ -546,7 +546,7 @@ export const Settings: React.FC<SettingsProps> = ({
                           
                           {/* Accent Color */}
                           <div className="space-y-2">
-                            <Label htmlFor="color-accent" className="text-xs">Accent</Label>
+                            <Label htmlFor="color-accent" className="text-caption">Accent</Label>
                             <div className="flex gap-2">
                               <Input
                                 id="color-accent"
@@ -565,7 +565,7 @@ export const Settings: React.FC<SettingsProps> = ({
                           
                           {/* Destructive Color */}
                           <div className="space-y-2">
-                            <Label htmlFor="color-destructive" className="text-xs">Destructive</Label>
+                            <Label htmlFor="color-destructive" className="text-caption">Destructive</Label>
                             <div className="flex gap-2">
                               <Input
                                 id="color-destructive"
@@ -583,7 +583,7 @@ export const Settings: React.FC<SettingsProps> = ({
                           </div>
                         </div>
                         
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-caption text-muted-foreground">
                           Use CSS color values (hex, rgb, oklch, etc.). Changes apply immediately.
                         </p>
                       </div>
@@ -593,7 +593,7 @@ export const Settings: React.FC<SettingsProps> = ({
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5 flex-1">
                         <Label htmlFor="coauthored">Include "Co-authored by Claude"</Label>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-caption text-muted-foreground">
                           Add Claude attribution to git commits and pull requests
                         </p>
                       </div>
@@ -608,7 +608,7 @@ export const Settings: React.FC<SettingsProps> = ({
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5 flex-1">
                         <Label htmlFor="verbose">Verbose Output</Label>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-caption text-muted-foreground">
                           Show full bash and command outputs
                         </p>
                       </div>
@@ -624,7 +624,7 @@ export const Settings: React.FC<SettingsProps> = ({
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
                           <Label htmlFor="cleanup">Chat Transcript Retention (days)</Label>
-                          <p className="text-xs text-muted-foreground mt-1">
+                          <p className="text-caption text-muted-foreground mt-1">
                             How long to retain chat transcripts locally (default: 30 days)
                           </p>
                         </div>
@@ -651,7 +651,7 @@ export const Settings: React.FC<SettingsProps> = ({
                         simplified={true}
                       />
                       {binaryPathChanged && (
-                        <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                        <p className="text-caption text-amber-600 dark:text-amber-400 flex items-center gap-1">
                           <AlertCircle className="h-3 w-3" />
                           Changes will be applied when you save settings.
                         </p>
@@ -667,8 +667,8 @@ export const Settings: React.FC<SettingsProps> = ({
               <Card className="p-6">
                 <div className="space-y-6">
                   <div>
-                    <h3 className="text-base font-semibold mb-2">Permission Rules</h3>
-                    <p className="text-sm text-muted-foreground mb-4">
+                    <h3 className="text-heading-4 mb-2">Permission Rules</h3>
+                    <p className="text-body-small text-muted-foreground mb-4">
                       Control which tools Claude Code can use without manual approval
                     </p>
                   </div>
@@ -676,7 +676,7 @@ export const Settings: React.FC<SettingsProps> = ({
                   {/* Allow Rules */}
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <Label className="text-sm font-medium text-green-500">Allow Rules</Label>
+                      <Label className="text-label text-green-500">Allow Rules</Label>
                       <Button
                         variant="outline"
                         size="sm"
@@ -723,7 +723,7 @@ export const Settings: React.FC<SettingsProps> = ({
                   {/* Deny Rules */}
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <Label className="text-sm font-medium text-red-500">Deny Rules</Label>
+                      <Label className="text-label text-red-500">Deny Rules</Label>
                       <Button
                         variant="outline"
                         size="sm"
@@ -771,7 +771,7 @@ export const Settings: React.FC<SettingsProps> = ({
                     <p className="text-xs text-muted-foreground">
                       <strong>Examples:</strong>
                     </p>
-                    <ul className="text-xs text-muted-foreground space-y-1 ml-4">
+                    <ul className="text-caption text-muted-foreground space-y-1 ml-4">
                       <li>• <code className="px-1 py-0.5 rounded bg-green-500/10 text-green-600 dark:text-green-400">Bash</code> - Allow all bash commands</li>
                       <li>• <code className="px-1 py-0.5 rounded bg-green-500/10 text-green-600 dark:text-green-400">Bash(npm run build)</code> - Allow exact command</li>
                       <li>• <code className="px-1 py-0.5 rounded bg-green-500/10 text-green-600 dark:text-green-400">Bash(npm run test:*)</code> - Allow commands with prefix</li>
@@ -789,7 +789,7 @@ export const Settings: React.FC<SettingsProps> = ({
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-base font-semibold">Environment Variables</h3>
+                      <h3 className="text-heading-4">Environment Variables</h3>
                       <p className="text-sm text-muted-foreground mt-1">
                         Environment variables applied to every Claude Code session
                       </p>
@@ -848,7 +848,7 @@ export const Settings: React.FC<SettingsProps> = ({
                     <p className="text-xs text-muted-foreground">
                       <strong>Common variables:</strong>
                     </p>
-                    <ul className="text-xs text-muted-foreground space-y-1 ml-4">
+                    <ul className="text-caption text-muted-foreground space-y-1 ml-4">
                       <li>• <code className="px-1 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400">CLAUDE_CODE_ENABLE_TELEMETRY</code> - Enable/disable telemetry (0 or 1)</li>
                       <li>• <code className="px-1 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400">ANTHROPIC_MODEL</code> - Custom model name</li>
                       <li>• <code className="px-1 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400">DISABLE_COST_WARNINGS</code> - Disable cost warnings (1)</li>
@@ -902,7 +902,7 @@ export const Settings: React.FC<SettingsProps> = ({
                 <div className="space-y-4">
                   <div>
                     <h3 className="text-base font-semibold mb-2">User Hooks</h3>
-                    <p className="text-sm text-muted-foreground mb-4">
+                    <p className="text-body-small text-muted-foreground mb-4">
                       Configure hooks that apply to all Claude Code sessions for your user account.
                       These are stored in <code className="mx-1 px-2 py-1 bg-muted rounded text-xs">~/.claude/settings.json</code>
                     </p>

@@ -118,7 +118,7 @@ export const ProjectList: React.FC<ProjectListProps> = ({
           <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
             <FolderOpen className="h-6 w-6 text-primary" />
           </div>
-          <h1 className="text-2xl font-semibold">Claudia</h1>
+          <h1 className="text-heading-2">Claudia</h1>
         </div>
       </div>
 
@@ -130,7 +130,7 @@ export const ProjectList: React.FC<ProjectListProps> = ({
           className="flex flex-col items-center gap-2 h-auto py-4 px-8 min-w-[160px]"
         >
           <FolderOpen className="h-5 w-5" />
-          <span className="text-sm">Open project</span>
+          <span className="text-button">Open project</span>
         </Button>
       </div>
 
@@ -138,18 +138,18 @@ export const ProjectList: React.FC<ProjectListProps> = ({
       {displayedProjects.length > 0 && (
         <div className="w-full">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-medium text-muted-foreground">Recent projects</h2>
+            <h2 className="text-overline text-muted-foreground">Recent projects</h2>
             {!showAll ? (
               <button 
                 onClick={handleViewAll}
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                className="text-caption text-muted-foreground hover:text-foreground transition-colors"
               >
                 View all ({projects.length})
               </button>
             ) : (
               <button 
                 onClick={handleViewLess}
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                className="text-caption text-muted-foreground hover:text-foreground transition-colors"
               >
                 View less
               </button>
@@ -172,10 +172,10 @@ export const ProjectList: React.FC<ProjectListProps> = ({
                   onClick={() => onProjectClick(project)}
                   className="w-full text-left px-3 py-2 rounded-md hover:bg-accent/50 transition-colors flex items-center justify-between"
                 >
-                  <span className="text-sm font-medium">
+                  <span className="text-body-small font-medium">
                     {getProjectName(project.path)}
                   </span>
-                  <span className="text-xs text-muted-foreground font-mono text-right" style={{ minWidth: '200px' }}>
+                  <span className="text-caption text-muted-foreground font-mono text-right" style={{ minWidth: '200px' }}>
                     {getDisplayPath(project.path, 35)}
                   </span>
                 </button>

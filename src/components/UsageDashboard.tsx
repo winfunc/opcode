@@ -128,8 +128,8 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ }) => {
         <div className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">Usage Dashboard</h1>
-              <p className="mt-1 text-sm text-muted-foreground">
+              <h1 className="text-heading-1">Usage Dashboard</h1>
+              <p className="mt-1 text-body-small text-muted-foreground">
                 Track your Claude Code usage and costs
               </p>
             </div>
@@ -163,23 +163,21 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ }) => {
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/50 text-sm text-destructive"
-            >
+              className="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/50 text-body-small text-destructive">
               {error}
               <Button onClick={loadUsageStats} size="sm" className="ml-4">
                 Try Again
               </Button>
             </motion.div>
           ) : stats ? (
-            <div className="space-y-6"
-          >
+            <div className="space-y-6">
             {/* Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               {/* Total Cost Card */}
               <Card className="p-4 shimmer-hover">
                 <div>
-                  <p className="text-xs text-muted-foreground">Total Cost</p>
-                  <p className="text-2xl font-bold mt-1">
+                  <p className="text-caption text-muted-foreground">Total Cost</p>
+                  <p className="text-display-2 mt-1">
                     {formatCurrency(stats.total_cost)}
                   </p>
                 </div>
@@ -188,8 +186,8 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ }) => {
               {/* Total Sessions Card */}
               <Card className="p-4 shimmer-hover">
                 <div>
-                  <p className="text-xs text-muted-foreground">Total Sessions</p>
-                  <p className="text-2xl font-bold mt-1">
+                  <p className="text-caption text-muted-foreground">Total Sessions</p>
+                  <p className="text-display-2 mt-1">
                     {formatNumber(stats.total_sessions)}
                   </p>
                 </div>
@@ -198,8 +196,8 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ }) => {
               {/* Total Tokens Card */}
               <Card className="p-4 shimmer-hover">
                 <div>
-                  <p className="text-xs text-muted-foreground">Total Tokens</p>
-                  <p className="text-2xl font-bold mt-1">
+                  <p className="text-caption text-muted-foreground">Total Tokens</p>
+                  <p className="text-display-2 mt-1">
                     {formatTokens(stats.total_tokens)}
                   </p>
                 </div>
@@ -208,8 +206,8 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ }) => {
               {/* Average Cost per Session Card */}
               <Card className="p-4 shimmer-hover">
                 <div>
-                  <p className="text-xs text-muted-foreground">Avg Cost/Session</p>
-                  <p className="text-2xl font-bold mt-1">
+                  <p className="text-caption text-muted-foreground">Avg Cost/Session</p>
+                  <p className="text-display-2 mt-1">
                     {formatCurrency(
                       stats.total_sessions > 0 
                         ? stats.total_cost / stats.total_sessions 
@@ -233,23 +231,23 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ }) => {
               {/* Overview Tab */}
               <TabsContent value="overview" className="space-y-6 mt-6">
                 <Card className="p-6">
-                  <h3 className="text-sm font-semibold mb-4">Token Breakdown</h3>
+                  <h3 className="text-label mb-4">Token Breakdown</h3>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div>
-                      <p className="text-xs text-muted-foreground">Input Tokens</p>
-                      <p className="text-lg font-semibold">{formatTokens(stats.total_input_tokens)}</p>
+                      <p className="text-caption text-muted-foreground">Input Tokens</p>
+                      <p className="text-heading-4">{formatTokens(stats.total_input_tokens)}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">Output Tokens</p>
-                      <p className="text-lg font-semibold">{formatTokens(stats.total_output_tokens)}</p>
+                      <p className="text-caption text-muted-foreground">Output Tokens</p>
+                      <p className="text-heading-4">{formatTokens(stats.total_output_tokens)}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">Cache Write</p>
-                      <p className="text-lg font-semibold">{formatTokens(stats.total_cache_creation_tokens)}</p>
+                      <p className="text-caption text-muted-foreground">Cache Write</p>
+                      <p className="text-heading-4">{formatTokens(stats.total_cache_creation_tokens)}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">Cache Read</p>
-                      <p className="text-lg font-semibold">{formatTokens(stats.total_cache_read_tokens)}</p>
+                      <p className="text-caption text-muted-foreground">Cache Read</p>
+                      <p className="text-heading-4">{formatTokens(stats.total_cache_read_tokens)}</p>
                     </div>
                   </div>
                 </Card>
@@ -257,19 +255,19 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ }) => {
                 {/* Quick Stats */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Card className="p-6">
-                    <h3 className="text-sm font-semibold mb-4">Most Used Models</h3>
+                    <h3 className="text-label mb-4">Most Used Models</h3>
                     <div className="space-y-3">
                       {stats.by_model.slice(0, 3).map((model) => (
                         <div key={model.model} className="flex items-center justify-between">
                           <div className="flex items-center space-x-2">
-                            <Badge variant="outline" className={cn("text-xs", getModelColor(model.model))}>
+                            <Badge variant="outline" className={cn("text-caption", getModelColor(model.model))}>
                               {getModelDisplayName(model.model)}
                             </Badge>
-                            <span className="text-xs text-muted-foreground">
+                            <span className="text-caption text-muted-foreground">
                               {model.session_count} sessions
                             </span>
                           </div>
-                          <span className="text-sm font-medium">
+                          <span className="text-body-small font-medium">
                             {formatCurrency(model.total_cost)}
                           </span>
                         </div>
@@ -278,19 +276,19 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ }) => {
                   </Card>
 
                   <Card className="p-6">
-                    <h3 className="text-sm font-semibold mb-4">Top Projects</h3>
+                    <h3 className="text-label mb-4">Top Projects</h3>
                     <div className="space-y-3">
                       {stats.by_project.slice(0, 3).map((project) => (
                         <div key={project.project_path} className="flex items-center justify-between">
                           <div className="flex flex-col">
-                            <span className="text-sm font-medium truncate max-w-[200px]" title={project.project_path}>
+                            <span className="text-body-small font-medium truncate max-w-[200px]" title={project.project_path}>
                               {project.project_path}
                             </span>
-                            <span className="text-xs text-muted-foreground">
+                            <span className="text-caption text-muted-foreground">
                               {project.session_count} sessions
                             </span>
                           </div>
-                          <span className="text-sm font-medium">
+                          <span className="text-body-small font-medium">
                             {formatCurrency(project.total_cost)}
                           </span>
                         </div>
@@ -359,10 +357,10 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ }) => {
                             {project.project_path}
                           </span>
                           <div className="flex items-center space-x-3 mt-1">
-                            <span className="text-xs text-muted-foreground">
+                            <span className="text-caption text-muted-foreground">
                               {project.session_count} sessions
                             </span>
-                            <span className="text-xs text-muted-foreground">
+                            <span className="text-caption text-muted-foreground">
                               {formatTokens(project.total_tokens)} tokens
                             </span>
                           </div>
