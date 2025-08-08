@@ -308,8 +308,8 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
                 <ArrowLeft className="h-4 w-4" />
               </Button>
               <div>
-                <h1 className="text-heading-2">CC Agents</h1>
-                <p className="text-body-small text-muted-foreground">
+                <h1 className="text-heading-1">CC Agents</h1>
+                <p className="mt-1 text-body-small text-muted-foreground">
                   Manage your Claude Code agents
                 </p>
               </div>

@@ -369,9 +369,10 @@ export const Settings: React.FC<SettingsProps> = ({
       <AnimatePresence>
         {error && (
           <motion.div
-            initial={{ opacity: 0, y: -10 }}
+            initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.15 }}
             className="mx-4 mt-4 p-3 rounded-lg bg-destructive/10 border border-destructive/50 flex items-center gap-2 text-body-small text-destructive"
           >
             <AlertCircle className="h-4 w-4" />
@@ -749,8 +750,9 @@ export const Settings: React.FC<SettingsProps> = ({
                         allowRules.map((rule) => (
                           <motion.div
                             key={rule.id}
-                            initial={{ opacity: 0, x: -20 }}
+                            initial={{ opacity: 0, x: -8 }}
                             animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.15 }}
                             className="flex items-center gap-2"
                           >
                             <Input
@@ -796,8 +798,9 @@ export const Settings: React.FC<SettingsProps> = ({
                         denyRules.map((rule) => (
                           <motion.div
                             key={rule.id}
-                            initial={{ opacity: 0, x: -20 }}
+                            initial={{ opacity: 0, x: -8 }}
                             animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.15 }}
                             className="flex items-center gap-2"
                           >
                             <Input

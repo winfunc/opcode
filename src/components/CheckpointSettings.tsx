@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { 
-  Settings,
+  Wrench,
   Save,
   Trash2,
   HardDrive,
-  AlertCircle
+  AlertCircle,
+  Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { SelectComponent, type SelectOption } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Card } from "@/components/ui/card";
 import { api, type CheckpointStrategy } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -129,30 +131,32 @@ export const CheckpointSettings: React.FC<CheckpointSettingsProps> = ({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      className={cn("space-y-6", className)}
+      exit={{ opacity: 0, y: -8 }}
+      transition={{ duration: 0.15 }}
+      className={cn("space-y-4", className)}
     >
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Settings className="h-5 w-5" />
-          <h3 className="text-lg font-semibold">Checkpoint Settings</h3>
+      {/* Header */}
+      <div className="flex items-center justify-between pb-2 border-b border-border">
+        <div className="flex items-center gap-2.5">
+          <div className="p-1.5 rounded-md bg-primary/10">
+            <Wrench className="h-4 w-4 text-primary" />
+          </div>
+          <div>
+            <h3 className="text-heading-4 font-semibold">Checkpoint Settings</h3>
+            <p className="text-caption text-muted-foreground mt-0.5">Manage session checkpoints and recovery</p>
+          </div>
         </div>
-        {onClose && (
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            Close
-          </Button>
-        )}
       </div>
 
       {/* Experimental Feature Warning */}
-      <div className="rounded-lg border border-yellow-500/50 bg-yellow-500/10 p-3">
-        <div className="flex items-start gap-2">
-          <AlertCircle className="h-4 w-4 text-yellow-600 mt-0.5" />
-          <div className="text-xs">
-            <p className="font-medium text-yellow-600">Experimental Feature</p>
-            <p className="text-yellow-600/80">
+      <div className="rounded-md border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/20 p-3">
+        <div className="flex items-start gap-2.5">
+          <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-500 mt-0.5 flex-shrink-0" />
+          <div className="space-y-0.5">
+            <p className="text-caption font-medium text-amber-900 dark:text-amber-100">Experimental Feature</p>
+            <p className="text-caption text-amber-700 dark:text-amber-300">
               Checkpointing may affect directory structure or cause data loss. Use with caution.
             </p>
           </div>
@@ -161,33 +165,36 @@ export const CheckpointSettings: React.FC<CheckpointSettingsProps> = ({
 
       {error && (
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-xs text-destructive"
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.15 }}
+          className="rounded-md border border-destructive/50 bg-destructive/10 p-3"
         >
           <div className="flex items-center gap-2">
-            <AlertCircle className="h-4 w-4" />
-            {error}
+            <AlertCircle className="h-3.5 w-3.5 text-destructive" />
+            <span className="text-caption text-destructive">{error}</span>
           </div>
         </motion.div>
       )}
 
       {successMessage && (
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="rounded-lg border border-green-500/50 bg-green-500/10 p-3 text-xs text-green-600"
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.15 }}
+          className="rounded-md border border-green-600/50 bg-green-50 dark:bg-green-950/20 p-3"
         >
-          {successMessage}
+          <span className="text-caption text-green-700 dark:text-green-400">{successMessage}</span>
         </motion.div>
       )}
 
-      <div className="space-y-4">
+      {/* Main Settings Card */}
+      <Card className="p-5 space-y-4">
         {/* Auto-checkpoint toggle */}
         <div className="flex items-center justify-between">
           <div className="space-y-0.5">
-            <Label htmlFor="auto-checkpoint">Automatic Checkpoints</Label>
-            <p className="text-sm text-muted-foreground">
+            <Label htmlFor="auto-checkpoint" className="text-label">Automatic Checkpoints</Label>
+            <p className="text-caption text-muted-foreground">
               Automatically create checkpoints based on the selected strategy
             </p>
           </div>
@@ -201,14 +208,14 @@ export const CheckpointSettings: React.FC<CheckpointSettingsProps> = ({
 
         {/* Checkpoint strategy */}
         <div className="space-y-2">
-          <Label htmlFor="strategy">Checkpoint Strategy</Label>
+          <Label htmlFor="strategy" className="text-label">Checkpoint Strategy</Label>
           <SelectComponent
             value={checkpointStrategy}
             onValueChange={(value: string) => setCheckpointStrategy(value as CheckpointStrategy)}
             options={strategyOptions}
             disabled={isLoading || !autoCheckpointEnabled}
           />
-          <p className="text-xs text-muted-foreground">
+          <p className="text-caption text-muted-foreground">
             {checkpointStrategy === "manual" && "Checkpoints will only be created manually"}
             {checkpointStrategy === "per_prompt" && "A checkpoint will be created after each user prompt"}
             {checkpointStrategy === "per_tool_use" && "A checkpoint will be created after each tool use"}
@@ -217,39 +224,48 @@ export const CheckpointSettings: React.FC<CheckpointSettingsProps> = ({
         </div>
 
         {/* Save button */}
-        <Button
-          onClick={handleSaveSettings}
-          disabled={isLoading || isSaving}
-          className="w-full"
+        <motion.div
+          whileTap={{ scale: 0.97 }}
+          transition={{ duration: 0.15 }}
         >
-          {isSaving ? (
-            <>
-              <Save className="h-4 w-4 mr-2 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            <>
-              <Save className="h-4 w-4 mr-2" />
-              Save Settings
-            </>
-          )}
-        </Button>
-      </div>
+          <Button
+            onClick={handleSaveSettings}
+            disabled={isLoading || isSaving}
+            className="w-full"
+            size="default"
+          >
+            {isSaving ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4 mr-2" />
+                Save Settings
+              </>
+            )}
+          </Button>
+        </motion.div>
+      </Card>
 
-      <div className="border-t pt-6 space-y-4">
+      {/* Storage Management Card */}
+      <Card className="p-5 space-y-4">
         <div className="flex items-center justify-between">
           <div className="space-y-0.5">
-            <Label>Storage Management</Label>
-            <p className="text-sm text-muted-foreground">
-              Total checkpoints: {totalCheckpoints}
+            <div className="flex items-center gap-2">
+              <HardDrive className="h-4 w-4 text-muted-foreground" />
+              <Label className="text-label">Storage Management</Label>
+            </div>
+            <p className="text-caption text-muted-foreground">
+              Total checkpoints: <span className="font-medium text-foreground">{totalCheckpoints}</span>
             </p>
           </div>
-          <HardDrive className="h-5 w-5 text-muted-foreground" />
         </div>
 
         {/* Cleanup settings */}
         <div className="space-y-2">
-          <Label htmlFor="keep-count">Keep Recent Checkpoints</Label>
+          <Label htmlFor="keep-count" className="text-label">Keep Recent Checkpoints</Label>
           <div className="flex gap-2">
             <Input
               id="keep-count"
@@ -259,22 +275,29 @@ export const CheckpointSettings: React.FC<CheckpointSettingsProps> = ({
               value={keepCount}
               onChange={(e) => setKeepCount(parseInt(e.target.value) || 10)}
               disabled={isLoading}
-              className="flex-1"
+              className="flex-1 h-9"
             />
-            <Button
-              variant="destructive"
-              onClick={handleCleanup}
-              disabled={isLoading || totalCheckpoints <= keepCount}
+            <motion.div
+              whileTap={{ scale: 0.97 }}
+              transition={{ duration: 0.15 }}
             >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Clean Up
-            </Button>
+              <Button
+                variant="outline"
+                onClick={handleCleanup}
+                disabled={isLoading || totalCheckpoints <= keepCount}
+                size="sm"
+                className="hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50"
+              >
+                <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                Clean Up
+              </Button>
+            </motion.div>
           </div>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-caption text-muted-foreground">
             Remove old checkpoints, keeping only the most recent {keepCount}
           </p>
         </div>
-      </div>
+      </Card>
     </motion.div>
   );
 }; 

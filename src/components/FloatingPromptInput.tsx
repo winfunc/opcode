@@ -794,9 +794,10 @@ const FloatingPromptInputInner = (
             onClick={() => setIsExpanded(false)}
           >
             <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.15 }}
               className="bg-background border border-border rounded-lg shadow-lg w-full max-w-2xl p-4 space-y-4"
               onClick={(e) => e.stopPropagation()}
             >

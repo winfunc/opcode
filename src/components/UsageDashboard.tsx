@@ -260,7 +260,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ }) => {
                       {stats.by_model.slice(0, 3).map((model) => (
                         <div key={model.model} className="flex items-center justify-between">
                           <div className="flex items-center space-x-2">
-                            <Badge variant="outline" className={cn("text-caption", getModelColor(model.model))}>
+                            <Badge variant="outline" className="text-caption">
                               {getModelDisplayName(model.model)}
                             </Badge>
                             <span className="text-caption text-muted-foreground">
@@ -309,7 +309,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ }) => {
                           <div className="flex items-center space-x-3">
                             <Badge 
                               variant="outline" 
-                              className={cn("text-xs", getModelColor(model.model))}
+                              className="text-xs"
                             >
                               {getModelDisplayName(model.model)}
                             </Badge>

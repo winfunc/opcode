@@ -167,11 +167,11 @@ export const ProjectList: React.FC<ProjectListProps> = ({
             {displayedProjects.map((project, index) => (
               <motion.div
                 key={project.id}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{
-                  duration: 0.2,
-                  delay: index * 0.03,
+                  duration: 0.15,
+                  delay: index * 0.02,
                 }}
                 className="group"
               >

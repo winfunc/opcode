@@ -193,8 +193,9 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
                     {/* Error display */}
                     {error && (
                       <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
+                        initial={{ opacity: 0, y: 4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.15 }}
                         className="mb-4 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-xs text-destructive"
                       >
                         {error}
@@ -338,10 +339,10 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
   return (
     <>
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
+        initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -10 }}
-        transition={{ duration: 0.2 }}
+        exit={{ opacity: 0, y: -8 }}
+        transition={{ duration: 0.15 }}
         className={`h-full w-full ${panelVisibilityClass}`}
       >
         <Suspense

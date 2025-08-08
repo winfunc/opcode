@@ -1172,9 +1172,10 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                 key={virtualItem.key}
                 data-index={virtualItem.index}
                 ref={(el) => el && rowVirtualizer.measureElement(el)}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.15 }}
                 transition={{ duration: 0.3 }}
                 className="absolute inset-x-4 pb-4"
                 style={{
@@ -1195,8 +1196,9 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       {/* Loading indicator under the latest message */}
       {isLoading && (
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.15 }}
           className="flex items-center justify-center py-4 mb-40"
         >
           <div className="rotating-symbol text-primary" />
@@ -1206,8 +1208,9 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       {/* Error indicator */}
       {error && (
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.15 }}
           className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive mb-40 w-full max-w-6xl mx-auto"
         >
           {error}
@@ -1224,8 +1227,9 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       <AnimatePresence>
         <motion.div 
           className="fixed inset-0 z-50 bg-background"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.15 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
         >
@@ -1323,10 +1327,10 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                   {!queuedPromptsCollapsed && queuedPrompts.map((queuedPrompt, index) => (
                     <motion.div
                       key={queuedPrompt.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
-                      transition={{ delay: index * 0.05 }}
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -4 }}
+                      transition={{ duration: 0.15, delay: index * 0.02 }}
                       className="flex items-start gap-2 bg-muted/50 rounded-md p-2"
                     >
                       <div className="flex-1 min-w-0">
@@ -1580,7 +1584,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
-              transition={{ type: "spring", damping: 20, stiffness: 300 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
               className="fixed right-0 top-0 h-full w-full sm:w-96 bg-background border-l border-border shadow-xl z-30 overflow-hidden"
             >
               <div className="h-full flex flex-col">
