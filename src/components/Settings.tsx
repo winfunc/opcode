@@ -697,12 +697,12 @@ export const Settings: React.FC<SettingsProps> = ({
                     
                     {/* Privacy Info */}
                     {analyticsEnabled && (
-                      <div className="rounded-lg border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/20 p-3">
+                      <div className="rounded-lg border border-border bg-muted/50 p-3">
                         <div className="flex gap-2">
-                          <Shield className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                          <Shield className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
                           <div className="space-y-1">
-                            <p className="text-xs font-medium text-blue-900 dark:text-blue-100">Your privacy is protected</p>
-                            <ul className="text-xs text-blue-800 dark:text-blue-200 space-y-0.5">
+                            <p className="text-xs font-medium text-foreground">Your privacy is protected</p>
+                            <ul className="text-xs text-muted-foreground space-y-0.5">
                               <li>• No personal information or file contents collected</li>
                               <li>• All data is anonymous with random IDs</li>
                               <li>• You can disable analytics at any time</li>
