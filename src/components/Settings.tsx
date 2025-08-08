@@ -388,7 +388,7 @@ export const Settings: React.FC<SettingsProps> = ({
       ) : (
         <div className="flex-1 overflow-y-auto p-6">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-9 w-full mb-6 h-auto p-1">
+            <TabsList className="grid grid-cols-8 w-full mb-6 h-auto p-1">
               <TabsTrigger value="general" className="py-2.5 px-3">General</TabsTrigger>
               <TabsTrigger value="permissions" className="py-2.5 px-3">Permissions</TabsTrigger>
               <TabsTrigger value="environment" className="py-2.5 px-3">Environment</TabsTrigger>
@@ -397,7 +397,6 @@ export const Settings: React.FC<SettingsProps> = ({
               <TabsTrigger value="commands" className="py-2.5 px-3">Commands</TabsTrigger>
               <TabsTrigger value="storage" className="py-2.5 px-3">Storage</TabsTrigger>
               <TabsTrigger value="proxy" className="py-2.5 px-3">Proxy</TabsTrigger>
-              <TabsTrigger value="analytics" className="py-2.5 px-3">Analytics</TabsTrigger>
             </TabsList>
             
             {/* General Settings */}
@@ -662,6 +661,55 @@ export const Settings: React.FC<SettingsProps> = ({
                         </p>
                       )}
                     </div>
+
+                    {/* Separator */}
+                    <div className="border-t border-border pt-4 mt-6" />
+                    
+                    {/* Analytics Toggle */}
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <Label htmlFor="analytics-enabled">Enable Analytics</Label>
+                        <p className="text-caption text-muted-foreground">
+                          Help improve Claudia by sharing anonymous usage data
+                        </p>
+                      </div>
+                      <Switch
+                        id="analytics-enabled"
+                        checked={analyticsEnabled}
+                        onCheckedChange={async (checked) => {
+                          if (checked && !analyticsConsented) {
+                            setShowAnalyticsConsent(true);
+                          } else if (checked) {
+                            await analytics.enable();
+                            setAnalyticsEnabled(true);
+                            trackEvent.settingsChanged('analytics_enabled', true);
+                            setToast({ message: "Analytics enabled", type: "success" });
+                          } else {
+                            await analytics.disable();
+                            setAnalyticsEnabled(false);
+                            trackEvent.settingsChanged('analytics_enabled', false);
+                            setToast({ message: "Analytics disabled", type: "success" });
+                          }
+                        }}
+                      />
+                    </div>
+                    
+                    {/* Privacy Info */}
+                    {analyticsEnabled && (
+                      <div className="rounded-lg border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/20 p-3">
+                        <div className="flex gap-2">
+                          <Shield className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                          <div className="space-y-1">
+                            <p className="text-xs font-medium text-blue-900 dark:text-blue-100">Your privacy is protected</p>
+                            <ul className="text-xs text-blue-800 dark:text-blue-200 space-y-0.5">
+                              <li>• No personal information or file contents collected</li>
+                              <li>• All data is anonymous with random IDs</li>
+                              <li>• You can disable analytics at any time</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </Card>
@@ -952,96 +1000,6 @@ export const Settings: React.FC<SettingsProps> = ({
               </Card>
             </TabsContent>
             
-            {/* Analytics Settings */}
-            <TabsContent value="analytics" className="space-y-6">
-              <Card className="p-6 space-y-6">
-                <div>
-                  <div className="flex items-center gap-3 mb-4">
-                    <BarChart3 className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-                    <h3 className="text-base font-semibold">Analytics Settings</h3>
-                  </div>
-                  
-                  <div className="space-y-6">
-                    {/* Analytics Toggle */}
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <Label htmlFor="analytics-enabled" className="text-base">Enable Analytics</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Help improve Claudia by sharing anonymous usage data
-                        </p>
-                      </div>
-                      <Switch
-                        id="analytics-enabled"
-                        checked={analyticsEnabled}
-                        onCheckedChange={async (checked) => {
-                          if (checked && !analyticsConsented) {
-                            setShowAnalyticsConsent(true);
-                          } else if (checked) {
-                            await analytics.enable();
-                            setAnalyticsEnabled(true);
-                            trackEvent.settingsChanged('analytics_enabled', true);
-                            setToast({ message: "Analytics enabled", type: "success" });
-                          } else {
-                            await analytics.disable();
-                            setAnalyticsEnabled(false);
-                            trackEvent.settingsChanged('analytics_enabled', false);
-                            setToast({ message: "Analytics disabled", type: "success" });
-                          }
-                        }}
-                      />
-                    </div>
-                    
-                    {/* Privacy Info */}
-                    <div className="rounded-lg border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/20 p-4">
-                      <div className="flex gap-3">
-                        <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-                        <div className="space-y-2">
-                          <p className="font-medium text-blue-900 dark:text-blue-100">Your privacy is protected</p>
-                          <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
-                            <li>• No personal information is collected</li>
-                            <li>• No file contents, paths, or project names</li>
-                            <li>• All data is anonymous with random IDs</li>
-                            <li>• You can disable analytics at any time</li>
-                          </ul>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Data Collection Info */}
-                    {analyticsEnabled && (
-                      <div className="space-y-4">
-                        <div>
-                          <h4 className="text-sm font-medium mb-2">What we collect:</h4>
-                          <ul className="text-sm text-muted-foreground space-y-1">
-                            <li>• Feature usage patterns</li>
-                            <li>• Performance metrics</li>
-                            <li>• Error reports (without sensitive data)</li>
-                            <li>• Session frequency and duration</li>
-                          </ul>
-                        </div>
-                        
-                        {/* Delete Data Button */}
-                        <div className="pt-4 border-t">
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={async () => {
-                              await analytics.deleteAllData();
-                              setAnalyticsEnabled(false);
-                              setAnalyticsConsented(false);
-                              setToast({ message: "All analytics data deleted", type: "success" });
-                            }}
-                          >
-                            <Trash className="mr-2 h-4 w-4" />
-                            Delete All Analytics Data
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </Card>
-            </TabsContent>
           </Tabs>
         </div>
       )}
