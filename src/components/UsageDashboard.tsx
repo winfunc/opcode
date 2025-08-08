@@ -12,7 +12,6 @@ import {
   ChevronLeft,
   ChevronRight
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 interface UsageDashboardProps {
   /**
@@ -23,7 +22,7 @@ interface UsageDashboardProps {
 
 // Cache for storing fetched data
 const dataCache = new Map<string, { data: any; timestamp: number }>();
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
+const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes cache - increased for better performance
 
 /**
  * Optimized UsageDashboard component with caching and progressive loading
@@ -35,7 +34,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ }) => {
   const [sessionStats, setSessionStats] = useState<ProjectUsage[] | null>(null);
   const [selectedDateRange, setSelectedDateRange] = useState<"all" | "7d" | "30d">("7d");
   const [activeTab, setActiveTab] = useState("overview");
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [hasLoadedTabs, setHasLoadedTabs] = useState<Set<string>>(new Set(["overview"]));
   
   // Pagination states
   const [projectsPage, setProjectsPage] = useState(1);
@@ -89,7 +88,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ }) => {
     dataCache.set(key, { data, timestamp: Date.now() });
   }, []);
 
-  const loadUsageStats = async () => {
+  const loadUsageStats = useCallback(async () => {
     const cacheKey = `usage-${selectedDateRange}`;
     
     // Check cache first
@@ -100,21 +99,27 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ }) => {
       setStats(cachedStats);
       setSessionStats(cachedSessions);
       setLoading(false);
-      setIsInitialLoad(false);
       return;
     }
 
     try {
-      setLoading(true);
+      // Don't show loading spinner if we have cached data for a different range
+      if (!stats && !sessionStats) {
+        setLoading(true);
+      }
       setError(null);
 
       let statsData: UsageStats;
       let sessionData: ProjectUsage[] = [];
       
       if (selectedDateRange === "all") {
-        // Fetch both in sequence
-        statsData = await api.getUsageStats();
-        sessionData = await api.getSessionStats();
+        // Fetch both in parallel for all time
+        const [statsResult, sessionResult] = await Promise.all([
+          api.getUsageStats(),
+          api.getSessionStats()
+        ]);
+        statsData = statsResult;
+        sessionData = sessionResult;
       } else {
         const endDate = new Date();
         const startDate = new Date();
@@ -152,15 +157,13 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ }) => {
       // Cache the data
       setCachedData(`${cacheKey}-stats`, statsData);
       setCachedData(`${cacheKey}-sessions`, sessionData);
-      
-      setIsInitialLoad(false);
     } catch (err: any) {
       console.error("Failed to load usage stats:", err);
       setError("Failed to load usage statistics. Please try again.");
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedDateRange, getCachedData, setCachedData, stats, sessionStats]);
 
   // Load data on mount and when date range changes
   useEffect(() => {
@@ -168,7 +171,34 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ }) => {
     setProjectsPage(1);
     setSessionsPage(1);
     loadUsageStats();
-  }, [selectedDateRange])
+  }, [loadUsageStats])
+
+  // Preload adjacent tabs when idle
+  useEffect(() => {
+    if (!stats || loading) return;
+    
+    const tabOrder = ["overview", "models", "projects", "sessions", "timeline"];
+    const currentIndex = tabOrder.indexOf(activeTab);
+    
+    // Use requestIdleCallback if available, otherwise setTimeout
+    const schedulePreload = (callback: () => void) => {
+      if ('requestIdleCallback' in window) {
+        requestIdleCallback(callback, { timeout: 2000 });
+      } else {
+        setTimeout(callback, 100);
+      }
+    };
+    
+    // Preload adjacent tabs
+    schedulePreload(() => {
+      if (currentIndex > 0) {
+        setHasLoadedTabs(prev => new Set([...prev, tabOrder[currentIndex - 1]]));
+      }
+      if (currentIndex < tabOrder.length - 1) {
+        setHasLoadedTabs(prev => new Set([...prev, tabOrder[currentIndex + 1]]));
+      }
+    });
+  }, [activeTab, stats, loading])
 
   // Memoize expensive computations
   const summaryCards = useMemo(() => {
@@ -261,6 +291,26 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ }) => {
     ));
   }, [stats, formatCurrency]);
 
+  // Memoize timeline chart data
+  const timelineChartData = useMemo(() => {
+    if (!stats?.by_date || stats.by_date.length === 0) return null;
+    
+    const maxCost = Math.max(...stats.by_date.map(d => d.total_cost), 0);
+    const halfMaxCost = maxCost / 2;
+    const reversedData = stats.by_date.slice().reverse();
+    
+    return {
+      maxCost,
+      halfMaxCost,
+      reversedData,
+      bars: reversedData.map(day => ({
+        ...day,
+        heightPercent: maxCost > 0 ? (day.total_cost / maxCost) * 100 : 0,
+        date: new Date(day.date.replace(/-/g, '/')),
+      }))
+    };
+  }, [stats?.by_date]);
+
   return (
     <div className="h-full overflow-y-auto">
       <div className="max-w-6xl mx-auto flex flex-col h-full">
@@ -312,7 +362,10 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ }) => {
               {summaryCards}
 
               {/* Tabs for different views */}
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <Tabs value={activeTab} onValueChange={(value) => {
+                setActiveTab(value);
+                setHasLoadedTabs(prev => new Set([...prev, value]));
+              }} className="w-full">
                 <TabsList className="grid grid-cols-5 w-full mb-6 h-auto p-1">
                   <TabsTrigger value="overview" className="py-2.5 px-3">Overview</TabsTrigger>
                   <TabsTrigger value="models" className="py-2.5 px-3">By Model</TabsTrigger>
@@ -363,13 +416,14 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ }) => {
                   </div>
                 </TabsContent>
 
-                {/* Models Tab - Only render when active */}
-                {activeTab === "models" && (
-                  <TabsContent value="models" className="space-y-6 mt-6">
-                    <Card className="p-6">
-                      <h3 className="text-sm font-semibold mb-4">Usage by Model</h3>
-                      <div className="space-y-4">
-                        {stats.by_model.map((model) => (
+                {/* Models Tab - Lazy render and cache */}
+                <TabsContent value="models" className="space-y-6 mt-6">
+                  {hasLoadedTabs.has("models") && stats && (
+                    <div style={{ display: activeTab === "models" ? "block" : "none" }}>
+                      <Card className="p-6">
+                        <h3 className="text-sm font-semibold mb-4">Usage by Model</h3>
+                        <div className="space-y-4">
+                          {stats.by_model.map((model) => (
                           <div key={model.model} className="space-y-2">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center space-x-3">
@@ -405,17 +459,19 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ }) => {
                                 <span className="font-medium">{formatTokens(model.cache_read_tokens)}</span>
                               </div>
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    </Card>
-                  </TabsContent>
-                )}
+                            </div>
+                          ))}
+                        </div>
+                      </Card>
+                    </div>
+                  )}
+                </TabsContent>
 
-                {/* Projects Tab - Only render when active */}
-                {activeTab === "projects" && (
-                  <TabsContent value="projects" className="space-y-6 mt-6">
-                    <Card className="p-6">
+                {/* Projects Tab - Lazy render and cache */}
+                <TabsContent value="projects" className="space-y-6 mt-6">
+                  {hasLoadedTabs.has("projects") && stats && (
+                    <div style={{ display: activeTab === "projects" ? "block" : "none" }}>
+                      <Card className="p-6">
                       <div className="flex items-center justify-between mb-4">
                         <h3 className="text-sm font-semibold">Usage by Project</h3>
                         <span className="text-xs text-muted-foreground">
@@ -486,16 +542,18 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ }) => {
                               )}
                             </>
                           );
-                        })()}
-                      </div>
-                    </Card>
-                  </TabsContent>
-                )}
+                          })()}
+                        </div>
+                      </Card>
+                    </div>
+                  )}
+                </TabsContent>
 
-                {/* Sessions Tab */}
-                {activeTab === "sessions" && (
-                  <TabsContent value="sessions" className="space-y-6 mt-6">
-                    <Card className="p-6">
+                {/* Sessions Tab - Lazy render and cache */}
+                <TabsContent value="sessions" className="space-y-6 mt-6">
+                  {hasLoadedTabs.has("sessions") && (
+                    <div style={{ display: activeTab === "sessions" ? "block" : "none" }}>
+                      <Card className="p-6">
                       <div className="flex items-center justify-between mb-4">
                         <h3 className="text-sm font-semibold">Usage by Session</h3>
                         {sessionStats && sessionStats.length > 0 && (
@@ -570,96 +628,92 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ }) => {
                           <div className="text-center py-8 text-sm text-muted-foreground">
                             No session data available for the selected period
                           </div>
-                        )}
-                      </div>
-                    </Card>
-                  </TabsContent>
-                )}
+                          )}
+                        </div>
+                      </Card>
+                    </div>
+                  )}
+                </TabsContent>
 
-                {/* Timeline Tab */}
-                {activeTab === "timeline" && (
-                  <TabsContent value="timeline" className="space-y-6 mt-6">
-                    <Card className="p-6">
+                {/* Timeline Tab - Lazy render and cache */}
+                <TabsContent value="timeline" className="space-y-6 mt-6">
+                  {hasLoadedTabs.has("timeline") && stats && (
+                    <div style={{ display: activeTab === "timeline" ? "block" : "none" }}>
+                      <Card className="p-6">
                       <h3 className="text-sm font-semibold mb-6 flex items-center space-x-2">
                         <Calendar className="h-4 w-4" />
                         <span>Daily Usage</span>
                       </h3>
-                      {stats.by_date && stats.by_date.length > 0 ? (() => {
-                        const maxCost = Math.max(...stats.by_date.map(d => d.total_cost), 0);
-                        const halfMaxCost = maxCost / 2;
-
-                        return (
-                          <div className="relative pl-8 pr-4">
-                            {/* Y-axis labels */}
-                            <div className="absolute left-0 top-0 bottom-8 flex flex-col justify-between text-xs text-muted-foreground">
-                              <span>{formatCurrency(maxCost)}</span>
-                              <span>{formatCurrency(halfMaxCost)}</span>
-                              <span>{formatCurrency(0)}</span>
-                            </div>
-                            
-                            {/* Chart container */}
-                            <div className="flex items-end space-x-2 h-64 border-l border-b border-border pl-4">
-                              {stats.by_date.slice().reverse().map((day) => {
-                                const heightPercent = maxCost > 0 ? (day.total_cost / maxCost) * 100 : 0;
-                                const date = new Date(day.date.replace(/-/g, '/'));
-                                const formattedDate = date.toLocaleDateString('en-US', {
-                                  weekday: 'short',
-                                  month: 'short',
-                                  day: 'numeric'
-                                });
-                                
-                                return (
-                                  <div key={day.date} className="flex-1 h-full flex flex-col items-center justify-end group relative">
-                                    {/* Tooltip */}
-                                    <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
-                                      <div className="bg-background border border-border rounded-lg shadow-lg p-3 whitespace-nowrap">
-                                        <p className="text-sm font-semibold">{formattedDate}</p>
-                                        <p className="text-sm text-muted-foreground mt-1">
-                                          Cost: {formatCurrency(day.total_cost)}
-                                        </p>
-                                        <p className="text-xs text-muted-foreground">
-                                          {formatTokens(day.total_tokens)} tokens
-                                        </p>
-                                        <p className="text-xs text-muted-foreground">
-                                          {day.models_used.length} model{day.models_used.length !== 1 ? 's' : ''}
-                                        </p>
-                                      </div>
-                                      <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
-                                        <div className="border-4 border-transparent border-t-border"></div>
-                                      </div>
+                      {timelineChartData ? (
+                        <div className="relative pl-8 pr-4">
+                          {/* Y-axis labels */}
+                          <div className="absolute left-0 top-0 bottom-8 flex flex-col justify-between text-xs text-muted-foreground">
+                            <span>{formatCurrency(timelineChartData.maxCost)}</span>
+                            <span>{formatCurrency(timelineChartData.halfMaxCost)}</span>
+                            <span>{formatCurrency(0)}</span>
+                          </div>
+                          
+                          {/* Chart container */}
+                          <div className="flex items-end space-x-2 h-64 border-l border-b border-border pl-4">
+                            {timelineChartData.bars.map((day) => {
+                              const formattedDate = day.date.toLocaleDateString('en-US', {
+                                weekday: 'short',
+                                month: 'short',
+                                day: 'numeric'
+                              });
+                              
+                              return (
+                                <div key={day.date.toISOString()} className="flex-1 h-full flex flex-col items-center justify-end group relative">
+                                  {/* Tooltip */}
+                                  <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
+                                    <div className="bg-background border border-border rounded-lg shadow-lg p-3 whitespace-nowrap">
+                                      <p className="text-sm font-semibold">{formattedDate}</p>
+                                      <p className="text-sm text-muted-foreground mt-1">
+                                        Cost: {formatCurrency(day.total_cost)}
+                                      </p>
+                                      <p className="text-xs text-muted-foreground">
+                                        {formatTokens(day.total_tokens)} tokens
+                                      </p>
+                                      <p className="text-xs text-muted-foreground">
+                                        {day.models_used.length} model{day.models_used.length !== 1 ? 's' : ''}
+                                      </p>
                                     </div>
-                                    
-                                    {/* Bar */}
-                                    <div 
-                                      className="w-full bg-primary hover:opacity-80 transition-opacity rounded-t cursor-pointer"
-                                      style={{ height: `${heightPercent}%` }}
-                                    />
-                                    
-                                    {/* X-axis label – absolutely positioned below the bar */}
-                                    <div
-                                      className="absolute left-1/2 top-full mt-2 -translate-x-1/2 text-xs text-muted-foreground whitespace-nowrap pointer-events-none"
-                                    >
-                                      {date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
+                                      <div className="border-4 border-transparent border-t-border"></div>
                                     </div>
                                   </div>
-                                );
-                              })}
-                            </div>
-                            
-                            {/* X-axis label */}
-                            <div className="mt-10 text-center text-xs text-muted-foreground">
-                              Daily Usage Over Time
-                            </div>
+                                  
+                                  {/* Bar */}
+                                  <div 
+                                    className="w-full bg-primary hover:opacity-80 transition-opacity rounded-t cursor-pointer"
+                                    style={{ height: `${day.heightPercent}%` }}
+                                  />
+                                  
+                                  {/* X-axis label – absolutely positioned below the bar */}
+                                  <div
+                                    className="absolute left-1/2 top-full mt-2 -translate-x-1/2 text-xs text-muted-foreground whitespace-nowrap pointer-events-none"
+                                  >
+                                    {day.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
-                        )
-                      })() : (
+                          
+                          {/* X-axis label */}
+                          <div className="mt-10 text-center text-xs text-muted-foreground">
+                            Daily Usage Over Time
+                          </div>
+                        </div>
+                      ) : (
                         <div className="text-center py-8 text-sm text-muted-foreground">
                           No usage data available for the selected period
                         </div>
-                      )}
-                    </Card>
-                  </TabsContent>
-                )}
+                        )}
+                      </Card>
+                    </div>
+                  )}
+                </TabsContent>
               </Tabs>
             </div>
           ) : null}

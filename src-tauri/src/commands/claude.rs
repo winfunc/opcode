@@ -262,6 +262,19 @@ fn create_command_with_env(program: &str) -> Command {
             }
         }
     }
+    
+    // Add Homebrew support if the program is in a Homebrew directory
+    if program.contains("/homebrew/") || program.contains("/opt/homebrew/") {
+        if let Some(program_dir) = std::path::Path::new(program).parent() {
+            let current_path = std::env::var("PATH").unwrap_or_default();
+            let homebrew_bin_str = program_dir.to_string_lossy();
+            if !current_path.contains(&homebrew_bin_str.as_ref()) {
+                let new_path = format!("{}:{}", homebrew_bin_str, current_path);
+                log::debug!("Adding Homebrew bin directory to PATH: {}", homebrew_bin_str);
+                tokio_cmd.env("PATH", new_path);
+            }
+        }
+    }
 
     tokio_cmd
 }
