@@ -1,15 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
-  ArrowLeft, 
   Plus, 
   Trash2, 
   Save, 
   AlertCircle,
   Loader2,
-  BarChart3,
   Shield,
-  Trash,
   Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,7 +15,6 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   api, 
   type ClaudeSettings,
@@ -63,7 +59,6 @@ interface EnvironmentVariable {
  * Provides a no-code interface for editing the settings.json file
  */
 export const Settings: React.FC<SettingsProps> = ({
-  onBack,
   className,
 }) => {
   const [settings, setSettings] = useState<ClaudeSettings | null>(null);

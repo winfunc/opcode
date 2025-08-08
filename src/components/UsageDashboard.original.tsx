@@ -11,7 +11,6 @@ import {
   Loader2,
   Briefcase
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 interface UsageDashboardProps {
   /**
@@ -115,11 +114,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ }) => {
     return modelMap[model] || model;
   };
 
-  const getModelColor = (model: string): string => {
-    if (model.includes("opus")) return "text-purple-500";
-    if (model.includes("sonnet")) return "text-blue-500";
-    return "text-gray-500";
-  };
+  // Helper for model color (unused in this original version)
 
   return (
     <div className="h-full overflow-y-auto">

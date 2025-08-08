@@ -12,7 +12,7 @@ import {
   Lightbulb,
   Cpu,
   Rocket,
-  Zap as Lightning
+  
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -138,7 +138,7 @@ const THINKING_MODES: ThinkingModeConfig[] = [
 /**
  * ThinkingModeIndicator component - Shows visual indicator bars for thinking level
  */
-const ThinkingModeIndicator: React.FC<{ level: number; color?: string }> = ({ level, color }) => {
+const ThinkingModeIndicator: React.FC<{ level: number; color?: string }> = ({ level, color: _color }) => {
   const getBarColor = (barIndex: number) => {
     if (barIndex > level) return "bg-muted";
     return "bg-primary";

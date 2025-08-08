@@ -39,7 +39,6 @@ export const CheckpointSettings: React.FC<CheckpointSettingsProps> = ({
   sessionId,
   projectId,
   projectPath,
-  onClose,
   className,
 }) => {
   const [autoCheckpointEnabled, setAutoCheckpointEnabled] = useState(true);

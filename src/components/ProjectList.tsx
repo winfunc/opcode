@@ -52,7 +52,7 @@ const getDisplayPath = (path: string, maxLength: number = 30): string => {
   for (const indicator of homeIndicators) {
     if (path.includes(indicator)) {
       const parts = path.split('/');
-      const userIndex = parts.findIndex((p, i) => 
+      const userIndex = parts.findIndex((_part, i) => 
         i > 0 && parts[i - 1] === indicator.split('/')[1]
       );
       if (userIndex > 0) {

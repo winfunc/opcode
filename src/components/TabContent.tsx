@@ -7,7 +7,6 @@ import { Loader2, Plus, ArrowLeft } from 'lucide-react';
 import { api, type Project, type Session, type ClaudeMdFile } from '@/lib/api';
 import { ProjectList } from '@/components/ProjectList';
 import { SessionList } from '@/components/SessionList';
-import { RunningClaudeSessions } from '@/components/RunningClaudeSessions';
 import { Button } from '@/components/ui/button';
 
 // Lazy load heavy components
@@ -30,7 +29,7 @@ interface TabPanelProps {
 }
 
 const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
-  const { updateTab, createChatTab } = useTabState();
+  const { updateTab } = useTabState();
   const [projects, setProjects] = React.useState<Project[]>([]);
   const [selectedProject, setSelectedProject] = React.useState<Project | null>(null);
   const [sessions, setSessions] = React.useState<Session[]>([]);

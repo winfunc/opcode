@@ -1,17 +1,12 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
-  ArrowLeft,
-  Terminal,
-  FolderOpen,
   Copy,
   ChevronDown,
   GitBranch,
-  Settings,
   ChevronUp,
   X,
   Hash,
-  Command,
   Wrench
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -20,7 +15,6 @@ import { Label } from "@/components/ui/label";
 import { Popover } from "@/components/ui/popover";
 import { api, type Session } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import { open } from "@tauri-apps/plugin-dialog";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { StreamMessage } from "./StreamMessage";
 import { FloatingPromptInput, type FloatingPromptInputRef } from "./FloatingPromptInput";
@@ -77,14 +71,11 @@ interface ClaudeCodeSessionProps {
 export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   session,
   initialProjectPath = "",
-  onBack,
-  onProjectSettings,
   className,
   onStreamingChange,
   onProjectPathChange,
 }) => {
-  const [projectPath, setProjectPath] = useState(initialProjectPath || session?.project_path || "");
-  const [sessionRestoreData, setSessionRestoreData] = useState<{ projectId: string } | null>(null);
+  const [projectPath] = useState(initialProjectPath || session?.project_path || "");
   const [messages, setMessages] = useState<ClaudeStreamMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -437,29 +428,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     }
   };
 
-  const handleSelectPath = async () => {
-    try {
-      const selected = await open({
-        directory: true,
-        multiple: false,
-        title: "Select Project Directory"
-      });
-      
-      if (selected) {
-        const selectedPath = selected as string;
-        setProjectPath(selectedPath);
-        setError(null);
-        // Call the callback to update tab title
-        if (onProjectPathChange) {
-          onProjectPathChange(selectedPath);
-        }
-      }
-    } catch (err) {
-      console.error("Failed to select directory:", err);
-      const errorMessage = err instanceof Error ? err.message : String(err);
-      setError(`Failed to select directory: ${errorMessage}`);
-    }
-  };
+  // Project path selection handled by parent tab controls
 
   const handleSendPrompt = async (prompt: string, model: "sonnet" | "opus") => {
     console.log('[ClaudeCodeSession] handleSendPrompt called with:', { prompt, model, projectPath, claudeSessionId, effectiveSession });

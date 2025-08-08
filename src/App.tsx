@@ -1,17 +1,14 @@
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, Bot, FolderCode } from "lucide-react";
+import { motion } from "framer-motion";
+import { Bot, FolderCode } from "lucide-react";
 import { api, type Project, type Session, type ClaudeMdFile } from "@/lib/api";
 import { OutputCacheProvider } from "@/lib/outputCache";
 import { TabProvider } from "@/contexts/TabContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ProjectList } from "@/components/ProjectList";
 import { FilePicker } from "@/components/FilePicker";
 import { SessionList } from "@/components/SessionList";
-import { RunningClaudeSessions } from "@/components/RunningClaudeSessions";
-import { Topbar } from "@/components/Topbar";
 import { CustomTitlebar } from "@/components/CustomTitlebar";
 import { MarkdownEditor } from "@/components/MarkdownEditor";
 import { ClaudeFileEditor } from "@/components/ClaudeFileEditor";
@@ -50,13 +47,13 @@ type View =
  */
 function AppContent() {
   const [view, setView] = useState<View>("tabs");
-  const { createClaudeMdTab, createSettingsTab, createUsageTab, createMCPTab, createProjectsTab, createAgentsTab } = useTabState();
+  const { createClaudeMdTab, createSettingsTab, createUsageTab, createMCPTab, createAgentsTab } = useTabState();
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [editingClaudeFile, setEditingClaudeFile] = useState<ClaudeMdFile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [_error, setError] = useState<string | null>(null);
   const [showNFO, setShowNFO] = useState(false);
   const [showClaudeBinaryDialog, setShowClaudeBinaryDialog] = useState(false);
   const [showProjectPicker, setShowProjectPicker] = useState(false);
@@ -197,10 +194,7 @@ function AppContent() {
   /**
    * Opens a new Claude Code session in the interactive UI
    */
-  const handleNewSession = async () => {
-    handleViewChange("tabs");
-    // The tab system will handle creating a new chat tab
-  };
+  // New session creation is handled by the tab system via titlebar actions
 
   /**
    * Handles editing a CLAUDE.md file from a project
@@ -229,10 +223,7 @@ function AppContent() {
   /**
    * Handles navigating to hooks configuration
    */
-  const handleProjectSettings = (project: Project) => {
-    setProjectForSettings(project);
-    handleViewChange("project-settings");
-  };
+  // Project settings navigation handled via `projectForSettings` state when needed
 
 
   const renderContent = () => {

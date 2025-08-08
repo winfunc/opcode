@@ -4,7 +4,6 @@ import {
   ArrowLeft, 
   Play, 
   StopCircle, 
-  FolderOpen, 
   Terminal,
   AlertCircle,
   Loader2,
@@ -22,13 +21,11 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { api, type Agent } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import { open } from "@tauri-apps/plugin-dialog";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { StreamMessage } from "./StreamMessage";
 import { ExecutionControlBar } from "./ExecutionControlBar";
@@ -91,7 +88,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
   onBack,
   className,
 }) => {
-  const [projectPath, setProjectPath] = useState(initialProjectPath || "");
+  const [projectPath] = useState(initialProjectPath || "");
   const [task, setTask] = useState(agent.default_task || "");
   const [model, setModel] = useState(agent.model || "sonnet");
   const [isRunning, setIsRunning] = useState(false);
@@ -280,25 +277,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
   }, [messages]);
 
 
-  const handleSelectPath = async () => {
-    try {
-      const selected = await open({
-        directory: true,
-        multiple: false,
-        title: "Select Project Directory"
-      });
-      
-      if (selected) {
-        setProjectPath(selected as string);
-        setError(null); // Clear any previous errors
-      }
-    } catch (err) {
-      console.error("Failed to select directory:", err);
-      // More detailed error logging
-      const errorMessage = err instanceof Error ? err.message : String(err);
-      setError(`Failed to select directory: ${errorMessage}`);
-    }
-  };
+  // Project path selection is handled upstream when opening an execution tab
 
   const handleOpenHooksDialog = async () => {
     setIsHooksDialogOpen(true);

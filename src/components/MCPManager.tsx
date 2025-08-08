@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Download, AlertCircle, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { AlertCircle, Loader2 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { Toast, ToastContainer } from "@/components/ui/toast";
@@ -26,7 +25,7 @@ interface MCPManagerProps {
  * Provides a comprehensive UI for adding, configuring, and managing MCP servers
  */
 export const MCPManager: React.FC<MCPManagerProps> = ({
-  className,
+  className: _className,
 }) => {
   const [activeTab, setActiveTab] = useState("servers");
   const [servers, setServers] = useState<MCPServer[]>([]);

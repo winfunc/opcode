@@ -1,17 +1,12 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { FileText, Calendar, Clock, MessageSquare, Info } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Clock, MessageSquare } from "lucide-react";
+import { Card } from "@/components/ui/card";
 import { Pagination } from "@/components/ui/pagination";
 import { ClaudeMemoriesDropdown } from "@/components/ClaudeMemoriesDropdown";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { formatUnixTimestamp, formatISOTimestamp, truncateText, getFirstLine } from "@/lib/date-utils";
+import { truncateText, getFirstLine } from "@/lib/date-utils";
 import type { Session, ClaudeMdFile } from "@/lib/api";
 
 interface SessionListProps {
@@ -57,7 +52,6 @@ const ITEMS_PER_PAGE = 12;
 export const SessionList: React.FC<SessionListProps> = ({
   sessions,
   projectPath,
-  onBack,
   onSessionClick,
   onEditClaudeFile,
   className,

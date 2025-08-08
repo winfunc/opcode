@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Circle, FileText, Settings, ExternalLink, BarChart3, Network, Info, Bot } from "lucide-react";
+import { Circle, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover } from "@/components/ui/popover";
 import { api, type ClaudeVersionStatus } from "@/lib/api";
@@ -49,12 +49,7 @@ interface TopbarProps {
  * />
  */
 export const Topbar: React.FC<TopbarProps> = ({
-  onClaudeClick,
   onSettingsClick,
-  onUsageClick,
-  onMCPClick,
-  onInfoClick,
-  onAgentsClick,
   className,
 }) => {
   const [versionStatus, setVersionStatus] = useState<ClaudeVersionStatus | null>(null);
