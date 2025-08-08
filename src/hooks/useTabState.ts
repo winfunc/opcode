@@ -14,7 +14,7 @@ interface UseTabStateReturn {
   // Operations
   createChatTab: (projectId?: string, title?: string, projectPath?: string) => string;
   createAgentTab: (agentRunId: string, agentName: string) => string;
-  createAgentExecutionTab: (agent: any, tabId: string) => string;
+  createAgentExecutionTab: (agent: any, tabId: string, projectPath?: string) => string;
   createProjectsTab: () => string | null;
   createAgentsTab: () => string | null;
   createUsageTab: () => string | null;
@@ -206,11 +206,12 @@ export const useTabState = (): UseTabStateReturn => {
     });
   }, [addTab, tabs, setActiveTab]);
 
-  const createAgentExecutionTab = useCallback((agent: any, _tabId: string): string => {
+  const createAgentExecutionTab = useCallback((agent: any, _tabId: string, projectPath?: string): string => {
     return addTab({
       type: 'agent-execution',
       title: `Run: ${agent.name}`,
       agentData: agent,
+      projectPath: projectPath,
       status: 'idle',
       hasUnsavedChanges: false,
       icon: 'bot'

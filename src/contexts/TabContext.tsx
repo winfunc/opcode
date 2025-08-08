@@ -10,6 +10,7 @@ export interface Tab {
   agentData?: any; // for agent-execution tabs
   claudeFileId?: string; // for claude-file tabs
   initialProjectPath?: string; // for chat tabs
+  projectPath?: string; // for agent-execution tabs
   status: 'active' | 'idle' | 'running' | 'complete' | 'error';
   hasUnsavedChanges: boolean;
   order: number;

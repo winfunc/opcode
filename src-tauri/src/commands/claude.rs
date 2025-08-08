@@ -307,15 +307,6 @@ pub async fn get_home_directory() -> Result<String, String> {
         .ok_or_else(|| "Could not determine home directory".to_string())
 }
 
-/// Opens native folder picker and returns selected path
-#[tauri::command]
-pub async fn pick_folder() -> Result<Option<String>, String> {
-    use tauri_plugin_dialog::DialogExt;
-    
-    // Note: This requires the dialog plugin to be initialized in main.rs
-    // The actual dialog will be shown from the frontend using the plugin
-    Ok(None)
-}
 
 /// Lists all projects in the ~/.claude/projects directory
 #[tauri::command]

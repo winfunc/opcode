@@ -34,15 +34,23 @@ import { StreamMessage } from "./StreamMessage";
 import { ExecutionControlBar } from "./ExecutionControlBar";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { AGENT_ICONS } from "./CCAgents";
 import { HooksEditor } from "./HooksEditor";
 import { useTrackEvent, useComponentMetrics, useFeatureAdoptionTracking } from "@/hooks";
+import { useTabState } from "@/hooks/useTabState";
 
 interface AgentExecutionProps {
   /**
    * The agent to execute
    */
   agent: Agent;
+  /**
+   * Optional initial project path
+   */
+  projectPath?: string;
+  /**
+   * Optional tab ID for updating tab status
+   */
+  tabId?: string;
   /**
    * Callback to go back to the agents list
    */
@@ -78,13 +86,18 @@ export interface ClaudeStreamMessage {
  */
 export const AgentExecution: React.FC<AgentExecutionProps> = ({
   agent,
+  projectPath: initialProjectPath,
+  tabId,
   onBack,
   className,
 }) => {
-  const [projectPath, setProjectPath] = useState("");
+  const [projectPath, setProjectPath] = useState(initialProjectPath || "");
   const [task, setTask] = useState(agent.default_task || "");
   const [model, setModel] = useState(agent.model || "sonnet");
   const [isRunning, setIsRunning] = useState(false);
+  
+  // Get tab state functions
+  const { updateTabStatus } = useTabState();
   const [messages, setMessages] = useState<ClaudeStreamMessage[]>([]);
   const [rawJsonlOutput, setRawJsonlOutput] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -294,6 +307,11 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
   const handleExecute = async () => {
     try {
       setIsRunning(true);
+      // Update tab status to running
+      console.log('Setting tab status to running for tab:', tabId);
+      if (tabId) {
+        updateTabStatus(tabId, 'running');
+      }
       setExecutionStartTime(Date.now());
       setMessages([]);
       setRawJsonlOutput([]);
@@ -351,6 +369,10 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
         setExecutionStartTime(null);
         if (!event.payload) {
           setError("Agent execution failed");
+          // Update tab status to error
+          if (tabId) {
+            updateTabStatus(tabId, 'error');
+          }
           // Track both the old event for compatibility and the new error event
           trackEvent.agentExecuted(agent.name || 'custom', false, agent.name, duration);
           trackEvent.agentError({
@@ -360,6 +382,10 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
             agent_type: agent.name || 'custom'
           });
         } else {
+          // Update tab status to complete on success
+          if (tabId) {
+            updateTabStatus(tabId, 'complete');
+          }
           trackEvent.agentExecuted(agent.name || 'custom', true, agent.name, duration);
         }
       });
@@ -368,6 +394,10 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
         setIsRunning(false);
         setExecutionStartTime(null);
         setError("Agent execution was cancelled");
+        // Update tab status to idle when cancelled
+        if (tabId) {
+          updateTabStatus(tabId, 'idle');
+        }
       });
 
       unlistenRefs.current = [outputUnlisten, errorUnlisten, completeUnlisten, cancelUnlisten];
@@ -376,6 +406,10 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
       setIsRunning(false);
       setExecutionStartTime(null);
       setRunId(null);
+      // Update tab status to error
+      if (tabId) {
+        updateTabStatus(tabId, 'error');
+      }
       // Show error in messages
       setMessages(prev => [...prev, {
         type: "result",
@@ -410,6 +444,10 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
       // Update UI state
       setIsRunning(false);
       setExecutionStartTime(null);
+      // Update tab status to idle when stopped
+      if (tabId) {
+        updateTabStatus(tabId, 'idle');
+      }
       
       // Clean up listeners
       unlistenRefs.current.forEach(unlisten => unlisten());
@@ -432,6 +470,10 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
       // Still update UI state even if the backend call failed
       setIsRunning(false);
       setExecutionStartTime(null);
+      // Update tab status to idle
+      if (tabId) {
+        updateTabStatus(tabId, 'idle');
+      }
       
       // Show error message
       setMessages(prev => [...prev, {
@@ -539,200 +581,188 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
     setCopyPopoverOpen(false);
   };
 
-  const renderIcon = () => {
-    const Icon = agent.icon in AGENT_ICONS ? AGENT_ICONS[agent.icon as keyof typeof AGENT_ICONS] : Terminal;
-    return <Icon className="h-5 w-5" />;
-  };
 
   return (
     <div className={cn("flex flex-col h-full bg-background", className)}>
       {/* Fixed container that takes full height */}
-      <div className="h-full flex flex-col">
-        {/* Sticky Header */}
-        <div className="sticky top-0 z-20 bg-background border-b border-border">
-          <div className="w-full max-w-5xl mx-auto">
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-              className="p-6"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={handleBackWithConfirmation}
-                    className="h-8 w-8"
-                  >
-                    <ArrowLeft className="h-4 w-4" />
-                  </Button>
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-full bg-primary/10 text-primary">
-                      {renderIcon()}
-                    </div>
-                    <div>
-                      <h1 className="text-xl font-bold">Execute: {agent.name}</h1>
-                      <p className="text-sm text-muted-foreground">
-                        {model === 'opus' ? 'Claude 4 Opus' : 'Claude 4 Sonnet'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsFullscreenModalOpen(true)}
-                    disabled={messages.length === 0}
-                  >
-                    <Maximize2 className="h-4 w-4 mr-2" />
-                    Fullscreen
-                  </Button>
-                </div>
+      <div className="h-full flex flex-col bg-background">
+        {/* Header */}
+        <div className="p-6 border-b border-border">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleBackWithConfirmation}
+                className="h-9 w-9 -ml-2"
+                title="Back"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <div>
+                <h1 className="text-heading-1">{agent.name}</h1>
+                <p className="mt-1 text-body-small text-muted-foreground">
+                  {isRunning ? 'Running' : messages.length > 0 ? 'Complete' : 'Ready'} • {model === 'opus' ? 'Claude 4 Opus' : 'Claude 4 Sonnet'}
+                </p>
               </div>
-            </motion.div>
+            </div>
+            <div className="flex items-center gap-2">
+              {messages.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="default"
+                  onClick={() => setIsFullscreenModalOpen(true)}
+                >
+                  <Maximize2 className="h-4 w-4 mr-2" />
+                  Fullscreen
+                </Button>
+              )}
+            </div>
           </div>
         </div>
         
-        {/* Sticky Configuration */}
-        <div className="sticky top-[73px] z-10 bg-background border-b border-border">
-          <div className="w-full max-w-5xl mx-auto p-4 space-y-4">
+        {/* Configuration Section */}
+        <div className="p-6 border-b border-border">
+          <div className="max-w-4xl mx-auto space-y-4">
             {/* Error display */}
             {error && (
               <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-xs text-destructive flex items-center gap-2"
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.15 }}
+                className="p-3 rounded-md bg-destructive/10 border border-destructive/50 flex items-center gap-2"
               >
-                <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                {error}
+                <AlertCircle className="h-3.5 w-3.5 text-destructive flex-shrink-0" />
+                <span className="text-caption text-destructive">{error}</span>
               </motion.div>
             )}
 
-            {/* Project Path */}
-            <div className="space-y-2">
-              <Label>Project Path</Label>
-              <div className="flex gap-2">
-                <Input
-                  value={projectPath}
-                  onChange={(e) => setProjectPath(e.target.value)}
-                  placeholder="Select or enter project path"
-                  disabled={isRunning}
-                  className="flex-1"
-                />
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={handleSelectPath}
-                  disabled={isRunning}
-                >
-                  <FolderOpen className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={handleOpenHooksDialog}
-                  disabled={isRunning || !projectPath}
-                  title="Configure hooks"
-                >
-                  <Settings2 className="h-4 w-4 mr-2" />
-                  Hooks
-                </Button>
-              </div>
-            </div>
-
             {/* Model Selection */}
-            <div className="space-y-2">
-              <Label>Model</Label>
-              <div className="flex gap-3">
-                <button
+            <div className="space-y-3">
+              <Label className="text-caption text-muted-foreground">Model Selection</Label>
+              <div className="flex gap-2">
+                <motion.button
                   type="button"
                   onClick={() => !isRunning && setModel("sonnet")}
+                  whileTap={{ scale: 0.97 }}
+                  transition={{ duration: 0.15 }}
                   className={cn(
-                    "flex-1 px-3.5 py-2 rounded-full border-2 font-medium transition-all text-sm",
-                    !isRunning && "hover:scale-[1.02] active:scale-[0.98]",
-                    isRunning && "opacity-50 cursor-not-allowed",
+                    "flex-1 px-4 py-3 rounded-md border transition-all",
                     model === "sonnet" 
-                      ? "border-primary bg-primary text-primary-foreground shadow-lg" 
-                      : "border-muted-foreground/30 hover:border-muted-foreground/50"
+                      ? "border-primary bg-primary/10 text-primary" 
+                      : "border-border hover:border-primary/50 hover:bg-accent",
+                    isRunning && "opacity-50 cursor-not-allowed"
                   )}
                   disabled={isRunning}
                 >
-                  <div className="flex items-center justify-center gap-2">
+                  <div className="flex items-center gap-3">
                     <div className={cn(
-                      "w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center flex-shrink-0",
-                      model === "sonnet" ? "border-primary-foreground" : "border-current"
+                      "w-4 h-4 rounded-full border-2 flex items-center justify-center",
+                      model === "sonnet" ? "border-primary" : "border-muted-foreground"
                     )}>
                       {model === "sonnet" && (
-                        <div className="w-1.5 h-1.5 rounded-full bg-primary-foreground" />
+                        <div className="w-2 h-2 rounded-full bg-primary" />
                       )}
                     </div>
-                    <span>Claude 4 Sonnet</span>
+                    <div className="text-left">
+                      <div className="text-body-small font-medium">Claude 4 Sonnet</div>
+                      <div className="text-caption text-muted-foreground">Faster, efficient</div>
+                    </div>
                   </div>
-                </button>
+                </motion.button>
                 
-                <button
+                <motion.button
                   type="button"
                   onClick={() => !isRunning && setModel("opus")}
+                  whileTap={{ scale: 0.97 }}
+                  transition={{ duration: 0.15 }}
                   className={cn(
-                    "flex-1 px-3.5 py-2 rounded-full border-2 font-medium transition-all text-sm",
-                    !isRunning && "hover:scale-[1.02] active:scale-[0.98]",
-                    isRunning && "opacity-50 cursor-not-allowed",
+                    "flex-1 px-4 py-3 rounded-md border transition-all",
                     model === "opus" 
-                      ? "border-primary bg-primary text-primary-foreground shadow-lg" 
-                      : "border-muted-foreground/30 hover:border-muted-foreground/50"
+                      ? "border-primary bg-primary/10 text-primary" 
+                      : "border-border hover:border-primary/50 hover:bg-accent",
+                    isRunning && "opacity-50 cursor-not-allowed"
                   )}
                   disabled={isRunning}
                 >
-                  <div className="flex items-center justify-center gap-2">
+                  <div className="flex items-center gap-3">
                     <div className={cn(
-                      "w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center flex-shrink-0",
-                      model === "opus" ? "border-primary-foreground" : "border-current"
+                      "w-4 h-4 rounded-full border-2 flex items-center justify-center",
+                      model === "opus" ? "border-primary" : "border-muted-foreground"
                     )}>
                       {model === "opus" && (
-                        <div className="w-1.5 h-1.5 rounded-full bg-primary-foreground" />
+                        <div className="w-2 h-2 rounded-full bg-primary" />
                       )}
                     </div>
-                    <span>Claude 4 Opus</span>
+                    <div className="text-left">
+                      <div className="text-body-small font-medium">Claude 4 Opus</div>
+                      <div className="text-caption text-muted-foreground">More capable</div>
+                    </div>
                   </div>
-                </button>
+                </motion.button>
               </div>
             </div>
 
             {/* Task Input */}
-            <div className="space-y-2">
-              <Label>Task</Label>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-caption text-muted-foreground">Task Description</Label>
+                {projectPath && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleOpenHooksDialog}
+                    disabled={isRunning}
+                    className="h-8 -mr-2"
+                  >
+                    <Settings2 className="h-3.5 w-3.5 mr-1.5" />
+                    <span className="text-caption">Configure Hooks</span>
+                  </Button>
+                )}
+              </div>
               <div className="flex gap-2">
                 <Input
                   value={task}
                   onChange={(e) => setTask(e.target.value)}
-                  placeholder="Enter the task for the agent"
+                  placeholder="What would you like the agent to do?"
                   disabled={isRunning}
-                  className="flex-1"
+                  className="flex-1 h-9"
                   onKeyPress={(e) => {
                     if (e.key === "Enter" && !isRunning && projectPath && task.trim()) {
                       handleExecute();
                     }
                   }}
                 />
-                <Button
-                  onClick={isRunning ? handleStop : handleExecute}
-                  disabled={!projectPath || !task.trim()}
-                  variant={isRunning ? "destructive" : "default"}
+                <motion.div
+                  whileTap={{ scale: 0.97 }}
+                  transition={{ duration: 0.15 }}
                 >
-                  {isRunning ? (
-                    <>
-                      <StopCircle className="mr-2 h-4 w-4" />
-                      Stop
-                    </>
-                  ) : (
-                    <>
-                      <Play className="mr-2 h-4 w-4" />
-                      Execute
-                    </>
-                  )}
-                </Button>
+                  <Button
+                    onClick={isRunning ? handleStop : handleExecute}
+                    disabled={!projectPath || !task.trim()}
+                    variant={isRunning ? "destructive" : "default"}
+                    size="default"
+                  >
+                    {isRunning ? (
+                      <>
+                        <StopCircle className="mr-2 h-4 w-4" />
+                        Stop
+                      </>
+                    ) : (
+                      <>
+                        <Play className="mr-2 h-4 w-4" />
+                        Execute
+                      </>
+                    )}
+                  </Button>
+                </motion.div>
               </div>
+              {projectPath && (
+                <p className="text-caption text-muted-foreground">
+                  Working in: <span className="font-mono">{projectPath.split('/').pop() || projectPath}</span>
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -761,7 +791,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
                   <Terminal className="h-16 w-16 text-muted-foreground mb-4" />
                   <h3 className="text-lg font-medium mb-2">Ready to Execute</h3>
                   <p className="text-sm text-muted-foreground">
-                    Select a project path and enter a task to run the agent
+                    Enter a task to run the agent
                   </p>
                 </div>
               )}
@@ -823,7 +853,6 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
           {/* Modal Header */}
           <div className="flex items-center justify-between p-4 border-b border-border">
             <div className="flex items-center gap-2">
-              {renderIcon()}
               <h2 className="text-lg font-semibold">{agent.name} - Output</h2>
               {isRunning && (
                 <div className="flex items-center gap-1">
@@ -903,7 +932,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
                   <Terminal className="h-16 w-16 text-muted-foreground mb-4" />
                   <h3 className="text-lg font-medium mb-2">Ready to Execute</h3>
                   <p className="text-sm text-muted-foreground">
-                    Select a project path and enter a task to run the agent
+                    Enter a task to run the agent
                   </p>
                 </div>
               )}
@@ -955,26 +984,34 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
         open={isHooksDialogOpen} 
         onOpenChange={setIsHooksDialogOpen}
       >
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle>Configure Hooks</DialogTitle>
-            <DialogDescription>
-              Configure hooks that run before, during, and after tool executions. Changes are saved immediately.
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col gap-0 p-0">
+          <div className="px-6 py-4 border-b border-border">
+            <DialogTitle className="text-heading-2">Configure Hooks</DialogTitle>
+            <DialogDescription className="mt-1 text-body-small text-muted-foreground">
+              Configure hooks that run before, during, and after tool executions
             </DialogDescription>
-          </DialogHeader>
+          </div>
           
           <Tabs value={activeHooksTab} onValueChange={setActiveHooksTab} className="flex-1 flex flex-col overflow-hidden">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="project">Project Settings</TabsTrigger>
-              <TabsTrigger value="local">Local Settings</TabsTrigger>
-            </TabsList>
+            <div className="px-6 pt-4">
+              <TabsList className="grid w-full grid-cols-2 h-auto p-1">
+                <TabsTrigger value="project" className="py-2.5 px-3 text-body-small">
+                  Project Settings
+                </TabsTrigger>
+                <TabsTrigger value="local" className="py-2.5 px-3 text-body-small">
+                  Local Settings
+                </TabsTrigger>
+              </TabsList>
+            </div>
             
-            <TabsContent value="project" className="flex-1 overflow-auto">
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Project hooks are stored in <code className="bg-muted px-1 py-0.5 rounded">.claude/settings.json</code> and 
-                  are committed to version control.
-                </p>
+            <TabsContent value="project" className="flex-1 overflow-auto px-6 pb-6 mt-0">
+              <div className="space-y-4 pt-4">
+                <div className="rounded-lg bg-muted/50 p-3">
+                  <p className="text-caption text-muted-foreground">
+                    Project hooks are stored in <code className="font-mono text-xs bg-background px-1.5 py-0.5 rounded">.claude/settings.json</code> and 
+                    are committed to version control, allowing team members to share configurations.
+                  </p>
+                </div>
                 <HooksEditor
                   projectPath={projectPath}
                   scope="project"
@@ -983,12 +1020,14 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
               </div>
             </TabsContent>
             
-            <TabsContent value="local" className="flex-1 overflow-auto">
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Local hooks are stored in <code className="bg-muted px-1 py-0.5 rounded">.claude/settings.local.json</code> and 
-                  are not committed to version control.
-                </p>
+            <TabsContent value="local" className="flex-1 overflow-auto px-6 pb-6 mt-0">
+              <div className="space-y-4 pt-4">
+                <div className="rounded-lg bg-muted/50 p-3">
+                  <p className="text-caption text-muted-foreground">
+                    Local hooks are stored in <code className="font-mono text-xs bg-background px-1.5 py-0.5 rounded">.claude/settings.local.json</code> and 
+                    are not committed to version control, perfect for personal preferences.
+                  </p>
+                </div>
                 <HooksEditor
                   projectPath={projectPath}
                   scope="local"

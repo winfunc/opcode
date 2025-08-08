@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bot, Loader2, Play, Clock, CheckCircle, XCircle, Trash2, Import, ChevronDown, FileJson, Globe, Download, Plus } from 'lucide-react';
+import { Bot, Loader2, Play, Clock, CheckCircle, XCircle, Trash2, Import, ChevronDown, ChevronRight, FileJson, Globe, Download, Plus, History } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,12 +13,12 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Toast } from '@/components/ui/toast';
 import { api, type Agent, type AgentRunWithMetrics } from '@/lib/api';
-import { useTabState } from '@/hooks/useTabState';
 import { formatISOTimestamp } from '@/lib/date-utils';
 import { open as openDialog, save } from '@tauri-apps/plugin-dialog';
 import { invoke } from '@tauri-apps/api/core';
 import { GitHubAgentBrowser } from '@/components/GitHubAgentBrowser';
 import { CreateAgent } from '@/components/CreateAgent';
+import { useTabState } from '@/hooks/useTabState';
 
 export const Agents: React.FC = () => {
   const [activeTab, setActiveTab] = useState('agents');
@@ -62,7 +62,7 @@ export const Agents: React.FC = () => {
 
   const loadRunningAgents = async () => {
     try {
-      const runs = await api.listAgentRuns();
+      const runs = await api.listAgentRunsWithMetrics();
       setRunningAgents(runs);
     } catch (error) {
       console.error('Failed to load running agents:', error);
@@ -74,14 +74,33 @@ export const Agents: React.FC = () => {
       setToast({ message: 'Agent ID is missing', type: 'error' });
       return;
     }
+    
+    // Import the dialog function
+    const { open } = await import('@tauri-apps/plugin-dialog');
+    
     try {
-      const runId = await api.executeAgent(agent.id, '', 'Run agent', undefined);
-      createAgentTab(runId.toString(), agent.name);
-      setToast({ message: `Started agent: ${agent.name}`, type: 'success' });
-      loadRunningAgents();
+      // Prompt user to select a project directory
+      const projectPath = await open({
+        directory: true,
+        multiple: false,
+        title: `Select project directory for ${agent.name}`
+      });
+      
+      if (!projectPath) {
+        // User cancelled
+        return;
+      }
+      
+      // Dispatch event to open agent execution in a new tab
+      const tabId = `agent-exec-${agent.id}-${Date.now()}`;
+      window.dispatchEvent(new CustomEvent('open-agent-execution', { 
+        detail: { agent, tabId, projectPath } 
+      }));
+      
+      setToast({ message: `Opening agent: ${agent.name}`, type: 'success' });
     } catch (error) {
-      console.error('Failed to run agent:', error);
-      setToast({ message: `Failed to run agent: ${agent.name}`, type: 'error' });
+      console.error('Failed to open agent:', error);
+      setToast({ message: `Failed to open agent: ${agent.name}`, type: 'error' });
     }
   };
 
@@ -292,8 +311,8 @@ export const Agents: React.FC = () => {
                 Agents ({agents.length})
               </TabsTrigger>
               <TabsTrigger value="running" className="py-2.5 px-3">
-                <Loader2 className="w-4 h-4 mr-2" />
-                Running ({runningAgents.length})
+                <History className="w-4 h-4 mr-2" />
+                History ({runningAgents.length})
               </TabsTrigger>
             </TabsList>
 
@@ -381,8 +400,8 @@ export const Agents: React.FC = () => {
               {runningAgents.length === 0 ? (
                 <Card className="p-12">
                   <div className="flex flex-col items-center justify-center text-center">
-                    <Loader2 className="w-12 h-12 text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">No Running Agents</h3>
+                    <History className="w-12 h-12 text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">No Agent History</h3>
                     <p className="text-muted-foreground">
                       Run an agent to see it here
                     </p>
@@ -404,26 +423,27 @@ export const Agents: React.FC = () => {
                           </Badge>
                         </div>
                         <Button
-                          size="sm"
-                          variant="outline"
+                          size="icon"
+                          variant="ghost"
                           onClick={() => createAgentTab(run.id?.toString() || '', run.agent_name)}
+                          className="h-8 w-8"
                         >
-                          View
+                          <ChevronRight className="w-4 h-4" />
                         </Button>
                       </div>
 
                       <div className="grid grid-cols-3 gap-4 text-sm">
                         <div>
                           <span className="text-muted-foreground">Started:</span>
-                          <p className="font-medium">{formatISOTimestamp(run.created_at)}</p>
+                          <p className="font-medium">{new Date(run.created_at).toLocaleString()}</p>
                         </div>
                         <div>
                           <span className="text-muted-foreground">Duration:</span>
-                          <p className="font-medium">{run.metrics?.duration_ms ? `${(run.metrics.duration_ms / 1000).toFixed(1)}s` : 'N/A'}</p>
+                          <p className="font-medium">{run.metrics?.duration_ms ? `${(run.metrics.duration_ms / 1000).toFixed(1)}s` : run.duration_ms ? `${(run.duration_ms / 1000).toFixed(1)}s` : '—'}</p>
                         </div>
                         <div>
                           <span className="text-muted-foreground">Tokens:</span>
-                          <p className="font-medium">{run.metrics?.total_tokens?.toLocaleString() || '0'}</p>
+                          <p className="font-medium">{run.metrics?.total_tokens ? run.metrics.total_tokens.toLocaleString() : run.total_tokens ? run.total_tokens.toLocaleString() : '—'}</p>
                         </div>
                       </div>
 

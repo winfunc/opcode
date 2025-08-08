@@ -118,7 +118,7 @@ export const ProjectList: React.FC<ProjectListProps> = ({
         <div className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-heading-1">Projects</h1>
+              <h1 className="text-3xl font-bold">Projects</h1>
               <p className="mt-1 text-body-small text-muted-foreground">
                 Select a project to start working with Claude Code
               </p>

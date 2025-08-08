@@ -848,15 +848,30 @@ export const api = {
   },
 
   /**
-   * Lists agent runs with metrics
+   * Lists agent runs without metrics (basic info only)
    * @param agentId - Optional agent ID to filter runs
-   * @returns Promise resolving to an array of agent runs with metrics
+   * @returns Promise resolving to an array of agent runs
    */
   async listAgentRuns(agentId?: number): Promise<AgentRunWithMetrics[]> {
     try {
       return await invoke<AgentRunWithMetrics[]>('list_agent_runs', { agentId });
     } catch (error) {
       console.error("Failed to list agent runs:", error);
+      // Return empty array instead of throwing to prevent UI crashes
+      return [];
+    }
+  },
+
+  /**
+   * Lists agent runs with metrics (includes token counts and duration)
+   * @param agentId - Optional agent ID to filter runs
+   * @returns Promise resolving to an array of agent runs with metrics
+   */
+  async listAgentRunsWithMetrics(agentId?: number): Promise<AgentRunWithMetrics[]> {
+    try {
+      return await invoke<AgentRunWithMetrics[]>('list_agent_runs_with_metrics', { agentId });
+    } catch (error) {
+      console.error("Failed to list agent runs with metrics:", error);
       // Return empty array instead of throwing to prevent UI crashes
       return [];
     }

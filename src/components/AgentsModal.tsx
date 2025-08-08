@@ -94,16 +94,35 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
   };
 
   const handleRunAgent = async (agent: Agent) => {
-    // Create a new agent execution tab
-    const tabId = `agent-exec-${agent.id}-${Date.now()}`;
+    // Open directory picker for project path
+    const { open } = await import('@tauri-apps/plugin-dialog');
     
-    // Close modal
-    onOpenChange(false);
-    
-    // Dispatch event to open agent execution in the new tab
-    window.dispatchEvent(new CustomEvent('open-agent-execution', { 
-      detail: { agent, tabId } 
-    }));
+    try {
+      const projectPath = await open({
+        directory: true,
+        multiple: false,
+        title: `Select project directory for ${agent.name}`
+      });
+      
+      if (!projectPath) {
+        // User cancelled
+        return;
+      }
+      
+      // Create a new agent execution tab
+      const tabId = `agent-exec-${agent.id}-${Date.now()}`;
+      
+      // Close modal
+      onOpenChange(false);
+      
+      // Dispatch event to open agent execution in the new tab with project path
+      window.dispatchEvent(new CustomEvent('open-agent-execution', { 
+        detail: { agent, tabId, projectPath } 
+      }));
+    } catch (error) {
+      console.error('Failed to run agent:', error);
+      setToast({ message: `Failed to run agent: ${agent.name}`, type: 'error' });
+    }
   };
 
   const handleDeleteAgent = async (agent: Agent) => {

@@ -309,6 +309,8 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
         return (
           <AgentExecution
             agent={tab.agentData}
+            projectPath={tab.projectPath}
+            tabId={tab.id}
             onBack={() => {}}
           />
         );
@@ -395,8 +397,8 @@ export const TabContent: React.FC = () => {
     };
 
     const handleOpenAgentExecution = (event: CustomEvent) => {
-      const { agent, tabId } = event.detail;
-      createAgentExecutionTab(agent, tabId);
+      const { agent, tabId, projectPath } = event.detail;
+      createAgentExecutionTab(agent, tabId, projectPath);
     };
 
     const handleOpenCreateAgentTab = () => {
