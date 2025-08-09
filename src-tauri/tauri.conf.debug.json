@@ -4,7 +4,7 @@
   "version": "0.1.6",
   "identifier": "claudia.asterisk.so",
   "build": {
-    "beforeDevCommand": "bun run dev",
+    "beforeDevCommand": "bun run build:executables:current && bun run dev",
     "devUrl": "http://localhost:1420",
     "beforeBuildCommand": "bun run build:debug",
     "frontendDist": "../dist"

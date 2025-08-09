@@ -7,6 +7,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
 use tauri::AppHandle;
+use tauri_plugin_shell::ShellExt;
 
 /// Helper function to create a std::process::Command with proper environment variables
 /// This ensures commands like Claude can find Node.js and other dependencies
@@ -96,10 +97,140 @@ pub struct ImportServerResult {
 }
 
 /// Executes a claude mcp command
-fn execute_claude_mcp_command(app_handle: &AppHandle, args: Vec<&str>) -> Result<String> {
+async fn execute_claude_mcp_command(app_handle: &AppHandle, args: Vec<&str>) -> Result<String> {
     info!("Executing claude mcp command with args: {:?}", args);
 
     let claude_path = find_claude_binary(app_handle)?;
+
+    // If using the bundled sidecar on macOS/Linux, run via tauri_plugin_shell to avoid PATH/sandbox issues
+    if claude_path == "claude-code" {
+        use tauri_plugin_shell::process::CommandEvent;
+
+        // Build sidecar command: claude-code mcp <args...>
+        let mut sidecar_cmd = app_handle
+            .shell()
+            .sidecar("claude-code")
+            .map_err(|e| anyhow::anyhow!(format!("Failed to create sidecar command: {}", e)))?;
+
+        let mut sidecar_args: Vec<String> = Vec::with_capacity(1 + args.len());
+        sidecar_args.push("mcp".to_string());
+        sidecar_args.extend(args.iter().map(|s| s.to_string()));
+        sidecar_cmd = sidecar_cmd.args(sidecar_args);
+
+        // Propagate essential environment variables similar to create_command_with_env
+        for (key, value) in std::env::vars() {
+            if key == "PATH"
+                || key == "HOME"
+                || key == "USER"
+                || key == "SHELL"
+                || key == "LANG"
+                || key == "LC_ALL"
+                || key.starts_with("LC_")
+                || key == "NODE_PATH"
+                || key == "NVM_DIR"
+                || key == "NVM_BIN"
+                || key == "HOMEBREW_PREFIX"
+                || key == "HOMEBREW_CELLAR"
+                || key == "HTTP_PROXY"
+                || key == "HTTPS_PROXY"
+                || key == "NO_PROXY"
+                || key == "ALL_PROXY"
+            {
+                sidecar_cmd = sidecar_cmd.env(&key, &value);
+            }
+        }
+
+        // macOS-specific: augment PATH to include common Node/Homebrew/NVM locations
+        #[cfg(target_os = "macos")]
+        {
+            use std::fs;
+            use std::path::PathBuf;
+
+            let current_path = std::env::var("PATH").unwrap_or_default();
+            let mut parts: Vec<String> = current_path.split(':').map(|s| s.to_string()).collect();
+            let mut add_path = |p: String| {
+                if !p.is_empty() && PathBuf::from(&p).exists() && !parts.iter().any(|x| x == &p) {
+                    parts.insert(0, p);
+                }
+            };
+
+            // Homebrew typical locations
+            add_path("/opt/homebrew/bin".to_string());
+            add_path("/usr/local/bin".to_string());
+
+            if let Ok(home) = std::env::var("HOME") {
+                add_path(format!("{}/.local/bin", home));
+                add_path(format!("{}/bin", home));
+
+                // Detect latest NVM Node bin
+                let nvm_versions = PathBuf::from(&home).join(".nvm").join("versions").join("node");
+                if nvm_versions.exists() {
+                    if let Ok(entries) = fs::read_dir(&nvm_versions) {
+                        let mut version_dirs: Vec<PathBuf> = entries.filter_map(|e| e.ok()).map(|e| e.path()).filter(|p| p.is_dir()).collect();
+                        version_dirs.sort_by(|a,b| b.file_name().cmp(&a.file_name()));
+                        if let Some(latest) = version_dirs.first() {
+                            let bin = latest.join("bin");
+                            add_path(bin.to_string_lossy().to_string());
+                            // Also set NVM_DIR/NVM_BIN if not present
+                            let nvm_dir = PathBuf::from(&home).join(".nvm");
+                            sidecar_cmd = sidecar_cmd.env("NVM_DIR", nvm_dir.to_string_lossy().to_string());
+                            sidecar_cmd = sidecar_cmd.env("NVM_BIN", latest.join("bin").to_string_lossy().to_string());
+                        }
+                    }
+                }
+            }
+
+            // System fallbacks
+            add_path("/usr/bin".to_string());
+            add_path("/bin".to_string());
+
+            let new_path = parts.join(":");
+            sidecar_cmd = sidecar_cmd.env("PATH", new_path);
+        }
+
+        // Use temp dir as working directory
+        let temp_dir = std::env::temp_dir();
+        sidecar_cmd = sidecar_cmd.current_dir(temp_dir);
+
+        let (mut rx, _child) = sidecar_cmd
+            .spawn()
+            .map_err(|e| anyhow::anyhow!(format!("Failed to spawn sidecar: {}", e)))?;
+
+        let mut stdout_output = String::new();
+        let mut stderr_output = String::new();
+        let mut exit_success = false;
+
+        while let Some(event) = rx.recv().await {
+            match event {
+                CommandEvent::Stdout(data) => {
+                    let s = String::from_utf8_lossy(&data);
+                    stdout_output.push_str(&s);
+                }
+                CommandEvent::Stderr(data) => {
+                    let s = String::from_utf8_lossy(&data);
+                    stderr_output.push_str(&s);
+                }
+                CommandEvent::Terminated(payload) => {
+                    exit_success = payload.code.unwrap_or(-1) == 0;
+                    break;
+                }
+                _ => {}
+            }
+        }
+
+        if exit_success {
+            return Ok(stdout_output);
+        } else {
+            let combined = if stderr_output.is_empty() {
+                stdout_output
+            } else {
+                format!("{}\n{}", stdout_output, stderr_output)
+            };
+            return Err(anyhow::anyhow!(format!("Command failed: {}", combined.trim())));
+        }
+    }
+
+    // Otherwise, use system command execution as before
     let mut cmd = create_command_with_env(&claude_path);
     cmd.arg("mcp");
     for arg in args {
@@ -196,7 +327,7 @@ pub async fn mcp_add(
         }
     }
 
-    match execute_claude_mcp_command(&app, cmd_args) {
+    match execute_claude_mcp_command(&app, cmd_args).await {
         Ok(output) => {
             info!("Successfully added MCP server: {}", name);
             Ok(AddServerResult {
@@ -221,7 +352,7 @@ pub async fn mcp_add(
 pub async fn mcp_list(app: AppHandle) -> Result<Vec<MCPServer>, String> {
     info!("Listing MCP servers");
 
-    match execute_claude_mcp_command(&app, vec!["list"]) {
+    match execute_claude_mcp_command(&app, vec!["list"]).await {
         Ok(output) => {
             info!("Raw output from 'claude mcp list': {:?}", output);
             let trimmed = output.trim();
@@ -343,7 +474,7 @@ pub async fn mcp_list(app: AppHandle) -> Result<Vec<MCPServer>, String> {
 pub async fn mcp_get(app: AppHandle, name: String) -> Result<MCPServer, String> {
     info!("Getting MCP server details for: {}", name);
 
-    match execute_claude_mcp_command(&app, vec!["get", &name]) {
+    match execute_claude_mcp_command(&app, vec!["get", &name]).await {
         Ok(output) => {
             // Parse the structured text output
             let mut scope = "local".to_string();
@@ -412,7 +543,7 @@ pub async fn mcp_get(app: AppHandle, name: String) -> Result<MCPServer, String> 
 pub async fn mcp_remove(app: AppHandle, name: String) -> Result<String, String> {
     info!("Removing MCP server: {}", name);
 
-    match execute_claude_mcp_command(&app, vec!["remove", &name]) {
+    match execute_claude_mcp_command(&app, vec!["remove", &name]).await {
         Ok(output) => {
             info!("Successfully removed MCP server: {}", name);
             Ok(output.trim().to_string())
@@ -445,7 +576,7 @@ pub async fn mcp_add_json(
     cmd_args.push(scope_flag);
     cmd_args.push(&scope);
 
-    match execute_claude_mcp_command(&app, cmd_args) {
+    match execute_claude_mcp_command(&app, cmd_args).await {
         Ok(output) => {
             info!("Successfully added MCP server from JSON: {}", name);
             Ok(AddServerResult {
@@ -623,7 +754,7 @@ pub async fn mcp_add_from_claude_desktop(
 pub async fn mcp_serve(app: AppHandle) -> Result<String, String> {
     info!("Starting Claude Code as MCP server");
 
-    // Start the server in a separate process
+    // Find binary path or sidecar indicator
     let claude_path = match find_claude_binary(&app) {
         Ok(path) => path,
         Err(e) => {
@@ -632,25 +763,107 @@ pub async fn mcp_serve(app: AppHandle) -> Result<String, String> {
         }
     };
 
-    let mut cmd = create_command_with_env(&claude_path);
-    cmd.arg("mcp").arg("serve");
+    // If using sidecar, spawn via tauri_plugin_shell to avoid PATH/sandbox issues
+    if claude_path == "claude-code" {
+        use tauri_plugin_shell::process::CommandEvent;
 
-    // On Windows, hide the console window to prevent CMD popup
-    #[cfg(target_os = "windows")]
-    {
-        use std::os::windows::process::CommandExt;
-        const CREATE_NO_WINDOW: u32 = 0x08000000;
-        cmd.creation_flags(CREATE_NO_WINDOW);
-    }
+        let mut sidecar_cmd = app
+            .shell()
+            .sidecar("claude-code")
+            .map_err(|e| format!("Failed to create sidecar command: {}", e))?;
 
-    match cmd.spawn() {
-        Ok(_) => {
-            info!("Successfully started Claude Code MCP server");
-            Ok("Claude Code MCP server started".to_string())
+        sidecar_cmd = sidecar_cmd.args(["mcp".to_string(), "serve".to_string()]);
+
+        // Propagate essential env vars
+        for (key, value) in std::env::vars() {
+            if key == "PATH"
+                || key == "HOME"
+                || key == "USER"
+                || key == "SHELL"
+                || key == "LANG"
+                || key == "LC_ALL"
+                || key.starts_with("LC_")
+                || key == "NODE_PATH"
+                || key == "NVM_DIR"
+                || key == "NVM_BIN"
+                || key == "HOMEBREW_PREFIX"
+                || key == "HOMEBREW_CELLAR"
+                || key == "HTTP_PROXY"
+                || key == "HTTPS_PROXY"
+                || key == "NO_PROXY"
+                || key == "ALL_PROXY"
+            {
+                sidecar_cmd = sidecar_cmd.env(&key, &value);
+            }
         }
-        Err(e) => {
-            error!("Failed to start MCP server: {}", e);
-            Err(e.to_string())
+
+        // Windows-specific SHELL/variables for CLI compatibility
+        #[cfg(target_os = "windows")]
+        {
+            let shell_candidates = [
+                "C:\\Program Files\\Git\\bin\\bash.exe",
+                "C:\\Program Files (x86)\\Git\\bin\\bash.exe",
+                "C:\\msys64\\usr\\bin\\bash.exe",
+                "C:\\cygwin64\\bin\\bash.exe",
+                "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+                "powershell.exe",
+                "cmd.exe",
+            ];
+            let mut shell_found = false;
+            for shell_path in &shell_candidates {
+                if std::path::Path::new(shell_path).exists() {
+                    sidecar_cmd = sidecar_cmd.env("SHELL", shell_path);
+                    shell_found = true;
+                    break;
+                }
+            }
+            if !shell_found {
+                sidecar_cmd = sidecar_cmd.env("SHELL", "bash");
+            }
+            if let Ok(userprofile) = std::env::var("USERPROFILE") {
+                sidecar_cmd = sidecar_cmd.env("HOME", userprofile);
+            }
+            if let Ok(comspec) = std::env::var("COMSPEC") {
+                sidecar_cmd = sidecar_cmd.env("COMSPEC", comspec);
+            }
+        }
+
+        // Set working dir as temp
+        sidecar_cmd = sidecar_cmd.current_dir(std::env::temp_dir());
+
+        match sidecar_cmd.spawn() {
+            Ok((_rx, _child)) => {
+                // 不阻塞等待输出，直接返回已启动
+                info!("Successfully started Claude Code MCP server (sidecar)");
+                Ok("Claude Code MCP server started".to_string())
+            }
+            Err(e) => {
+                error!("Failed to start MCP server via sidecar: {}", e);
+                Err(e.to_string())
+            }
+        }
+    } else {
+        // Otherwise use system command execution
+        let mut cmd = create_command_with_env(&claude_path);
+        cmd.arg("mcp").arg("serve");
+
+        // On Windows, hide the console window to prevent CMD popup
+        #[cfg(target_os = "windows")]
+        {
+            use std::os::windows::process::CommandExt;
+            const CREATE_NO_WINDOW: u32 = 0x08000000;
+            cmd.creation_flags(CREATE_NO_WINDOW);
+        }
+
+        match cmd.spawn() {
+            Ok(_) => {
+                info!("Successfully started Claude Code MCP server");
+                Ok("Claude Code MCP server started".to_string())
+            }
+            Err(e) => {
+                error!("Failed to start MCP server: {}", e);
+                Err(e.to_string())
+            }
         }
     }
 }
@@ -661,7 +874,7 @@ pub async fn mcp_test_connection(app: AppHandle, name: String) -> Result<String,
     info!("Testing connection to MCP server: {}", name);
 
     // For now, we'll use the get command to test if the server exists
-    match execute_claude_mcp_command(&app, vec!["get", &name]) {
+    match execute_claude_mcp_command(&app, vec!["get", &name]).await {
         Ok(_) => Ok(format!("Connection to {} successful", name)),
         Err(e) => Err(e.to_string()),
     }
@@ -672,7 +885,7 @@ pub async fn mcp_test_connection(app: AppHandle, name: String) -> Result<String,
 pub async fn mcp_reset_project_choices(app: AppHandle) -> Result<String, String> {
     info!("Resetting MCP project choices");
 
-    match execute_claude_mcp_command(&app, vec!["reset-project-choices"]) {
+    match execute_claude_mcp_command(&app, vec!["reset-project-choices"]).await {
         Ok(output) => {
             info!("Successfully reset MCP project choices");
             Ok(output.trim().to_string())

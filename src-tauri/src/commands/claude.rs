@@ -404,6 +404,54 @@ fn create_sidecar_command(
                 sidecar_cmd = sidecar_cmd.env(&key, &value);
             }
         }
+
+        // macOS-specific: augment PATH to include common Node/Homebrew/NVM locations
+        #[cfg(target_os = "macos")]
+        {
+            use std::fs;
+            use std::path::PathBuf;
+
+            let current_path = std::env::var("PATH").unwrap_or_default();
+            let mut parts: Vec<String> = current_path.split(':').map(|s| s.to_string()).collect();
+            let mut add_path = |p: String| {
+                if !p.is_empty() && PathBuf::from(&p).exists() && !parts.iter().any(|x| x == &p) {
+                    parts.insert(0, p);
+                }
+            };
+
+            // Homebrew typical locations
+            add_path("/opt/homebrew/bin".to_string());
+            add_path("/usr/local/bin".to_string());
+
+            if let Ok(home) = std::env::var("HOME") {
+                add_path(format!("{}/.local/bin", home));
+                add_path(format!("{}/bin", home));
+
+                // Detect latest NVM Node bin
+                let nvm_versions = PathBuf::from(&home).join(".nvm").join("versions").join("node");
+                if nvm_versions.exists() {
+                    if let Ok(entries) = fs::read_dir(&nvm_versions) {
+                        let mut version_dirs: Vec<PathBuf> = entries.filter_map(|e| e.ok()).map(|e| e.path()).filter(|p| p.is_dir()).collect();
+                        version_dirs.sort_by(|a,b| b.file_name().cmp(&a.file_name()));
+                        if let Some(latest) = version_dirs.first() {
+                            let bin = latest.join("bin");
+                            add_path(bin.to_string_lossy().to_string());
+                            // Also set NVM_DIR/NVM_BIN if not present
+                            let nvm_dir = PathBuf::from(&home).join(".nvm");
+                            sidecar_cmd = sidecar_cmd.env("NVM_DIR", nvm_dir.to_string_lossy().to_string());
+                            sidecar_cmd = sidecar_cmd.env("NVM_BIN", latest.join("bin").to_string_lossy().to_string());
+                        }
+                    }
+                }
+            }
+
+            // System fallbacks
+            add_path("/usr/bin".to_string());
+            add_path("/bin".to_string());
+
+            let new_path = parts.join(":");
+            sidecar_cmd = sidecar_cmd.env("PATH", new_path);
+        }
     }
 
     Ok(sidecar_cmd)
@@ -1086,6 +1134,12 @@ pub async fn execute_claude_code(
         "--dangerously-skip-permissions".to_string(),
     ];
 
+    // On macOS, when the stored path is the special sidecar identifier, use sidecar to spawn
+    #[cfg(target_os = "macos")]
+    if claude_path == "claude-code" {
+        return spawn_claude_sidecar(app, args, prompt, model, project_path).await;
+    }
+
     let cmd = create_system_command(&claude_path, args, &project_path);
     spawn_claude_process(app, cmd, prompt, model, project_path).await
 }
@@ -1117,6 +1171,12 @@ pub async fn continue_claude_code(
         "--verbose".to_string(),
         "--dangerously-skip-permissions".to_string(),
     ];
+
+    // On macOS, when the stored path is the special sidecar identifier, use sidecar to spawn
+    #[cfg(target_os = "macos")]
+    if claude_path == "claude-code" {
+        return spawn_claude_sidecar(app, args, prompt, model, project_path).await;
+    }
 
     let cmd = create_system_command(&claude_path, args, &project_path);
     spawn_claude_process(app, cmd, prompt, model, project_path).await
@@ -1152,6 +1212,12 @@ pub async fn resume_claude_code(
         "--verbose".to_string(),
         "--dangerously-skip-permissions".to_string(),
     ];
+
+    // On macOS, when the stored path is the special sidecar identifier, use sidecar to spawn
+    #[cfg(target_os = "macos")]
+    if claude_path == "claude-code" {
+        return spawn_claude_sidecar(app, args, prompt, model, project_path).await;
+    }
 
     let cmd = create_system_command(&claude_path, args, &project_path);
     spawn_claude_process(app, cmd, prompt, model, project_path).await
