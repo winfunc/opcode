@@ -10,6 +10,15 @@ html, body {
   background-color: rgba(0, 0, 0, 0);
 }
 
+/* Tauri drag region helpers */
+.tauri-drag {
+  -webkit-app-region: drag;
+}
+
+.tauri-no-drag {
+  -webkit-app-region: no-drag;
+}
+
 /* Apply rounded corners and background to body */
 body {
   border-radius: var(--radius-lg);
