@@ -14,6 +14,10 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { getClaudeSyntaxTheme } from "@/lib/claudeSyntaxTheme";
 import { useTheme } from "@/hooks";
 import type { ClaudeStreamMessage } from "./AgentExecution";
+import { SelectableText } from "./SelectableText";
+import { Button } from "@/components/ui/button";
+import { FileText } from "lucide-react";
+import { useNoteStore } from "@/hooks/useNoteStore";
 import {
   TodoWidget,
   TodoReadWidget,
@@ -46,12 +50,13 @@ interface StreamMessageProps {
   className?: string;
   streamMessages: ClaudeStreamMessage[];
   onLinkDetected?: (url: string) => void;
+  onSwitchToNotes?: () => void;
 }
 
 /**
  * Component to render a single Claude Code stream message
  */
-const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, className, streamMessages, onLinkDetected }) => {
+const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, className, streamMessages, onLinkDetected, onSwitchToNotes }) => {
   // State to track tool results mapped by tool call ID
   const [toolResults, setToolResults] = useState<Map<string, any>>(new Map());
   
@@ -128,32 +133,38 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                     
                     renderedSomething = true;
                     return (
-                      <div key={idx} className="prose prose-sm dark:prose-invert max-w-none">
-                        <ReactMarkdown
-                          remarkPlugins={[remarkGfm]}
-                          components={{
-                            code({ node, inline, className, children, ...props }: any) {
-                              const match = /language-(\w+)/.exec(className || '');
-                              return !inline && match ? (
-                                <SyntaxHighlighter
-                                  style={syntaxTheme}
-                                  language={match[1]}
-                                  PreTag="div"
-                                  {...props}
-                                >
-                                  {String(children).replace(/\n$/, '')}
-                                </SyntaxHighlighter>
-                              ) : (
-                                <code className={className} {...props}>
-                                  {children}
-                                </code>
-                              );
-                            }
-                          }}
-                        >
-                          {textContent}
-                        </ReactMarkdown>
-                      </div>
+                      <SelectableText 
+                        key={idx}
+                        source="Assistant Message"
+                        onTabSwitch={onSwitchToNotes}
+                      >
+                        <div className="prose prose-sm dark:prose-invert max-w-none">
+                          <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
+                            components={{
+                              code({ node, inline, className, children, ...props }: any) {
+                                const match = /language-(\w+)/.exec(className || '');
+                                return !inline && match ? (
+                                  <SyntaxHighlighter
+                                    style={syntaxTheme}
+                                    language={match[1]}
+                                    PreTag="div"
+                                    {...props}
+                                  >
+                                    {String(children).replace(/\n$/, '')}
+                                  </SyntaxHighlighter>
+                                ) : (
+                                  <code className={className} {...props}>
+                                    {children}
+                                  </code>
+                                );
+                              }
+                            }}
+                          >
+                            {textContent}
+                          </ReactMarkdown>
+                        </div>
+                      </SelectableText>
                     );
                   }
                   
@@ -190,7 +201,14 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                       // Edit tool
                       if (toolName === "edit" && input?.file_path) {
                         renderedSomething = true;
-                        return <EditWidget {...input} result={toolResult} />;
+                        return (
+                          <SelectableText
+                            source="Edit Tool"
+                            onTabSwitch={onSwitchToNotes}
+                          >
+                            <EditWidget {...input} result={toolResult} />
+                          </SelectableText>
+                        );
                       }
                       
                       // MultiEdit tool
@@ -208,7 +226,14 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                       // TodoWrite tool
                       if (toolName === "todowrite" && input?.todos) {
                         renderedSomething = true;
-                        return <TodoWidget todos={input.todos} result={toolResult} />;
+                        return (
+                          <SelectableText
+                            source="Todo Tool"
+                            onTabSwitch={onSwitchToNotes}
+                          >
+                            <TodoWidget todos={input.todos} result={toolResult} />
+                          </SelectableText>
+                        );
                       }
                       
                       // TodoRead tool
@@ -226,7 +251,14 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                       // Read tool
                       if (toolName === "read" && input?.file_path) {
                         renderedSomething = true;
-                        return <ReadWidget filePath={input.file_path} result={toolResult} />;
+                        return (
+                          <SelectableText
+                            source="Read Tool"
+                            onTabSwitch={onSwitchToNotes}
+                          >
+                            <ReadWidget filePath={input.file_path} result={toolResult} />
+                          </SelectableText>
+                        );
                       }
                       
                       // Glob tool
@@ -238,7 +270,14 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                       // Bash tool
                       if (toolName === "bash" && input?.command) {
                         renderedSomething = true;
-                        return <BashWidget command={input.command} description={input.description} result={toolResult} />;
+                        return (
+                          <SelectableText
+                            source="Bash Tool"
+                            onTabSwitch={onSwitchToNotes}
+                          >
+                            <BashWidget command={input.command} description={input.description} result={toolResult} />
+                          </SelectableText>
+                        );
                       }
                       
                       // Write tool
@@ -250,19 +289,40 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                       // Grep tool
                       if (toolName === "grep" && input?.pattern) {
                         renderedSomething = true;
-                        return <GrepWidget pattern={input.pattern} include={input.include} path={input.path} exclude={input.exclude} result={toolResult} />;
+                        return (
+                          <SelectableText
+                            source="Grep Tool"
+                            onTabSwitch={onSwitchToNotes}
+                          >
+                            <GrepWidget pattern={input.pattern} include={input.include} path={input.path} exclude={input.exclude} result={toolResult} />
+                          </SelectableText>
+                        );
                       }
                       
                       // WebSearch tool
                       if (toolName === "websearch" && input?.query) {
                         renderedSomething = true;
-                        return <WebSearchWidget query={input.query} result={toolResult} />;
+                        return (
+                          <SelectableText
+                            source="WebSearch Tool"
+                            onTabSwitch={onSwitchToNotes}
+                          >
+                            <WebSearchWidget query={input.query} result={toolResult} />
+                          </SelectableText>
+                        );
                       }
                       
                       // WebFetch tool
                       if (toolName === "webfetch" && input?.url) {
                         renderedSomething = true;
-                        return <WebFetchWidget url={input.url} prompt={input.prompt} result={toolResult} />;
+                        return (
+                          <SelectableText
+                            source="WebFetch Tool"
+                            onTabSwitch={onSwitchToNotes}
+                          >
+                            <WebFetchWidget url={input.url} prompt={input.prompt} result={toolResult} />
+                          </SelectableText>
+                        );
                       }
                       
                       // Default - return null
@@ -300,11 +360,145 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                   return null;
                 })}
                 
-                {msg.usage && (
-                  <div className="text-xs text-muted-foreground mt-2">
-                    Tokens: {msg.usage.input_tokens} in, {msg.usage.output_tokens} out
-                  </div>
-                )}
+                {/* Show usage info and Add to Note button */}
+                <div className="text-xs text-muted-foreground mt-2 flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs opacity-70 hover:opacity-100"
+                    onClick={(event) => {
+                      console.log('Message Add to Note button clicked');
+                      console.log('Message object:', message);
+                      console.log('msg object:', msg);
+                      
+                      // Try multiple approaches to get text content
+                      let fullText = '';
+                      
+                      // Method 1: Check message.message.content
+                      if (message.message?.content && Array.isArray(message.message.content)) {
+                        console.log('Using message.message.content');
+                        const textContents: string[] = [];
+                        message.message.content.forEach((content: any) => {
+                          if (content.type === "text") {
+                            const textContent = typeof content.text === 'string' 
+                              ? content.text 
+                              : (content.text?.text || JSON.stringify(content.text || content));
+                            if (textContent && textContent.trim()) {
+                              textContents.push(textContent);
+                            }
+                          }
+                        });
+                        fullText = textContents.join('\n\n');
+                      }
+                      
+                      // Method 2: Check msg.content (current approach)
+                      if (!fullText && msg.content && Array.isArray(msg.content)) {
+                        console.log('Using msg.content');
+                        const textContents: string[] = [];
+                        msg.content.forEach((content: any) => {
+                          if (content.type === "text") {
+                            const textContent = typeof content.text === 'string' 
+                              ? content.text 
+                              : (content.text?.text || JSON.stringify(content.text || content));
+                            if (textContent && textContent.trim()) {
+                              textContents.push(textContent);
+                            }
+                          }
+                        });
+                        fullText = textContents.join('\n\n');
+                      }
+                      
+                      // Method 3: Check message.result (for execution results)
+                      if (!fullText && message.result) {
+                        console.log('Using message.result');
+                        fullText = message.result;
+                      }
+                      
+                      // Method 4: Check message.summary
+                      if (!fullText && message.summary) {
+                        console.log('Using message.summary');
+                        fullText = message.summary;
+                      }
+                      
+                      // Method 5: Get text from tool widgets and DOM
+                      if (!fullText) {
+                        console.log('Using DOM text extraction as fallback');
+                        // Find the closest message container by traversing up from the button
+                        const buttonElement = event.currentTarget as HTMLElement;
+                        const messageContainer = buttonElement.closest('.motion-div, [class*="motion"]') || buttonElement.closest('.space-y-2');
+                        
+                        if (messageContainer) {
+                          // Try to get text from tool widgets first
+                          const toolWidgets = messageContainer.querySelectorAll('[class*="widget"], [class*="tool"], .prose');
+                          if (toolWidgets.length > 0) {
+                            const texts = Array.from(toolWidgets).map(el => {
+                              const text = el.textContent?.trim() || '';
+                              // Clean up common UI elements
+                              return text
+                                .replace(/Add to Note/g, '')
+                                .replace(/Tokens:\s*\d+\s*in,\s*\d+\s*out/g, '')
+                                .replace(/Copy/g, '')
+                                .replace(/Show more/g, '')
+                                .replace(/Show less/g, '')
+                                .trim();
+                            }).filter(text => text.length > 10); // Only meaningful content
+                            
+                            fullText = texts.join('\n\n');
+                          }
+                          
+                          // If still no text, get all text content from the message
+                          if (!fullText) {
+                            fullText = messageContainer.textContent?.trim() || '';
+                            // Clean up - remove button text and metadata
+                            fullText = fullText
+                              .replace(/Add to Note/g, '')
+                              .replace(/Tokens:\s*\d+\s*in,\s*\d+\s*out/g, '')
+                              .replace(/Copy/g, '')
+                              .trim();
+                          }
+                        }
+                      }
+                      
+                      console.log('Final text to add:', JSON.stringify(fullText));
+                      
+                      if (fullText && fullText.trim()) {
+                        try {
+                          const { currentNoteId, getCurrentNote, createNoteFromContent, addContentToNote } = useNoteStore.getState();
+                          const source = message.type === 'assistant' ? 'Assistant Message' : 'User Message';
+                          
+                          console.log('Current note ID:', currentNoteId);
+                          
+                          if (currentNoteId && getCurrentNote()) {
+                            console.log('Adding to existing note');
+                            addContentToNote(currentNoteId, fullText, source);
+                          } else {
+                            console.log('Creating new note');
+                            const newNote = createNoteFromContent(fullText, source);
+                            console.log('Created note:', newNote);
+                          }
+                          
+                          onSwitchToNotes?.();
+                          console.log('Switched to notes tab');
+                        } catch (error) {
+                          console.error('Error in message Add to Note:', error);
+                        }
+                      } else {
+                        console.warn('No text content found to add to note');
+                        console.warn('Available properties:', Object.keys(message));
+                      }
+                    }}
+                    title="Add entire message to note"
+                  >
+                    <FileText className="w-3 h-3 mr-1" />
+                    Add to Note
+                  </Button>
+                  
+                  {msg.usage && (
+                    <span>
+                      Tokens: {msg.usage.input_tokens} in, {msg.usage.output_tokens} out
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           </CardContent>
@@ -618,9 +812,15 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                     
                     renderedSomething = true;
                     return (
-                      <div key={idx} className="text-sm">
-                        {textContent}
-                      </div>
+                      <SelectableText 
+                        key={idx}
+                        source="User Message"
+                        onTabSwitch={onSwitchToNotes}
+                      >
+                        <div className="text-sm">
+                          {textContent}
+                        </div>
+                      </SelectableText>
                     );
                   }
                   
@@ -657,54 +857,117 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                 </h4>
                 
                 {message.result && (
-                  <div className="prose prose-sm dark:prose-invert max-w-none">
-                    <ReactMarkdown
-                      remarkPlugins={[remarkGfm]}
-                      components={{
-                        code({ node, inline, className, children, ...props }: any) {
-                          const match = /language-(\w+)/.exec(className || '');
-                          return !inline && match ? (
-                            <SyntaxHighlighter
-                              style={syntaxTheme}
-                              language={match[1]}
-                              PreTag="div"
-                              {...props}
-                            >
-                              {String(children).replace(/\n$/, '')}
-                            </SyntaxHighlighter>
-                          ) : (
-                            <code className={className} {...props}>
-                              {children}
-                            </code>
-                          );
-                        }
-                      }}
-                    >
-                      {message.result}
-                    </ReactMarkdown>
-                  </div>
+                  <SelectableText 
+                    source="Execution Result"
+                    onTabSwitch={onSwitchToNotes}
+                  >
+                    <div className="prose prose-sm dark:prose-invert max-w-none">
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          code({ node, inline, className, children, ...props }: any) {
+                            const match = /language-(\w+)/.exec(className || '');
+                            return !inline && match ? (
+                              <SyntaxHighlighter
+                                style={syntaxTheme}
+                                language={match[1]}
+                                PreTag="div"
+                                {...props}
+                              >
+                                {String(children).replace(/\n$/, '')}
+                              </SyntaxHighlighter>
+                            ) : (
+                              <code className={className} {...props}>
+                                {children}
+                              </code>
+                            );
+                          }
+                        }}
+                      >
+                        {message.result}
+                      </ReactMarkdown>
+                    </div>
+                  </SelectableText>
                 )}
                 
                 {message.error && (
-                  <div className="text-sm text-destructive">{message.error}</div>
+                  <div className="space-y-2">
+                    <div className="text-sm text-destructive">{message.error}</div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2 text-xs opacity-70 hover:opacity-100 text-destructive hover:text-destructive"
+                        onClick={() => {
+                          const content = message.error || '';
+                          if (content.trim()) {
+                            const { currentNoteId, getCurrentNote, createNoteFromContent, addContentToNote } = useNoteStore.getState();
+                            
+                            if (currentNoteId && getCurrentNote()) {
+                              addContentToNote(currentNoteId, content, 'Execution Error');
+                            } else {
+                              createNoteFromContent(content, 'Execution Error');
+                            }
+                            
+                            onSwitchToNotes?.();
+                          }
+                        }}
+                        title="Add error message to note"
+                      >
+                        <FileText className="w-3 h-3 mr-1" />
+                        Add Error to Note
+                      </Button>
+                    </div>
+                  </div>
                 )}
                 
-                <div className="text-xs text-muted-foreground space-y-1 mt-2">
-                  {(message.cost_usd !== undefined || message.total_cost_usd !== undefined) && (
-                    <div>Cost: ${((message.cost_usd || message.total_cost_usd)!).toFixed(4)} USD</div>
-                  )}
-                  {message.duration_ms !== undefined && (
-                    <div>Duration: {(message.duration_ms / 1000).toFixed(2)}s</div>
-                  )}
-                  {message.num_turns !== undefined && (
-                    <div>Turns: {message.num_turns}</div>
-                  )}
-                  {message.usage && (
-                    <div>
-                      Total tokens: {message.usage.input_tokens + message.usage.output_tokens} 
-                      ({message.usage.input_tokens} in, {message.usage.output_tokens} out)
+                <div className="text-xs text-muted-foreground mt-2">
+                  {/* Add to Note button - only show if there's result content */}
+                  {message.result && message.result.trim() && (
+                    <div className="flex items-center gap-2 mb-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2 text-xs opacity-70 hover:opacity-100"
+                        onClick={() => {
+                          const content = message.result || '';
+                          if (content.trim()) {
+                            const { currentNoteId, getCurrentNote, createNoteFromContent, addContentToNote } = useNoteStore.getState();
+                            
+                            if (currentNoteId && getCurrentNote()) {
+                              addContentToNote(currentNoteId, content, 'Execution Result');
+                            } else {
+                              createNoteFromContent(content, 'Execution Result');
+                            }
+                            
+                            onSwitchToNotes?.();
+                          }
+                        }}
+                        title="Add execution result to note"
+                      >
+                        <FileText className="w-3 h-3 mr-1" />
+                        Add to Note
+                      </Button>
                     </div>
                   )}
+                  
+                  <div className="space-y-1">
+                    {(message.cost_usd !== undefined || message.total_cost_usd !== undefined) && (
+                      <div>Cost: ${((message.cost_usd || message.total_cost_usd)!).toFixed(4)} USD</div>
+                    )}
+                    {message.duration_ms !== undefined && (
+                      <div>Duration: {(message.duration_ms / 1000).toFixed(2)}s</div>
+                    )}
+                    {message.num_turns !== undefined && (
+                      <div>Turns: {message.num_turns}</div>
+                    )}
+                    {message.usage && (
+                      <div>
+                        Total tokens: {message.usage.input_tokens + message.usage.output_tokens} 
+                        ({message.usage.input_tokens} in, {message.usage.output_tokens} out)
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

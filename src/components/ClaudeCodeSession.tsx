@@ -111,8 +111,8 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   // Three-pane layout state
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
   const [leftPanelTab, setLeftPanelTab] = useState<'files' | 'notes'>('files');
-  const [leftPanelWidth, setLeftPanelWidth] = useState(300);
-  const [middlePanelWidth, setMiddlePanelWidth] = useState(400);
+  const [leftPanelWidth] = useState(300);
+  const [middlePanelWidth] = useState(400);
   
   // Add collapsed state for queued prompts
   const [queuedPromptsCollapsed, setQueuedPromptsCollapsed] = useState(false);
@@ -1213,6 +1213,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                   message={message} 
                   streamMessages={messages}
                   onLinkDetected={handleLinkDetected}
+                  onSwitchToNotes={() => setLeftPanelTab('notes')}
                 />
               </motion.div>
             );
