@@ -5,6 +5,7 @@ mod checkpoint;
 mod claude_binary;
 mod commands;
 mod process;
+mod filesystem;
 
 use checkpoint::state::CheckpointState;
 use commands::agents::{
@@ -43,6 +44,8 @@ use commands::storage::{
     storage_insert_row, storage_execute_sql, storage_reset_database,
 };
 use commands::proxy::{get_proxy_settings, save_proxy_settings, apply_proxy_settings};
+use filesystem::{read_directory, get_default_directories, calculate_file_tokens, read_file, read_pdf_content, read_csv_content, read_xlsx_content};
+
 use process::ProcessRegistryState;
 use std::sync::Mutex;
 use tauri::Manager;
@@ -199,6 +202,15 @@ fn main() {
             get_hooks_config,
             update_hooks_config,
             validate_hook_command,
+
+            // filetree
+            read_directory,
+            get_default_directories,
+            calculate_file_tokens,
+            read_file,
+            read_pdf_content,
+            read_csv_content,
+            read_xlsx_content,
             
             // Checkpoint Management
             create_checkpoint,

@@ -62,6 +62,8 @@ interface FloatingPromptInputProps {
 
 export interface FloatingPromptInputRef {
   addImage: (imagePath: string) => void;
+  setPrompt: (prompt: string) => void;
+  appendToPrompt: (text: string) => void;
 }
 
 /**
@@ -247,6 +249,31 @@ const FloatingPromptInputInner = (
           const newPrompt = currentPrompt + (currentPrompt.endsWith(' ') || currentPrompt === '' ? '' : ' ') + mention + ' ';
 
           // Focus the textarea
+          setTimeout(() => {
+            const target = isExpanded ? expandedTextareaRef.current : textareaRef.current;
+            target?.focus();
+            target?.setSelectionRange(newPrompt.length, newPrompt.length);
+          }, 0);
+
+          return newPrompt;
+        });
+      },
+      setPrompt: (newPrompt: string) => {
+        setPrompt(newPrompt);
+        // Focus the textarea and move cursor to end
+        setTimeout(() => {
+          const target = isExpanded ? expandedTextareaRef.current : textareaRef.current;
+          target?.focus();
+          target?.setSelectionRange(newPrompt.length, newPrompt.length);
+        }, 0);
+      },
+      appendToPrompt: (text: string) => {
+        setPrompt(currentPrompt => {
+          // Add proper spacing - space before if prompt doesn't end with space and isn't empty
+          const needsSpaceBefore = currentPrompt !== '' && !currentPrompt.endsWith(' ');
+          const newPrompt = currentPrompt + (needsSpaceBefore ? ' ' : '') + text;
+
+          // Focus the textarea and move cursor to end
           setTimeout(() => {
             const target = isExpanded ? expandedTextareaRef.current : textareaRef.current;
             target?.focus();
