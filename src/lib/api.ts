@@ -441,9 +441,31 @@ export interface ImportServerResult {
 }
 
 /**
+ * Represents the claude-code-router model info
+ */
+export interface CcrModelInfo {
+  provider: string;
+  models: string[];
+  default_model: string;
+}
+
+/**
  * API client for interacting with the Rust backend
  */
 export const api = {
+  /**
+   * Gets the claude-code-router model info
+   * @returns Promise resolving to the ccr model info
+   */
+  async getCcrModelInfo(): Promise<CcrModelInfo> {
+    try {
+      return await invoke<CcrModelInfo>("get_ccr_model_info");
+    } catch (error) {
+      console.error("Failed to get ccr model info:", error);
+      throw error;
+    }
+  },
+
   /**
    * Lists all projects in the ~/.claude/projects directory
    * @returns Promise resolving to an array of projects

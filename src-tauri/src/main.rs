@@ -249,6 +249,9 @@ fn main() {
             // Proxy Settings
             get_proxy_settings,
             save_proxy_settings,
+
+            // CCR Commands
+            commands::ccr::get_ccr_model_info,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

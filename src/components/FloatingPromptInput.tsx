@@ -8,7 +8,8 @@ import {
   Sparkles,
   Zap,
   Square,
-  Brain
+  Brain,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -18,37 +19,17 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { FilePicker } from "./FilePicker";
 import { SlashCommandPicker } from "./SlashCommandPicker";
 import { ImagePreview } from "./ImagePreview";
-import { type FileEntry, type SlashCommand } from "@/lib/api";
+import { api, type FileEntry, type SlashCommand, type CcrModelInfo } from "@/lib/api";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 
 interface FloatingPromptInputProps {
-  /**
-   * Callback when prompt is sent
-   */
-  onSend: (prompt: string, model: "sonnet" | "opus") => void;
-  /**
-   * Whether the input is loading
-   */
+  onSend: (prompt: string, model: string) => void;
+  onModelChange?: (provider: string, model: string) => void;
   isLoading?: boolean;
-  /**
-   * Whether the input is disabled
-   */
   disabled?: boolean;
-  /**
-   * Default model to select
-   */
-  defaultModel?: "sonnet" | "opus";
-  /**
-   * Project path for file picker
-   */
+  defaultModel?: string;
   projectPath?: string;
-  /**
-   * Optional className for styling
-   */
   className?: string;
-  /**
-   * Callback when cancel is clicked (only during loading)
-   */
   onCancel?: () => void;
 }
 
@@ -56,114 +37,51 @@ export interface FloatingPromptInputRef {
   addImage: (imagePath: string) => void;
 }
 
-/**
- * Thinking mode type definition
- */
 type ThinkingMode = "auto" | "think" | "think_hard" | "think_harder" | "ultrathink";
 
-/**
- * Thinking mode configuration
- */
 type ThinkingModeConfig = {
   id: ThinkingMode;
   name: string;
   description: string;
-  level: number; // 0-4 for visual indicator
-  phrase?: string; // The phrase to append
+  level: number;
+  phrase?: string;
 };
 
 const THINKING_MODES: ThinkingModeConfig[] = [
-  {
-    id: "auto",
-    name: "Auto",
-    description: "Let Claude decide",
-    level: 0
-  },
-  {
-    id: "think",
-    name: "Think",
-    description: "Basic reasoning",
-    level: 1,
-    phrase: "think"
-  },
-  {
-    id: "think_hard",
-    name: "Think Hard",
-    description: "Deeper analysis",
-    level: 2,
-    phrase: "think hard"
-  },
-  {
-    id: "think_harder",
-    name: "Think Harder",
-    description: "Extensive reasoning",
-    level: 3,
-    phrase: "think harder"
-  },
-  {
-    id: "ultrathink",
-    name: "Ultrathink",
-    description: "Maximum computation",
-    level: 4,
-    phrase: "ultrathink"
-  }
+  { id: "auto", name: "Auto", description: "Let Claude decide", level: 0 },
+  { id: "think", name: "Think", description: "Basic reasoning", level: 1, phrase: "think" },
+  { id: "think_hard", name: "Think Hard", description: "Deeper analysis", level: 2, phrase: "think hard" },
+  { id: "think_harder", name: "Think Harder", description: "Extensive reasoning", level: 3, phrase: "think harder" },
+  { id: "ultrathink", name: "Ultrathink", description: "Maximum computation", level: 4, phrase: "ultrathink" },
 ];
 
-/**
- * ThinkingModeIndicator component - Shows visual indicator bars for thinking level
- */
-const ThinkingModeIndicator: React.FC<{ level: number }> = ({ level }) => {
-  return (
-    <div className="flex items-center gap-0.5">
-      {[1, 2, 3, 4].map((i) => (
-        <div
-          key={i}
-          className={cn(
-            "w-1 h-3 rounded-full transition-colors",
-            i <= level ? "bg-blue-500" : "bg-muted"
-          )}
-        />
-      ))}
-    </div>
-  );
-};
+const ThinkingModeIndicator: React.FC<{ level: number }> = ({ level }) => (
+  <div className="flex items-center gap-0.5">
+    {[1, 2, 3, 4].map((i) => (
+      <div
+        key={i}
+        className={cn("w-1 h-3 rounded-full transition-colors", i <= level ? "bg-blue-500" : "bg-muted")}
+      />
+    ))}
+  </div>
+);
 
 type Model = {
-  id: "sonnet" | "opus";
+  id: string;
   name: string;
   description: string;
   icon: React.ReactNode;
 };
 
-const MODELS: Model[] = [
-  {
-    id: "sonnet",
-    name: "Claude 4 Sonnet",
-    description: "Faster, efficient for most tasks",
-    icon: <Zap className="h-4 w-4" />
-  },
-  {
-    id: "opus",
-    name: "Claude 4 Opus",
-    description: "More capable, better for complex tasks",
-    icon: <Sparkles className="h-4 w-4" />
-  }
+const DEFAULT_MODELS: Model[] = [
+  { id: "sonnet", name: "Claude 4 Sonnet", description: "Faster, efficient for most tasks", icon: <Zap className="h-4 w-4" /> },
+  { id: "opus", name: "Claude 4 Opus", description: "More capable, better for complex tasks", icon: <Sparkles className="h-4 w-4" /> },
 ];
 
-/**
- * FloatingPromptInput component - Fixed position prompt input with model picker
- * 
- * @example
- * const promptRef = useRef<FloatingPromptInputRef>(null);
- * <FloatingPromptInput
- *   ref={promptRef}
- *   onSend={(prompt, model) => console.log('Send:', prompt, model)}
- *   isLoading={false}
- * />
- */
 const FloatingPromptInputInner = (
   {
     onSend,
+    onModelChange,
     isLoading = false,
     disabled = false,
     defaultModel = "sonnet",
@@ -174,7 +92,10 @@ const FloatingPromptInputInner = (
   ref: React.Ref<FloatingPromptInputRef>,
 ) => {
   const [prompt, setPrompt] = useState("");
-  const [selectedModel, setSelectedModel] = useState<"sonnet" | "opus">(defaultModel);
+  const [ccrInfo, setCcrInfo] = useState<CcrModelInfo | null>(null);
+  const [models, setModels] = useState<Model[]>(DEFAULT_MODELS);
+  const [selectedModel, setSelectedModel] = useState<string>(defaultModel);
+  const [isCcrLoading, setIsCcrLoading] = useState(true);
   const [selectedThinkingMode, setSelectedThinkingMode] = useState<ThinkingMode>("auto");
   const [isExpanded, setIsExpanded] = useState(false);
   const [modelPickerOpen, setModelPickerOpen] = useState(false);
@@ -191,28 +112,45 @@ const FloatingPromptInputInner = (
   const expandedTextareaRef = useRef<HTMLTextAreaElement>(null);
   const unlistenDragDropRef = useRef<(() => void) | null>(null);
 
-  // Expose a method to add images programmatically
+  useEffect(() => {
+    const fetchCcrInfo = async () => {
+      try {
+        setIsCcrLoading(true);
+        const info = await api.getCcrModelInfo();
+        setCcrInfo(info);
+        const ccrModels: Model[] = info.models.map(m => ({
+          id: m,
+          name: m,
+          description: `From ${info.provider}`,
+          icon: <Sparkles className="h-4 w-4" />
+        }));
+        setModels(ccrModels);
+        setSelectedModel(info.default_model || ccrModels[0]?.id || defaultModel);
+      } catch (error) {
+        console.warn("Could not load claude-code-router config, falling back to default models.", error);
+        setModels(DEFAULT_MODELS);
+        setSelectedModel(defaultModel);
+      } finally {
+        setIsCcrLoading(false);
+      }
+    };
+    fetchCcrInfo();
+  }, [defaultModel]);
+
   React.useImperativeHandle(
     ref,
     () => ({
       addImage: (imagePath: string) => {
         setPrompt(currentPrompt => {
           const existingPaths = extractImagePaths(currentPrompt);
-          if (existingPaths.includes(imagePath)) {
-            return currentPrompt; // Image already added
-          }
-
-          // Wrap path in quotes if it contains spaces
+          if (existingPaths.includes(imagePath)) return currentPrompt;
           const mention = imagePath.includes(' ') ? `@"${imagePath}"` : `@${imagePath}`;
           const newPrompt = currentPrompt + (currentPrompt.endsWith(' ') || currentPrompt === '' ? '' : ' ') + mention + ' ';
-
-          // Focus the textarea
           setTimeout(() => {
             const target = isExpanded ? expandedTextareaRef.current : textareaRef.current;
             target?.focus();
             target?.setSelectionRange(newPrompt.length, newPrompt.length);
           }, 0);
-
           return newPrompt;
         });
       }
@@ -220,139 +158,66 @@ const FloatingPromptInputInner = (
     [isExpanded]
   );
 
-  // Helper function to check if a file is an image
   const isImageFile = (path: string): boolean => {
-    // Check if it's a data URL
-    if (path.startsWith('data:image/')) {
-      return true;
-    }
-    // Otherwise check file extension
+    if (path.startsWith('data:image/')) return true;
     const ext = path.split('.').pop()?.toLowerCase();
     return ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'ico', 'bmp'].includes(ext || '');
   };
 
-  // Extract image paths from prompt text
   const extractImagePaths = (text: string): string[] => {
-    console.log('[extractImagePaths] Input text length:', text.length);
-    
-    // Updated regex to handle both quoted and unquoted paths
-    // Pattern 1: @"path with spaces or data URLs" - quoted paths
-    // Pattern 2: @path - unquoted paths (continues until @ or end)
     const quotedRegex = /@"([^"]+)"/g;
     const unquotedRegex = /@([^@\n\s]+)/g;
-    
-    const pathsSet = new Set<string>(); // Use Set to ensure uniqueness
-    
-    // First, extract quoted paths (including data URLs)
+    const pathsSet = new Set<string>();
     let matches = Array.from(text.matchAll(quotedRegex));
-    console.log('[extractImagePaths] Quoted matches:', matches.length);
-    
     for (const match of matches) {
-      const path = match[1]; // No need to trim, quotes preserve exact path
-      console.log('[extractImagePaths] Processing quoted path:', path.startsWith('data:') ? 'data URL' : path);
-      
-      // For data URLs, use as-is; for file paths, convert to absolute
-      const fullPath = path.startsWith('data:') 
-        ? path 
-        : (path.startsWith('/') ? path : (projectPath ? `${projectPath}/${path}` : path));
-      
-      if (isImageFile(fullPath)) {
-        pathsSet.add(fullPath);
-      }
+      const path = match[1];
+      const fullPath = path.startsWith('data:') ? path : (path.startsWith('/') ? path : (projectPath ? `${projectPath}/${path}` : path));
+      if (isImageFile(fullPath)) pathsSet.add(fullPath);
     }
-    
-    // Remove quoted mentions from text to avoid double-matching
     let textWithoutQuoted = text.replace(quotedRegex, '');
-    
-    // Then extract unquoted paths (typically file paths)
     matches = Array.from(textWithoutQuoted.matchAll(unquotedRegex));
-    console.log('[extractImagePaths] Unquoted matches:', matches.length);
-    
     for (const match of matches) {
       const path = match[1].trim();
-      // Skip if it looks like a data URL fragment (shouldn't happen with proper quoting)
       if (path.includes('data:')) continue;
-      
-      console.log('[extractImagePaths] Processing unquoted path:', path);
-      
-      // Convert relative path to absolute if needed
       const fullPath = path.startsWith('/') ? path : (projectPath ? `${projectPath}/${path}` : path);
-      
-      if (isImageFile(fullPath)) {
-        pathsSet.add(fullPath);
-      }
+      if (isImageFile(fullPath)) pathsSet.add(fullPath);
     }
-
-    const uniquePaths = Array.from(pathsSet);
-    console.log('[extractImagePaths] Final extracted paths (unique):', uniquePaths.length);
-    return uniquePaths;
+    return Array.from(pathsSet);
   };
 
-  // Update embedded images when prompt changes
   useEffect(() => {
-    console.log('[useEffect] Prompt changed:', prompt);
     const imagePaths = extractImagePaths(prompt);
-    console.log('[useEffect] Setting embeddedImages to:', imagePaths);
     setEmbeddedImages(imagePaths);
   }, [prompt, projectPath]);
 
-  // Set up Tauri drag-drop event listener
   useEffect(() => {
-    // This effect runs only once on component mount to set up the listener.
     let lastDropTime = 0;
-
     const setupListener = async () => {
       try {
-        // If a listener from a previous mount/render is still around, clean it up.
-        if (unlistenDragDropRef.current) {
-          unlistenDragDropRef.current();
-        }
-
+        if (unlistenDragDropRef.current) unlistenDragDropRef.current();
         const webview = getCurrentWebviewWindow();
         unlistenDragDropRef.current = await webview.onDragDropEvent((event) => {
-          if (event.payload.type === 'enter' || event.payload.type === 'over') {
-            setDragActive(true);
-          } else if (event.payload.type === 'leave') {
+          if (event.payload.type === 'enter' || event.payload.type === 'over') setDragActive(true);
+          else if (event.payload.type === 'leave') setDragActive(false);
+          else if (event.payload.type === 'drop' && event.payload.paths) {
             setDragActive(false);
-          } else if (event.payload.type === 'drop' && event.payload.paths) {
-            setDragActive(false);
-
             const currentTime = Date.now();
-            if (currentTime - lastDropTime < 200) {
-              // This debounce is crucial to handle the storm of drop events
-              // that Tauri/OS can fire for a single user action.
-              return;
-            }
+            if (currentTime - lastDropTime < 200) return;
             lastDropTime = currentTime;
-
             const droppedPaths = event.payload.paths as string[];
             const imagePaths = droppedPaths.filter(isImageFile);
-
             if (imagePaths.length > 0) {
               setPrompt(currentPrompt => {
                 const existingPaths = extractImagePaths(currentPrompt);
                 const newPaths = imagePaths.filter(p => !existingPaths.includes(p));
-
-                if (newPaths.length === 0) {
-                  return currentPrompt; // All dropped images are already in the prompt
-                }
-
-                // Wrap paths with spaces in quotes for clarity
-                const mentionsToAdd = newPaths.map(p => {
-                  // If path contains spaces, wrap in quotes
-                  if (p.includes(' ')) {
-                    return `@"${p}"`;
-                  }
-                  return `@${p}`;
-                }).join(' ');
+                if (newPaths.length === 0) return currentPrompt;
+                const mentionsToAdd = newPaths.map(p => p.includes(' ') ? `@"${p}"` : `@${p}`).join(' ');
                 const newPrompt = currentPrompt + (currentPrompt.endsWith(' ') || currentPrompt === '' ? '' : ' ') + mentionsToAdd + ' ';
-
                 setTimeout(() => {
                   const target = isExpanded ? expandedTextareaRef.current : textareaRef.current;
                   target?.focus();
                   target?.setSelectionRange(newPrompt.length, newPrompt.length);
                 }, 0);
-
                 return newPrompt;
               });
             }
@@ -362,43 +227,40 @@ const FloatingPromptInputInner = (
         console.error('Failed to set up Tauri drag-drop listener:', error);
       }
     };
-
     setupListener();
-
     return () => {
-      // On unmount, ensure we clean up the listener.
       if (unlistenDragDropRef.current) {
         unlistenDragDropRef.current();
         unlistenDragDropRef.current = null;
       }
     };
-  }, []); // Empty dependency array ensures this runs only on mount/unmount.
+  }, []);
 
   useEffect(() => {
-    // Focus the appropriate textarea when expanded state changes
-    if (isExpanded && expandedTextareaRef.current) {
-      expandedTextareaRef.current.focus();
-    } else if (!isExpanded && textareaRef.current) {
-      textareaRef.current.focus();
-    }
+    if (isExpanded && expandedTextareaRef.current) expandedTextareaRef.current.focus();
+    else if (!isExpanded && textareaRef.current) textareaRef.current.focus();
   }, [isExpanded]);
 
   const handleSend = () => {
     if (prompt.trim() && !disabled) {
       let finalPrompt = prompt.trim();
-      
-      // Append thinking phrase if not auto mode
       const thinkingMode = THINKING_MODES.find(m => m.id === selectedThinkingMode);
-      if (thinkingMode && thinkingMode.phrase) {
-        finalPrompt = `${finalPrompt}.\n\n${thinkingMode.phrase}.`;
-      }
-      
+      if (thinkingMode && thinkingMode.phrase) finalPrompt = `${finalPrompt}.\n\n${thinkingMode.phrase}.`;
       onSend(finalPrompt, selectedModel);
       setPrompt("");
       setEmbeddedImages([]);
     }
   };
 
+  const handleModelSelect = (modelId: string) => {
+    setSelectedModel(modelId);
+    setModelPickerOpen(false);
+    if (onModelChange && ccrInfo) {
+      onModelChange(ccrInfo.provider, modelId);
+    }
+  };
+
+  // ... (keep the rest of the handlers: handleTextChange, handleFileSelect, etc. as they were)
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = e.target.value;
     const newCursorPosition = e.target.selectionStart || 0;
@@ -688,19 +550,19 @@ const FloatingPromptInputInner = (
     }
     
     // For file paths, use the original logic
-    const escapedPath = imagePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const escapedRelativePath = imagePath.replace(projectPath + '/', '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const escapedPath = imagePath.replace(/[.*+?^${}()|[\\]/g, '\\$&');
+    const escapedRelativePath = imagePath.replace(projectPath + '/', '').replace(/[.*+?^${}()|[\\]/g, '\\$&');
     
     // Create patterns for both quoted and unquoted mentions
     const patterns = [
       // Quoted full path
-      new RegExp(`@"${escapedPath}"\\s?`, 'g'),
+      new RegExp(`@"${escapedPath}"\s?`, 'g'),
       // Unquoted full path
-      new RegExp(`@${escapedPath}\\s?`, 'g'),
+      new RegExp(`@${escapedPath}\s?`, 'g'),
       // Quoted relative path
-      new RegExp(`@"${escapedRelativePath}"\\s?`, 'g'),
+      new RegExp(`@"${escapedRelativePath}"\s?`, 'g'),
       // Unquoted relative path
-      new RegExp(`@${escapedRelativePath}\\s?`, 'g')
+      new RegExp(`@${escapedRelativePath}\s?`)
     ];
 
     let newPrompt = prompt;
@@ -711,7 +573,7 @@ const FloatingPromptInputInner = (
     setPrompt(newPrompt.trim());
   };
 
-  const selectedModelData = MODELS.find(m => m.id === selectedModel) || MODELS[0];
+  const selectedModelData = models.find(m => m.id === selectedModel) || models[0] || DEFAULT_MODELS[0];
 
   return (
     <>
@@ -893,23 +755,20 @@ const FloatingPromptInputInner = (
                   <Button
                     variant="outline"
                     size="default"
-                    disabled={disabled}
+                    disabled={disabled || isCcrLoading}
                     className="gap-2 min-w-[180px] justify-start"
                   >
-                    {selectedModelData.icon}
-                    <span className="flex-1 text-left">{selectedModelData.name}</span>
+                    {isCcrLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : selectedModelData.icon}
+                    <span className="flex-1 text-left">{isCcrLoading ? "Loading..." : selectedModelData.name}</span>
                     <ChevronUp className="h-4 w-4 opacity-50" />
                   </Button>
                 }
                 content={
-                  <div className="w-[300px] p-1">
-                    {MODELS.map((model) => (
+                  <div className="w-[300px] p-1 max-h-60 overflow-y-auto">
+                    {models.map((model) => (
                       <button
                         key={model.id}
-                        onClick={() => {
-                          setSelectedModel(model.id);
-                          setModelPickerOpen(false);
-                        }}
+                        onClick={() => handleModelSelect(model.id)}
                         className={cn(
                           "w-full flex items-start gap-3 p-3 rounded-md transition-colors text-left",
                           "hover:bg-accent",

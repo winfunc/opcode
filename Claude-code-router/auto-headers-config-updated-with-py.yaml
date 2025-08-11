@@ -1,0 +1,118 @@
+model_list:
+- model_name: claude-3.5-sonnet
+  litellm_params:
+    model: github_copilot/claude-3.5-sonnet
+    extra_headers: &id001
+      editor-version: vscode/1.96.0
+      editor-plugin-version: copilot/1.155.0
+      copilot-integration-id: vscode-chat
+      user-agent: GitHubCopilot/1.155.0
+- model_name: claude-3.7-sonnet
+  litellm_params:
+    model: github_copilot/claude-3.7-sonnet
+    extra_headers: *id001
+- model_name: claude-3.7-sonnet-thought
+  litellm_params:
+    model: github_copilot/claude-3.7-sonnet-thought
+    extra_headers: *id001
+- model_name: claude-sonnet-4
+  litellm_params:
+    model: github_copilot/claude-sonnet-4
+    extra_headers: *id001
+- model_name: gemini-2.0-flash-001
+  litellm_params:
+    model: github_copilot/gemini-2.0-flash-001
+    extra_headers: *id001
+- model_name: gpt-3.5-turbo
+  litellm_params:
+    model: github_copilot/gpt-3.5-turbo
+    extra_headers: *id001
+- model_name: gpt-3.5-turbo-0613
+  litellm_params:
+    model: github_copilot/gpt-3.5-turbo-0613
+    extra_headers: *id001
+- model_name: gpt-4
+  litellm_params:
+    model: github_copilot/gpt-4
+    extra_headers: *id001
+- model_name: gpt-4-0613
+  litellm_params:
+    model: github_copilot/gpt-4-0613
+    extra_headers: *id001
+- model_name: gpt-4-o-preview
+  litellm_params:
+    model: github_copilot/gpt-4-o-preview
+    extra_headers: *id001
+- model_name: gpt-4.1
+  litellm_params:
+    model: github_copilot/gpt-4.1
+    extra_headers: *id001
+- model_name: gpt-4.1-2025-04-14
+  litellm_params:
+    model: github_copilot/gpt-4.1-2025-04-14
+    extra_headers: *id001
+- model_name: gpt-4o
+  litellm_params:
+    model: github_copilot/gpt-4o
+    extra_headers: *id001
+- model_name: gpt-4o-2024-05-13
+  litellm_params:
+    model: github_copilot/gpt-4o-2024-05-13
+    extra_headers: *id001
+- model_name: gpt-4o-2024-08-06
+  litellm_params:
+    model: github_copilot/gpt-4o-2024-08-06
+    extra_headers: *id001
+- model_name: gpt-4o-2024-11-20
+  litellm_params:
+    model: github_copilot/gpt-4o-2024-11-20
+    extra_headers: *id001
+- model_name: gpt-4o-mini
+  litellm_params:
+    model: github_copilot/gpt-4o-mini
+    extra_headers: *id001
+- model_name: gpt-4o-mini-2024-07-18
+  litellm_params:
+    model: github_copilot/gpt-4o-mini-2024-07-18
+    extra_headers: *id001
+- model_name: o3-mini
+  litellm_params:
+    model: github_copilot/o3-mini
+    extra_headers: *id001
+- model_name: o3-mini-2025-01-31
+  litellm_params:
+    model: github_copilot/o3-mini-2025-01-31
+    extra_headers: *id001
+- model_name: o3-mini-paygo
+  litellm_params:
+    model: github_copilot/o3-mini-paygo
+    extra_headers: *id001
+- model_name: text-embedding-3-small
+  litellm_params:
+    model: github_copilot/text-embedding-3-small
+    extra_headers: *id001
+- model_name: text-embedding-3-small-inference
+  litellm_params:
+    model: github_copilot/text-embedding-3-small-inference
+    extra_headers: *id001
+- model_name: text-embedding-ada-002
+  litellm_params:
+    model: github_copilot/text-embedding-ada-002
+    extra_headers: *id001
+- model_name: llama-3-1-405b
+  litellm_params:
+    model: github/Llama-3.1-405B-Instruct
+    api_key: os.environ/GITHUB_API_KEY
+- model_name: phi-4
+  litellm_params:
+    model: github/Phi-4
+    api_key: os.environ/GITHUB_API_KEY
+general_settings:
+  master_key: sk-auto-headers-2025
+litellm_settings:
+  set_verbose: true
+  drop_params: true
+cost_tracking:
+  enabled: true
+  github_copilot_subscription: true
+  github_marketplace_usage: true

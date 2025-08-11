@@ -5,3 +5,4 @@ pub mod usage;
 pub mod storage;
 pub mod slash_commands;
 pub mod proxy;
+pub mod ccr;

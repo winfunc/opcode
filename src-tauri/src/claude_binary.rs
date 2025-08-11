@@ -146,6 +146,19 @@ fn source_preference(installation: &ClaudeInstallation) -> u8 {
 fn discover_system_installations() -> Vec<ClaudeInstallation> {
     let mut installations = Vec::new();
 
+    // Manually add ccr wrapper script path
+    let ccr_path = "/home/sedinha/Desktop/claudia/scripts/ccr_wrapper.sh".to_string();
+    if PathBuf::from(&ccr_path).exists() {
+        info!("Found ccr binary at: {}", ccr_path);
+        let version = get_claude_version(&ccr_path).ok().flatten();
+        installations.push(ClaudeInstallation {
+            path: ccr_path,
+            version,
+            source: "ccr".to_string(),
+            installation_type: InstallationType::Custom,
+        });
+    }
+
     // 1. Try 'which' command first (now works in production)
     if let Some(installation) = try_which_command() {
         installations.push(installation);

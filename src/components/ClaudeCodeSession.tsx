@@ -95,7 +95,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   const [forkSessionName, setForkSessionName] = useState("");
   
   // Queued prompts state
-  const [queuedPrompts, setQueuedPrompts] = useState<Array<{ id: string; prompt: string; model: "sonnet" | "opus" }>>([]);
+  const [queuedPrompts, setQueuedPrompts] = useState<Array<{ id: string; prompt: string; model: string }>>([]);
   
   // New state for preview feature
   const [showPreview, setShowPreview] = useState(false);
@@ -111,7 +111,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   const unlistenRefs = useRef<UnlistenFn[]>([]);
   const hasActiveSessionRef = useRef(false);
   const floatingPromptRef = useRef<FloatingPromptInputRef>(null);
-  const queuedPromptsRef = useRef<Array<{ id: string; prompt: string; model: "sonnet" | "opus" }>>([]);
+  const queuedPromptsRef = useRef<Array<{ id: string; prompt: string; model: string }>>([]);
   const isMountedRef = useRef(true);
   const isListeningRef = useRef(false);
   const sessionStartTime = useRef<number>(Date.now());
@@ -264,6 +264,25 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   useEffect(() => {
     onStreamingChange?.(isLoading, claudeSessionId);
   }, [isLoading, claudeSessionId, onStreamingChange]);
+
+  const handleModelChange = (provider: string, model: string) => {
+    const command = `/model ${provider},${model}`;
+    // We can't directly send a command without a user prompt.
+    // So, we add a user message to the history to show the change,
+    // and then we'll inject this command into the next `onSend` call.
+    // A better approach is to have a dedicated command channel.
+    // For now, let's just send it as a prompt.
+    handleSendPrompt(command, model);
+
+    // Add a visual confirmation in the chat
+    const modelChangeMessage: ClaudeStreamMessage = {
+      type: "system",
+      subtype: "info",
+      result: `Switched model to ${model}`,
+      timestamp: new Date().toISOString()
+    };
+    setMessages(prev => [...prev, modelChangeMessage]);
+  };
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -424,12 +443,19 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     }
   };
 
-  const handleSendPrompt = async (prompt: string, model: "sonnet" | "opus") => {
+  const handleSendPrompt = async (prompt: string, model: string) => {
     console.log('[ClaudeCodeSession] handleSendPrompt called with:', { prompt, model, projectPath, claudeSessionId, effectiveSession });
     
     if (!projectPath) {
       setError("Please select a project directory first");
       return;
+    }
+
+    // If the prompt is a /model command, handle it separately
+    if (prompt.startsWith('/model ')) {
+      // This is now handled by onModelChange, but we can keep this as a manual fallback
+      // Or just let it be sent like a normal prompt, which ccr should handle.
+      // For now, we'll let it pass through as a normal prompt.
     }
 
     // If already loading, queue the prompt
@@ -1560,6 +1586,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
             <FloatingPromptInput
               ref={floatingPromptRef}
               onSend={handleSendPrompt}
+              onModelChange={handleModelChange}
               onCancel={handleCancelExecution}
               isLoading={isLoading}
               disabled={!projectPath}
