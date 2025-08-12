@@ -512,5 +512,38 @@ fn json_to_sql_value(value: &JsonValue) -> Result<Box<dyn rusqlite::ToSql>, Stri
     }
 }
 
+/// Get a setting from the app_settings table
+#[tauri::command]
+pub async fn get_app_setting(app: AppHandle, key: String) -> Result<Option<String>, String> {
+    let db_state = app.state::<super::agents::AgentDb>();
+    let conn = db_state.0.lock().map_err(|e| e.to_string())?;
+    
+    match conn.query_row(
+        "SELECT value FROM app_settings WHERE key = ?1",
+        params![key],
+        |row| row.get::<_, String>(0),
+    ) {
+        Ok(value) => Ok(Some(value)),
+        Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+        Err(e) => Err(format!("Failed to get setting: {}", e)),
+    }
+}
+
+/// Save a setting to the app_settings table (insert or update)
+#[tauri::command]
+pub async fn save_app_setting(app: AppHandle, key: String, value: String) -> Result<(), String> {
+    let db_state = app.state::<super::agents::AgentDb>();
+    let conn = db_state.0.lock().map_err(|e| e.to_string())?;
+    
+    // Use INSERT OR REPLACE to handle both insert and update
+    conn.execute(
+        "INSERT OR REPLACE INTO app_settings (key, value) VALUES (?1, ?2)",
+        params![key, value],
+    )
+    .map_err(|e| format!("Failed to save setting: {}", e))?;
+    
+    Ok(())
+}
+
 /// Initialize the agents database (re-exported from agents module)
 use super::agents::init_database; 

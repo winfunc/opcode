@@ -42,6 +42,7 @@ use commands::usage::{
 use commands::storage::{
     storage_list_tables, storage_read_table, storage_update_row, storage_delete_row,
     storage_insert_row, storage_execute_sql, storage_reset_database,
+    get_app_setting, save_app_setting,
 };
 use commands::proxy::{get_proxy_settings, save_proxy_settings, apply_proxy_settings};
 use process::ProcessRegistryState;
@@ -55,6 +56,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_window_state::Builder::default().build())
         .setup(|app| {
             // Initialize agents database
             let conn = init_database(&app.handle()).map_err(|e| {
@@ -250,6 +252,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             storage_insert_row,
             storage_execute_sql,
             storage_reset_database,
+            get_app_setting,
+            save_app_setting,
 
             // Slash Commands
             commands::slash_commands::slash_commands_list,

@@ -288,9 +288,9 @@ brew install pkg-config
    bun run tauri:build
 
    # The built executable will be in:
-   # - Linux: src-tauri/target/release/
-   # - macOS: src-tauri/target/release/
-   # - Windows: src-tauri/target/release/
+   # - Linux: src-tauri/target/release/bundle/
+   # - macOS: src-tauri/target/release/bundle/
+   # - Windows: src-tauri/target/release/bundle/
    ```
 
 4. **Platform-Specific Build Options**
@@ -362,7 +362,7 @@ The build process creates several artifacts:
   - `.msi` installer (Windows)
   - `.exe` installer (Windows)
 
-All artifacts are located in `src-tauri/target/release/`.
+All artifacts are located in `src-tauri/target/release/bundle/`.
 
 ## 🛠️ Development
 

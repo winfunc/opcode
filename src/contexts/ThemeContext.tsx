@@ -65,29 +65,43 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Load theme preference and custom colors from storage
   useEffect(() => {
     const loadTheme = async () => {
+      console.log('Loading theme settings...');
       try {
         // Load theme preference
         const savedTheme = await api.getSetting(THEME_STORAGE_KEY);
+        console.log('Loaded theme preference:', savedTheme);
         
-        if (savedTheme) {
-          const themeMode = savedTheme as ThemeMode;
-          setThemeState(themeMode);
-          applyTheme(themeMode, customColors);
-        }
-
         // Load custom colors
         const savedColors = await api.getSetting(CUSTOM_COLORS_STORAGE_KEY);
+        console.log('Loaded custom colors:', savedColors);
+        let colors = DEFAULT_CUSTOM_COLORS;
         
         if (savedColors) {
-          const colors = JSON.parse(savedColors) as CustomThemeColors;
-          setCustomColorsState(colors);
-          if (theme === 'custom') {
-            applyTheme('custom', colors);
+          try {
+            colors = JSON.parse(savedColors) as CustomThemeColors;
+            console.log('Parsed custom colors:', colors);
+            setCustomColorsState(colors);
+          } catch (parseError) {
+            console.error('Failed to parse custom colors:', parseError);
           }
+        }
+
+        if (savedTheme) {
+          const themeMode = savedTheme as ThemeMode;
+          console.log('Applying saved theme:', themeMode);
+          setThemeState(themeMode);
+          applyTheme(themeMode, colors);
+        } else {
+          console.log('Applying default theme');
+          // Apply default theme if none saved
+          applyTheme('dark', colors);
         }
       } catch (error) {
         console.error('Failed to load theme settings:', error);
+        // Apply default theme if loading fails
+        applyTheme('dark', DEFAULT_CUSTOM_COLORS);
       } finally {
+        console.log('Finished loading theme settings');
         setIsLoading(false);
       }
     };
@@ -121,6 +135,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   const setTheme = useCallback(async (newTheme: ThemeMode) => {
+    console.log('Setting theme to:', newTheme);
     try {
       setIsLoading(true);
       
@@ -129,7 +144,9 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       applyTheme(newTheme, customColors);
       
       // Save to storage
+      console.log('Saving theme to storage:', newTheme);
       await api.saveSetting(THEME_STORAGE_KEY, newTheme);
+      console.log('Theme saved successfully');
     } catch (error) {
       console.error('Failed to save theme preference:', error);
     } finally {

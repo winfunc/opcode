@@ -1797,10 +1797,7 @@ export const api = {
    */
   async getSetting(key: string): Promise<string | null> {
     try {
-      // Use storageReadTable to safely query the app_settings table
-      const result = await this.storageReadTable('app_settings', 1, 1000);
-      const setting = (result as any)?.data?.find((row: any) => row.key === key);
-      return setting?.value || null;
+      return await invoke<string | null>("get_app_setting", { key });
     } catch (error) {
       console.error(`Failed to get setting ${key}:`, error);
       return null;
@@ -1815,17 +1812,7 @@ export const api = {
    */
   async saveSetting(key: string, value: string): Promise<void> {
     try {
-      // Try to update first
-      try {
-        await this.storageUpdateRow(
-          'app_settings',
-          { key },
-          { value }
-        );
-      } catch (updateError) {
-        // If update fails (row doesn't exist), insert new row
-        await this.storageInsertRow('app_settings', { key, value });
-      }
+      await invoke<void>("save_app_setting", { key, value });
     } catch (error) {
       console.error(`Failed to save setting ${key}:`, error);
       throw error;
