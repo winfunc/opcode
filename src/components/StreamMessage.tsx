@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import rehypeRaw from "rehype-raw";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { getClaudeSyntaxTheme } from "@/lib/claudeSyntaxTheme";
 import { useTheme } from "@/hooks";
@@ -666,10 +667,10 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
                             </div>
 
                             {beforeReminder && (
-                              <div className="ml-6 p-2 bg-background rounded-md border">
-                                <pre className="text-xs font-mono overflow-x-auto whitespace-pre-wrap">
+                              <div className="ml-6 p-2 bg-background rounded-md border prose prose-sm dark:prose-invert max-w-none">
+                                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
                                   {beforeReminder}
-                                </pre>
+                                </ReactMarkdown>
                               </div>
                             )}
 
@@ -678,10 +679,10 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
                             </div>
 
                             {afterReminder && (
-                              <div className="ml-6 p-2 bg-background rounded-md border">
-                                <pre className="text-xs font-mono overflow-x-auto whitespace-pre-wrap">
+                              <div className="ml-6 p-2 bg-background rounded-md border prose prose-sm dark:prose-invert max-w-none">
+                                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
                                   {afterReminder}
-                                </pre>
+                                </ReactMarkdown>
                               </div>
                             )}
                           </div>
@@ -849,6 +850,90 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
                         );
                       }
 
+                      // Check if this is thinking content that should be rendered with markdown
+                      const isThinkingResult = (() => {
+                        if (!content.tool_use_id || typeof contentText !== "string") return false;
+                        
+                        // Check if this result came from a thinking-related tool or contains thinking patterns
+                        let isFromThinkingTool = false;
+                        
+                        // Search in previous assistant messages for the matching tool_use
+                        if (streamMessages) {
+                          for (let i = streamMessages.length - 1; i >= 0; i--) {
+                            const prevMsg = streamMessages[i];
+                            if (
+                              prevMsg.type === "assistant" &&
+                              prevMsg.message?.content &&
+                              Array.isArray(prevMsg.message.content)
+                            ) {
+                              const toolUse = prevMsg.message.content.find(
+                                (c: any) =>
+                                  c.type === "tool_use" &&
+                                  c.id === content.tool_use_id &&
+                                  (c.name?.toLowerCase().includes("thinking") || 
+                                   c.name?.toLowerCase().includes("sequential"))
+                              );
+                              if (toolUse) {
+                                isFromThinkingTool = true;
+                                break;
+                              }
+                            }
+                          }
+                        }
+                        
+                        // Also check if content looks like thinking content (has markdown patterns)
+                        const hasMarkdownPatterns = contentText.includes('**') || 
+                                                  contentText.includes('```') || 
+                                                  contentText.includes('##') ||
+                                                  contentText.includes('- ') ||
+                                                  contentText.includes('1. ');
+                        
+                        return isFromThinkingTool || hasMarkdownPatterns;
+                      })();
+
+                      if (isThinkingResult) {
+                        renderedSomething = true;
+                        return (
+                          <div key={idx} className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <CheckCircle2 className="h-4 w-4 text-purple-500" />
+                              <span className="text-sm font-medium">
+                                Thinking Result
+                              </span>
+                            </div>
+                            <div className="ml-6 p-4 bg-gradient-to-br from-purple-50/80 to-indigo-50/60 dark:from-purple-950/20 dark:to-indigo-950/10 rounded-xl border border-purple-200/40 dark:border-purple-700/20">
+                              <div className="prose prose-sm dark:prose-invert max-w-none">
+                                <ReactMarkdown
+                                  remarkPlugins={[remarkGfm]}
+                                  rehypePlugins={[rehypeRaw]}
+                                  components={{
+                                    code({ node, inline, className, children, ...props }: any) {
+                                      const match = /language-(\w+)/.exec(className || "");
+                                      return !inline && match ? (
+                                        <SyntaxHighlighter
+                                          style={syntaxTheme}
+                                          language={match[1]}
+                                          PreTag="div"
+                                          {...props}
+                                        >
+                                          {String(children).replace(/\n$/, "")}
+                                        </SyntaxHighlighter>
+                                      ) : (
+                                        <code className={className} {...props}>
+                                          {children}
+                                        </code>
+                                      );
+                                    },
+                                  }}
+                                >
+                                  {contentText}
+                                </ReactMarkdown>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+
                       // Handle empty tool results
                       if (!contentText || contentText.trim() === "") {
                         renderedSomething = true;
@@ -880,10 +965,32 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
                               Tool Result
                             </span>
                           </div>
-                          <div className="ml-6 p-2 bg-background rounded-md border">
-                            <pre className="text-xs font-mono overflow-x-auto whitespace-pre-wrap">
+                          <div className="ml-6 p-2 bg-background rounded-md border prose prose-sm dark:prose-invert max-w-none">
+                            <ReactMarkdown
+                              remarkPlugins={[remarkGfm]}
+                              rehypePlugins={[rehypeRaw]}
+                              components={{
+                                code({ node, inline, className, children, ...props }: any) {
+                                  const match = /language-(\w+)/.exec(className || "");
+                                  return !inline && match ? (
+                                    <SyntaxHighlighter
+                                      style={syntaxTheme}
+                                      language={match[1]}
+                                      PreTag="div"
+                                      {...props}
+                                    >
+                                      {String(children).replace(/\n$/, "")}
+                                    </SyntaxHighlighter>
+                                  ) : (
+                                    <code className={className} {...props}>
+                                      {children}
+                                    </code>
+                                  );
+                                },
+                              }}
+                            >
                               {contentText}
-                            </pre>
+                            </ReactMarkdown>
                           </div>
                         </div>
                       );

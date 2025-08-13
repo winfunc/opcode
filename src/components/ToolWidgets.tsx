@@ -60,8 +60,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { detectLinks, makeLinksClickable } from "@/lib/linkDetector";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { getClaudeSyntaxTheme } from "@/lib/claudeSyntaxTheme";
+import rehypeRaw from "rehype-raw";
 import { open } from "@tauri-apps/plugin-shell";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -2483,11 +2482,16 @@ export const ThinkingWidget: React.FC<{
   signature?: string;
 }> = ({ thinking }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const { theme } = useTheme();
+  // theme not needed here
 
   // Process thinking content similar to sequential thinking
   const formattedThinking = thinking
     .replace(/\\n/g, '\n')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#x27;/g, "'")
     .trim();
 
   // Determine if content is long and should be collapsible
@@ -2543,30 +2547,18 @@ export const ThinkingWidget: React.FC<{
             !isExpanded && isLongThinking && "max-h-32 overflow-hidden"
           )}>
             <div className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed prose prose-sm dark:prose-invert max-w-none">
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                components={{
-                  code({ node, inline, className, children, ...props }: any) {
-                    const match = /language-(\w+)/.exec(className || "");
-                    return !inline && match ? (
-                      <SyntaxHighlighter
-                        style={getClaudeSyntaxTheme(theme)}
-                        language={match[1]}
-                        PreTag="div"
-                        {...props}
-                      >
-                        {String(children).replace(/\n$/, "")}
-                      </SyntaxHighlighter>
-                    ) : (
-                      <code className={className} {...props}>
-                        {children}
-                      </code>
-                    );
-                  },
-                }}
-              >
-                {formattedThinking}
-              </ReactMarkdown>
+              {formattedThinking ? (
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  rehypePlugins={[rehypeRaw]}
+                >
+                  {formattedThinking}
+                </ReactMarkdown>
+              ) : (
+                <span className="italic text-slate-500 dark:text-slate-400">
+                  Thinking...
+                </span>
+              )}
             </div>
             {!isExpanded && isLongThinking && (
               <div className="text-xs text-purple-600 dark:text-purple-400 italic text-center pt-2 border-t border-purple-200/20 dark:border-purple-700/20">
@@ -2683,6 +2675,7 @@ export const SequentialThinkingWidget: React.FC<{
               {formattedThought ? (
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
+                  rehypePlugins={[rehypeRaw]}
                   components={{
                     code({ node, inline, className, children, ...props }: any) {
                       const match = /language-(\w+)/.exec(className || "");
