@@ -2560,13 +2560,37 @@ export const ThinkingWidget: React.FC<{
                 </span>
               )}
             </div>
-            {!isExpanded && isLongThinking && (
-              <div className="text-xs text-purple-600 dark:text-purple-400 italic text-center pt-2 border-t border-purple-200/20 dark:border-purple-700/20">
-                Click to expand full thinking...
-              </div>
-            )}
           </div>
+          {/* Gradient fade for collapsed long thinking */}
+          {!isExpanded && isLongThinking && (
+            <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white/80 dark:from-slate-900/50 to-transparent pointer-events-none rounded-b-xl" />
+          )}
         </div>
+
+        {/* Expand/collapse buttons for long thinking */}
+        {!isExpanded && isLongThinking && (
+          <div className="text-center mt-3">
+            <button
+              onClick={() => setIsExpanded(true)}
+              className="text-xs text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 transition-colors inline-flex items-center gap-1 font-medium"
+            >
+              <ChevronDown className="h-3 w-3" />
+              Read full thinking
+            </button>
+          </div>
+        )}
+
+        {isExpanded && isLongThinking && (
+          <div className="text-center mt-3">
+            <button
+              onClick={() => setIsExpanded(false)}
+              className="text-xs text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 transition-colors inline-flex items-center gap-1 font-medium"
+            >
+              <ChevronUp className="h-3 w-3" />
+              Collapse
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
