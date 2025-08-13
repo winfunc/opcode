@@ -16,6 +16,7 @@ To contribute, please follow these steps:
 When submitting a pull request, please follow these guidelines:
 
 1. **Title**: Please include following prefixes:
+
    - `Feature:` for new features
    - `Fix:` for bug fixes
    - `Docs:` for documentation changes
@@ -24,6 +25,7 @@ When submitting a pull request, please follow these guidelines:
    - `Other:` for other changes
 
    For example:
+
    - `Feature: added custom agent timeout configuration`
    - `Fix: resolved session list scrolling issue`
 
@@ -40,12 +42,14 @@ When submitting a pull request, please follow these guidelines:
 ## Coding Standards
 
 ### Frontend (React/TypeScript)
+
 - Use TypeScript for all new code
 - Follow functional components with hooks
 - Use Tailwind CSS for styling
 - Add JSDoc comments for exported functions and components
 
 ### Backend (Rust)
+
 - Follow Rust standard conventions
 - Use `cargo fmt` for formatting
 - Use `cargo clippy` for linting
@@ -53,15 +57,17 @@ When submitting a pull request, please follow these guidelines:
 - Add comprehensive documentation with `///` comments
 
 ### Security Requirements
+
 - Validate all inputs from the frontend
 - Use prepared statements for database operations
 - Never log sensitive data (tokens, passwords, etc.)
 - Use secure defaults for all configurations
 
 ## Testing
+
 - Add tests for new functionality
 - Ensure all existing tests pass
 - Run `cargo test` for Rust code
 - Test the application manually before submitting
 
-Please adhere to the coding conventions, maintain clear documentation, and provide thorough testing for your contributions. 
+Please adhere to the coding conventions, maintain clear documentation, and provide thorough testing for your contributions.

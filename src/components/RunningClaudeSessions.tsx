@@ -31,7 +31,7 @@ export const RunningClaudeSessions: React.FC<RunningClaudeSessionsProps> = ({
 
   useEffect(() => {
     loadRunningSessions();
-    
+
     // Poll for updates every 5 seconds
     const interval = setInterval(loadRunningSessions, 5000);
     return () => clearInterval(interval);
@@ -52,23 +52,23 @@ export const RunningClaudeSessions: React.FC<RunningClaudeSessionsProps> = ({
 
   const handleResumeSession = (processInfo: ProcessInfo) => {
     // Extract session ID from process type
-    if ('ClaudeSession' in processInfo.process_type) {
+    if ("ClaudeSession" in processInfo.process_type) {
       const sessionId = processInfo.process_type.ClaudeSession.session_id;
-      
+
       // Create a minimal session object for resumption
       const session: Session = {
         id: sessionId,
-        project_id: processInfo.project_path.replace(/[^a-zA-Z0-9]/g, '-'),
+        project_id: processInfo.project_path.replace(/[^a-zA-Z0-9]/g, "-"),
         project_path: processInfo.project_path,
         created_at: new Date(processInfo.started_at).getTime() / 1000,
       };
-      
+
       // Emit event to navigate to the session
-      const event = new CustomEvent('claude-session-selected', { 
-        detail: { session, projectPath: processInfo.project_path } 
+      const event = new CustomEvent("claude-session-selected", {
+        detail: { session, projectPath: processInfo.project_path },
       });
       window.dispatchEvent(event);
-      
+
       onSessionClick?.(session);
     }
   };
@@ -83,7 +83,12 @@ export const RunningClaudeSessions: React.FC<RunningClaudeSessionsProps> = ({
 
   if (error) {
     return (
-      <div className={cn("flex items-center gap-2 text-destructive text-sm", className)}>
+      <div
+        className={cn(
+          "flex items-center gap-2 text-destructive text-sm",
+          className,
+        )}
+      >
         <AlertCircle className="h-4 w-4" />
         <span>{error}</span>
       </div>
@@ -108,10 +113,11 @@ export const RunningClaudeSessions: React.FC<RunningClaudeSessionsProps> = ({
 
       <div className="space-y-2">
         {runningSessions.map((session) => {
-          const sessionId = 'ClaudeSession' in session.process_type 
-            ? session.process_type.ClaudeSession.session_id 
-            : null;
-          
+          const sessionId =
+            "ClaudeSession" in session.process_type
+              ? session.process_type.ClaudeSession.session_id
+              : null;
+
           if (!sessionId) return null;
 
           return (
@@ -122,7 +128,7 @@ export const RunningClaudeSessions: React.FC<RunningClaudeSessionsProps> = ({
               transition={{ duration: 0.15 }}
             >
               <Card className="transition-all hover:shadow-md hover:scale-[1.01] cursor-pointer">
-                <CardContent 
+                <CardContent
                   className="p-3"
                   onClick={() => handleResumeSession(session)}
                 >
@@ -138,28 +144,29 @@ export const RunningClaudeSessions: React.FC<RunningClaudeSessionsProps> = ({
                             Running
                           </span>
                         </div>
-                        
+
                         <p className="text-xs text-muted-foreground truncate">
                           {session.project_path}
                         </p>
-                        
+
                         <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                          <span>Started: {formatISOTimestamp(session.started_at)}</span>
+                          <span>
+                            Started: {formatISOTimestamp(session.started_at)}
+                          </span>
                           <span>Model: {session.model}</span>
                           {session.task && (
-                            <span className="truncate max-w-[200px]" title={session.task}>
+                            <span
+                              className="truncate max-w-[200px]"
+                              title={session.task}
+                            >
                               Task: {session.task}
                             </span>
                           )}
                         </div>
                       </div>
                     </div>
-                    
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="flex-shrink-0"
-                    >
+
+                    <Button size="sm" variant="ghost" className="flex-shrink-0">
                       <Play className="h-3 w-3 mr-1" />
                       Resume
                     </Button>
@@ -172,4 +179,4 @@ export const RunningClaudeSessions: React.FC<RunningClaudeSessionsProps> = ({
       </div>
     </div>
   );
-}; 
+};

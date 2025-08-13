@@ -15,35 +15,38 @@ import { useTabState } from "@/hooks/useTabState";
  * AppContent component - Contains the main app logic, wrapped by providers
  */
 function AppContent() {
-  const { } = useTabState();
+  const {} = useTabState();
   const [showNFO, setShowNFO] = useState(false);
   const [showClaudeBinaryDialog, setShowClaudeBinaryDialog] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error" | "info";
+  } | null>(null);
   const [showAgentsModal, setShowAgentsModal] = useState(false);
   const [, setClaudeExecutableExists] = useState(true);
 
   // Keyboard shortcuts for tab navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
       const modKey = isMac ? e.metaKey : e.ctrlKey;
-      
+
       if (modKey) {
         switch (e.key) {
-          case 't':
+          case "t":
             e.preventDefault();
-            window.dispatchEvent(new CustomEvent('create-chat-tab'));
+            window.dispatchEvent(new CustomEvent("create-chat-tab"));
             break;
-          case 'w':
+          case "w":
             e.preventDefault();
-            window.dispatchEvent(new CustomEvent('close-current-tab'));
+            window.dispatchEvent(new CustomEvent("close-current-tab"));
             break;
-          case 'Tab':
+          case "Tab":
             e.preventDefault();
             if (e.shiftKey) {
-              window.dispatchEvent(new CustomEvent('switch-to-previous-tab'));
+              window.dispatchEvent(new CustomEvent("switch-to-previous-tab"));
             } else {
-              window.dispatchEvent(new CustomEvent('switch-to-next-tab'));
+              window.dispatchEvent(new CustomEvent("switch-to-next-tab"));
             }
             break;
           default:
@@ -51,15 +54,17 @@ function AppContent() {
             const num = parseInt(e.key);
             if (!isNaN(num) && num >= 1 && num <= 9) {
               e.preventDefault();
-              window.dispatchEvent(new CustomEvent('switch-to-tab', { detail: num - 1 }));
+              window.dispatchEvent(
+                new CustomEvent("switch-to-tab", { detail: num - 1 }),
+              );
             }
             break;
         }
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   // Check if Claude executable exists on mount
@@ -82,27 +87,27 @@ function AppContent() {
   // Custom event handlers
   useEffect(() => {
     const handleCreateProjectTab = () => {
-      window.dispatchEvent(new CustomEvent('create-project-tab'));
+      window.dispatchEvent(new CustomEvent("create-project-tab"));
     };
 
     const handleShowNFO = () => setShowNFO(true);
     const handleShowAgents = () => setShowAgentsModal(true);
 
-    const projectButton = document.getElementById('create-project-tab-btn');
+    const projectButton = document.getElementById("create-project-tab-btn");
     if (projectButton) {
-      projectButton.addEventListener('click', handleCreateProjectTab);
+      projectButton.addEventListener("click", handleCreateProjectTab);
     }
 
     // Listen for custom events to show modals
-    window.addEventListener('show-nfo', handleShowNFO);
-    window.addEventListener('show-agents-modal', handleShowAgents);
+    window.addEventListener("show-nfo", handleShowNFO);
+    window.addEventListener("show-agents-modal", handleShowAgents);
 
     return () => {
       if (projectButton) {
-        projectButton.removeEventListener('click', handleCreateProjectTab);
+        projectButton.removeEventListener("click", handleCreateProjectTab);
       }
-      window.removeEventListener('show-nfo', handleShowNFO);
-      window.removeEventListener('show-agents-modal', handleShowAgents);
+      window.removeEventListener("show-nfo", handleShowNFO);
+      window.removeEventListener("show-agents-modal", handleShowAgents);
     };
   }, []);
 
@@ -118,11 +123,11 @@ function AppContent() {
         <CustomTitlebar
           onSettingsClick={() => {
             // Open settings tab or modal
-            window.dispatchEvent(new CustomEvent('create-settings-tab'));
+            window.dispatchEvent(new CustomEvent("create-settings-tab"));
           }}
           onAgentsClick={() => {}}
         />
-        
+
         {/* Tab-based interface */}
         <div className="flex-1 flex flex-col">
           <TabManager />
@@ -131,23 +136,23 @@ function AppContent() {
 
         {/* Global Modals */}
         {showNFO && <NFOCredits onClose={() => setShowNFO(false)} />}
-        
-        <ClaudeBinaryDialog 
-          open={showClaudeBinaryDialog} 
+
+        <ClaudeBinaryDialog
+          open={showClaudeBinaryDialog}
           onOpenChange={setShowClaudeBinaryDialog}
           onSuccess={() => {
             setClaudeExecutableExists(true);
-            setToast({ message: "Claude binary path set successfully", type: "success" });
+            setToast({
+              message: "Claude binary path set successfully",
+              type: "success",
+            });
           }}
           onError={(message) => {
             setToast({ message, type: "error" });
           }}
         />
-        
-        <AgentsModal
-          open={showAgentsModal}
-          onOpenChange={setShowAgentsModal}
-        />
+
+        <AgentsModal open={showAgentsModal} onOpenChange={setShowAgentsModal} />
 
         {/* Toast Container */}
         {toast && (

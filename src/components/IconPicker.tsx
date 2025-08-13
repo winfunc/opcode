@@ -142,7 +142,12 @@ import {
   Wrench,
   type LucideIcon,
 } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
@@ -264,7 +269,7 @@ const ICON_CATEGORIES = {
     { name: "swords", icon: Swords },
     { name: "shield", icon: Shield },
   ],
-  "Communication": [
+  Communication: [
     { name: "mail", icon: Mail },
     { name: "send", icon: Send },
     { name: "message-circle", icon: MessageCircle },
@@ -274,7 +279,7 @@ const ICON_CATEGORIES = {
     { name: "podcast", icon: Podcast },
     { name: "megaphone", icon: Megaphone },
   ],
-  "Miscellaneous": [
+  Miscellaneous: [
     { name: "activity", icon: Activity },
     { name: "anchor", icon: Anchor },
     { name: "award", icon: Award },
@@ -299,7 +304,7 @@ const ICON_CATEGORIES = {
   ],
 } as const;
 
-type IconCategory = typeof ICON_CATEGORIES[keyof typeof ICON_CATEGORIES];
+type IconCategory = (typeof ICON_CATEGORIES)[keyof typeof ICON_CATEGORIES];
 type IconItem = IconCategory[number];
 
 interface IconPickerProps {
@@ -343,7 +348,7 @@ export const IconPicker: React.FC<IconPickerProps> = ({
 
     Object.entries(ICON_CATEGORIES).forEach(([category, icons]) => {
       const matchingIcons = icons.filter(({ name }) =>
-        name.toLowerCase().includes(query)
+        name.toLowerCase().includes(query),
       );
       if (matchingIcons.length > 0) {
         filtered[category] = matchingIcons;
@@ -421,7 +426,8 @@ export const IconPicker: React.FC<IconPickerProps> = ({
                             className={cn(
                               "p-2.5 rounded-lg transition-colors relative group",
                               "hover:bg-accent hover:text-accent-foreground",
-                              value === item.name && "bg-primary/10 text-primary"
+                              value === item.name &&
+                                "bg-primary/10 text-primary",
                             )}
                           >
                             <Icon className="h-5 w-5" />
@@ -460,4 +466,7 @@ export const AVAILABLE_ICONS = Object.values(ICON_CATEGORIES)
 // Export icon map for easy access
 export const ICON_MAP = Object.values(ICON_CATEGORIES)
   .flat()
-  .reduce((acc, { name, icon }) => ({ ...acc, [name]: icon }), {} as Record<string, LucideIcon>); 
+  .reduce(
+    (acc, { name, icon }) => ({ ...acc, [name]: icon }),
+    {} as Record<string, LucideIcon>,
+  );

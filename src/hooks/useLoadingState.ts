@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback } from "react";
 
 interface LoadingState<T> {
   data: T | null;
@@ -13,7 +13,7 @@ interface LoadingState<T> {
  * Reduces boilerplate code for async operations
  */
 export function useLoadingState<T>(
-  asyncFunction: (...args: any[]) => Promise<T>
+  asyncFunction: (...args: any[]) => Promise<T>,
 ): LoadingState<T> {
   const [data, setData] = useState<T | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -28,14 +28,15 @@ export function useLoadingState<T>(
         setData(result);
         return result;
       } catch (err) {
-        const error = err instanceof Error ? err : new Error('An error occurred');
+        const error =
+          err instanceof Error ? err : new Error("An error occurred");
         setError(error);
         throw error;
       } finally {
         setIsLoading(false);
       }
     },
-    [asyncFunction]
+    [asyncFunction],
   );
 
   const reset = useCallback(() => {

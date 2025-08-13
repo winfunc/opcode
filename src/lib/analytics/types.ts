@@ -23,83 +23,83 @@ export interface AnalyticsSettings {
 export interface AnalyticsConfig {
   apiKey: string;
   apiHost?: string;
-  persistence?: 'localStorage' | 'memory';
+  persistence?: "localStorage" | "memory";
   autocapture?: boolean;
   disable_session_recording?: boolean;
   opt_out_capturing_by_default?: boolean;
   loaded?: (posthog: any) => void;
 }
 
-export type EventName = 
-  | 'session_created'
-  | 'session_completed'
-  | 'session_resumed'
-  | 'feature_used'
-  | 'error_occurred'
-  | 'model_selected'
-  | 'tab_created'
-  | 'tab_closed'
-  | 'file_opened'
-  | 'file_edited'
-  | 'file_saved'
-  | 'agent_executed'
-  | 'mcp_server_connected'
-  | 'mcp_server_disconnected'
-  | 'slash_command_used'
-  | 'settings_changed'
-  | 'app_started'
-  | 'app_closed'
+export type EventName =
+  | "session_created"
+  | "session_completed"
+  | "session_resumed"
+  | "feature_used"
+  | "error_occurred"
+  | "model_selected"
+  | "tab_created"
+  | "tab_closed"
+  | "file_opened"
+  | "file_edited"
+  | "file_saved"
+  | "agent_executed"
+  | "mcp_server_connected"
+  | "mcp_server_disconnected"
+  | "slash_command_used"
+  | "settings_changed"
+  | "app_started"
+  | "app_closed"
   // New session events
-  | 'prompt_submitted'
-  | 'session_stopped'
-  | 'checkpoint_created'
-  | 'checkpoint_restored'
-  | 'tool_executed'
+  | "prompt_submitted"
+  | "session_stopped"
+  | "checkpoint_created"
+  | "checkpoint_restored"
+  | "tool_executed"
   // New agent events
-  | 'agent_started'
-  | 'agent_progress'
-  | 'agent_error'
+  | "agent_started"
+  | "agent_progress"
+  | "agent_error"
   // New MCP events
-  | 'mcp_server_added'
-  | 'mcp_server_removed'
-  | 'mcp_tool_invoked'
-  | 'mcp_connection_error'
+  | "mcp_server_added"
+  | "mcp_server_removed"
+  | "mcp_tool_invoked"
+  | "mcp_connection_error"
   // New slash command events
-  | 'slash_command_selected'
-  | 'slash_command_executed'
-  | 'slash_command_created'
+  | "slash_command_selected"
+  | "slash_command_executed"
+  | "slash_command_created"
   // New error and performance events
-  | 'api_error'
-  | 'ui_error'
-  | 'performance_bottleneck'
-  | 'memory_warning'
+  | "api_error"
+  | "ui_error"
+  | "performance_bottleneck"
+  | "memory_warning"
   // User journey events
-  | 'journey_milestone'
-  | 'user_retention'
+  | "journey_milestone"
+  | "user_retention"
   // AI interaction events
-  | 'ai_interaction'
-  | 'prompt_pattern'
+  | "ai_interaction"
+  | "prompt_pattern"
   // Quality events
-  | 'output_regenerated'
-  | 'conversation_abandoned'
-  | 'suggestion_accepted'
-  | 'suggestion_rejected'
+  | "output_regenerated"
+  | "conversation_abandoned"
+  | "suggestion_accepted"
+  | "suggestion_rejected"
   // Workflow events
-  | 'workflow_started'
-  | 'workflow_completed'
-  | 'workflow_abandoned'
+  | "workflow_started"
+  | "workflow_completed"
+  | "workflow_abandoned"
   // Feature adoption events
-  | 'feature_discovered'
-  | 'feature_adopted'
-  | 'feature_combination'
+  | "feature_discovered"
+  | "feature_adopted"
+  | "feature_combination"
   // Resource usage events
-  | 'resource_usage_high'
-  | 'resource_usage_sampled'
+  | "resource_usage_high"
+  | "resource_usage_sampled"
   // Network performance events
-  | 'network_performance'
-  | 'network_failure'
+  | "network_performance"
+  | "network_failure"
   // Engagement events
-  | 'session_engagement';
+  | "session_engagement";
 
 export interface FeatureUsageProperties {
   feature: string;
@@ -157,23 +157,24 @@ export interface PromptSubmittedProperties {
   prompt_length: number;
   model: string;
   has_attachments: boolean;
-  source: 'keyboard' | 'button';
+  source: "keyboard" | "button";
   word_count: number;
 }
 
 export interface SessionStoppedProperties {
   duration_ms: number;
   messages_count: number;
-  reason: 'user_stopped' | 'error' | 'completed';
+  reason: "user_stopped" | "error" | "completed";
 }
 
 // Enhanced session stopped properties for detailed analytics
-export interface EnhancedSessionStoppedProperties extends SessionStoppedProperties {
+export interface EnhancedSessionStoppedProperties
+  extends SessionStoppedProperties {
   // Timing metrics
   time_to_first_message_ms?: number;
   average_response_time_ms?: number;
   idle_time_ms?: number;
-  
+
   // Interaction metrics
   prompts_sent: number;
   tools_executed: number;
@@ -181,26 +182,31 @@ export interface EnhancedSessionStoppedProperties extends SessionStoppedProperti
   files_created: number;
   files_modified: number;
   files_deleted: number;
-  
+
   // Content metrics
   total_tokens_used?: number;
   code_blocks_generated?: number;
   errors_encountered: number;
-  
+
   // Session context
   model: string;
   has_checkpoints: boolean;
   checkpoint_count?: number;
   was_resumed: boolean;
-  
+
   // Agent context (if applicable)
   agent_type?: string;
   agent_name?: string;
   agent_success?: boolean;
-  
+
   // Stop context
-  stop_source: 'user_button' | 'keyboard_shortcut' | 'timeout' | 'error' | 'completed';
-  final_state: 'success' | 'partial' | 'failed' | 'cancelled';
+  stop_source:
+    | "user_button"
+    | "keyboard_shortcut"
+    | "timeout"
+    | "error"
+    | "completed";
+  final_state: "success" | "partial" | "failed" | "cancelled";
   has_pending_prompts: boolean;
   pending_prompts_count?: number;
 }
@@ -246,7 +252,7 @@ export interface AgentErrorProperties {
 // MCP properties
 export interface MCPServerAddedProperties {
   server_type: string;
-  configuration_method: 'manual' | 'preset' | 'import';
+  configuration_method: "manual" | "preset" | "import";
 }
 
 export interface MCPServerRemovedProperties {
@@ -257,7 +263,7 @@ export interface MCPServerRemovedProperties {
 export interface MCPToolInvokedProperties {
   server_name: string;
   tool_name: string;
-  invocation_source: 'user' | 'agent' | 'suggestion';
+  invocation_source: "user" | "agent" | "suggestion";
 }
 
 export interface MCPConnectionErrorProperties {
@@ -269,7 +275,7 @@ export interface MCPConnectionErrorProperties {
 // Slash Command properties
 export interface SlashCommandSelectedProperties {
   command_name: string;
-  selection_method: 'click' | 'keyboard' | 'autocomplete';
+  selection_method: "click" | "keyboard" | "autocomplete";
 }
 
 export interface SlashCommandExecutedProperties {
@@ -279,7 +285,7 @@ export interface SlashCommandExecutedProperties {
 }
 
 export interface SlashCommandCreatedProperties {
-  command_type: 'custom' | 'imported';
+  command_type: "custom" | "imported";
   has_parameters: boolean;
 }
 
@@ -313,15 +319,16 @@ export interface MemoryWarningProperties {
 
 // User Journey properties
 export interface UserJourneyProperties {
-  journey_stage: 'onboarding' | 'first_chat' | 'first_agent' | 'power_user';
+  journey_stage: "onboarding" | "first_chat" | "first_agent" | "power_user";
   milestone_reached?: string;
   time_to_milestone_ms?: number;
 }
 
 // Enhanced prompt properties
-export interface EnhancedPromptSubmittedProperties extends PromptSubmittedProperties {
+export interface EnhancedPromptSubmittedProperties
+  extends PromptSubmittedProperties {
   conversation_depth: number;
-  prompt_complexity: 'simple' | 'moderate' | 'complex';
+  prompt_complexity: "simple" | "moderate" | "complex";
   contains_code: boolean;
   language_detected?: string;
   session_age_ms: number;
@@ -329,7 +336,7 @@ export interface EnhancedPromptSubmittedProperties extends PromptSubmittedProper
 
 // Enhanced tool properties
 export interface EnhancedToolExecutedProperties extends ToolExecutedProperties {
-  tool_category: 'file' | 'search' | 'system' | 'custom';
+  tool_category: "file" | "search" | "system" | "custom";
   consecutive_failures?: number;
   retry_attempted: boolean;
   input_size_bytes?: number;
@@ -357,7 +364,7 @@ export interface SessionEngagementProperties {
 // Feature discovery properties
 export interface FeatureDiscoveryProperties {
   feature_name: string;
-  discovery_method: 'organic' | 'prompted' | 'documentation';
+  discovery_method: "organic" | "prompted" | "documentation";
   time_to_first_use_ms: number;
   initial_success: boolean;
 }
@@ -383,10 +390,10 @@ export interface ResourceUsageProperties {
 // Feature adoption properties
 export interface FeatureAdoptionProperties {
   feature: string;
-  adoption_stage: 'discovered' | 'tried' | 'adopted' | 'abandoned';
+  adoption_stage: "discovered" | "tried" | "adopted" | "abandoned";
   usage_count: number;
   days_since_first_use: number;
-  usage_trend: 'increasing' | 'stable' | 'decreasing';
+  usage_trend: "increasing" | "stable" | "decreasing";
 }
 
 // Feature combination properties
@@ -410,7 +417,7 @@ export interface AIInteractionProperties {
 // Prompt pattern properties
 export interface PromptPatternProperties {
   prompt_category: string;
-  prompt_effectiveness: 'high' | 'medium' | 'low';
+  prompt_effectiveness: "high" | "medium" | "low";
   required_iterations: number;
   final_satisfaction: boolean;
 }
@@ -428,10 +435,10 @@ export interface WorkflowProperties {
 
 // Network performance properties
 export interface NetworkPerformanceProperties {
-  endpoint_type: 'mcp' | 'api' | 'webhook';
+  endpoint_type: "mcp" | "api" | "webhook";
   latency_ms: number;
   payload_size_bytes: number;
-  connection_quality: 'excellent' | 'good' | 'poor';
+  connection_quality: "excellent" | "good" | "poor";
   retry_count: number;
   circuit_breaker_triggered: boolean;
 }

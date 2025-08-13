@@ -1,5 +1,5 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { eventBuilders, analytics } from '@/lib/analytics';
+import React, { Component, ErrorInfo, ReactNode } from "react";
+import { eventBuilders, analytics } from "@/lib/analytics";
 
 interface Props {
   children: ReactNode;
@@ -27,15 +27,15 @@ export class AnalyticsErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     // Track UI error to analytics
     const event = eventBuilders.uiError({
-      component_name: errorInfo.componentStack?.split('\n')[0] || 'Unknown',
-      error_type: error.name || 'UnknownError',
+      component_name: errorInfo.componentStack?.split("\n")[0] || "Unknown",
+      error_type: error.name || "UnknownError",
       user_action: undefined, // Could be enhanced with context
     });
-    
+
     analytics.track(event.event, event.properties);
-    
+
     // Log to console for debugging
-    console.error('UI Error caught by boundary:', error, errorInfo);
+    console.error("UI Error caught by boundary:", error, errorInfo);
   }
 
   reset = () => {
@@ -48,7 +48,7 @@ export class AnalyticsErrorBoundary extends Component<Props, State> {
       if (this.props.fallback) {
         return this.props.fallback(this.state.error, this.reset);
       }
-      
+
       // Default fallback UI
       return (
         <div className="flex flex-col items-center justify-center min-h-[200px] p-8 text-center">
@@ -77,7 +77,7 @@ export class AnalyticsErrorBoundary extends Component<Props, State> {
  */
 export function withAnalyticsErrorBoundary<P extends object>(
   Component: React.ComponentType<P>,
-  fallback?: (error: Error, reset: () => void) => ReactNode
+  fallback?: (error: Error, reset: () => void) => ReactNode,
 ) {
   return (props: P) => (
     <AnalyticsErrorBoundary fallback={fallback}>

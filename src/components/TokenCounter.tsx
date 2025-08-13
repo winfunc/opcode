@@ -20,7 +20,7 @@ interface TokenCounterProps {
 
 /**
  * TokenCounter component - Displays a floating token count
- * 
+ *
  * @example
  * <TokenCounter tokens={1234} show={true} />
  */
@@ -41,7 +41,7 @@ export const TokenCounter: React.FC<TokenCounterProps> = ({
         "bg-background/90 backdrop-blur-sm",
         "border border-border rounded-full",
         "px-3 py-1.5 shadow-lg",
-        className
+        className,
       )}
     >
       <div className="flex items-center gap-1.5 text-xs">
@@ -51,4 +51,4 @@ export const TokenCounter: React.FC<TokenCounterProps> = ({
       </div>
     </motion.div>
   );
-}; 
+};

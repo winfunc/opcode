@@ -16,15 +16,16 @@
 
 ## 📦 Available Agents
 
-| Agent | Model | Description | Default Task |
-|-------|-------|-------------|--------------|
-| **🎯 Git Commit Bot**<br/>🤖 `bot` | <img src="https://img.shields.io/badge/Sonnet-blue?style=flat-square" alt="Sonnet"> | **Automate your Git workflow with intelligent commit messages**<br/><br/>Analyzes Git repository changes, generates detailed commit messages following Conventional Commits specification, and pushes changes to remote repository. | "Push all changes." |
-| **🛡️ Security Scanner**<br/>🛡️ `shield` | <img src="https://img.shields.io/badge/Opus-purple?style=flat-square" alt="Opus"> | **Advanced AI-powered Static Application Security Testing (SAST)**<br/><br/>Performs comprehensive security audits by spawning specialized sub-agents for: codebase intelligence gathering, threat modeling (STRIDE), vulnerability scanning (OWASP Top 10, CWE), exploit validation, remediation design, and professional report generation. | "Review the codebase for security issues." |
-| **🧪 Unit Tests Bot**<br/>💻 `code` | <img src="https://img.shields.io/badge/Opus-purple?style=flat-square" alt="Opus"> | **Automated comprehensive unit test generation for any codebase**<br/><br/>Analyzes codebase and generates comprehensive unit tests by: analyzing code structure, creating test plans, writing tests matching your style, verifying execution, optimizing coverage (>80% overall, 100% critical paths), and generating documentation. | "Generate unit tests for this codebase." |
+| Agent                                   | Model                                                                               | Description                                                                                                                                                                                                                                                                                                                                   | Default Task                               |
+| --------------------------------------- | ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| **🎯 Git Commit Bot**<br/>🤖 `bot`      | <img src="https://img.shields.io/badge/Sonnet-blue?style=flat-square" alt="Sonnet"> | **Automate your Git workflow with intelligent commit messages**<br/><br/>Analyzes Git repository changes, generates detailed commit messages following Conventional Commits specification, and pushes changes to remote repository.                                                                                                           | "Push all changes."                        |
+| **🛡️ Security Scanner**<br/>🛡️ `shield` | <img src="https://img.shields.io/badge/Opus-purple?style=flat-square" alt="Opus">   | **Advanced AI-powered Static Application Security Testing (SAST)**<br/><br/>Performs comprehensive security audits by spawning specialized sub-agents for: codebase intelligence gathering, threat modeling (STRIDE), vulnerability scanning (OWASP Top 10, CWE), exploit validation, remediation design, and professional report generation. | "Review the codebase for security issues." |
+| **🧪 Unit Tests Bot**<br/>💻 `code`     | <img src="https://img.shields.io/badge/Opus-purple?style=flat-square" alt="Opus">   | **Automated comprehensive unit test generation for any codebase**<br/><br/>Analyzes codebase and generates comprehensive unit tests by: analyzing code structure, creating test plans, writing tests matching your style, verifying execution, optimizing coverage (>80% overall, 100% critical paths), and generating documentation.         | "Generate unit tests for this codebase."   |
 
 ### Available Icons
 
 Choose from these icon options when creating agents:
+
 - `bot` - 🤖 General purpose
 - `shield` - 🛡️ Security related
 - `code` - 💻 Development
@@ -88,13 +89,15 @@ All agents are stored in `.claudia.json` format with the following structure:
 The agent import/export system is built on a robust architecture:
 
 #### Backend (Rust/Tauri)
+
 - **Storage**: SQLite database stores agent configurations
 - **Export**: Serializes agent data to JSON with version control
 - **Import**: Validates and deduplicates agents on import
 - **GitHub Integration**: Fetches agents via GitHub API
 
 #### Frontend (React/TypeScript)
-- **UI Components**: 
+
+- **UI Components**:
   - `CCAgents.tsx` - Main agent management interface
   - `GitHubAgentBrowser.tsx` - GitHub repository browser
   - `CreateAgent.tsx` - Agent creation/editing form
@@ -113,12 +116,15 @@ The agent import/export system is built on a robust architecture:
 We welcome agent contributions! Here's how to add your agent:
 
 ### 1. Create Your Agent
+
 Design and test your agent in Claudia with a clear, focused purpose.
 
 ### 2. Export Your Agent
+
 Export your agent to a `.claudia.json` file with a descriptive name.
 
 ### 3. Submit a Pull Request
+
 1. Fork this repository
 2. Add your `.claudia.json` file to the `cc_agents` directory
 3. Update this README with your agent's details
@@ -139,4 +145,4 @@ These agents are provided under the same license as the Claudia project. See the
 
 <div align="center">
   <strong>Built with ❤️ by the Claudia community</strong>
-</div> 
+</div>
