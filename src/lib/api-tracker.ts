@@ -1,5 +1,5 @@
-import { api as originalApi } from './api';
-import { analytics, eventBuilders } from './analytics';
+import { api as originalApi } from "./api";
+import { analytics, eventBuilders } from "./analytics";
 
 // Performance thresholds (in milliseconds)
 const PERFORMANCE_THRESHOLDS = {
@@ -17,28 +17,36 @@ const MEMORY_WARNING_THRESHOLD = 100;
  */
 function wrapApiMethod<T extends (...args: any[]) => Promise<any>>(
   methodName: string,
-  method: T
+  method: T,
 ): T {
   return (async (...args: any[]) => {
     const startTime = performance.now();
-    const startMemory = ('memory' in performance ? (performance as any).memory?.usedJSHeapSize : 0) || 0;
+    const startMemory =
+      ("memory" in performance
+        ? (performance as any).memory?.usedJSHeapSize
+        : 0) || 0;
     let retryCount = 0;
-    
+
     const trackPerformance = (success: boolean, error?: any) => {
       const duration = performance.now() - startTime;
-      const memoryUsed = ((('memory' in performance ? (performance as any).memory?.usedJSHeapSize : 0) || 0) - startMemory) / (1024 * 1024); // Convert to MB
-      
+      const memoryUsed =
+        ((("memory" in performance
+          ? (performance as any).memory?.usedJSHeapSize
+          : 0) || 0) -
+          startMemory) /
+        (1024 * 1024); // Convert to MB
+
       // Track API errors
       if (!success && error) {
         const event = eventBuilders.apiError({
           endpoint: methodName,
-          error_code: error.code || error.status || 'unknown',
+          error_code: error.code || error.status || "unknown",
           retry_count: retryCount,
           response_time_ms: duration,
         });
         analytics.track(event.event, event.properties);
       }
-      
+
       // Track performance bottlenecks
       if (duration > PERFORMANCE_THRESHOLDS.bottleneck) {
         const event = eventBuilders.performanceBottleneck({
@@ -49,15 +57,18 @@ function wrapApiMethod<T extends (...args: any[]) => Promise<any>>(
         });
         analytics.track(event.event, event.properties);
       }
-      
+
       // Track network performance
-      const connectionQuality = 
-        duration < PERFORMANCE_THRESHOLDS.fast ? 'excellent' :
-        duration < PERFORMANCE_THRESHOLDS.normal ? 'good' : 'poor';
-      
+      const connectionQuality =
+        duration < PERFORMANCE_THRESHOLDS.fast
+          ? "excellent"
+          : duration < PERFORMANCE_THRESHOLDS.normal
+            ? "good"
+            : "poor";
+
       if (success) {
         const networkEvent = eventBuilders.networkPerformance({
-          endpoint_type: 'api',
+          endpoint_type: "api",
           latency_ms: duration,
           payload_size_bytes: 0, // Could be enhanced with actual payload size
           connection_quality: connectionQuality,
@@ -66,7 +77,7 @@ function wrapApiMethod<T extends (...args: any[]) => Promise<any>>(
         });
         analytics.track(networkEvent.event, networkEvent.properties);
       }
-      
+
       // Track memory warnings
       if (memoryUsed > MEMORY_WARNING_THRESHOLD) {
         const event = eventBuilders.memoryWarning({
@@ -78,7 +89,7 @@ function wrapApiMethod<T extends (...args: any[]) => Promise<any>>(
         analytics.track(event.event, event.properties);
       }
     };
-    
+
     try {
       const result = await method(...args);
       trackPerformance(true);
@@ -95,16 +106,16 @@ function wrapApiMethod<T extends (...args: any[]) => Promise<any>>(
  */
 function createTrackedApi() {
   const trackedApi: any = {};
-  
+
   // Wrap each method in the original API
   for (const [key, value] of Object.entries(originalApi)) {
-    if (typeof value === 'function') {
+    if (typeof value === "function") {
       trackedApi[key] = wrapApiMethod(key, value);
     } else {
       trackedApi[key] = value;
     }
   }
-  
+
   return trackedApi as typeof originalApi;
 }
 
@@ -112,4 +123,4 @@ function createTrackedApi() {
 export const api = createTrackedApi();
 
 // Re-export types from the original API module
-export * from './api';
+export * from "./api";

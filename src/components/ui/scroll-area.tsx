@@ -14,7 +14,7 @@ interface ScrollAreaProps extends React.HTMLAttributes<HTMLDivElement> {
 
 /**
  * ScrollArea component for scrollable content with custom scrollbar styling
- * 
+ *
  * @example
  * <ScrollArea className="h-[200px]">
  *   <div>Scrollable content here</div>
@@ -31,7 +31,7 @@ export const ScrollArea = React.forwardRef<HTMLDivElement, ScrollAreaProps>(
         {children}
       </div>
     );
-  }
+  },
 );
 
-ScrollArea.displayName = "ScrollArea"; 
+ScrollArea.displayName = "ScrollArea";

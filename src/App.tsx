@@ -19,18 +19,18 @@ import { MCPManager } from "@/components/MCPManager";
 import { NFOCredits } from "@/components/NFOCredits";
 import { ClaudeBinaryDialog } from "@/components/ClaudeBinaryDialog";
 import { Toast, ToastContainer } from "@/components/ui/toast";
-import { ProjectSettings } from '@/components/ProjectSettings';
+import { ProjectSettings } from "@/components/ProjectSettings";
 import { TabManager } from "@/components/TabManager";
 import { TabContent } from "@/components/TabContent";
 import { useTabState } from "@/hooks/useTabState";
 import { AnalyticsConsentBanner } from "@/components/AnalyticsConsent";
 import { useAppLifecycle, useTrackEvent } from "@/hooks";
 
-type View = 
-  | "welcome" 
-  | "projects" 
-  | "editor" 
-  | "claude-file-editor" 
+type View =
+  | "welcome"
+  | "projects"
+  | "editor"
+  | "claude-file-editor"
   | "settings"
   | "cc-agents"
   | "create-agent"
@@ -47,37 +47,49 @@ type View =
  */
 function AppContent() {
   const [view, setView] = useState<View>("tabs");
-  const { createClaudeMdTab, createSettingsTab, createUsageTab, createMCPTab, createAgentsTab } = useTabState();
+  const {
+    createClaudeMdTab,
+    createSettingsTab,
+    createUsageTab,
+    createMCPTab,
+    createAgentsTab,
+  } = useTabState();
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
-  const [editingClaudeFile, setEditingClaudeFile] = useState<ClaudeMdFile | null>(null);
+  const [editingClaudeFile, setEditingClaudeFile] =
+    useState<ClaudeMdFile | null>(null);
   const [loading, setLoading] = useState(true);
   const [_error, setError] = useState<string | null>(null);
   const [showNFO, setShowNFO] = useState(false);
   const [showClaudeBinaryDialog, setShowClaudeBinaryDialog] = useState(false);
   const [showProjectPicker, setShowProjectPicker] = useState(false);
-  const [homeDirectory, setHomeDirectory] = useState<string>('/');
-  const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
-  const [projectForSettings, setProjectForSettings] = useState<Project | null>(null);
+  const [homeDirectory, setHomeDirectory] = useState<string>("/");
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error" | "info";
+  } | null>(null);
+  const [projectForSettings, setProjectForSettings] = useState<Project | null>(
+    null,
+  );
   const [previousView] = useState<View>("welcome");
-  
+
   // Initialize analytics lifecycle tracking
   useAppLifecycle();
   const trackEvent = useTrackEvent();
-  
+
   // Track user journey milestones
   const [hasTrackedFirstChat] = useState(false);
   // const [hasTrackedFirstAgent] = useState(false);
-  
+
   // Track when user reaches different journey stages
   useEffect(() => {
     if (view === "projects" && projects.length > 0 && !hasTrackedFirstChat) {
       // User has projects - they're past onboarding
       trackEvent.journeyMilestone({
-        journey_stage: 'onboarding',
-        milestone_reached: 'projects_created',
-        time_to_milestone_ms: Date.now() - performance.timing.navigationStart
+        journey_stage: "onboarding",
+        milestone_reached: "projects_created",
+        time_to_milestone_ms: Date.now() - performance.timing.navigationStart,
       });
     }
   }, [view, projects.length, hasTrackedFirstChat, trackEvent]);
@@ -95,43 +107,47 @@ function AppContent() {
   // Keyboard shortcuts for tab navigation
   useEffect(() => {
     if (view !== "tabs") return;
-    
+
     const handleKeyDown = (e: KeyboardEvent) => {
-      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
       const modKey = isMac ? e.metaKey : e.ctrlKey;
-      
+
       if (modKey) {
         switch (e.key) {
-          case 't':
+          case "t":
             e.preventDefault();
-            window.dispatchEvent(new CustomEvent('create-chat-tab'));
+            window.dispatchEvent(new CustomEvent("create-chat-tab"));
             break;
-          case 'w':
+          case "w":
             e.preventDefault();
-            window.dispatchEvent(new CustomEvent('close-current-tab'));
+            window.dispatchEvent(new CustomEvent("close-current-tab"));
             break;
-          case 'Tab':
+          case "Tab":
             e.preventDefault();
             if (e.shiftKey) {
-              window.dispatchEvent(new CustomEvent('switch-to-previous-tab'));
+              window.dispatchEvent(new CustomEvent("switch-to-previous-tab"));
             } else {
-              window.dispatchEvent(new CustomEvent('switch-to-next-tab'));
+              window.dispatchEvent(new CustomEvent("switch-to-next-tab"));
             }
             break;
           default:
             // Handle number keys 1-9
-            if (e.key >= '1' && e.key <= '9') {
+            if (e.key >= "1" && e.key <= "9") {
               e.preventDefault();
               const index = parseInt(e.key) - 1;
-              window.dispatchEvent(new CustomEvent('switch-to-tab-by-index', { detail: { index } }));
+              window.dispatchEvent(
+                new CustomEvent("switch-to-tab-by-index", {
+                  detail: { index },
+                }),
+              );
             }
             break;
         }
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [view]);
 
   // Listen for Claude not found events
@@ -140,9 +156,15 @@ function AppContent() {
       setShowClaudeBinaryDialog(true);
     };
 
-    window.addEventListener('claude-not-found', handleClaudeNotFound as EventListener);
+    window.addEventListener(
+      "claude-not-found",
+      handleClaudeNotFound as EventListener,
+    );
     return () => {
-      window.removeEventListener('claude-not-found', handleClaudeNotFound as EventListener);
+      window.removeEventListener(
+        "claude-not-found",
+        handleClaudeNotFound as EventListener,
+      );
     };
   }, []);
 
@@ -157,7 +179,9 @@ function AppContent() {
       setProjects(projectList);
     } catch (err) {
       console.error("Failed to load projects:", err);
-      setError("Failed to load projects. Please ensure ~/.claude directory exists.");
+      setError(
+        "Failed to load projects. Please ensure ~/.claude directory exists.",
+      );
     } finally {
       setLoading(false);
     }
@@ -225,12 +249,14 @@ function AppContent() {
    */
   // Project settings navigation handled via `projectForSettings` state when needed
 
-
   const renderContent = () => {
     switch (view) {
       case "welcome":
         return (
-          <div className="flex items-center justify-center p-4" style={{ height: "100%" }}>
+          <div
+            className="flex items-center justify-center p-4"
+            style={{ height: "100%" }}
+          >
             <div className="w-full max-w-4xl">
               {/* Welcome Header */}
               <motion.div
@@ -253,7 +279,7 @@ function AppContent() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.15, delay: 0.05 }}
                 >
-                  <Card 
+                  <Card
                     className="h-64 cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-lg border border-border/50 shimmer-hover trailing-border"
                     onClick={() => handleViewChange("cc-agents")}
                   >
@@ -270,7 +296,7 @@ function AppContent() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.15, delay: 0.1 }}
                 >
-                  <Card 
+                  <Card
                     className="h-64 cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-lg border border-border/50 shimmer-hover trailing-border"
                     onClick={() => handleViewChange("projects")}
                   >
@@ -280,18 +306,13 @@ function AppContent() {
                     </div>
                   </Card>
                 </motion.div>
-
               </div>
             </div>
           </div>
         );
 
       case "cc-agents":
-        return (
-          <CCAgents 
-            onBack={() => handleViewChange("welcome")} 
-          />
-        );
+        return <CCAgents onBack={() => handleViewChange("welcome")} />;
 
       case "editor":
         return (
@@ -299,10 +320,10 @@ function AppContent() {
             <MarkdownEditor onBack={() => handleViewChange("welcome")} />
           </div>
         );
-      
+
       case "settings":
         return <Settings onBack={() => handleViewChange("welcome")} />;
-      
+
       case "projects":
         if (selectedProject) {
           return (
@@ -321,7 +342,7 @@ function AppContent() {
             loading={loading}
           />
         );
-      
+
       case "claude-file-editor":
         return editingClaudeFile ? (
           <ClaudeFileEditor
@@ -329,7 +350,7 @@ function AppContent() {
             onBack={handleBackFromClaudeFileEditor}
           />
         ) : null;
-      
+
       case "tabs":
         return (
           <div className="h-full flex flex-col">
@@ -339,17 +360,13 @@ function AppContent() {
             </div>
           </div>
         );
-      
+
       case "usage-dashboard":
-        return (
-          <UsageDashboard onBack={() => handleViewChange("welcome")} />
-        );
-      
+        return <UsageDashboard onBack={() => handleViewChange("welcome")} />;
+
       case "mcp":
-        return (
-          <MCPManager onBack={() => handleViewChange("welcome")} />
-        );
-      
+        return <MCPManager onBack={() => handleViewChange("welcome")} />;
+
       case "project-settings":
         if (projectForSettings) {
           return (
@@ -363,7 +380,7 @@ function AppContent() {
           );
         }
         break;
-      
+
       default:
         return null;
     }
@@ -380,7 +397,7 @@ function AppContent() {
         onSettingsClick={() => createSettingsTab()}
         onInfoClick={() => setShowNFO(true)}
       />
-      
+
       {/* Topbar - Commented out since navigation moved to titlebar */}
       {/* <Topbar
         onClaudeClick={() => createClaudeMdTab()}
@@ -390,25 +407,25 @@ function AppContent() {
         onInfoClick={() => setShowNFO(true)}
         onAgentsClick={() => setShowAgentsModal(true)}
       /> */}
-      
+
       {/* Analytics Consent Banner */}
       <AnalyticsConsentBanner />
-      
+
       {/* Main Content */}
-      <div className="flex-1 overflow-hidden">
-        {renderContent()}
-      </div>
-      
+      <div className="flex-1 overflow-hidden">{renderContent()}</div>
+
       {/* NFO Credits Modal */}
       {showNFO && <NFOCredits onClose={() => setShowNFO(false)} />}
-      
-      
+
       {/* Claude Binary Dialog */}
       <ClaudeBinaryDialog
         open={showClaudeBinaryDialog}
         onOpenChange={setShowClaudeBinaryDialog}
         onSuccess={() => {
-          setToast({ message: "Claude binary path saved successfully", type: "success" });
+          setToast({
+            message: "Claude binary path saved successfully",
+            type: "success",
+          });
           // Trigger a refresh of the Claude version check
           window.location.reload();
         }}
@@ -430,8 +447,10 @@ function AppContent() {
                     await loadProjects();
                     await handleProjectClick(project);
                   } catch (err) {
-                    console.error('Failed to create project:', err);
-                    setError('Failed to create project for the selected directory.');
+                    console.error("Failed to create project:", err);
+                    setError(
+                      "Failed to create project for the selected directory.",
+                    );
                   }
                 }
               }}
@@ -440,7 +459,7 @@ function AppContent() {
           </div>
         </div>
       )}
-      
+
       {/* Toast Container */}
       <ToastContainer>
         {toast && (
@@ -468,8 +487,10 @@ function AppContent() {
                     // Load sessions for the selected project
                     await handleProjectClick(project);
                   } catch (err) {
-                    console.error('Failed to create project:', err);
-                    setError('Failed to create project for the selected directory.');
+                    console.error("Failed to create project:", err);
+                    setError(
+                      "Failed to create project for the selected directory.",
+                    );
                   }
                 }
               }}

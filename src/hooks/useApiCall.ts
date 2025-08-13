@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect } from "react";
 
 interface ApiCallOptions {
   onSuccess?: (data: any) => void;
@@ -23,7 +23,7 @@ interface ApiCallState<T> {
  */
 export function useApiCall<T>(
   apiFunction: (...args: any[]) => Promise<T>,
-  options: ApiCallOptions = {}
+  options: ApiCallOptions = {},
 ): ApiCallState<T> {
   const [data, setData] = useState<T | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -36,8 +36,8 @@ export function useApiCall<T>(
     onError,
     showErrorToast = true,
     showSuccessToast = false,
-    successMessage = 'Operation completed successfully',
-    errorMessage
+    successMessage = "Operation completed successfully",
+    errorMessage,
   } = options;
 
   const call = useCallback(
@@ -60,29 +60,30 @@ export function useApiCall<T>(
         if (!isMountedRef.current) return null;
 
         setData(result);
-        
+
         if (showSuccessToast) {
           // TODO: Implement toast notification
-          console.log('Success:', successMessage);
+          console.log("Success:", successMessage);
         }
 
         onSuccess?.(result);
         return result;
       } catch (err) {
         // Ignore aborted requests
-        if (err instanceof Error && err.name === 'AbortError') {
+        if (err instanceof Error && err.name === "AbortError") {
           return null;
         }
 
         // Only update state if component is still mounted
         if (!isMountedRef.current) return null;
 
-        const error = err instanceof Error ? err : new Error('An error occurred');
+        const error =
+          err instanceof Error ? err : new Error("An error occurred");
         setError(error);
 
         if (showErrorToast) {
           // TODO: Implement toast notification
-          console.error('Error:', errorMessage || error.message);
+          console.error("Error:", errorMessage || error.message);
         }
 
         onError?.(error);
@@ -93,7 +94,15 @@ export function useApiCall<T>(
         }
       }
     },
-    [apiFunction, onSuccess, onError, showErrorToast, showSuccessToast, successMessage, errorMessage]
+    [
+      apiFunction,
+      onSuccess,
+      onError,
+      showErrorToast,
+      showSuccessToast,
+      successMessage,
+      errorMessage,
+    ],
   );
 
   const reset = useCallback(() => {

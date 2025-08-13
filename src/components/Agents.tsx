@@ -1,33 +1,52 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Bot, Loader2, Play, Clock, CheckCircle, XCircle, Trash2, Import, ChevronDown, ChevronRight, FileJson, Globe, Download, Plus, History } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Bot,
+  Loader2,
+  Play,
+  Clock,
+  CheckCircle,
+  XCircle,
+  Trash2,
+  Import,
+  ChevronDown,
+  ChevronRight,
+  FileJson,
+  Globe,
+  Download,
+  Plus,
+  History,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
-import { Toast } from '@/components/ui/toast';
-import { api, type Agent, type AgentRunWithMetrics } from '@/lib/api';
-import { open as openDialog, save } from '@tauri-apps/plugin-dialog';
-import { invoke } from '@tauri-apps/api/core';
-import { GitHubAgentBrowser } from '@/components/GitHubAgentBrowser';
-import { CreateAgent } from '@/components/CreateAgent';
-import { useTabState } from '@/hooks/useTabState';
+} from "@/components/ui/dropdown-menu";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { Toast } from "@/components/ui/toast";
+import { api, type Agent, type AgentRunWithMetrics } from "@/lib/api";
+import { open as openDialog, save } from "@tauri-apps/plugin-dialog";
+import { invoke } from "@tauri-apps/api/core";
+import { GitHubAgentBrowser } from "@/components/GitHubAgentBrowser";
+import { CreateAgent } from "@/components/CreateAgent";
+import { useTabState } from "@/hooks/useTabState";
 
 export const Agents: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('agents');
+  const [activeTab, setActiveTab] = useState("agents");
   const [showCreateAgent, setShowCreateAgent] = useState(false);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [runningAgents, setRunningAgents] = useState<AgentRunWithMetrics[]>([]);
   const [loading, setLoading] = useState(true);
   const [agentToDelete, setAgentToDelete] = useState<Agent | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error";
+  } | null>(null);
   const [showGitHubBrowser, setShowGitHubBrowser] = useState(false);
   const { createAgentTab } = useTabState();
 
@@ -52,8 +71,8 @@ export const Agents: React.FC = () => {
       const agents = await api.listAgents();
       setAgents(agents);
     } catch (error) {
-      console.error('Failed to load agents:', error);
-      setToast({ message: 'Failed to load agents', type: 'error' });
+      console.error("Failed to load agents:", error);
+      setToast({ message: "Failed to load agents", type: "error" });
     } finally {
       setLoading(false);
     }
@@ -64,57 +83,68 @@ export const Agents: React.FC = () => {
       const runs = await api.listAgentRunsWithMetrics();
       setRunningAgents(runs);
     } catch (error) {
-      console.error('Failed to load running agents:', error);
+      console.error("Failed to load running agents:", error);
     }
   };
 
   const handleRunAgent = async (agent: Agent) => {
     if (!agent.id) {
-      setToast({ message: 'Agent ID is missing', type: 'error' });
+      setToast({ message: "Agent ID is missing", type: "error" });
       return;
     }
-    
+
     // Import the dialog function
-    const { open } = await import('@tauri-apps/plugin-dialog');
-    
+    const { open } = await import("@tauri-apps/plugin-dialog");
+
     try {
       // Prompt user to select a project directory
       const projectPath = await open({
         directory: true,
         multiple: false,
-        title: `Select project directory for ${agent.name}`
+        title: `Select project directory for ${agent.name}`,
       });
-      
+
       if (!projectPath) {
         // User cancelled
         return;
       }
-      
+
       // Dispatch event to open agent execution in a new tab
       const tabId = `agent-exec-${agent.id}-${Date.now()}`;
-      window.dispatchEvent(new CustomEvent('open-agent-execution', { 
-        detail: { agent, tabId, projectPath } 
-      }));
-      
-      setToast({ message: `Opening agent: ${agent.name}`, type: 'success' });
+      window.dispatchEvent(
+        new CustomEvent("open-agent-execution", {
+          detail: { agent, tabId, projectPath },
+        }),
+      );
+
+      setToast({ message: `Opening agent: ${agent.name}`, type: "success" });
     } catch (error) {
-      console.error('Failed to open agent:', error);
-      setToast({ message: `Failed to open agent: ${agent.name}`, type: 'error' });
+      console.error("Failed to open agent:", error);
+      setToast({
+        message: `Failed to open agent: ${agent.name}`,
+        type: "error",
+      });
     }
   };
 
   const handleDeleteAgent = async () => {
     if (!agentToDelete || !agentToDelete.id) return;
-    
+
     try {
       await api.deleteAgent(agentToDelete.id);
-      setToast({ message: `Deleted agent: ${agentToDelete.name}`, type: 'success' });
-      setAgents(prev => prev.filter(a => a.id !== agentToDelete.id));
+      setToast({
+        message: `Deleted agent: ${agentToDelete.name}`,
+        type: "success",
+      });
+      setAgents((prev) => prev.filter((a) => a.id !== agentToDelete.id));
       setShowDeleteDialog(false);
       setAgentToDelete(null);
     } catch (error) {
-      console.error('Failed to delete agent:', error);
-      setToast({ message: `Failed to delete agent: ${agentToDelete.name}`, type: 'error' });
+      console.error("Failed to delete agent:", error);
+      setToast({
+        message: `Failed to delete agent: ${agentToDelete.name}`,
+        type: "error",
+      });
     }
   };
 
@@ -122,23 +152,28 @@ export const Agents: React.FC = () => {
     try {
       const selected = await openDialog({
         filters: [
-          { name: 'JSON Files', extensions: ['json'] },
-          { name: 'All Files', extensions: ['*'] }
+          { name: "JSON Files", extensions: ["json"] },
+          { name: "All Files", extensions: ["*"] },
         ],
         multiple: false,
       });
 
       if (selected) {
-        const fileContent = await invoke<string>('read_text_file', { path: selected });
+        const fileContent = await invoke<string>("read_text_file", {
+          path: selected,
+        });
         const agentData = JSON.parse(fileContent);
-        
+
         const importedAgent = await api.importAgent(JSON.stringify(agentData));
-        setToast({ message: `Imported agent: ${importedAgent.name}`, type: 'success' });
+        setToast({
+          message: `Imported agent: ${importedAgent.name}`,
+          type: "success",
+        });
         loadAgents();
       }
     } catch (error) {
-      console.error('Failed to import agent:', error);
-      setToast({ message: 'Failed to import agent', type: 'error' });
+      console.error("Failed to import agent:", error);
+      setToast({ message: "Failed to import agent", type: "error" });
     }
   };
 
@@ -146,32 +181,30 @@ export const Agents: React.FC = () => {
     try {
       const path = await save({
         defaultPath: `${agent.name}.json`,
-        filters: [
-          { name: 'JSON Files', extensions: ['json'] }
-        ]
+        filters: [{ name: "JSON Files", extensions: ["json"] }],
       });
 
       if (path && agent.id) {
         const agentData = await api.exportAgent(agent.id);
-        await invoke('write_text_file', {
+        await invoke("write_text_file", {
           path,
-          contents: agentData
+          contents: agentData,
         });
-        setToast({ message: `Exported agent: ${agent.name}`, type: 'success' });
+        setToast({ message: `Exported agent: ${agent.name}`, type: "success" });
       }
     } catch (error) {
-      console.error('Failed to export agent:', error);
-      setToast({ message: 'Failed to export agent', type: 'error' });
+      console.error("Failed to export agent:", error);
+      setToast({ message: "Failed to export agent", type: "error" });
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'running':
+      case "running":
         return <Loader2 className="w-4 h-4 animate-spin" />;
-      case 'completed':
+      case "completed":
         return <CheckCircle className="w-4 h-4 text-green-500" />;
-      case 'failed':
+      case "failed":
         return <XCircle className="w-4 h-4 text-red-500" />;
       default:
         return <Clock className="w-4 h-4 text-muted-foreground" />;
@@ -181,7 +214,7 @@ export const Agents: React.FC = () => {
   // Show CreateAgent component if creating
   if (showCreateAgent) {
     return (
-      <CreateAgent 
+      <CreateAgent
         onBack={() => setShowCreateAgent(false)}
         onAgentCreated={() => {
           setShowCreateAgent(false);
@@ -241,8 +274,8 @@ export const Agents: React.FC = () => {
               exit={{ opacity: 0, y: -10 }}
               className="mx-6 mb-4"
             >
-              <Toast 
-                message={toast.message} 
+              <Toast
+                message={toast.message}
                 type={toast.type}
                 onDismiss={() => setToast(null)}
               />
@@ -250,60 +283,65 @@ export const Agents: React.FC = () => {
           )}
         </AnimatePresence>
 
-      {showGitHubBrowser && (
-        <GitHubAgentBrowser
-          isOpen={showGitHubBrowser}
-          onClose={() => setShowGitHubBrowser(false)}
-          onImportSuccess={() => {
-            loadAgents();
-            setShowGitHubBrowser(false);
-            setToast({ message: 'Agent imported successfully', type: 'success' });
-          }}
-        />
-      )}
-
-      <AnimatePresence>
-        {showDeleteDialog && agentToDelete && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center"
-            onClick={() => setShowDeleteDialog(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-card p-6 rounded-lg shadow-lg max-w-md w-full mx-4"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <h3 className="text-lg font-semibold mb-4">Delete Agent</h3>
-              <p className="text-muted-foreground mb-6">
-                Are you sure you want to delete "{agentToDelete.name}"? This action cannot be undone.
-              </p>
-              <div className="flex gap-3 justify-end">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowDeleteDialog(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={handleDeleteAgent}
-                >
-                  Delete
-                </Button>
-              </div>
-            </motion.div>
-          </motion.div>
+        {showGitHubBrowser && (
+          <GitHubAgentBrowser
+            isOpen={showGitHubBrowser}
+            onClose={() => setShowGitHubBrowser(false)}
+            onImportSuccess={() => {
+              loadAgents();
+              setShowGitHubBrowser(false);
+              setToast({
+                message: "Agent imported successfully",
+                type: "success",
+              });
+            }}
+          />
         )}
-      </AnimatePresence>
+
+        <AnimatePresence>
+          {showDeleteDialog && agentToDelete && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center"
+              onClick={() => setShowDeleteDialog(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                className="bg-card p-6 rounded-lg shadow-lg max-w-md w-full mx-4"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <h3 className="text-lg font-semibold mb-4">Delete Agent</h3>
+                <p className="text-muted-foreground mb-6">
+                  Are you sure you want to delete "{agentToDelete.name}"? This
+                  action cannot be undone.
+                </p>
+                <div className="flex gap-3 justify-end">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowDeleteDialog(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button variant="destructive" onClick={handleDeleteAgent}>
+                    Delete
+                  </Button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <Tabs
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className="w-full"
+          >
             <TabsList className="grid grid-cols-2 w-full max-w-md mb-6 h-auto p-1">
               <TabsTrigger value="agents" className="py-2.5 px-3">
                 <Bot className="w-4 h-4 mr-2" />
@@ -315,7 +353,7 @@ export const Agents: React.FC = () => {
               </TabsTrigger>
             </TabsList>
 
-          <TabsContent value="agents" className="flex-1 overflow-hidden">
+            <TabsContent value="agents" className="flex-1 overflow-hidden">
               {loading ? (
                 <div className="flex items-center justify-center h-64">
                   <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
@@ -346,20 +384,28 @@ export const Agents: React.FC = () => {
                         </div>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                            >
                               <ChevronDown className="w-4 h-4" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleRunAgent(agent)}>
+                            <DropdownMenuItem
+                              onClick={() => handleRunAgent(agent)}
+                            >
                               <Play className="w-4 h-4 mr-2" />
                               Run
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleExportAgent(agent)}>
+                            <DropdownMenuItem
+                              onClick={() => handleExportAgent(agent)}
+                            >
                               <Download className="w-4 h-4 mr-2" />
                               Export
                             </DropdownMenuItem>
-                            <DropdownMenuItem 
+                            <DropdownMenuItem
                               onClick={() => {
                                 setAgentToDelete(agent);
                                 setShowDeleteDialog(true);
@@ -381,10 +427,7 @@ export const Agents: React.FC = () => {
                         <Badge variant="secondary" className="text-xs">
                           v1.0.0
                         </Badge>
-                        <Button
-                          size="sm"
-                          onClick={() => handleRunAgent(agent)}
-                        >
+                        <Button size="sm" onClick={() => handleRunAgent(agent)}>
                           <Play className="w-3 h-3 mr-1" />
                           Run
                         </Button>
@@ -400,7 +443,9 @@ export const Agents: React.FC = () => {
                 <Card className="p-12">
                   <div className="flex flex-col items-center justify-center text-center">
                     <History className="w-12 h-12 text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">No Agent History</h3>
+                    <h3 className="text-lg font-semibold mb-2">
+                      No Agent History
+                    </h3>
                     <p className="text-muted-foreground">
                       Run an agent to see it here
                     </p>
@@ -409,10 +454,7 @@ export const Agents: React.FC = () => {
               ) : (
                 <div className="space-y-4">
                   {runningAgents.map((run) => (
-                    <Card
-                      key={run.id}
-                      className="p-4"
-                    >
+                    <Card key={run.id} className="p-4">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-3">
                           {getStatusIcon(run.status)}
@@ -424,7 +466,12 @@ export const Agents: React.FC = () => {
                         <Button
                           size="icon"
                           variant="ghost"
-                          onClick={() => createAgentTab(run.id?.toString() || '', run.agent_name)}
+                          onClick={() =>
+                            createAgentTab(
+                              run.id?.toString() || "",
+                              run.agent_name,
+                            )
+                          }
                           className="h-8 w-8"
                         >
                           <ChevronRight className="w-4 h-4" />
@@ -433,20 +480,38 @@ export const Agents: React.FC = () => {
 
                       <div className="grid grid-cols-3 gap-4 text-sm">
                         <div>
-                          <span className="text-muted-foreground">Started:</span>
-                          <p className="font-medium">{new Date(run.created_at).toLocaleString()}</p>
+                          <span className="text-muted-foreground">
+                            Started:
+                          </span>
+                          <p className="font-medium">
+                            {new Date(run.created_at).toLocaleString()}
+                          </p>
                         </div>
                         <div>
-                          <span className="text-muted-foreground">Duration:</span>
-                          <p className="font-medium">{run.metrics?.duration_ms ? `${(run.metrics.duration_ms / 1000).toFixed(1)}s` : run.duration_ms ? `${(run.duration_ms / 1000).toFixed(1)}s` : '—'}</p>
+                          <span className="text-muted-foreground">
+                            Duration:
+                          </span>
+                          <p className="font-medium">
+                            {run.metrics?.duration_ms
+                              ? `${(run.metrics.duration_ms / 1000).toFixed(1)}s`
+                              : run.duration_ms
+                                ? `${(run.duration_ms / 1000).toFixed(1)}s`
+                                : "—"}
+                          </p>
                         </div>
                         <div>
                           <span className="text-muted-foreground">Tokens:</span>
-                          <p className="font-medium">{run.metrics?.total_tokens ? run.metrics.total_tokens.toLocaleString() : run.total_tokens ? run.total_tokens.toLocaleString() : '—'}</p>
+                          <p className="font-medium">
+                            {run.metrics?.total_tokens
+                              ? run.metrics.total_tokens.toLocaleString()
+                              : run.total_tokens
+                                ? run.total_tokens.toLocaleString()
+                                : "—"}
+                          </p>
                         </div>
                       </div>
 
-                      {run.status === 'failed' && (
+                      {run.status === "failed" && (
                         <div className="mt-3 p-2 bg-destructive/10 rounded text-sm text-destructive">
                           Agent execution failed
                         </div>

@@ -1,7 +1,8 @@
 @import "tailwindcss";
 
 /* Tauri Transparent Window with Rounded Corners - Official Approach */
-html, body {
+html,
+body {
   height: 100%;
   width: 100%;
   margin: 0;
@@ -44,11 +45,11 @@ html {
 
 /* Inter Font - Local */
 @font-face {
-  font-family: 'Inter';
+  font-family: "Inter";
   font-style: normal;
   font-weight: 100 900;
   font-display: swap;
-  src: url('/src/assets/fonts/inter/Inter.ttf') format('truetype-variations');
+  src: url("/src/assets/fonts/inter/Inter.ttf") format("truetype-variations");
 }
 
 /* Custom scrollbar hiding */
@@ -88,7 +89,7 @@ html {
 /* Dark theme configuration */
 @theme {
   /* Colors */
-  --color-background: oklch(0.10 0.01 240);
+  --color-background: oklch(0.1 0.01 240);
   --color-foreground: oklch(0.95 0.01 240);
   --color-card: oklch(0.14 0.01 240);
   --color-card-foreground: oklch(0.95 0.01 240);
@@ -104,12 +105,12 @@ html {
   --color-accent-foreground: oklch(0.95 0.01 240);
   --color-destructive: oklch(0.6 0.2 25);
   --color-destructive-foreground: oklch(0.98 0.01 240);
-  --color-border: oklch(0.20 0.01 240);
-  --color-input: oklch(0.20 0.01 240);
-  --color-ring: oklch(0.50 0.015 240);
-  
+  --color-border: oklch(0.2 0.01 240);
+  --color-input: oklch(0.2 0.01 240);
+  --color-ring: oklch(0.5 0.015 240);
+
   /* Additional colors for status messages */
-  --color-green-500: oklch(0.72 0.20 142);
+  --color-green-500: oklch(0.72 0.2 142);
   --color-green-600: oklch(0.64 0.22 142);
 
   /* Border radius */
@@ -120,9 +121,14 @@ html {
   --radius-xl: 1rem;
 
   /* Fonts */
-  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
-  
+  --font-sans:
+    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+    sans-serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo,
+    monospace;
+
   /* Font Weights */
   --font-weight-thin: 100;
   --font-weight-extralight: 200;
@@ -133,18 +139,18 @@ html {
   --font-weight-bold: 700;
   --font-weight-extrabold: 800;
   --font-weight-black: 900;
-  
+
   /* Font Sizes */
-  --text-xs: 0.75rem;      /* 12px */
-  --text-sm: 0.875rem;     /* 14px */
-  --text-base: 1rem;       /* 16px */
-  --text-lg: 1.125rem;     /* 18px */
-  --text-xl: 1.25rem;      /* 20px */
-  --text-2xl: 1.5rem;      /* 24px */
-  --text-3xl: 1.875rem;    /* 30px */
-  --text-4xl: 2.25rem;     /* 36px */
-  --text-5xl: 3rem;        /* 48px */
-  
+  --text-xs: 0.75rem; /* 12px */
+  --text-sm: 0.875rem; /* 14px */
+  --text-base: 1rem; /* 16px */
+  --text-lg: 1.125rem; /* 18px */
+  --text-xl: 1.25rem; /* 20px */
+  --text-2xl: 1.5rem; /* 24px */
+  --text-3xl: 1.875rem; /* 30px */
+  --text-4xl: 2.25rem; /* 36px */
+  --text-5xl: 3rem; /* 48px */
+
   /* Line Heights */
   --leading-none: 1;
   --leading-tight: 1.25;
@@ -152,7 +158,7 @@ html {
   --leading-normal: 1.5;
   --leading-relaxed: 1.625;
   --leading-loose: 1.75;
-  
+
   /* Letter Spacing */
   --tracking-tighter: -0.05em;
   --tracking-tight: -0.025em;
@@ -187,12 +193,12 @@ html {
   --color-accent-foreground: oklch(0.12 0.01 240);
   --color-destructive: oklch(0.6 0.2 25);
   --color-destructive-foreground: oklch(0.98 0.01 240);
-  --color-border: oklch(0.90 0.01 240);
-  --color-input: oklch(0.90 0.01 240);
+  --color-border: oklch(0.9 0.01 240);
+  --color-input: oklch(0.9 0.01 240);
   --color-ring: oklch(0.52 0.015 240);
-  
+
   /* Additional colors for status messages */
-  --color-green-500: oklch(0.62 0.20 142);
+  --color-green-500: oklch(0.62 0.2 142);
   --color-green-600: oklch(0.54 0.22 142);
 }
 
@@ -217,34 +223,34 @@ html {
   --color-border: oklch(0.32 0.01 240);
   --color-input: oklch(0.32 0.01 240);
   --color-ring: oklch(0.55 0.015 240);
-  
+
   /* Additional colors for status messages */
-  --color-green-500: oklch(0.72 0.20 142);
+  --color-green-500: oklch(0.72 0.2 142);
   --color-green-600: oklch(0.64 0.22 142);
 }
 
 /* White Theme (High Contrast Light) */
 .theme-white {
   --color-background: oklch(0.99 0 240);
-  --color-foreground: oklch(0.10 0 240);
-  --color-card: oklch(1.0 0 240);
-  --color-card-foreground: oklch(0.10 0 240);
-  --color-popover: oklch(1.0 0 240);
-  --color-popover-foreground: oklch(0.10 0 240);
-  --color-primary: oklch(0.10 0 240);
-  --color-primary-foreground: oklch(1.0 0 240);
+  --color-foreground: oklch(0.1 0 240);
+  --color-card: oklch(1 0 240);
+  --color-card-foreground: oklch(0.1 0 240);
+  --color-popover: oklch(1 0 240);
+  --color-popover-foreground: oklch(0.1 0 240);
+  --color-primary: oklch(0.1 0 240);
+  --color-primary-foreground: oklch(1 0 240);
   --color-secondary: oklch(0.95 0.01 240);
-  --color-secondary-foreground: oklch(0.10 0 240);
+  --color-secondary-foreground: oklch(0.1 0 240);
   --color-muted: oklch(0.93 0.01 240);
-  --color-muted-foreground: oklch(0.40 0.01 240);
+  --color-muted-foreground: oklch(0.4 0.01 240);
   --color-accent: oklch(0.95 0.01 240);
-  --color-accent-foreground: oklch(0.10 0 240);
+  --color-accent-foreground: oklch(0.1 0 240);
   --color-destructive: oklch(0.55 0.25 25);
-  --color-destructive-foreground: oklch(1.0 0 240);
+  --color-destructive-foreground: oklch(1 0 240);
   --color-border: oklch(0.88 0.01 240);
   --color-input: oklch(0.88 0.01 240);
   --color-ring: oklch(0.45 0.015 240);
-  
+
   /* Additional colors for status messages */
   --color-green-500: oklch(0.55 0.25 142);
   --color-green-600: oklch(0.47 0.27 142);
@@ -454,14 +460,34 @@ html.is-macos body {
 @keyframes enter {
   from {
     opacity: var(--tw-enter-opacity, 1);
-    transform: translate3d(var(--tw-enter-translate-x, 0), var(--tw-enter-translate-y, 0), 0) scale3d(var(--tw-enter-scale, 1), var(--tw-enter-scale, 1), var(--tw-enter-scale, 1)) rotate(var(--tw-enter-rotate, 0));
+    transform: translate3d(
+        var(--tw-enter-translate-x, 0),
+        var(--tw-enter-translate-y, 0),
+        0
+      )
+      scale3d(
+        var(--tw-enter-scale, 1),
+        var(--tw-enter-scale, 1),
+        var(--tw-enter-scale, 1)
+      )
+      rotate(var(--tw-enter-rotate, 0));
   }
 }
 
 @keyframes exit {
   to {
     opacity: var(--tw-exit-opacity, 1);
-    transform: translate3d(var(--tw-exit-translate-x, 0), var(--tw-exit-translate-y, 0), 0) scale3d(var(--tw-exit-scale, 1), var(--tw-exit-scale, 1), var(--tw-exit-scale, 1)) rotate(var(--tw-exit-rotate, 0));
+    transform: translate3d(
+        var(--tw-exit-translate-x, 0),
+        var(--tw-exit-translate-y, 0),
+        0
+      )
+      scale3d(
+        var(--tw-exit-scale, 1),
+        var(--tw-exit-scale, 1),
+        var(--tw-exit-scale, 1)
+      )
+      rotate(var(--tw-exit-rotate, 0));
   }
 }
 
@@ -571,7 +597,12 @@ html.is-macos body {
   margin-bottom: 1.2em;
 }
 
-.prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4,
+.prose h5,
+.prose h6 {
   margin-top: 0;
   margin-bottom: 0.8888889em;
   font-weight: 600;
@@ -604,7 +635,8 @@ html.is-macos body {
   font-weight: 600;
 }
 
-.prose ol, .prose ul {
+.prose ol,
+.prose ul {
   margin-top: 1.25em;
   margin-bottom: 1.25em;
   padding-left: 1.625em;
@@ -745,11 +777,26 @@ html.is-macos body {
 
 /* Rotating symbol animation */
 @keyframes rotate-symbol {
-  0%   { content: "◐"; transform: scale(1); }
-  25%  { content: "◓"; transform: scale(1); }
-  50%  { content: "◑"; transform: scale(1); }
-  75%  { content: "◒"; transform: scale(1); }
-  100% { content: "◐"; transform: scale(1); }
+  0% {
+    content: "◐";
+    transform: scale(1);
+  }
+  25% {
+    content: "◓";
+    transform: scale(1);
+  }
+  50% {
+    content: "◑";
+    transform: scale(1);
+  }
+  75% {
+    content: "◒";
+    transform: scale(1);
+  }
+  100% {
+    content: "◐";
+    transform: scale(1);
+  }
 }
 
 @keyframes fade-in {
@@ -858,8 +905,8 @@ html.is-macos body {
     #d97757 95%,
     transparent 100%
   );
-  -webkit-mask: 
-    linear-gradient(#fff 0 0) content-box, 
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
     linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
@@ -981,4 +1028,4 @@ code::-webkit-scrollbar-thumb:hover {
 
 .image-move-to-input {
   animation: moveToInput 0.8s ease-in-out forwards;
-} 
+}

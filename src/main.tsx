@@ -17,7 +17,8 @@ resourceMonitor.startMonitoring(120000);
 // Add a macOS-specific class to the <html> element to enable platform-specific styling
 // Browser-safe detection using navigator properties (works in Tauri and web preview)
 (() => {
-  const isMacLike = typeof navigator !== "undefined" &&
+  const isMacLike =
+    typeof navigator !== "undefined" &&
     (navigator.platform?.toLowerCase().includes("mac") ||
       navigator.userAgent?.toLowerCase().includes("mac os x"));
   if (isMacLike) {
@@ -31,7 +32,7 @@ ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
       apiKey={import.meta.env.VITE_PUBLIC_POSTHOG_KEY}
       options={{
         api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
-        defaults: '2025-05-24',
+        defaults: "2025-05-24",
         capture_exceptions: true,
         debug: import.meta.env.MODE === "development",
       }}

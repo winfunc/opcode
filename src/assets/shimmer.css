@@ -45,7 +45,8 @@
   95% {
     background-position: 200% center;
   }
-  96%, 100% {
+  96%,
+  100% {
     background-position: 200% center;
     -webkit-text-fill-color: currentColor;
     background: none;
@@ -54,27 +55,27 @@
 
 @keyframes symbol-rotate {
   0% {
-    content: '◐';
+    content: "◐";
     opacity: 1;
     transform: translateY(0) scale(1);
   }
   25% {
-    content: '◓';
+    content: "◓";
     opacity: 1;
     transform: translateY(0) scale(1);
   }
   50% {
-    content: '◑';
+    content: "◑";
     opacity: 1;
     transform: translateY(0) scale(1);
   }
   75% {
-    content: '◒';
+    content: "◒";
     opacity: 1;
     transform: translateY(0) scale(1);
   }
   100% {
-    content: '◐';
+    content: "◐";
     opacity: 1;
     transform: translateY(0) scale(1);
   }
@@ -112,7 +113,7 @@
 }
 
 .rotating-symbol::before {
-  content: '◐';
+  content: "◐";
   display: inline-block;
   animation: symbol-rotate 2s linear infinite;
   font-size: inherit;
@@ -126,7 +127,7 @@
 }
 
 .shimmer-hover::before {
-  content: '';
+  content: "";
   position: absolute;
   top: -50%;
   left: 0;
@@ -153,4 +154,4 @@
 
 .shimmer-hover:hover::before {
   animation: shimmer 1s ease-out;
-} 
+}

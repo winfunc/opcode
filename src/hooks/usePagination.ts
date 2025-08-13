@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback } from "react";
 
 interface PaginationOptions {
   initialPage?: number;
@@ -27,12 +27,12 @@ interface PaginationResult<T> {
  */
 export function usePagination<T>(
   data: T[],
-  options: PaginationOptions = {}
+  options: PaginationOptions = {},
 ): PaginationResult<T> {
   const {
     initialPage = 1,
     initialPageSize = 10,
-    pageSizeOptions: _pageSizeOptions = [10, 25, 50, 100]
+    pageSizeOptions: _pageSizeOptions = [10, 25, 50, 100],
   } = options;
 
   const [currentPage, setCurrentPage] = useState(initialPage);
@@ -49,9 +49,12 @@ export function usePagination<T>(
   }, [data, currentPage, pageSize]);
 
   // Navigation functions
-  const goToPage = useCallback((page: number) => {
-    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
-  }, [totalPages]);
+  const goToPage = useCallback(
+    (page: number) => {
+      setCurrentPage(Math.max(1, Math.min(page, totalPages)));
+    },
+    [totalPages],
+  );
 
   const nextPage = useCallback(() => {
     goToPage(currentPage + 1);
@@ -71,7 +74,7 @@ export function usePagination<T>(
   const pageRange = useMemo(() => {
     const range: number[] = [];
     const maxVisible = 7; // Maximum number of page buttons to show
-    
+
     if (totalPages <= maxVisible) {
       // Show all pages if total is less than max
       for (let i = 1; i <= totalPages; i++) {
@@ -80,29 +83,29 @@ export function usePagination<T>(
     } else {
       // Always show first page
       range.push(1);
-      
+
       if (currentPage > 3) {
         range.push(-1); // Ellipsis
       }
-      
+
       // Show pages around current page
       const start = Math.max(2, currentPage - 1);
       const end = Math.min(totalPages - 1, currentPage + 1);
-      
+
       for (let i = start; i <= end; i++) {
         range.push(i);
       }
-      
+
       if (currentPage < totalPages - 2) {
         range.push(-1); // Ellipsis
       }
-      
+
       // Always show last page
       if (totalPages > 1) {
         range.push(totalPages);
       }
     }
-    
+
     return range;
   }, [currentPage, totalPages]);
 
@@ -118,6 +121,6 @@ export function usePagination<T>(
     setPageSize: handleSetPageSize,
     canGoNext: currentPage < totalPages,
     canGoPrevious: currentPage > 1,
-    pageRange
+    pageRange,
   };
 }

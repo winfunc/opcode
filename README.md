@@ -1,8 +1,8 @@
 <div align="center">
   <img src="https://github.com/user-attachments/assets/92fd93ed-e71b-4b94-b270-50684323dd00" alt="Claudia Logo" width="120" height="120">
 
-  <a href="https://claudiacode.com"><h1>Claudia</h1></a>
-  
+<a href="https://claudiacode.com"><h1>Claudia</h1></a>
+
   <p>
     <strong>A powerful GUI app and Toolkit for Claude Code</strong>
   </p>
@@ -22,8 +22,7 @@
 
 https://github.com/user-attachments/assets/bf0bdf9d-ba91-45af-9ac4-7274f57075cf
 
-> [!TIP]
-> **⭐ Star the repo and follow [@getAsterisk](https://x.com/getAsterisk) on X for early access to `asteria-swe-v0`**.
+> [!TIP] > **⭐ Star the repo and follow [@getAsterisk](https://x.com/getAsterisk) on X for early access to `asteria-swe-v0`**.
 
 ## 🌟 Overview
 
@@ -35,13 +34,14 @@ Think of Claudia as your command center for Claude Code - bridging the gap betwe
 
 - [🌟 Overview](#-overview)
 - [✨ Features](#-features)
+
   - [🗂️ Project & Session Management](#️-project--session-management)
   - [🤖 CC Agents](#-cc-agents)
-  
   - [📊 Usage Analytics Dashboard](#-usage-analytics-dashboard)
   - [🔌 MCP Server Management](#-mcp-server-management)
   - [⏰ Timeline & Checkpoints](#-timeline--checkpoints)
   - [📝 CLAUDE.md Management](#-claudemd-management)
+
 - [📖 Usage](#-usage)
   - [Getting Started](#getting-started)
   - [Managing Projects](#managing-projects)
@@ -59,32 +59,35 @@ Think of Claudia as your command center for Claude Code - bridging the gap betwe
 ## ✨ Features
 
 ### 🗂️ **Project & Session Management**
+
 - **Visual Project Browser**: Navigate through all your Claude Code projects in `~/.claude/projects/`
 - **Session History**: View and resume past coding sessions with full context
 - **Smart Search**: Find projects and sessions quickly with built-in search
 - **Session Insights**: See first messages, timestamps, and session metadata at a glance
 
 ### 🤖 **CC Agents**
+
 - **Custom AI Agents**: Create specialized agents with custom system prompts and behaviors
 - **Agent Library**: Build a collection of purpose-built agents for different tasks
 - **Background Execution**: Run agents in separate processes for non-blocking operations
 - **Execution History**: Track all agent runs with detailed logs and performance metrics
 
-
-
 ### 📊 **Usage Analytics Dashboard**
+
 - **Cost Tracking**: Monitor your Claude API usage and costs in real-time
 - **Token Analytics**: Detailed breakdown by model, project, and time period
 - **Visual Charts**: Beautiful charts showing usage trends and patterns
 - **Export Data**: Export usage data for accounting and analysis
 
 ### 🔌 **MCP Server Management**
+
 - **Server Registry**: Manage Model Context Protocol servers from a central UI
 - **Easy Configuration**: Add servers via UI or import from existing configs
 - **Connection Testing**: Verify server connectivity before use
 - **Claude Desktop Import**: Import server configurations from Claude Desktop
 
 ### ⏰ **Timeline & Checkpoints**
+
 - **Session Versioning**: Create checkpoints at any point in your coding session
 - **Visual Timeline**: Navigate through your session history with a branching timeline
 - **Instant Restore**: Jump back to any checkpoint with one click
@@ -92,6 +95,7 @@ Think of Claudia as your command center for Claude Code - bridging the gap betwe
 - **Diff Viewer**: See exactly what changed between checkpoints
 
 ### 📝 **CLAUDE.md Management**
+
 - **Built-in Editor**: Edit CLAUDE.md files directly within the app
 - **Live Preview**: See your markdown rendered in real-time
 - **Project Scanner**: Find all CLAUDE.md files in your projects
@@ -169,18 +173,21 @@ Before building Claudia from source, ensure you have the following installed:
 #### Required Tools
 
 1. **Rust** (1.70.0 or later)
+
    ```bash
    # Install via rustup
    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
    ```
 
 2. **Bun** (latest version)
+
    ```bash
    # Install bun
    curl -fsSL https://bun.sh/install | bash
    ```
 
 3. **Git**
+
    ```bash
    # Usually pre-installed, but if not:
    # Ubuntu/Debian: sudo apt install git
@@ -195,6 +202,7 @@ Before building Claudia from source, ensure you have the following installed:
 #### Platform-Specific Dependencies
 
 **Linux (Ubuntu/Debian)**
+
 ```bash
 # Install system dependencies
 sudo apt update
@@ -215,6 +223,7 @@ sudo apt install -y \
 ```
 
 **macOS**
+
 ```bash
 # Install Xcode Command Line Tools
 xcode-select --install
@@ -224,34 +233,39 @@ brew install pkg-config
 ```
 
 **Windows**
+
 - Install [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
 - Install [WebView2](https://developer.microsoft.com/microsoft-edge/webview2/) (usually pre-installed on Windows 11)
 
 ### Build Steps
 
 1. **Clone the Repository**
+
    ```bash
    git clone https://github.com/getAsterisk/claudia.git
    cd claudia
    ```
 
 2. **Install Frontend Dependencies**
+
    ```bash
    bun install
    ```
 
 3. **Build the Application**
-   
+
    **For Development (with hot reload)**
+
    ```bash
    bun run tauri dev
    ```
-   
+
    **For Production Build**
+
    ```bash
    # Build the application
    bun run tauri build
-   
+
    # The built executable will be in:
    # - Linux: src-tauri/target/release/
    # - macOS: src-tauri/target/release/
@@ -259,13 +273,15 @@ brew install pkg-config
    ```
 
 4. **Platform-Specific Build Options**
-   
+
    **Debug Build (faster compilation, larger binary)**
+
    ```bash
    bun run tauri build --debug
    ```
-   
+
    **Universal Binary for macOS (Intel + Apple Silicon)**
+
    ```bash
    bun run tauri build --target universal-apple-darwin
    ```
@@ -275,18 +291,22 @@ brew install pkg-config
 #### Common Issues
 
 1. **"cargo not found" error**
+
    - Ensure Rust is installed and `~/.cargo/bin` is in your PATH
    - Run `source ~/.cargo/env` or restart your terminal
 
 2. **Linux: "webkit2gtk not found" error**
+
    - Install the webkit2gtk development packages listed above
    - On newer Ubuntu versions, you might need `libwebkit2gtk-4.0-dev`
 
 3. **Windows: "MSVC not found" error**
+
    - Install Visual Studio Build Tools with C++ support
    - Restart your terminal after installation
 
 4. **"claude command not found" error**
+
    - Ensure Claude Code CLI is installed and in your PATH
    - Test with `claude --version`
 
@@ -411,7 +431,6 @@ This project is licensed under the AGPL License - see the [LICENSE](LICENSE) fil
     <a href="https://github.com/getAsterisk/claudia/issues">Request Feature</a>
   </p>
 </div>
-
 
 ## Star History
 

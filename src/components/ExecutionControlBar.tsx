@@ -16,12 +16,12 @@ interface ExecutionControlBarProps {
  * Floating control bar shown during agent execution
  * Provides stop functionality and real-time statistics
  */
-export const ExecutionControlBar: React.FC<ExecutionControlBarProps> = ({ 
-  isExecuting, 
-  onStop, 
+export const ExecutionControlBar: React.FC<ExecutionControlBarProps> = ({
+  isExecuting,
+  onStop,
   totalTokens = 0,
   elapsedTime = 0,
-  className 
+  className,
 }) => {
   // Format elapsed time
   const formatTime = (seconds: number) => {
@@ -53,7 +53,7 @@ export const ExecutionControlBar: React.FC<ExecutionControlBarProps> = ({
             "fixed bottom-6 left-1/2 -translate-x-1/2 z-50",
             "bg-background/95 backdrop-blur-md border rounded-full shadow-lg",
             "px-6 py-3 flex items-center gap-4",
-            className
+            className,
           )}
         >
           {/* Rotating symbol indicator */}
@@ -99,4 +99,4 @@ export const ExecutionControlBar: React.FC<ExecutionControlBarProps> = ({
       )}
     </AnimatePresence>
   );
-}; 
+};
