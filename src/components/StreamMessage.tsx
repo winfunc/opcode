@@ -37,6 +37,7 @@ import {
   TaskWidget,
   LSResultWidget,
   ThinkingWidget,
+  SequentialThinkingWidget,
   WebSearchWidget,
   WebFetchWidget
 } from "./ToolWidgets";
@@ -202,6 +203,74 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                       // MCP tools (starting with mcp__)
                       if (content.name?.startsWith("mcp__")) {
                         renderedSomething = true;
+                        
+                        // Check if this is Sequential Thinking data
+                        let sequentialThinkingData = null;
+                        if (toolResult) {
+                          try {
+                            // Try to parse the tool result content as JSON
+                            // toolResult comes from getToolResult and has the structure from tool_result content
+                            let contentToParse = toolResult.content;
+                            
+                            // Handle different content structures similar to other tools
+                            if (typeof contentToParse === 'string') {
+                              // Try to parse as JSON first
+                              try {
+                                contentToParse = JSON.parse(contentToParse);
+                              } catch (jsonError) {
+                                // If not JSON, skip Sequential Thinking detection
+                                contentToParse = null;
+                              }
+                            } else if (contentToParse && typeof contentToParse === 'object') {
+                              // Handle object with text property similar to line 439
+                              if (contentToParse.text) {
+                                try {
+                                  contentToParse = JSON.parse(contentToParse.text);
+                                } catch (jsonError) {
+                                  contentToParse = null;
+                                }
+                              } else if (Array.isArray(contentToParse)) {
+                                // Handle array of content blocks - try first text item
+                                const firstText = contentToParse.find((c: any) => c.text);
+                                if (firstText?.text) {
+                                  try {
+                                    contentToParse = JSON.parse(firstText.text);
+                                  } catch (jsonError) {
+                                    contentToParse = null;
+                                  }
+                                } else {
+                                  contentToParse = null;
+                                }
+                              }
+                              // If it's already an object, check if it's Sequential Thinking data directly
+                            }
+                            
+                            // Check if it has Sequential Thinking properties
+                            if (contentToParse && 
+                                typeof contentToParse.thought === 'string' && 
+                                (contentToParse.thoughtNumber !== undefined || 
+                                 contentToParse.nextThoughtNeeded !== undefined ||
+                                 contentToParse.totalThoughts !== undefined)) {
+                              sequentialThinkingData = contentToParse;
+                            }
+                          } catch (e) {
+                            // Not Sequential Thinking data, fall back to regular MCP widget
+                          }
+                        }
+                        
+                        // Use SequentialThinkingWidget if we detected the right data format
+                        if (sequentialThinkingData) {
+                          return (
+                            <SequentialThinkingWidget
+                              thought={sequentialThinkingData.thought}
+                              thoughtNumber={sequentialThinkingData.thoughtNumber}
+                              totalThoughts={sequentialThinkingData.totalThoughts}
+                              nextThoughtNeeded={sequentialThinkingData.nextThoughtNeeded}
+                            />
+                          );
+                        }
+                        
+                        // Fall back to regular MCP widget
                         return <MCPWidget toolName={content.name} input={input} result={toolResult} />;
                       }
                       

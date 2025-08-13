@@ -2313,6 +2313,144 @@ export const ThinkingWidget: React.FC<{
 };
 
 /**
+ * Widget for Sequential Thinking MCP server - displays thoughts in a thought bubble design
+ */
+export const SequentialThinkingWidget: React.FC<{
+  thought: string;
+  thoughtNumber?: number;
+  totalThoughts?: number;
+  nextThoughtNeeded?: boolean;
+}> = ({ thought, thoughtNumber, totalThoughts, nextThoughtNeeded }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  
+  // Convert \n to actual line breaks and clean up the text
+  const formattedThought = (thought || '')
+    .replace(/\\n/g, '\n')
+    .trim();
+  
+  // Determine emoji based on progress and state
+  const getThinkingEmoji = () => {
+    if (!thoughtNumber || !totalThoughts || totalThoughts <= 0) return '🤔';
+    
+    const progress = thoughtNumber / totalThoughts;
+    
+    if (progress <= 0.2) return '🤔'; // Just starting to think
+    if (progress <= 0.4) return '💭'; // Developing thoughts
+    if (progress <= 0.6) return '🤨'; // Analyzing/questioning
+    if (progress <= 0.8) return '🧐'; // Deep analysis
+    if (progress < 1.0) return '💡'; // Getting close to solution
+    return nextThoughtNeeded ? '😣' : '💡'; // Struggling or eureka moment
+  };
+  
+  const emoji = getThinkingEmoji();
+  const progressText = thoughtNumber && totalThoughts 
+    ? `${thoughtNumber}/${totalThoughts}` 
+    : '';
+  
+  // Determine if content is long and should be collapsible
+  const isLongThought = formattedThought.length > 300 || formattedThought.split('\n').length > 5;
+  
+  return (
+    <div className="rounded-2xl border-2 border-blue-200/60 bg-gradient-to-br from-blue-50/80 to-indigo-50/60 dark:from-blue-950/20 dark:to-indigo-950/10 dark:border-blue-700/40 overflow-hidden shadow-sm">
+      {/* Header */}
+      <div 
+        className={cn(
+          "px-4 py-3 bg-gradient-to-r from-blue-100/50 to-indigo-100/30 dark:from-blue-900/30 dark:to-indigo-900/20 border-b border-blue-200/40 dark:border-blue-700/30",
+          isLongThought && "cursor-pointer hover:bg-blue-100/70 dark:hover:bg-blue-900/40 transition-colors"
+        )}
+        onClick={isLongThought ? () => setIsExpanded(!isExpanded) : undefined}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xl animate-pulse">{emoji}</span>
+              <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                Sequential Thinking
+              </span>
+            </div>
+            {progressText && (
+              <div className="flex items-center gap-2">
+                <Badge 
+                  variant="outline" 
+                  className="text-xs border-blue-300/50 text-blue-600 dark:text-blue-400 dark:border-blue-600/50 bg-blue-50/50 dark:bg-blue-950/30"
+                >
+                  Step {progressText}
+                </Badge>
+                {nextThoughtNeeded && (
+                  <Badge 
+                    variant="outline" 
+                    className="text-xs border-amber-300/50 text-amber-600 dark:text-amber-400 dark:border-amber-600/50 bg-amber-50/50 dark:bg-amber-950/30"
+                  >
+                    Continuing...
+                  </Badge>
+                )}
+              </div>
+            )}
+          </div>
+          {isLongThought && (
+            <ChevronRight className={cn(
+              "h-4 w-4 text-blue-500 transition-transform",
+              isExpanded && "rotate-90"
+            )} />
+          )}
+        </div>
+      </div>
+      
+      {/* Thought Content */}
+      <div className="px-4 py-4">
+        <div className={cn(
+          "relative bg-white/60 dark:bg-slate-900/30 rounded-xl border border-blue-200/30 dark:border-blue-700/20 shadow-sm",
+          "before:absolute before:left-6 before:-top-2 before:w-4 before:h-4 before:bg-white/60 dark:before:bg-slate-900/30 before:border-l before:border-t before:border-blue-200/30 dark:before:border-blue-700/20 before:rotate-45"
+        )}>
+          <div className={cn(
+            "p-4 space-y-2",
+            !isExpanded && isLongThought && "max-h-32 overflow-hidden"
+          )}>
+            <div className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
+              {formattedThought || (
+                <span className="italic text-slate-500 dark:text-slate-400">
+                  Thinking...
+                </span>
+              )}
+            </div>
+          </div>
+          
+          {/* Gradient fade for collapsed long thoughts */}
+          {!isExpanded && isLongThought && (
+            <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white/80 dark:from-slate-900/50 to-transparent pointer-events-none rounded-b-xl" />
+          )}
+        </div>
+        
+        {/* Expand/collapse button for long thoughts */}
+        {!isExpanded && isLongThought && (
+          <div className="text-center mt-3">
+            <button
+              onClick={() => setIsExpanded(true)}
+              className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors inline-flex items-center gap-1 font-medium"
+            >
+              <ChevronDown className="h-3 w-3" />
+              Read full thought
+            </button>
+          </div>
+        )}
+        
+        {isExpanded && isLongThought && (
+          <div className="text-center mt-3">
+            <button
+              onClick={() => setIsExpanded(false)}
+              className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors inline-flex items-center gap-1 font-medium"
+            >
+              <ChevronUp className="h-3 w-3" />
+              Collapse
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+/**
  * Widget for WebFetch tool - displays URL fetching with optional prompts
  */
 export const WebFetchWidget: React.FC<{ 
