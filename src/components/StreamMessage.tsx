@@ -5,6 +5,8 @@ import { cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
+import rehypeSanitize from "rehype-sanitize";
+import { defaultSchema } from "hast-util-sanitize";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { getClaudeSyntaxTheme } from "@/lib/claudeSyntaxTheme";
 import { useTheme } from "@/hooks";
@@ -59,6 +61,17 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
   // Get current theme
   const { theme } = useTheme();
   const syntaxTheme = getClaudeSyntaxTheme(theme);
+  // Build a safe sanitize schema allowing basic formatting and code blocks
+  const sanitizeSchema = React.useMemo(() => {
+    const schema = { ...(defaultSchema as any) };
+    schema.attributes = {
+      ...(schema.attributes || {}),
+      code: [((schema.attributes as any)?.code || []), ["className"]].flat(),
+      span: [((schema.attributes as any)?.span || []), ["className"]].flat(),
+      div: [((schema.attributes as any)?.div || []), ["className"]].flat(),
+    };
+    return schema;
+  }, []);
 
   // Extract all tool results from stream messages
   useEffect(() => {
@@ -668,7 +681,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
 
                             {beforeReminder && (
                               <div className="ml-6 p-2 bg-background rounded-md border prose prose-sm dark:prose-invert max-w-none">
-                                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+                                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[[rehypeRaw], [rehypeSanitize, sanitizeSchema]]}>
                                   {beforeReminder}
                                 </ReactMarkdown>
                               </div>
@@ -680,7 +693,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
 
                             {afterReminder && (
                               <div className="ml-6 p-2 bg-background rounded-md border prose prose-sm dark:prose-invert max-w-none">
-                                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+                                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[[rehypeRaw], [rehypeSanitize, sanitizeSchema]]}>
                                   {afterReminder}
                                 </ReactMarkdown>
                               </div>
@@ -905,7 +918,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
                               <div className="prose prose-sm dark:prose-invert max-w-none">
                                 <ReactMarkdown
                                   remarkPlugins={[remarkGfm]}
-                                  rehypePlugins={[rehypeRaw]}
+                                  rehypePlugins={[[rehypeRaw], [rehypeSanitize, sanitizeSchema]]}
                                   components={{
                                     code({ node, inline, className, children, ...props }: any) {
                                       const match = /language-(\w+)/.exec(className || "");
@@ -968,7 +981,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
                           <div className="ml-6 p-2 bg-background rounded-md border prose prose-sm dark:prose-invert max-w-none">
                             <ReactMarkdown
                               remarkPlugins={[remarkGfm]}
-                              rehypePlugins={[rehypeRaw]}
+                              rehypePlugins={[[rehypeRaw], [rehypeSanitize, sanitizeSchema]]}
                               components={{
                                 code({ node, inline, className, children, ...props }: any) {
                                   const match = /language-(\w+)/.exec(className || "");

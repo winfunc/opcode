@@ -61,10 +61,25 @@ import { detectLinks, makeLinksClickable } from "@/lib/linkDetector";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
+import rehypeSanitize from "rehype-sanitize";
+import { defaultSchema } from "hast-util-sanitize";
 import { open } from "@tauri-apps/plugin-shell";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { motion, AnimatePresence } from "framer-motion";
+import { ThinkingPreferencesService } from "@/services/thinkingPreferences";
+
+// Build a safe sanitize schema allowing basic formatting and code block class names
+const buildSanitizeSchema = () => {
+  const schema = { ...(defaultSchema as any) };
+  schema.attributes = {
+    ...(schema.attributes || {}),
+    code: [((schema.attributes as any)?.code || []), ["className"]].flat(),
+    span: [((schema.attributes as any)?.span || []), ["className"]].flat(),
+    div: [((schema.attributes as any)?.div || []), ["className"]].flat(),
+  };
+  return schema;
+};
 
 /**
  * Widget for TodoWrite tool - displays a beautiful TODO list
@@ -2389,7 +2404,9 @@ export const WebSearchWidget: React.FC<{
                       key={idx}
                       className="prose prose-sm dark:prose-invert max-w-none"
                     >
-                      <ReactMarkdown>{section.content as string}</ReactMarkdown>
+                      <ReactMarkdown rehypePlugins={[[rehypeRaw], [rehypeSanitize, buildSanitizeSchema()]]}>
+                        {section.content as string}
+                      </ReactMarkdown>
                     </div>
                   );
                 } else if (
@@ -2481,8 +2498,9 @@ export const ThinkingWidget: React.FC<{
   thinking: string;
   signature?: string;
 }> = ({ thinking }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-  // theme not needed here
+  const defaultExpanded = ThinkingPreferencesService.isExpandedByDefault();
+  const [isExpanded, setIsExpanded] = useState<boolean>(defaultExpanded);
+  const { theme } = useTheme();
 
   // Process thinking content similar to sequential thinking
   const formattedThinking = thinking
@@ -2550,7 +2568,26 @@ export const ThinkingWidget: React.FC<{
               {formattedThinking ? (
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
-                  rehypePlugins={[rehypeRaw]}
+                  rehypePlugins={[[rehypeRaw], [rehypeSanitize, buildSanitizeSchema()]]}
+                  components={{
+                    code({ node, inline, className, children, ...props }: any) {
+                      const match = /language-(\w+)/.exec(className || "");
+                      return !inline && match ? (
+                        <SyntaxHighlighter
+                          style={getClaudeSyntaxTheme(theme)}
+                          language={match[1]}
+                          PreTag="div"
+                          {...props}
+                        >
+                          {String(children).replace(/\n$/, "")}
+                        </SyntaxHighlighter>
+                      ) : (
+                        <code className={className} {...props}>
+                          {children}
+                        </code>
+                      );
+                    },
+                  }}
                 >
                   {formattedThinking}
                 </ReactMarkdown>
@@ -2605,7 +2642,8 @@ export const SequentialThinkingWidget: React.FC<{
   totalThoughts?: number;
   nextThoughtNeeded?: boolean;
 }> = ({ thought, thoughtNumber, totalThoughts, nextThoughtNeeded }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const defaultExpanded = ThinkingPreferencesService.isExpandedByDefault();
+  const [isExpanded, setIsExpanded] = useState<boolean>(defaultExpanded);
   const { theme } = useTheme();
 
   // Convert \n to actual line breaks and clean up the text
@@ -2699,7 +2737,7 @@ export const SequentialThinkingWidget: React.FC<{
               {formattedThought ? (
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
-                  rehypePlugins={[rehypeRaw]}
+                  rehypePlugins={[[rehypeRaw], [rehypeSanitize, buildSanitizeSchema()]]}
                   components={{
                     code({ node, inline, className, children, ...props }: any) {
                       const match = /language-(\w+)/.exec(className || "");

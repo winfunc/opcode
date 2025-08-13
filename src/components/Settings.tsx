@@ -24,6 +24,7 @@ import { HooksEditor } from "./HooksEditor";
 import { SlashCommandsManager } from "./SlashCommandsManager";
 import { ProxySettings } from "./ProxySettings";
 import { AnalyticsConsent } from "./AnalyticsConsent";
+import { ThinkingPreferencesService } from "@/services/thinkingPreferences";
 import { useTheme, useTrackEvent } from "@/hooks";
 import { analytics } from "@/lib/analytics";
 import { TabPersistenceService } from "@/services/tabPersistence";
@@ -97,6 +98,8 @@ export const Settings: React.FC<SettingsProps> = ({ className }) => {
 
   // Tab persistence state
   const [tabPersistenceEnabled, setTabPersistenceEnabled] = useState(true);
+  const [thinkingExpandedByDefault, setThinkingExpandedByDefault] =
+    useState<boolean>(true);
 
   // Load settings on mount
   useEffect(() => {
@@ -105,6 +108,10 @@ export const Settings: React.FC<SettingsProps> = ({ className }) => {
     loadAnalyticsSettings();
     // Load tab persistence setting
     setTabPersistenceEnabled(TabPersistenceService.isEnabled());
+    // Load thinking preference
+    setThinkingExpandedByDefault(
+      ThinkingPreferencesService.isExpandedByDefault(),
+    );
   }, []);
 
   /**
@@ -875,6 +882,38 @@ export const Settings: React.FC<SettingsProps> = ({ className }) => {
                               message: checked
                                 ? "Tab persistence enabled - your tabs will be restored on restart"
                                 : "Tab persistence disabled - tabs will not be saved",
+                              type: "success",
+                            });
+                          }}
+                        />
+                      </div>
+
+                      {/* Thinking Expanded By Default */}
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-1">
+                          <Label htmlFor="thinking-expanded-default">
+                            Show Thinking Expanded by Default
+                          </Label>
+                          <p className="text-caption text-muted-foreground">
+                            Expand AI thinking/analysis blocks automatically
+                          </p>
+                        </div>
+                        <Switch
+                          id="thinking-expanded-default"
+                          checked={thinkingExpandedByDefault}
+                          onCheckedChange={(checked) => {
+                            setThinkingExpandedByDefault(checked);
+                            ThinkingPreferencesService.setExpandedByDefault(
+                              checked,
+                            );
+                            trackEvent.settingsChanged(
+                              "thinking_expanded_by_default",
+                              checked,
+                            );
+                            setToast({
+                              message: checked
+                                ? "Thinking will be expanded by default"
+                                : "Thinking will be collapsed by default",
                               type: "success",
                             });
                           }}
