@@ -1846,6 +1846,13 @@ export const api = {
    */
   async getSetting(key: string): Promise<string | null> {
     try {
+      // Fast path: check localStorage mirror to avoid startup flicker
+      if (typeof window !== 'undefined' && 'localStorage' in window) {
+        const cached = window.localStorage.getItem(`app_setting:${key}`);
+        if (cached !== null) {
+          return cached;
+        }
+      }
       // Use storageReadTable to safely query the app_settings table
       const result = await this.storageReadTable("app_settings", 1, 1000);
       const setting = result?.data?.find((row: any) => row.key === key);
@@ -1864,6 +1871,14 @@ export const api = {
    */
   async saveSetting(key: string, value: string): Promise<void> {
     try {
+      // Mirror to localStorage for instant availability on next startup
+      if (typeof window !== 'undefined' && 'localStorage' in window) {
+        try {
+          window.localStorage.setItem(`app_setting:${key}`, value);
+        } catch (_ignore) {
+          // best-effort; continue to persist in DB
+        }
+      }
       // Try to update first
       try {
         await this.storageUpdateRow("app_settings", { key }, { value });

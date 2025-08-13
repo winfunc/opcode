@@ -98,8 +98,14 @@ export const Settings: React.FC<SettingsProps> = ({ className }) => {
 
   // Tab persistence state
   const [tabPersistenceEnabled, setTabPersistenceEnabled] = useState(true);
+
   const [thinkingExpandedByDefault, setThinkingExpandedByDefault] =
     useState<boolean>(true);
+
+
+  // Startup intro preference
+  const [startupIntroEnabled, setStartupIntroEnabled] = useState(true);
+  
 
   // Load settings on mount
   useEffect(() => {
@@ -108,11 +114,19 @@ export const Settings: React.FC<SettingsProps> = ({ className }) => {
     loadAnalyticsSettings();
     // Load tab persistence setting
     setTabPersistenceEnabled(TabPersistenceService.isEnabled());
+
     // Load thinking preference
     setThinkingExpandedByDefault(
       ThinkingPreferencesService.isExpandedByDefault(),
     );
-  }, []);
+
+    // Load startup intro setting (default to true if not set)
+    (async () => {
+      const pref = await api.getSetting('startup_intro_enabled');
+      setStartupIntroEnabled(pref === null ? true : pref === 'true');
+    })();
+
+}, []);
 
   /**
    * Loads analytics settings
@@ -919,6 +933,35 @@ export const Settings: React.FC<SettingsProps> = ({ className }) => {
                           }}
                         />
                       </div>
+                    </div>
+
+                    {/* Startup Intro Toggle */}
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <Label htmlFor="startup-intro">Show Welcome Intro on Startup</Label>
+                        <p className="text-caption text-muted-foreground">
+                          Display a brief welcome animation when the app launches
+                        </p>
+                      </div>
+                      <Switch
+                        id="startup-intro"
+                        checked={startupIntroEnabled}
+                        onCheckedChange={async (checked) => {
+                          setStartupIntroEnabled(checked);
+                          try {
+                            await api.saveSetting('startup_intro_enabled', checked ? 'true' : 'false');
+                            trackEvent.settingsChanged('startup_intro_enabled', checked);
+                            setToast({ 
+                              message: checked 
+                                ? 'Welcome intro enabled' 
+                                : 'Welcome intro disabled', 
+                              type: 'success' 
+                            });
+                          } catch (e) {
+                            setToast({ message: 'Failed to update preference', type: 'error' });
+                          }
+                        }}
+                      />
                     </div>
                   </div>
                 </Card>
