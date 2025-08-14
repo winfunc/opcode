@@ -99,44 +99,22 @@ jobs:
           body: |
             <div align="center">
               <img src="https://raw.githubusercontent.com/${{ github.repository }}/${{ steps.version.outputs.version }}/src-tauri/icons/icon.png" alt="Claudia Logo" width="128" height="128">
-              
-              # Claudia ${{ steps.version.outputs.version }}
-              
-              🎉 **First Release!** 🎉
-            
-            ### 🚀 What's New in This First Release
-            
-            - **AI-Powered Coding**: Seamless integration with Claude for intelligent code assistance
-            - **Cross-Platform Support**: Available for macOS and Linux
-            - **Modern UI**: Clean, intuitive interface built with React and Tauri
-            - **MCP Support**: Model Context Protocol integration for enhanced capabilities
-            - **Session Management**: Save and restore your coding sessions
-            - **And much more!**
-            
+            </div>
+
+            ## Claudia ${{ steps.version.outputs.version }}
+
+            This release was built and signed by CI. Artifacts for macOS and Linux are attached below.
+
+            - Auto-generated release notes are included below (commits, PRs, and contributors).
+            - Checksums (`.sha256`) are provided for all assets.
+
             ### Downloads
-            
-            #### macOS
-            - Universal binary (Intel + Apple Silicon)
-            - `.dmg` - Disk image installer (recommended)
-            - `.app.tar.gz` - Application bundle
-            
 
-            #### Linux
-            - `.AppImage` - Universal Linux package (recommended)
-            - `.deb` - Debian/Ubuntu package
-            
-            #### Source Code
-            - `claudia-{version}.tar.gz` - Source code (tar.gz)
-            - `claudia-{version}.zip` - Source code (zip)
-            
+            - macOS: `.dmg`, `.app.tar.gz` (Universal: Apple Silicon + Intel)
+            - Linux: `.AppImage`, `.deb`
+
             ### Installation
-            
-            **macOS**: Download the `.dmg` file, open it, and drag Claudia to your Applications folder.
-            
 
-            **Linux**: Download the `.AppImage` file, make it executable (`chmod +x`), and run it. For Debian/Ubuntu, use the `.deb` file.
-            
-            ### Verification
-            
-            All files include `.sha256` signature files for verification.
+            - macOS: Open the `.dmg` and drag Claudia to Applications.
+            - Linux: `chmod +x` the `.AppImage` and run it, or install the `.deb` on Debian/Ubuntu.
             

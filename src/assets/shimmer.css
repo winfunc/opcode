@@ -52,6 +52,18 @@
   }
 }
 
+/* Overlay variant: keeps the overlay text transparent and simply fades it out */
+@keyframes shimmer-overlay {
+  0% {
+    background-position: -150% center;
+    opacity: 1;
+  }
+  100% {
+    background-position: 150% center;
+    opacity: 0;
+  }
+}
+
 @keyframes symbol-rotate {
   0% {
     content: '◐';
@@ -99,6 +111,38 @@
   animation: shimmer-text 1s ease-out forwards;
 }
 
+/* Ensures text remains visible after shimmer completes on engines
+   where -webkit-text-fill-color set in keyframes may not persist */
+.shimmer-fallback-visible {
+  -webkit-text-fill-color: currentColor !important;
+  background: none !important;
+}
+
+/* Layered brand text: base solid text plus shimmering overlay to avoid flicker */
+.brand-text { position: relative; display: inline-block; }
+.brand-text-solid { position: relative; color: currentColor; }
+.brand-text-shimmer {
+  position: absolute;
+  inset: 0;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    transparent 47%,
+    rgba(217, 119, 87, 0.35) 50%,
+    transparent 53%,
+    transparent 100%
+  );
+  background-size: 300% auto;
+  background-position: -150% center;
+  -webkit-background-clip: text;
+  background-clip: text;
+  pointer-events: none;
+  will-change: background-position, opacity;
+  animation: shimmer-overlay 1.1s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
 .rotating-symbol {
   display: inline-block;
   color: #d97757;
@@ -118,6 +162,11 @@
   font-size: inherit;
   line-height: inherit;
   vertical-align: baseline;
+}
+
+/* Allow pausing the rotating symbol via an extra class */
+.rotating-symbol.paused::before {
+  animation: none !important;
 }
 
 .shimmer-hover {

@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Save, Loader2, ChevronDown } from "lucide-react";
+import { ArrowLeft, Save, Loader2, ChevronDown, Zap, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Card } from "@/components/ui/card";
 import { Toast, ToastContainer } from "@/components/ui/toast";
 import { api, type Agent } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -115,91 +116,108 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
   };
 
   return (
-    <div className={cn("flex flex-col h-full bg-background", className)}>
-      <div className="w-full max-w-5xl mx-auto flex flex-col h-full">
+    <motion.div 
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.15 }}
+      className={cn("h-full overflow-y-auto bg-background", className)}
+    >
+      <div className="max-w-6xl mx-auto flex flex-col h-full">
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          className="flex items-center justify-between p-4 border-b border-border"
-        >
-          <div className="flex items-center space-x-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleBack}
-              className="h-8 w-8"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div>
-              <h2 className="text-lg font-semibold">
-                {isEditMode ? "Edit CC Agent" : "Create CC Agent"}
-              </h2>
-              <p className="text-xs text-muted-foreground">
-                {isEditMode ? "Update your Claude Code agent" : "Create a new Claude Code agent"}
-              </p>
+        <div className="p-6 border-b border-border">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <motion.div
+                whileTap={{ scale: 0.97 }}
+                transition={{ duration: 0.15 }}
+              >
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleBack}
+                  className="h-9 w-9 -ml-2"
+                  title="Back to Agents"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+              </motion.div>
+              <div>
+                <h1 className="text-heading-1">
+                  {isEditMode ? "Edit Agent" : "Create New Agent"}
+                </h1>
+                <p className="mt-1 text-body-small text-muted-foreground">
+                  {isEditMode ? "Update your Claude Code agent configuration" : "Configure a new Claude Code agent"}
+                </p>
+              </div>
             </div>
+            
+            <motion.div
+              whileTap={{ scale: 0.97 }}
+              transition={{ duration: 0.15 }}
+            >
+              <Button
+                onClick={handleSave}
+                disabled={saving || !name.trim() || !systemPrompt.trim()}
+                size="default"
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Agent
+                  </>
+                )}
+              </Button>
+            </motion.div>
           </div>
-          
-          <Button
-            onClick={handleSave}
-            disabled={saving || !name.trim() || !systemPrompt.trim()}
-            size="sm"
-          >
-            {saving ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Save className="mr-2 h-4 w-4" />
-            )}
-            {saving ? "Saving..." : "Save"}
-          </Button>
-        </motion.div>
+        </div>
         
         {/* Error display */}
         {error && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="mx-4 mt-4 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-xs text-destructive"
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.15 }}
+            className="mx-6 mt-4 p-3 rounded-md bg-destructive/10 border border-destructive/50 flex items-center gap-2"
           >
-            {error}
+            <AlertCircle className="h-3.5 w-3.5 text-destructive flex-shrink-0" />
+            <span className="text-caption text-destructive">{error}</span>
           </motion.div>
         )}
         
-        {/* Form */}
-        <div className="flex-1 overflow-y-auto px-4 py-6">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.1 }}
-            className="space-y-6"
-          >
-                {/* Basic Information */}
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-sm font-medium mb-4">Basic Information</h3>
-                  </div>
-              
-              {/* Name and Icon */}
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6">
+          <div className="space-y-4">
+            {/* Basic Information */}
+            <Card className="p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <h3 className="text-heading-4">Basic Information</h3>
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Agent Name</Label>
+                  <Label htmlFor="name" className="text-caption text-muted-foreground">Agent Name</Label>
                   <Input
                     id="name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="e.g., Code Assistant"
                     required
+                    className="h-9"
                   />
                 </div>
                 
                 <div className="space-y-2">
-                  <Label>Agent Icon</Label>
-                  <div
+                  <Label className="text-caption text-muted-foreground">Agent Icon</Label>
+                  <motion.div
+                    whileTap={{ scale: 0.97 }}
+                    transition={{ duration: 0.15 }}
                     onClick={() => setShowIconPicker(true)}
-                    className="h-10 px-3 py-2 bg-background border border-input rounded-md cursor-pointer hover:bg-accent hover:text-accent-foreground transition-colors flex items-center justify-between"
+                    className="h-9 px-3 py-2 bg-background border border-input rounded-md cursor-pointer hover:bg-accent hover:text-accent-foreground transition-colors flex items-center justify-between"
                   >
                     <div className="flex items-center gap-2">
                       {(() => {
@@ -213,128 +231,127 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
                       })()}
                     </div>
                     <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                  </div>
+                  </motion.div>
                 </div>
               </div>
 
               {/* Model Selection */}
-              <div className="space-y-2">
-                <Label>Model</Label>
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <button
+              <div className="space-y-2 mt-4">
+                <Label className="text-caption text-muted-foreground">Model</Label>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <motion.button
                     type="button"
                     onClick={() => setModel("sonnet")}
+                    whileTap={{ scale: 0.97 }}
+                    transition={{ duration: 0.15 }}
                     className={cn(
-                      "flex-1 px-4 py-2.5 rounded-full border-2 font-medium transition-all",
-                      "hover:scale-[1.02] active:scale-[0.98]",
+                      "flex-1 px-4 py-3 rounded-md border transition-all",
                       model === "sonnet" 
-                        ? "border-primary bg-primary text-primary-foreground shadow-lg" 
-                        : "border-muted-foreground/30 hover:border-muted-foreground/50"
+                        ? "border-primary bg-primary/10 text-primary" 
+                        : "border-border hover:border-primary/50 hover:bg-accent"
                     )}
                   >
-                    <div className="flex items-center justify-center gap-2.5">
-                      <div className={cn(
-                        "w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0",
-                        model === "sonnet" ? "border-primary-foreground" : "border-current"
-                      )}>
-                        {model === "sonnet" && (
-                          <div className="w-2 h-2 rounded-full bg-primary-foreground" />
-                        )}
-                      </div>
+                    <div className="flex items-center gap-3">
+                      <Zap className={cn(
+                        "h-4 w-4",
+                        model === "sonnet" ? "text-primary" : "text-muted-foreground"
+                      )} />
                       <div className="text-left">
-                        <div className="text-sm font-semibold">Claude 4 Sonnet</div>
-                        <div className="text-xs opacity-80">Faster, efficient for most tasks</div>
+                        <div className="text-body-small font-medium">Claude 4 Sonnet</div>
+                        <div className="text-caption text-muted-foreground">Faster, efficient for most tasks</div>
                       </div>
                     </div>
-                  </button>
+                  </motion.button>
                   
-                  <button
+                  <motion.button
                     type="button"
                     onClick={() => setModel("opus")}
+                    whileTap={{ scale: 0.97 }}
+                    transition={{ duration: 0.15 }}
                     className={cn(
-                      "flex-1 px-4 py-2.5 rounded-full border-2 font-medium transition-all",
-                      "hover:scale-[1.02] active:scale-[0.98]",
+                      "flex-1 px-4 py-3 rounded-md border transition-all",
                       model === "opus" 
-                        ? "border-primary bg-primary text-primary-foreground shadow-lg" 
-                        : "border-muted-foreground/30 hover:border-muted-foreground/50"
+                        ? "border-primary bg-primary/10 text-primary" 
+                        : "border-border hover:border-primary/50 hover:bg-accent"
                     )}
                   >
-                    <div className="flex items-center justify-center gap-2.5">
-                      <div className={cn(
-                        "w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0",
-                        model === "opus" ? "border-primary-foreground" : "border-current"
-                      )}>
-                        {model === "opus" && (
-                          <div className="w-2 h-2 rounded-full bg-primary-foreground" />
-                        )}
-                      </div>
+                    <div className="flex items-center gap-3">
+                      <Zap className={cn(
+                        "h-4 w-4",
+                        model === "opus" ? "text-primary" : "text-muted-foreground"
+                      )} />
                       <div className="text-left">
-                        <div className="text-sm font-semibold">Claude 4 Opus</div>
-                        <div className="text-xs opacity-80">More capable, better for complex tasks</div>
+                        <div className="text-body-small font-medium">Claude 4 Opus</div>
+                        <div className="text-caption text-muted-foreground">More capable, better for complex tasks</div>
                       </div>
                     </div>
-                  </button>
+                  </motion.button>
                 </div>
               </div>
+            </Card>
 
-              {/* Default Task */}
+            {/* Configuration */}
+            <Card className="p-5">
+              <h3 className="text-heading-4 mb-4">Configuration</h3>
               <div className="space-y-2">
-                <Label htmlFor="default-task">Default Task (Optional)</Label>
+                <Label htmlFor="default-task" className="text-caption text-muted-foreground">Default Task (Optional)</Label>
                 <Input
                   id="default-task"
                   type="text"
                   placeholder="e.g., Review this code for security issues"
                   value={defaultTask}
                   onChange={(e) => setDefaultTask(e.target.value)}
-                  className="max-w-md"
+                  className="h-9"
                 />
-                <p className="text-xs text-muted-foreground">
+                <p className="text-caption text-muted-foreground">
                   This will be used as the default task placeholder when executing the agent
                 </p>
               </div>
+            </Card>
 
-              {/* System Prompt Editor */}
-              <div className="space-y-2">
-                <Label>System Prompt</Label>
-                <p className="text-xs text-muted-foreground mb-2">
-                  Define the behavior and capabilities of your CC Agent
+            {/* System Prompt */}
+            <Card className="p-5">
+              <div className="mb-4">
+                <h3 className="text-heading-4 mb-1">System Prompt</h3>
+                <p className="text-caption text-muted-foreground">
+                  Define the behavior and capabilities of your Claude Code agent
                 </p>
-                <div className="rounded-lg border border-border overflow-hidden shadow-sm" data-color-mode="dark">
-                  <MDEditor
-                    value={systemPrompt}
-                    onChange={(val) => setSystemPrompt(val || "")}
-                    preview="edit"
-                    height={400}
-                    visibleDragbar={false}
-                  />
-                </div>
               </div>
-            </div>
-          </motion.div>
+              <div className="rounded-md border border-border overflow-hidden" data-color-mode="dark">
+                <MDEditor
+                  value={systemPrompt}
+                  onChange={(val) => setSystemPrompt(val || "")}
+                  preview="edit"
+                  height={350}
+                  visibleDragbar={false}
+                />
+              </div>
+            </Card>
+          </div>
         </div>
       </div>
   
-  {/* Toast Notification */}
-  <ToastContainer>
-    {toast && (
-      <Toast
-        message={toast.message}
-        type={toast.type}
-        onDismiss={() => setToast(null)}
-      />
-    )}
-  </ToastContainer>
+      {/* Toast Notification */}
+      <ToastContainer>
+        {toast && (
+          <Toast
+            message={toast.message}
+            type={toast.type}
+            onDismiss={() => setToast(null)}
+          />
+        )}
+      </ToastContainer>
 
-  {/* Icon Picker Dialog */}
-  <IconPicker
-    value={selectedIcon}
-    onSelect={(iconName) => {
-      setSelectedIcon(iconName as AgentIconName);
-      setShowIconPicker(false);
-    }}
-    isOpen={showIconPicker}
-    onClose={() => setShowIconPicker(false)}
-  />
-</div>
+      {/* Icon Picker Dialog */}
+      <IconPicker
+        value={selectedIcon}
+        onSelect={(iconName) => {
+          setSelectedIcon(iconName as AgentIconName);
+          setShowIconPicker(false);
+        }}
+        isOpen={showIconPicker}
+        onClose={() => setShowIconPicker(false)}
+      />
+    </motion.div>
   );
 }; 

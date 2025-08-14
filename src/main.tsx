@@ -14,6 +14,17 @@ analytics.initialize();
 // Start resource monitoring (check every 2 minutes)
 resourceMonitor.startMonitoring(120000);
 
+// Add a macOS-specific class to the <html> element to enable platform-specific styling
+// Browser-safe detection using navigator properties (works in Tauri and web preview)
+(() => {
+  const isMacLike = typeof navigator !== "undefined" &&
+    (navigator.platform?.toLowerCase().includes("mac") ||
+      navigator.userAgent?.toLowerCase().includes("mac os x"));
+  if (isMacLike) {
+    document.documentElement.classList.add("is-macos");
+  }
+})();
+
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
     <PostHogProvider

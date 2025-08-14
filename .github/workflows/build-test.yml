@@ -28,6 +28,9 @@ jobs:
           - name: Linux
             os: ubuntu-latest
             rust-target: x86_64-unknown-linux-gnu
+          - name: Linux ARM64
+            os: ubuntu-24.04-arm64
+            rust-target: aarch64-unknown-linux-gnu
           - name: Windows
             os: windows-latest
             rust-target: x86_64-pc-windows-msvc

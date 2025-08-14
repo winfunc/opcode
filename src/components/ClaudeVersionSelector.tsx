@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { api, type ClaudeInstallation } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import { CheckCircle, HardDrive, Settings } from "lucide-react";
+import { CheckCircle, HardDrive, Settings, Terminal, Info } from "lucide-react";
 
 interface ClaudeVersionSelectorProps {
   /**
@@ -33,6 +33,10 @@ interface ClaudeVersionSelectorProps {
    * Whether save is in progress
    */
   isSaving?: boolean;
+  /**
+   * Simplified mode for cleaner UI
+   */
+  simplified?: boolean;
 }
 
 /**
@@ -52,6 +56,7 @@ export const ClaudeVersionSelector: React.FC<ClaudeVersionSelectorProps> = ({
   showSaveButton = false,
   onSave,
   isSaving = false,
+  simplified = false,
 }) => {
   const [installations, setInstallations] = useState<ClaudeInstallation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -120,15 +125,25 @@ export const ClaudeVersionSelector: React.FC<ClaudeVersionSelectorProps> = ({
   const getInstallationTypeColor = (installation: ClaudeInstallation) => {
     switch (installation.installation_type) {
       case "System":
-        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
+        return "default";
       case "Custom":
-        return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300";
+        return "secondary";
       default:
-        return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300";
+        return "outline";
     }
   };
 
   if (loading) {
+    if (simplified) {
+      return (
+        <div className="space-y-2">
+          <Label className="text-sm font-medium">Claude Installation</Label>
+          <div className="flex items-center justify-center py-3 border rounded-lg">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+          </div>
+        </div>
+      );
+    }
     return (
       <Card className={className}>
         <CardHeader>
@@ -145,6 +160,19 @@ export const ClaudeVersionSelector: React.FC<ClaudeVersionSelectorProps> = ({
   }
 
   if (error) {
+    if (simplified) {
+      return (
+        <div className="space-y-2">
+          <Label className="text-sm font-medium">Claude Installation</Label>
+          <div className="p-3 border border-destructive/50 rounded-lg bg-destructive/10">
+            <p className="text-sm text-destructive mb-2">{error}</p>
+            <Button onClick={loadInstallations} variant="outline" size="sm">
+              Retry
+            </Button>
+          </div>
+        </div>
+      );
+    }
     return (
       <Card className={className}>
         <CardHeader>
@@ -164,6 +192,81 @@ export const ClaudeVersionSelector: React.FC<ClaudeVersionSelectorProps> = ({
   const systemInstallations = installations.filter(i => i.installation_type === "System");
   const customInstallations = installations.filter(i => i.installation_type === "Custom");
 
+  // Simplified mode - more streamlined UI
+  if (simplified) {
+    return (
+      <div className={cn("space-y-3", className)}>
+        <div className="flex items-center justify-between">
+          <div className="space-y-0.5">
+            <Label htmlFor="claude-installation" className="text-sm font-medium">Claude Installation</Label>
+            <p className="text-xs text-muted-foreground">
+              Select which version of Claude to use
+            </p>
+          </div>
+          {selectedInstallation && (
+            <Badge variant={getInstallationTypeColor(selectedInstallation)} className="text-xs">
+              {selectedInstallation.installation_type}
+            </Badge>
+          )}
+        </div>
+        
+        <Select value={selectedInstallation?.path || ""} onValueChange={handleInstallationChange}>
+          <SelectTrigger id="claude-installation" className="w-full">
+            <SelectValue placeholder="Choose Claude installation">
+              {selectedInstallation && (
+                <div className="flex items-center gap-2">
+                  <Terminal className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="font-mono text-sm">{selectedInstallation.path.split('/').pop() || selectedInstallation.path}</span>
+                  {selectedInstallation.version && (
+                    <span className="text-xs text-muted-foreground">({selectedInstallation.version})</span>
+                  )}
+                </div>
+              )}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent side="bottom" align="start" sideOffset={5}>
+            {installations.length === 0 ? (
+              <div className="p-4 text-center text-sm text-muted-foreground">
+                No Claude installations found
+              </div>
+            ) : (
+              <>
+                {installations.map((installation) => (
+                  <SelectItem key={installation.path} value={installation.path} className="cursor-pointer hover:bg-accent focus:bg-accent">
+                    <div className="flex items-center gap-2 py-1">
+                      <Terminal className="h-3.5 w-3.5 text-muted-foreground" />
+                      <div className="flex-1">
+                        <div className="font-mono text-sm">{installation.path}</div>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span>{installation.version || "Unknown version"}</span>
+                          <span>•</span>
+                          <span>{installation.source}</span>
+                          <Badge variant={getInstallationTypeColor(installation)} className="text-xs ml-2">
+                            {installation.installation_type}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  </SelectItem>
+                ))}
+              </>
+            )}
+          </SelectContent>
+        </Select>
+        
+        {selectedInstallation && (
+          <div className="flex items-start gap-2 p-2 bg-muted/50 rounded-md">
+            <Info className="h-3.5 w-3.5 text-muted-foreground mt-0.5" />
+            <div className="text-xs text-muted-foreground">
+              <span className="font-medium">Path:</span> <code className="font-mono">{selectedInstallation.path}</code>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Original card-based UI
   return (
     <Card className={className}>
       <CardHeader>
@@ -186,19 +289,19 @@ export const ClaudeVersionSelector: React.FC<ClaudeVersionSelectorProps> = ({
                   <div className="flex items-center gap-2">
                     {getInstallationIcon(selectedInstallation)}
                     <span className="truncate">{selectedInstallation.path}</span>
-                    <Badge variant="secondary" className={cn("text-xs", getInstallationTypeColor(selectedInstallation))}>
+                    <Badge variant={getInstallationTypeColor(selectedInstallation)} className="text-xs">
                       {selectedInstallation.installation_type}
                     </Badge>
                   </div>
                 )}
               </SelectValue>
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent side="bottom" align="start" sideOffset={5}>
               {systemInstallations.length > 0 && (
                 <>
                   <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">System Installations</div>
                   {systemInstallations.map((installation) => (
-                    <SelectItem key={installation.path} value={installation.path}>
+                    <SelectItem key={installation.path} value={installation.path} className="cursor-pointer hover:bg-accent focus:bg-accent">
                       <div className="flex items-center gap-2 w-full">
                         {getInstallationIcon(installation)}
                         <div className="flex-1 min-w-0">
@@ -220,7 +323,7 @@ export const ClaudeVersionSelector: React.FC<ClaudeVersionSelectorProps> = ({
                 <>
                   <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Custom Installations</div>
                   {customInstallations.map((installation) => (
-                    <SelectItem key={installation.path} value={installation.path}>
+                    <SelectItem key={installation.path} value={installation.path} className="cursor-pointer hover:bg-accent focus:bg-accent">
                       <div className="flex items-center gap-2 w-full">
                         {getInstallationIcon(installation)}
                         <div className="flex-1 min-w-0">
@@ -246,7 +349,7 @@ export const ClaudeVersionSelector: React.FC<ClaudeVersionSelectorProps> = ({
           <div className="p-3 bg-muted rounded-lg space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Selected Installation</span>
-              <Badge className={cn("text-xs", getInstallationTypeColor(selectedInstallation))}>
+              <Badge variant={getInstallationTypeColor(selectedInstallation)} className="text-xs">
                 {selectedInstallation.installation_type}
               </Badge>
             </div>

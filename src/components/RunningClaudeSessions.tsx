@@ -117,9 +117,9 @@ export const RunningClaudeSessions: React.FC<RunningClaudeSessionsProps> = ({
           return (
             <motion.div
               key={session.run_id}
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.2 }}
+              transition={{ duration: 0.15 }}
             >
               <Card className="transition-all hover:shadow-md hover:scale-[1.01] cursor-pointer">
                 <CardContent 

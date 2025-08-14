@@ -58,7 +58,7 @@ const DEFAULT_CUSTOM_COLORS: CustomThemeColors = {
 };
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [theme, setThemeState] = useState<ThemeMode>('dark');
+  const [theme, setThemeState] = useState<ThemeMode>('gray');
   const [customColors, setCustomColorsState] = useState<CustomThemeColors>(DEFAULT_CUSTOM_COLORS);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -72,7 +72,11 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         if (savedTheme) {
           const themeMode = savedTheme as ThemeMode;
           setThemeState(themeMode);
-          applyTheme(themeMode, customColors);
+          await applyTheme(themeMode, customColors);
+        } else {
+          // No saved preference: apply gray as the default theme
+          setThemeState('gray');
+          await applyTheme('gray', customColors);
         }
 
         // Load custom colors
@@ -82,7 +86,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           const colors = JSON.parse(savedColors) as CustomThemeColors;
           setCustomColorsState(colors);
           if (theme === 'custom') {
-            applyTheme('custom', colors);
+            await applyTheme('custom', colors);
           }
         }
       } catch (error) {
@@ -96,7 +100,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   // Apply theme to document
-  const applyTheme = useCallback((themeMode: ThemeMode, colors: CustomThemeColors) => {
+  const applyTheme = useCallback(async (themeMode: ThemeMode, colors: CustomThemeColors) => {
     const root = document.documentElement;
     
     // Remove all theme classes
@@ -118,6 +122,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         root.style.removeProperty(cssVarName);
       });
     }
+
+    // Note: Window theme updates removed since we're using custom titlebar
   }, []);
 
   const setTheme = useCallback(async (newTheme: ThemeMode) => {
@@ -126,7 +132,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       
       // Apply theme immediately
       setThemeState(newTheme);
-      applyTheme(newTheme, customColors);
+      await applyTheme(newTheme, customColors);
       
       // Save to storage
       await api.saveSetting(THEME_STORAGE_KEY, newTheme);
@@ -146,7 +152,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       
       // Apply immediately if custom theme is active
       if (theme === 'custom') {
-        applyTheme('custom', newColors);
+        await applyTheme('custom', newColors);
       }
       
       // Save to storage

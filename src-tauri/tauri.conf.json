@@ -10,11 +10,18 @@
     "frontendDist": "../dist"
   },
   "app": {
+    "macOSPrivateApi": true,
     "windows": [
       {
         "title": "Claudia",
         "width": 800,
-        "height": 600
+        "height": 600,
+        "decorations": false,
+        "transparent": true,
+        "shadow": true,
+        "center": true,
+        "resizable": true,
+        "alwaysOnTop": false
       }
     ],
     "security": {

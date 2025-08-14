@@ -23,6 +23,7 @@ const TabItem: React.FC<TabItemProps> = ({ tab, isActive, onClose, onClick, isDr
       case 'chat':
         return MessageSquare;
       case 'agent':
+      case 'agents':
         return Bot;
       case 'projects':
         return Folder;
@@ -36,11 +37,9 @@ const TabItem: React.FC<TabItemProps> = ({ tab, isActive, onClose, onClick, isDr
       case 'claude-file':
         return FileText;
       case 'agent-execution':
-        return Bot;
       case 'create-agent':
-        return Plus;
       case 'import-agent':
-        return Plus;
+        return Bot;
       default:
         return MessageSquare;
     }
@@ -172,8 +171,8 @@ export const TabManager: React.FC<TabManagerProps> = ({ className }) => {
   // Listen for keyboard shortcut events
   useEffect(() => {
     const handleCreateTab = () => {
-      createChatTab();
-      trackEvent.tabCreated('chat');
+      createProjectsTab();
+      trackEvent.tabCreated('projects');
     };
 
     const handleCloseTab = async () => {
@@ -302,7 +301,7 @@ export const TabManager: React.FC<TabManagerProps> = ({ className }) => {
   };
 
   return (
-    <div className={cn("flex items-stretch bg-muted/15 border-b relative", className)}>
+    <div className={cn("flex items-stretch bg-muted/15 relative border-b border-border/50", className)}>
       {/* Left fade gradient */}
       {showLeftScroll && (
         <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-muted/15 to-transparent pointer-events-none z-10" />
@@ -336,25 +335,45 @@ export const TabManager: React.FC<TabManagerProps> = ({ className }) => {
         className="flex-1 flex overflow-x-auto scrollbar-hide"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
-        <Reorder.Group
-          axis="x"
-          values={tabs}
-          onReorder={handleReorder}
-          className="flex items-stretch h-8"
-          layoutScroll={false}
-        >
-          {tabs.map((tab) => (
-            <TabItem
-              key={tab.id}
-              tab={tab}
-              isActive={tab.id === activeTabId}
-              onClose={handleCloseTab}
-              onClick={switchToTab}
-              isDragging={draggedTabId === tab.id}
-              setDraggedTabId={setDraggedTabId}
-            />
-          ))}
-        </Reorder.Group>
+        <div className="flex items-stretch h-8">
+          <Reorder.Group
+            axis="x"
+            values={tabs}
+            onReorder={handleReorder}
+            className="flex items-stretch"
+            layoutScroll={false}
+          >
+            {tabs.map((tab) => (
+              <TabItem
+                key={tab.id}
+                tab={tab}
+                isActive={tab.id === activeTabId}
+                onClose={handleCloseTab}
+                onClick={switchToTab}
+                isDragging={draggedTabId === tab.id}
+                setDraggedTabId={setDraggedTabId}
+              />
+            ))}
+          </Reorder.Group>
+          
+          {/* New tab button - positioned right after tabs */}
+          <motion.button
+            onClick={handleNewTab}
+            disabled={!canAddTab()}
+            whileTap={canAddTab() ? { scale: 0.97 } : {}}
+            transition={{ duration: 0.15 }}
+            className={cn(
+              "px-2 mx-1 rounded-md flex items-center justify-center flex-shrink-0",
+              "bg-background/50 backdrop-blur-sm h-8",
+              canAddTab()
+                ? "hover:bg-muted/60 text-muted-foreground hover:text-foreground"
+                : "opacity-50 cursor-not-allowed text-muted-foreground"
+            )}
+            title={canAddTab() ? "New project (Ctrl+T)" : "Maximum tabs reached"}
+          >
+            <Plus className="w-4 h-4" />
+          </motion.button>
+        </div>
       </div>
 
       {/* Right fade gradient */}
@@ -384,21 +403,6 @@ export const TabManager: React.FC<TabManagerProps> = ({ className }) => {
         )}
       </AnimatePresence>
 
-      {/* New tab button */}
-      <button
-        onClick={handleNewTab}
-        disabled={!canAddTab()}
-        className={cn(
-          "p-2 mx-2 rounded-md transition-all duration-200 flex items-center justify-center",
-          "border border-border/50 bg-background/50 backdrop-blur-sm",
-          canAddTab()
-            ? "hover:bg-muted/80 hover:border-border text-muted-foreground hover:text-foreground hover:shadow-sm"
-            : "opacity-50 cursor-not-allowed bg-muted/30"
-        )}
-        title={canAddTab() ? "Browse projects (Ctrl+T)" : `Maximum tabs reached (${tabs.length}/20)`}
-      >
-        <Plus className="w-3.5 h-3.5" />
-      </button>
     </div>
   );
 };

@@ -1,17 +1,13 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
-  ArrowLeft,
-  Terminal,
-  FolderOpen,
   Copy,
   ChevronDown,
   GitBranch,
-  Settings,
   ChevronUp,
   X,
   Hash,
-  Command
+  Wrench
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +15,6 @@ import { Label } from "@/components/ui/label";
 import { Popover } from "@/components/ui/popover";
 import { api, type Session } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import { open } from "@tauri-apps/plugin-dialog";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { StreamMessage } from "./StreamMessage";
 import { FloatingPromptInput, type FloatingPromptInputRef } from "./FloatingPromptInput";
@@ -28,12 +23,13 @@ import { TimelineNavigator } from "./TimelineNavigator";
 import { CheckpointSettings } from "./CheckpointSettings";
 import { SlashCommandsManager } from "./SlashCommandsManager";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { TooltipProvider, TooltipSimple } from "@/components/ui/tooltip-modern";
 import { SplitPane } from "@/components/ui/split-pane";
 import { WebviewPreview } from "./WebviewPreview";
 import type { ClaudeStreamMessage } from "./AgentExecution";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useTrackEvent, useComponentMetrics, useWorkflowTracking } from "@/hooks";
+import { SessionPersistenceService } from "@/services/sessionPersistence";
 
 interface ClaudeCodeSessionProps {
   /**
@@ -60,6 +56,10 @@ interface ClaudeCodeSessionProps {
    * Callback when streaming state changes
    */
   onStreamingChange?: (isStreaming: boolean, sessionId: string | null) => void;
+  /**
+   * Callback when project path changes
+   */
+  onProjectPathChange?: (path: string) => void;
 }
 
 /**
@@ -71,12 +71,11 @@ interface ClaudeCodeSessionProps {
 export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   session,
   initialProjectPath = "",
-  onBack,
-  onProjectSettings,
   className,
   onStreamingChange,
+  onProjectPathChange,
 }) => {
-  const [projectPath, setProjectPath] = useState(initialProjectPath || session?.project_path || "");
+  const [projectPath] = useState(initialProjectPath || session?.project_path || "");
   const [messages, setMessages] = useState<ClaudeStreamMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -139,6 +138,13 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   useComponentMetrics('ClaudeCodeSession');
   // const aiTracking = useAIInteractionTracking('sonnet'); // Default model
   const workflowTracking = useWorkflowTracking('claude_session');
+  
+  // Call onProjectPathChange when component mounts with initial path
+  useEffect(() => {
+    if (onProjectPathChange && projectPath) {
+      onProjectPathChange(projectPath);
+    }
+  }, []); // Only run on mount
   
   // Keep ref in sync with state
   useEffect(() => {
@@ -295,6 +301,16 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       
       const history = await api.loadSessionHistory(session.id, session.project_id);
       
+      // Save session data for restoration
+      if (history && history.length > 0) {
+        SessionPersistenceService.saveSession(
+          session.id,
+          session.project_id,
+          session.project_path,
+          history.length
+        );
+      }
+      
       // Convert history to messages format
       const loadedMessages: ClaudeStreamMessage[] = history.map(entry => ({
         ...entry,
@@ -306,6 +322,13 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       
       // After loading history, we're continuing a conversation
       setIsFirstPrompt(false);
+      
+      // Scroll to bottom after loading history
+      setTimeout(() => {
+        if (loadedMessages.length > 0) {
+          rowVirtualizer.scrollToIndex(loadedMessages.length - 1, { align: 'end', behavior: 'auto' });
+        }
+      }, 100);
     } catch (err) {
       console.error("Failed to load session history:", err);
       setError("Failed to load session history");
@@ -405,24 +428,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     }
   };
 
-  const handleSelectPath = async () => {
-    try {
-      const selected = await open({
-        directory: true,
-        multiple: false,
-        title: "Select Project Directory"
-      });
-      
-      if (selected) {
-        setProjectPath(selected as string);
-        setError(null);
-      }
-    } catch (err) {
-      console.error("Failed to select directory:", err);
-      const errorMessage = err instanceof Error ? err.message : String(err);
-      setError(`Failed to select directory: ${errorMessage}`);
-    }
-  };
+  // Project path selection handled by parent tab controls
 
   const handleSendPrompt = async (prompt: string, model: string) => {
     console.log('[ClaudeCodeSession] handleSendPrompt called with:', { prompt, model, projectPath, claudeSessionId, effectiveSession });
@@ -519,6 +525,14 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                 if (!extractedSessionInfo) {
                   const projectId = projectPath.replace(/[^a-zA-Z0-9]/g, '-');
                   setExtractedSessionInfo({ sessionId: msg.session_id, projectId });
+                  
+                  // Save session data for restoration
+                  SessionPersistenceService.saveSession(
+                    msg.session_id,
+                    projectId,
+                    projectPath,
+                    messages.length
+                  );
                 }
 
                 // Switch to session-specific listeners
@@ -1133,7 +1147,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       }}
     >
       <div
-        className="relative w-full max-w-5xl mx-auto px-4 pt-8 pb-4"
+        className="relative w-full max-w-6xl mx-auto px-4 pt-8 pb-4"
         style={{
           height: `${Math.max(rowVirtualizer.getTotalSize(), 100)}px`,
           minHeight: '100px',
@@ -1147,9 +1161,9 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                 key={virtualItem.key}
                 data-index={virtualItem.index}
                 ref={(el) => el && rowVirtualizer.measureElement(el)}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
+                exit={{ opacity: 0, y: -8 }}
                 transition={{ duration: 0.3 }}
                 className="absolute inset-x-4 pb-4"
                 style={{
@@ -1170,8 +1184,9 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       {/* Loading indicator under the latest message */}
       {isLoading && (
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.15 }}
           className="flex items-center justify-center py-4 mb-40"
         >
           <div className="rotating-symbol text-primary" />
@@ -1181,9 +1196,10 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       {/* Error indicator */}
       {error && (
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive mb-40 w-full max-w-5xl mx-auto"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.15 }}
+          className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive mb-40 w-full max-w-6xl mx-auto"
         >
           {error}
         </motion.div>
@@ -1191,36 +1207,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     </div>
   );
 
-  const projectPathInput = !session && (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ delay: 0.1 }}
-      className="p-4 border-b border-border flex-shrink-0"
-    >
-      <Label htmlFor="project-path" className="text-sm font-medium">
-        Project Directory
-      </Label>
-      <div className="flex items-center gap-2 mt-1">
-        <Input
-          id="project-path"
-          value={projectPath}
-          onChange={(e) => setProjectPath(e.target.value)}
-          placeholder="/path/to/your/project"
-          className="flex-1"
-          disabled={isLoading}
-        />
-        <Button
-          onClick={handleSelectPath}
-          size="icon"
-          variant="outline"
-          disabled={isLoading}
-        >
-          <FolderOpen className="h-4 w-4" />
-        </Button>
-      </div>
-    </motion.div>
-  );
+  const projectPathInput = null; // Removed project path display
 
   // If preview is maximized, render only the WebviewPreview in full screen
   if (showPreview && isPreviewMaximized) {
@@ -1228,8 +1215,8 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       <AnimatePresence>
         <motion.div 
           className="fixed inset-0 z-50 bg-background"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
         >
@@ -1247,142 +1234,9 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   }
 
   return (
-    <div className={cn("flex flex-col h-full bg-background", className)}>
-      <div className="w-full h-full flex flex-col">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          className="flex items-center justify-between p-4 border-b border-border"
-        >
-          <div className="flex items-center space-x-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onBack}
-              className="h-8 w-8"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div className="flex items-center gap-2">
-              <Terminal className="h-5 w-5 text-muted-foreground" />
-              <div className="flex-1">
-                <h1 className="text-xl font-bold">Claude Code Session</h1>
-                <p className="text-sm text-muted-foreground">
-                  {projectPath ? `${projectPath}` : "No project selected"}
-                </p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            {projectPath && onProjectSettings && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onProjectSettings(projectPath)}
-                disabled={isLoading}
-              >
-                <Settings className="h-4 w-4 mr-2" />
-                Hooks
-              </Button>
-            )}
-            {projectPath && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowSlashCommandsSettings(true)}
-                disabled={isLoading}
-              >
-                <Command className="h-4 w-4 mr-2" />
-                Commands
-              </Button>
-            )}
-            <div className="flex items-center gap-2">
-              {showSettings && (
-                <CheckpointSettings
-                  sessionId={effectiveSession?.id || ''}
-                  projectId={effectiveSession?.project_id || ''}
-                  projectPath={projectPath}
-                />
-              )}
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setShowSettings(!showSettings)}
-                      className="h-8 w-8"
-                    >
-                      <Settings className={cn("h-4 w-4", showSettings && "text-primary")} />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Checkpoint Settings</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              {effectiveSession && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setShowTimeline(!showTimeline)}
-                        className="h-8 w-8"
-                      >
-                        <GitBranch className={cn("h-4 w-4", showTimeline && "text-primary")} />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Timeline Navigator</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
-              {messages.length > 0 && (
-                <Popover
-                  trigger={
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="flex items-center gap-2"
-                    >
-                      <Copy className="h-4 w-4" />
-                      Copy Output
-                      <ChevronDown className="h-3 w-3" />
-                    </Button>
-                  }
-                  content={
-                    <div className="w-44 p-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleCopyAsMarkdown}
-                        className="w-full justify-start"
-                      >
-                        Copy as Markdown
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleCopyAsJsonl}
-                        className="w-full justify-start"
-                      >
-                        Copy as JSONL
-                      </Button>
-                    </div>
-                  }
-                  open={copyPopoverOpen}
-                  onOpenChange={setCopyPopoverOpen}
-                />
-              )}
-            </div>
-          </div>
-        </motion.div>
+    <TooltipProvider>
+      <div className={cn("flex flex-col h-full bg-background", className)}>
+        <div className="w-full h-full flex flex-col">
 
         {/* Main Content Area */}
         <div className={cn(
@@ -1415,7 +1269,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
             />
           ) : (
             // Original layout when no preview
-            <div className="h-full flex flex-col max-w-5xl mx-auto">
+            <div className="h-full flex flex-col max-w-6xl mx-auto px-6">
               {projectPathInput}
               {messagesList}
               
@@ -1449,17 +1303,24 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                     <div className="text-xs font-medium text-muted-foreground mb-1">
                       Queued Prompts ({queuedPrompts.length})
                     </div>
-                    <Button variant="ghost" size="icon" onClick={() => setQueuedPromptsCollapsed(prev => !prev)}>
-                      {queuedPromptsCollapsed ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                    </Button>
+                    <TooltipSimple content={queuedPromptsCollapsed ? "Expand queue" : "Collapse queue"} side="top">
+                      <motion.div
+                        whileTap={{ scale: 0.97 }}
+                        transition={{ duration: 0.15 }}
+                      >
+                        <Button variant="ghost" size="icon" onClick={() => setQueuedPromptsCollapsed(prev => !prev)}>
+                          {queuedPromptsCollapsed ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                        </Button>
+                      </motion.div>
+                    </TooltipSimple>
                   </div>
                   {!queuedPromptsCollapsed && queuedPrompts.map((queuedPrompt, index) => (
                     <motion.div
                       key={queuedPrompt.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
-                      transition={{ delay: index * 0.05 }}
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -4 }}
+                      transition={{ duration: 0.15, delay: index * 0.02 }}
                       className="flex items-start gap-2 bg-muted/50 rounded-md p-2"
                     >
                       <div className="flex-1 min-w-0">
@@ -1471,14 +1332,19 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                         </div>
                         <p className="text-sm line-clamp-2 break-words">{queuedPrompt.prompt}</p>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 flex-shrink-0"
-                        onClick={() => setQueuedPrompts(prev => prev.filter(p => p.id !== queuedPrompt.id))}
+                      <motion.div
+                        whileTap={{ scale: 0.97 }}
+                        transition={{ duration: 0.15 }}
                       >
-                        <X className="h-3 w-3" />
-                      </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 flex-shrink-0"
+                          onClick={() => setQueuedPrompts(prev => prev.filter(p => p.id !== queuedPrompt.id))}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </motion.div>
                     </motion.div>
                   ))}
                 </div>
@@ -1496,59 +1362,71 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
               className="fixed bottom-32 right-6 z-50"
             >
               <div className="flex items-center bg-background/95 backdrop-blur-md border rounded-full shadow-lg overflow-hidden">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    // Use virtualizer to scroll to the first item
-                    if (displayableMessages.length > 0) {
-                      // Scroll to top of the container
-                      parentRef.current?.scrollTo({
-                        top: 0,
-                        behavior: 'smooth'
-                      });
-                      
-                      // After smooth scroll completes, trigger a small scroll to ensure rendering
-                      setTimeout(() => {
-                        if (parentRef.current) {
-                          // Scroll down 1px then back to 0 to trigger virtualizer update
-                          parentRef.current.scrollTop = 1;
-                          requestAnimationFrame(() => {
-                            if (parentRef.current) {
-                              parentRef.current.scrollTop = 0;
-                            }
-                          });
-                        }
-                      }, 500); // Wait for smooth scroll to complete
-                    }
-                  }}
-                  className="px-3 py-2 hover:bg-accent rounded-none"
-                  title="Scroll to top"
-                >
-                  <ChevronUp className="h-4 w-4" />
-                </Button>
-                <div className="w-px h-4 bg-border" />
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    // Use virtualizer to scroll to the last item
-                    if (displayableMessages.length > 0) {
-                      // Scroll to bottom of the container
-                      const scrollElement = parentRef.current;
-                      if (scrollElement) {
-                        scrollElement.scrollTo({
-                          top: scrollElement.scrollHeight,
+                <TooltipSimple content="Scroll to top" side="top">
+                  <motion.div
+                    whileTap={{ scale: 0.97 }}
+                    transition={{ duration: 0.15 }}
+                  >
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                      // Use virtualizer to scroll to the first item
+                      if (displayableMessages.length > 0) {
+                        // Scroll to top of the container
+                        parentRef.current?.scrollTo({
+                          top: 0,
                           behavior: 'smooth'
                         });
+                        
+                        // After smooth scroll completes, trigger a small scroll to ensure rendering
+                        setTimeout(() => {
+                          if (parentRef.current) {
+                            // Scroll down 1px then back to 0 to trigger virtualizer update
+                            parentRef.current.scrollTop = 1;
+                            requestAnimationFrame(() => {
+                              if (parentRef.current) {
+                                parentRef.current.scrollTop = 0;
+                              }
+                            });
+                          }
+                        }, 500); // Wait for smooth scroll to complete
                       }
-                    }
-                  }}
-                  className="px-3 py-2 hover:bg-accent rounded-none"
-                  title="Scroll to bottom"
-                >
-                  <ChevronDown className="h-4 w-4" />
-                </Button>
+                    }}
+                      className="px-3 py-2 hover:bg-accent rounded-none"
+                    >
+                      <ChevronUp className="h-4 w-4" />
+                    </Button>
+                  </motion.div>
+                </TooltipSimple>
+                <div className="w-px h-4 bg-border" />
+                <TooltipSimple content="Scroll to bottom" side="top">
+                  <motion.div
+                    whileTap={{ scale: 0.97 }}
+                    transition={{ duration: 0.15 }}
+                  >
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                      // Use virtualizer to scroll to the last item
+                      if (displayableMessages.length > 0) {
+                        // Scroll to bottom of the container
+                        const scrollElement = parentRef.current;
+                        if (scrollElement) {
+                          scrollElement.scrollTo({
+                            top: scrollElement.scrollHeight,
+                            behavior: 'smooth'
+                          });
+                        }
+                      }
+                    }}
+                      className="px-3 py-2 hover:bg-accent rounded-none"
+                    >
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </motion.div>
+                </TooltipSimple>
               </div>
             </motion.div>
           )}
@@ -1564,13 +1442,93 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
               isLoading={isLoading}
               disabled={!projectPath}
               projectPath={projectPath}
+              extraMenuItems={
+                <>
+                  {effectiveSession && (
+                    <TooltipSimple content="Session Timeline" side="top">
+                      <motion.div
+                        whileTap={{ scale: 0.97 }}
+                        transition={{ duration: 0.15 }}
+                      >
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setShowTimeline(!showTimeline)}
+                          className="h-9 w-9 text-muted-foreground hover:text-foreground"
+                        >
+                          <GitBranch className={cn("h-3.5 w-3.5", showTimeline && "text-primary")} />
+                        </Button>
+                      </motion.div>
+                    </TooltipSimple>
+                  )}
+                  {messages.length > 0 && (
+                    <Popover
+                      trigger={
+                        <TooltipSimple content="Copy conversation" side="top">
+                          <motion.div
+                            whileTap={{ scale: 0.97 }}
+                            transition={{ duration: 0.15 }}
+                          >
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-9 w-9 text-muted-foreground hover:text-foreground"
+                            >
+                              <Copy className="h-3.5 w-3.5" />
+                            </Button>
+                          </motion.div>
+                        </TooltipSimple>
+                      }
+                      content={
+                        <div className="w-44 p-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleCopyAsMarkdown}
+                            className="w-full justify-start text-xs"
+                          >
+                            Copy as Markdown
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleCopyAsJsonl}
+                            className="w-full justify-start text-xs"
+                          >
+                            Copy as JSONL
+                          </Button>
+                        </div>
+                      }
+                      open={copyPopoverOpen}
+                      onOpenChange={setCopyPopoverOpen}
+                      side="top"
+                      align="end"
+                    />
+                  )}
+                  <TooltipSimple content="Checkpoint Settings" side="top">
+                    <motion.div
+                      whileTap={{ scale: 0.97 }}
+                      transition={{ duration: 0.15 }}
+                    >
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setShowSettings(!showSettings)}
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                      >
+                        <Wrench className={cn("h-3.5 w-3.5", showSettings && "text-primary")} />
+                      </Button>
+                    </motion.div>
+                  </TooltipSimple>
+                </>
+              }
             />
           </div>
 
           {/* Token Counter - positioned under the Send button */}
           {totalTokens > 0 && (
             <div className="fixed bottom-0 left-0 right-0 z-30 pointer-events-none">
-              <div className="max-w-5xl mx-auto">
+              <div className="max-w-6xl mx-auto">
                 <div className="flex justify-end px-4 pb-2">
                   <motion.div
                     initial={{ opacity: 0, scale: 0.8 }}
@@ -1597,7 +1555,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
-              transition={{ type: "spring", damping: 20, stiffness: 300 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
               className="fixed right-0 top-0 h-full w-full sm:w-96 bg-background border-l border-border shadow-xl z-30 overflow-hidden"
             >
               <div className="h-full flex flex-col">
@@ -1708,6 +1666,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
           </DialogContent>
         </Dialog>
       )}
-    </div>
+      </div>
+    </TooltipProvider>
   );
 };

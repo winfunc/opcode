@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
-  ArrowLeft, 
   Plus, 
   Trash2, 
   Save, 
@@ -12,7 +11,7 @@ import {
   ChevronUp,
   BarChart3,
   Shield,
-  Trash,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,7 +19,6 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   api, 
   type ClaudeSettings,
@@ -38,6 +36,7 @@ import { ProxySettings } from "./ProxySettings";
 import { AnalyticsConsent } from "./AnalyticsConsent";
 import { useTheme, useTrackEvent } from "@/hooks";
 import { analytics } from "@/lib/analytics";
+import { TabPersistenceService } from "@/services/tabPersistence";
 
 interface SettingsProps {
   /**
@@ -66,7 +65,6 @@ interface EnvironmentVariable {
  * Provides a no-code interface for editing the settings.json file
  */
 export const Settings: React.FC<SettingsProps> = ({
-  onBack,
   className,
 }) => {
   const [settings, setSettings] = useState<ClaudeSettings | null>(null);
@@ -113,11 +111,23 @@ export const Settings: React.FC<SettingsProps> = ({
   const [showAnalyticsConsent, setShowAnalyticsConsent] = useState(false);
   const trackEvent = useTrackEvent();
   
+  // Tab persistence state
+  const [tabPersistenceEnabled, setTabPersistenceEnabled] = useState(true);
+  // Startup intro preference
+  const [startupIntroEnabled, setStartupIntroEnabled] = useState(true);
+  
   // Load settings on mount
   useEffect(() => {
     loadSettings();
     loadClaudeBinaryPath();
     loadAnalyticsSettings();
+    // Load tab persistence setting
+    setTabPersistenceEnabled(TabPersistenceService.isEnabled());
+    // Load startup intro setting (default to true if not set)
+    (async () => {
+      const pref = await api.getSetting('startup_intro_enabled');
+      setStartupIntroEnabled(pref === null ? true : pref === 'true');
+    })();
   }, []);
 
   /**
@@ -438,60 +448,51 @@ export const Settings: React.FC<SettingsProps> = ({
   };
 
   return (
-    <div className={cn("flex flex-col h-full bg-background text-foreground", className)}>
-      <div className="max-w-4xl mx-auto w-full flex flex-col h-full">
+    <div className={cn("h-full overflow-y-auto", className)}>
+      <div className="max-w-6xl mx-auto flex flex-col h-full">
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          className="flex items-center justify-between p-4 border-b border-border"
-        >
-        <div className="flex items-center gap-3">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onBack}
-          className="h-8 w-8"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div>
-          <h2 className="text-lg font-semibold">Settings</h2>
-          <p className="text-xs text-muted-foreground">
-              Configure Claude Code preferences
-          </p>
+        <div className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-heading-1">Settings</h1>
+              <p className="mt-1 text-body-small text-muted-foreground">
+                Configure Claude Code preferences
+              </p>
+            </div>
+            <motion.div
+              whileTap={{ scale: 0.97 }}
+              transition={{ duration: 0.15 }}
+            >
+              <Button
+                onClick={saveSettings}
+                disabled={saving || loading}
+                size="default"
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Settings
+                  </>
+                )}
+              </Button>
+            </motion.div>
           </div>
         </div>
-        
-        <Button
-          onClick={saveSettings}
-          disabled={saving || loading}
-          size="sm"
-          className="gap-2 bg-primary hover:bg-primary/90"
-        >
-          {saving ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            <>
-              <Save className="h-4 w-4" />
-              Save Settings
-            </>
-          )}
-        </Button>
-      </motion.div>
       
       {/* Error message */}
       <AnimatePresence>
         {error && (
           <motion.div
-            initial={{ opacity: 0, y: -10 }}
+            initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="mx-4 mt-4 p-3 rounded-lg bg-destructive/10 border border-destructive/50 flex items-center gap-2 text-sm text-destructive"
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.15 }}
+            className="mx-4 mt-4 p-3 rounded-lg bg-destructive/10 border border-destructive/50 flex items-center gap-2 text-body-small text-destructive"
           >
             <AlertCircle className="h-4 w-4" />
             {error}
@@ -505,59 +506,96 @@ export const Settings: React.FC<SettingsProps> = ({
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       ) : (
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 overflow-y-auto p-6">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-9 w-full">
-              <TabsTrigger value="general">General</TabsTrigger>
-              <TabsTrigger value="permissions">Permissions</TabsTrigger>
-              <TabsTrigger value="environment">Environment</TabsTrigger>
-              <TabsTrigger value="models">Models</TabsTrigger>
-              <TabsTrigger value="advanced">Advanced</TabsTrigger>
-              <TabsTrigger value="hooks">Hooks</TabsTrigger>
-              <TabsTrigger value="commands">Commands</TabsTrigger>
-              <TabsTrigger value="storage">Storage</TabsTrigger>
-              <TabsTrigger value="proxy">Proxy</TabsTrigger>
-              <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            <TabsList className="grid grid-cols-9 w-full mb-6 h-auto p-1">
+              <TabsTrigger value="general" className="py-2.5 px-3">General</TabsTrigger>
+              <TabsTrigger value="permissions" className="py-2.5 px-3">Permissions</TabsTrigger>
+              <TabsTrigger value="environment" className="py-2.5 px-3">Environment</TabsTrigger>
+              <TabsTrigger value="models" className="py-2.5 px-3">Models</TabsTrigger>
+              <TabsTrigger value="advanced" className="py-2.5 px-3">Advanced</TabsTrigger>
+              <TabsTrigger value="hooks" className="py-2.5 px-3">Hooks</TabsTrigger>
+              <TabsTrigger value="commands" className="py-2.5 px-3">Commands</TabsTrigger>
+              <TabsTrigger value="storage" className="py-2.5 px-3">Storage</TabsTrigger>
+              <TabsTrigger value="proxy" className="py-2.5 px-3">Proxy</TabsTrigger>
             </TabsList>
             
             {/* General Settings */}
-            <TabsContent value="general" className="space-y-6">
+            <TabsContent value="general" className="space-y-6 mt-6">
               <Card className="p-6 space-y-6">
                 <div>
-                  <h3 className="text-base font-semibold mb-4">General Settings</h3>
+                  <h3 className="text-heading-4 mb-4">General Settings</h3>
                   
                   <div className="space-y-4">
                     {/* Theme Selector */}
-                    <div className="space-y-2">
-                      <Label htmlFor="theme">Theme</Label>
-                      <Select
-                        value={theme}
-                        onValueChange={(value) => setTheme(value as any)}
-                      >
-                        <SelectTrigger id="theme" className="w-full">
-                          <SelectValue placeholder="Select a theme" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="dark">Dark</SelectItem>
-                          <SelectItem value="gray">Gray</SelectItem>
-                          <SelectItem value="light">Light</SelectItem>
-                          <SelectItem value="custom">Custom</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <p className="text-xs text-muted-foreground">
-                        Choose your preferred color theme for the interface
-                      </p>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label>Theme</Label>
+                        <p className="text-caption text-muted-foreground mt-1">
+                          Choose your preferred color theme
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1 p-1 bg-muted/30 rounded-lg">
+                        <button
+                          onClick={() => setTheme('dark')}
+                          className={cn(
+                            "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all",
+                            theme === 'dark' 
+                              ? "bg-background shadow-sm" 
+                              : "hover:bg-background/50"
+                          )}
+                        >
+                          {theme === 'dark' && <Check className="h-3 w-3" />}
+                          Dark
+                        </button>
+                        <button
+                          onClick={() => setTheme('gray')}
+                          className={cn(
+                            "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all",
+                            theme === 'gray' 
+                              ? "bg-background shadow-sm" 
+                              : "hover:bg-background/50"
+                          )}
+                        >
+                          {theme === 'gray' && <Check className="h-3 w-3" />}
+                          Gray
+                        </button>
+                        <button
+                          onClick={() => setTheme('light')}
+                          className={cn(
+                            "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all",
+                            theme === 'light' 
+                              ? "bg-background shadow-sm" 
+                              : "hover:bg-background/50"
+                          )}
+                        >
+                          {theme === 'light' && <Check className="h-3 w-3" />}
+                          Light
+                        </button>
+                        <button
+                          onClick={() => setTheme('custom')}
+                          className={cn(
+                            "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all",
+                            theme === 'custom' 
+                              ? "bg-background shadow-sm" 
+                              : "hover:bg-background/50"
+                          )}
+                        >
+                          {theme === 'custom' && <Check className="h-3 w-3" />}
+                          Custom
+                        </button>
+                      </div>
                     </div>
                     
                     {/* Custom Color Editor */}
                     {theme === 'custom' && (
                       <div className="space-y-4 p-4 border rounded-lg bg-muted/20">
-                        <h4 className="text-sm font-medium">Custom Theme Colors</h4>
+                        <h4 className="text-label">Custom Theme Colors</h4>
                         
                         <div className="grid grid-cols-2 gap-4">
                           {/* Background Color */}
                           <div className="space-y-2">
-                            <Label htmlFor="color-background" className="text-xs">Background</Label>
+                            <Label htmlFor="color-background" className="text-caption">Background</Label>
                             <div className="flex gap-2">
                               <Input
                                 id="color-background"
@@ -576,7 +614,7 @@ export const Settings: React.FC<SettingsProps> = ({
                           
                           {/* Foreground Color */}
                           <div className="space-y-2">
-                            <Label htmlFor="color-foreground" className="text-xs">Foreground</Label>
+                            <Label htmlFor="color-foreground" className="text-caption">Foreground</Label>
                             <div className="flex gap-2">
                               <Input
                                 id="color-foreground"
@@ -595,7 +633,7 @@ export const Settings: React.FC<SettingsProps> = ({
                           
                           {/* Primary Color */}
                           <div className="space-y-2">
-                            <Label htmlFor="color-primary" className="text-xs">Primary</Label>
+                            <Label htmlFor="color-primary" className="text-caption">Primary</Label>
                             <div className="flex gap-2">
                               <Input
                                 id="color-primary"
@@ -614,7 +652,7 @@ export const Settings: React.FC<SettingsProps> = ({
                           
                           {/* Card Color */}
                           <div className="space-y-2">
-                            <Label htmlFor="color-card" className="text-xs">Card</Label>
+                            <Label htmlFor="color-card" className="text-caption">Card</Label>
                             <div className="flex gap-2">
                               <Input
                                 id="color-card"
@@ -633,7 +671,7 @@ export const Settings: React.FC<SettingsProps> = ({
                           
                           {/* Accent Color */}
                           <div className="space-y-2">
-                            <Label htmlFor="color-accent" className="text-xs">Accent</Label>
+                            <Label htmlFor="color-accent" className="text-caption">Accent</Label>
                             <div className="flex gap-2">
                               <Input
                                 id="color-accent"
@@ -652,7 +690,7 @@ export const Settings: React.FC<SettingsProps> = ({
                           
                           {/* Destructive Color */}
                           <div className="space-y-2">
-                            <Label htmlFor="color-destructive" className="text-xs">Destructive</Label>
+                            <Label htmlFor="color-destructive" className="text-caption">Destructive</Label>
                             <div className="flex gap-2">
                               <Input
                                 id="color-destructive"
@@ -670,7 +708,7 @@ export const Settings: React.FC<SettingsProps> = ({
                           </div>
                         </div>
                         
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-caption text-muted-foreground">
                           Use CSS color values (hex, rgb, oklch, etc.). Changes apply immediately.
                         </p>
                       </div>
@@ -680,7 +718,7 @@ export const Settings: React.FC<SettingsProps> = ({
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5 flex-1">
                         <Label htmlFor="coauthored">Include "Co-authored by Claude"</Label>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-caption text-muted-foreground">
                           Add Claude attribution to git commits and pull requests
                         </p>
                       </div>
@@ -695,7 +733,7 @@ export const Settings: React.FC<SettingsProps> = ({
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5 flex-1">
                         <Label htmlFor="verbose">Verbose Output</Label>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-caption text-muted-foreground">
                           Show full bash and command outputs
                         </p>
                       </div>
@@ -708,40 +746,144 @@ export const Settings: React.FC<SettingsProps> = ({
                     
                     {/* Cleanup Period */}
                     <div className="space-y-2">
-                      <Label htmlFor="cleanup">Chat Transcript Retention (days)</Label>
-                      <Input
-                        id="cleanup"
-                        type="number"
-                        min="1"
-                        placeholder="30"
-                        value={settings?.cleanupPeriodDays || ""}
-                        onChange={(e) => {
-                          const value = e.target.value ? parseInt(e.target.value) : undefined;
-                          updateSetting("cleanupPeriodDays", value);
-                        }}
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        How long to retain chat transcripts locally (default: 30 days)
-                      </p>
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <Label htmlFor="cleanup">Chat Transcript Retention (days)</Label>
+                          <p className="text-caption text-muted-foreground mt-1">
+                            How long to retain chat transcripts locally (default: 30 days)
+                          </p>
+                        </div>
+                        <Input
+                          id="cleanup"
+                          type="number"
+                          min="1"
+                          placeholder="30"
+                          value={settings?.cleanupPeriodDays || ""}
+                          onChange={(e) => {
+                            const value = e.target.value ? parseInt(e.target.value) : undefined;
+                            updateSetting("cleanupPeriodDays", value);
+                          }}
+                          className="w-24"
+                        />
+                      </div>
                     </div>
                     
                     {/* Claude Binary Path Selector */}
-                    <div className="space-y-4">
-                      <div>
-                        <Label className="text-sm font-medium mb-2 block">Claude Code Installation</Label>
-                        <p className="text-xs text-muted-foreground mb-4">
-                          Select which Claude Code installation to use.
-                        </p>
-                      </div>
+                    <div className="space-y-3">
                       <ClaudeVersionSelector
                         selectedPath={currentBinaryPath}
                         onSelect={handleClaudeInstallationSelect}
+                        simplified={true}
                       />
                       {binaryPathChanged && (
-                        <p className="text-xs text-amber-600 dark:text-amber-400">
-                          ⚠️ Claude binary path has been changed. Remember to save your settings.
+                        <p className="text-caption text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                          <AlertCircle className="h-3 w-3" />
+                          Changes will be applied when you save settings.
                         </p>
                       )}
+                    </div>
+
+                    {/* Separator */}
+                    <div className="border-t border-border pt-4 mt-6" />
+                    
+                    {/* Analytics Toggle */}
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <Label htmlFor="analytics-enabled">Enable Analytics</Label>
+                        <p className="text-caption text-muted-foreground">
+                          Help improve Claudia by sharing anonymous usage data
+                        </p>
+                      </div>
+                      <Switch
+                        id="analytics-enabled"
+                        checked={analyticsEnabled}
+                        onCheckedChange={async (checked) => {
+                          if (checked && !analyticsConsented) {
+                            setShowAnalyticsConsent(true);
+                          } else if (checked) {
+                            await analytics.enable();
+                            setAnalyticsEnabled(true);
+                            trackEvent.settingsChanged('analytics_enabled', true);
+                            setToast({ message: "Analytics enabled", type: "success" });
+                          } else {
+                            await analytics.disable();
+                            setAnalyticsEnabled(false);
+                            trackEvent.settingsChanged('analytics_enabled', false);
+                            setToast({ message: "Analytics disabled", type: "success" });
+                          }
+                        }}
+                      />
+                    </div>
+                    
+                    {/* Privacy Info */}
+                    {analyticsEnabled && (
+                      <div className="rounded-lg border border-border bg-muted/50 p-3">
+                        <div className="flex gap-2">
+                          <Shield className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+                          <div className="space-y-1">
+                            <p className="text-xs font-medium text-foreground">Your privacy is protected</p>
+                            <ul className="text-xs text-muted-foreground space-y-0.5">
+                              <li>• No personal information or file contents collected</li>
+                              <li>• All data is anonymous with random IDs</li>
+                              <li>• You can disable analytics at any time</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Tab Persistence Toggle */}
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <Label htmlFor="tab-persistence">Remember Open Tabs</Label>
+                        <p className="text-caption text-muted-foreground">
+                          Restore your tabs when you restart the app
+                        </p>
+                      </div>
+                      <Switch
+                        id="tab-persistence"
+                        checked={tabPersistenceEnabled}
+                        onCheckedChange={(checked) => {
+                          TabPersistenceService.setEnabled(checked);
+                          setTabPersistenceEnabled(checked);
+                          trackEvent.settingsChanged('tab_persistence_enabled', checked);
+                          setToast({ 
+                            message: checked 
+                              ? "Tab persistence enabled - your tabs will be restored on restart" 
+                              : "Tab persistence disabled - tabs will not be saved", 
+                            type: "success" 
+                          });
+                        }}
+                      />
+                    </div>
+
+                    {/* Startup Intro Toggle */}
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <Label htmlFor="startup-intro">Show Welcome Intro on Startup</Label>
+                        <p className="text-caption text-muted-foreground">
+                          Display a brief welcome animation when the app launches
+                        </p>
+                      </div>
+                      <Switch
+                        id="startup-intro"
+                        checked={startupIntroEnabled}
+                        onCheckedChange={async (checked) => {
+                          setStartupIntroEnabled(checked);
+                          try {
+                            await api.saveSetting('startup_intro_enabled', checked ? 'true' : 'false');
+                            trackEvent.settingsChanged('startup_intro_enabled', checked);
+                            setToast({ 
+                              message: checked 
+                                ? 'Welcome intro enabled' 
+                                : 'Welcome intro disabled', 
+                              type: 'success' 
+                            });
+                          } catch (e) {
+                            setToast({ message: 'Failed to update preference', type: 'error' });
+                          }
+                        }}
+                      />
                     </div>
                   </div>
                 </div>
@@ -753,8 +895,8 @@ export const Settings: React.FC<SettingsProps> = ({
               <Card className="p-6">
                 <div className="space-y-6">
                   <div>
-                    <h3 className="text-base font-semibold mb-2">Permission Rules</h3>
-                    <p className="text-sm text-muted-foreground mb-4">
+                    <h3 className="text-heading-4 mb-2">Permission Rules</h3>
+                    <p className="text-body-small text-muted-foreground mb-4">
                       Control which tools Claude Code can use without manual approval
                     </p>
                   </div>
@@ -762,7 +904,7 @@ export const Settings: React.FC<SettingsProps> = ({
                   {/* Allow Rules */}
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <Label className="text-sm font-medium text-green-500">Allow Rules</Label>
+                      <Label className="text-label text-green-500">Allow Rules</Label>
                       <Button
                         variant="outline"
                         size="sm"
@@ -782,8 +924,9 @@ export const Settings: React.FC<SettingsProps> = ({
                         allowRules.map((rule) => (
                           <motion.div
                             key={rule.id}
-                            initial={{ opacity: 0, x: -20 }}
+                            initial={{ opacity: 0, x: -8 }}
                             animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.15 }}
                             className="flex items-center gap-2"
                           >
                             <Input
@@ -809,7 +952,7 @@ export const Settings: React.FC<SettingsProps> = ({
                   {/* Deny Rules */}
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <Label className="text-sm font-medium text-red-500">Deny Rules</Label>
+                      <Label className="text-label text-red-500">Deny Rules</Label>
                       <Button
                         variant="outline"
                         size="sm"
@@ -829,8 +972,9 @@ export const Settings: React.FC<SettingsProps> = ({
                         denyRules.map((rule) => (
                           <motion.div
                             key={rule.id}
-                            initial={{ opacity: 0, x: -20 }}
+                            initial={{ opacity: 0, x: -8 }}
                             animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.15 }}
                             className="flex items-center gap-2"
                           >
                             <Input
@@ -857,7 +1001,7 @@ export const Settings: React.FC<SettingsProps> = ({
                     <p className="text-xs text-muted-foreground">
                       <strong>Examples:</strong>
                     </p>
-                    <ul className="text-xs text-muted-foreground space-y-1 ml-4">
+                    <ul className="text-caption text-muted-foreground space-y-1 ml-4">
                       <li>• <code className="px-1 py-0.5 rounded bg-green-500/10 text-green-600 dark:text-green-400">Bash</code> - Allow all bash commands</li>
                       <li>• <code className="px-1 py-0.5 rounded bg-green-500/10 text-green-600 dark:text-green-400">Bash(npm run build)</code> - Allow exact command</li>
                       <li>• <code className="px-1 py-0.5 rounded bg-green-500/10 text-green-600 dark:text-green-400">Bash(npm run test:*)</code> - Allow commands with prefix</li>
@@ -875,7 +1019,7 @@ export const Settings: React.FC<SettingsProps> = ({
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-base font-semibold">Environment Variables</h3>
+                      <h3 className="text-heading-4">Environment Variables</h3>
                       <p className="text-sm text-muted-foreground mt-1">
                         Environment variables applied to every Claude Code session
                       </p>
@@ -934,7 +1078,7 @@ export const Settings: React.FC<SettingsProps> = ({
                     <p className="text-xs text-muted-foreground">
                       <strong>Common variables:</strong>
                     </p>
-                    <ul className="text-xs text-muted-foreground space-y-1 ml-4">
+                    <ul className="text-caption text-muted-foreground space-y-1 ml-4">
                       <li>• <code className="px-1 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400">CLAUDE_CODE_ENABLE_TELEMETRY</code> - Enable/disable telemetry (0 or 1)</li>
                       <li>• <code className="px-1 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400">ANTHROPIC_MODEL</code> - Custom model name</li>
                       <li>• <code className="px-1 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400">DISABLE_COST_WARNINGS</code> - Disable cost warnings (1)</li>
@@ -1250,7 +1394,7 @@ export const Settings: React.FC<SettingsProps> = ({
                 <div className="space-y-4">
                   <div>
                     <h3 className="text-base font-semibold mb-2">User Hooks</h3>
-                    <p className="text-sm text-muted-foreground mb-4">
+                    <p className="text-body-small text-muted-foreground mb-4">
                       Configure hooks that apply to all Claude Code sessions for your user account.
                       These are stored in <code className="mx-1 px-2 py-1 bg-muted rounded text-xs">~/.claude/settings.json</code>
                     </p>
@@ -1295,96 +1439,6 @@ export const Settings: React.FC<SettingsProps> = ({
               </Card>
             </TabsContent>
             
-            {/* Analytics Settings */}
-            <TabsContent value="analytics" className="space-y-6">
-              <Card className="p-6 space-y-6">
-                <div>
-                  <div className="flex items-center gap-3 mb-4">
-                    <BarChart3 className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-                    <h3 className="text-base font-semibold">Analytics Settings</h3>
-                  </div>
-                  
-                  <div className="space-y-6">
-                    {/* Analytics Toggle */}
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <Label htmlFor="analytics-enabled" className="text-base">Enable Analytics</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Help improve Claudia by sharing anonymous usage data
-                        </p>
-                      </div>
-                      <Switch
-                        id="analytics-enabled"
-                        checked={analyticsEnabled}
-                        onCheckedChange={async (checked) => {
-                          if (checked && !analyticsConsented) {
-                            setShowAnalyticsConsent(true);
-                          } else if (checked) {
-                            await analytics.enable();
-                            setAnalyticsEnabled(true);
-                            trackEvent.settingsChanged('analytics_enabled', true);
-                            setToast({ message: "Analytics enabled", type: "success" });
-                          } else {
-                            await analytics.disable();
-                            setAnalyticsEnabled(false);
-                            trackEvent.settingsChanged('analytics_enabled', false);
-                            setToast({ message: "Analytics disabled", type: "success" });
-                          }
-                        }}
-                      />
-                    </div>
-                    
-                    {/* Privacy Info */}
-                    <div className="rounded-lg border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/20 p-4">
-                      <div className="flex gap-3">
-                        <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-                        <div className="space-y-2">
-                          <p className="font-medium text-blue-900 dark:text-blue-100">Your privacy is protected</p>
-                          <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
-                            <li>• No personal information is collected</li>
-                            <li>• No file contents, paths, or project names</li>
-                            <li>• All data is anonymous with random IDs</li>
-                            <li>• You can disable analytics at any time</li>
-                          </ul>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Data Collection Info */}
-                    {analyticsEnabled && (
-                      <div className="space-y-4">
-                        <div>
-                          <h4 className="text-sm font-medium mb-2">What we collect:</h4>
-                          <ul className="text-sm text-muted-foreground space-y-1">
-                            <li>• Feature usage patterns</li>
-                            <li>• Performance metrics</li>
-                            <li>• Error reports (without sensitive data)</li>
-                            <li>• Session frequency and duration</li>
-                          </ul>
-                        </div>
-                        
-                        {/* Delete Data Button */}
-                        <div className="pt-4 border-t">
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={async () => {
-                              await analytics.deleteAllData();
-                              setAnalyticsEnabled(false);
-                              setAnalyticsConsented(false);
-                              setToast({ message: "All analytics data deleted", type: "success" });
-                            }}
-                          >
-                            <Trash className="mr-2 h-4 w-4" />
-                            Delete All Analytics Data
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </Card>
-            </TabsContent>
           </Tabs>
         </div>
       )}
