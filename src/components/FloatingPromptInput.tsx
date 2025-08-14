@@ -680,7 +680,6 @@ const FloatingPromptInputInner = (
       return;
     }
 
-    // 在中文輸入法組字期間，不要觸發送出（部分瀏覽器 keyCode 會是 229）
     const composing = (e as any).nativeEvent?.isComposing || isComposing || (e as any).keyCode === 229;
     if (e.key === "Enter" && !e.shiftKey && !isExpanded && !showFilePicker && !showSlashCommandPicker && !composing) {
       e.preventDefault();
