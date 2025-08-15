@@ -1056,22 +1056,6 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
                       <p className="text-xs text-muted-foreground">{t.settings.apiKeyHelperDesc}</p>
                     </div>
 
-                    {/* Claude Code Installation */}
-                    <div className="space-y-4">
-                      <div>
-                        <Label className="text-sm font-medium mb-2 block">
-                          {t.settings.claudeInstallation}
-                        </Label>
-                        <p className="text-xs text-muted-foreground mb-4">
-                          {t.settings.claudeInstallationDesc}
-                        </p>
-                      </div>
-                      {binaryPathChanged && (
-                        <p className="text-xs text-amber-600 dark:text-amber-400">
-                          {t.settings.binaryPathChanged}
-                        </p>
-                      )}
-                    </div>
 
                     {/* Font Scale */}
                     <div className="space-y-4">

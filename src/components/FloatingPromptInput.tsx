@@ -1025,9 +1025,18 @@ const FloatingPromptInputInner = (
       <div
         className={cn(
           "fixed bottom-0 left-0 right-0 z-40 bg-background border-t border-border",
+          "transform-gpu will-change-transform", // 优化GPU渲染和布局稳定性
           dragActive && "ring-2 ring-primary ring-offset-2",
           className
         )}
+        style={{
+          position: "fixed", // 强制固定定位
+          bottom: 0,
+          left: 0,
+          right: 0,
+          zIndex: 40, // 确保z-index
+          isolation: "isolate", // 创建新的stacking context
+        }}
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}
         onDragOver={handleDrag}

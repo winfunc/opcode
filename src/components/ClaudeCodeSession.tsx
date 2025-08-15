@@ -1281,15 +1281,32 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       }
     };
 
+    // Handle window resize to prevent input box layout issues
+    const handleWindowResize = () => {
+      // Force a reflow to ensure floating input stays at bottom
+      const floatingInput = document.querySelector('[class*="fixed bottom-0"]') as HTMLElement;
+      if (floatingInput) {
+        // Briefly remove and restore the fixed positioning to trigger relayout
+        const originalPosition = floatingInput.style.position;
+        floatingInput.style.position = 'absolute';
+        // Use requestAnimationFrame to ensure the change is processed
+        requestAnimationFrame(() => {
+          floatingInput.style.position = originalPosition || 'fixed';
+        });
+      }
+    };
+
     window.addEventListener("tab-cleanup", handleTabCleanup);
+    window.addEventListener("resize", handleWindowResize);
 
     return () => {
       logger.debug("[ClaudeCodeSession] Component unmounting, cleaning up listeners");
       isMountedRef.current = false;
       isListeningRef.current = false;
 
-      // Remove the tab-cleanup event listener
+      // Remove the event listeners
       window.removeEventListener("tab-cleanup", handleTabCleanup);
+      window.removeEventListener("resize", handleWindowResize);
 
       // Clean up listeners when component unmounts
       unlistenRefs.current.forEach((unlisten) => unlisten());
