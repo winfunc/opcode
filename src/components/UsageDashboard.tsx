@@ -172,6 +172,7 @@ export const UsageDashboard: React.FC<UsageDashboardProps> = ({ onBack }) => {
   const getModelDisplayName = (model: string): string => {
     const modelMap: Record<string, string> = {
       "claude-4-opus": "Opus 4",
+      "claude-opus-4-1-20250805": "Opus 4.1",
       "claude-4-sonnet": "Sonnet 4",
       "claude-3.5-sonnet": "Sonnet 3.5",
       "claude-3-opus": "Opus 3",

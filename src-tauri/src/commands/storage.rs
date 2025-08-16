@@ -442,6 +442,9 @@ pub async fn storage_reset_database(app: AppHandle) -> Result<(), String> {
         conn.execute("PRAGMA foreign_keys = OFF", [])
             .map_err(|e| format!("Failed to disable foreign keys: {}", e))?;
         
+        // Drop indexes first (they will be dropped with tables anyway, but being explicit)
+        let _ = conn.execute("DROP INDEX IF EXISTS idx_env_vars_group_key", []);
+        
         // Drop tables - order doesn't matter with foreign keys disabled
         conn.execute("DROP TABLE IF EXISTS agent_runs", [])
             .map_err(|e| format!("Failed to drop agent_runs table: {}", e))?;
@@ -449,6 +452,10 @@ pub async fn storage_reset_database(app: AppHandle) -> Result<(), String> {
             .map_err(|e| format!("Failed to drop agents table: {}", e))?;
         conn.execute("DROP TABLE IF EXISTS app_settings", [])
             .map_err(|e| format!("Failed to drop app_settings table: {}", e))?;
+        conn.execute("DROP TABLE IF EXISTS environment_variables", [])
+            .map_err(|e| format!("Failed to drop environment_variables table: {}", e))?;
+        conn.execute("DROP TABLE IF EXISTS environment_variable_groups", [])
+            .map_err(|e| format!("Failed to drop environment_variable_groups table: {}", e))?;
         
         // Re-enable foreign key constraints
         conn.execute("PRAGMA foreign_keys = ON", [])

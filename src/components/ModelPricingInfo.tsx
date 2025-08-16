@@ -130,9 +130,15 @@ export const ModelPricingInfo: React.FC<ModelPricingInfoProps> = ({
           <h4 className="text-sm font-medium mb-3">缓存功能定价</h4>
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <span className="text-muted-foreground">{t.agents.cacheWrite}:</span>
+              <span className="text-muted-foreground">5m Cache Write:</span>
               <span className="ml-2 font-medium">{formatPrice(pricing.cacheWritePrice)}/M</span>
             </div>
+            {pricing.cacheWrite1hPrice && (
+              <div>
+                <span className="text-muted-foreground">1h Cache Write:</span>
+                <span className="ml-2 font-medium">{formatPrice(pricing.cacheWrite1hPrice)}/M</span>
+              </div>
+            )}
             <div>
               <span className="text-muted-foreground">{t.agents.cacheRead}:</span>
               <span className="ml-2 font-medium">{formatPrice(pricing.cacheReadPrice)}/M</span>

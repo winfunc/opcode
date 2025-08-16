@@ -339,9 +339,17 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   }, [session]);
 
   const loadSessionHistory = useCallback(async () => {
-    if (!session?.id) return;
+    if (!session?.id) {
+      logger.debug("[ClaudeCodeSession] No session ID, clearing messages");
+      setMessages([]);
+      return;
+    }
 
-    setIsLoading(true);
+    // Only show loading if we don't have any messages yet
+    const shouldShowLoading = messages.length === 0;
+    if (shouldShowLoading) {
+      setIsLoading(true);
+    }
     try {
       logger.debug("[ClaudeCodeSession] Loading session history for:", session.id);
       
@@ -373,18 +381,26 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       }
       
       logger.debug("[ClaudeCodeSession] Loaded", parsedMessages.length, "messages");
-      setMessages(parsedMessages);
+      
+      // Only update messages if component is still mounted
+      if (isMountedRef.current) {
+        setMessages(parsedMessages);
+      }
     } catch (err) {
       logger.error("[ClaudeCodeSession] Failed to load session history:", err);
-      await handleApiError(err as Error, {
-        operation: "loadSessionHistory",
-        component: "ClaudeCodeSession",
-        sessionId: session.id,
-      });
+      if (isMountedRef.current) {
+        await handleApiError(err as Error, {
+          operation: "loadSessionHistory",
+          component: "ClaudeCodeSession",
+          sessionId: session.id,
+        });
+      }
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current && shouldShowLoading) {
+        setIsLoading(false);
+      }
     }
-  }, [session?.id, session?.project_id]);
+  }, [session?.id, session?.project_id, messages.length]);
 
   // Report streaming state changes
   useEffect(() => {
@@ -413,12 +429,59 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         // After loading history, check if the session is still active
         if (isMountedRef.current) {
           await checkForActiveSession();
+          
+          // Set up listeners for resumed sessions
+          if (!isListeningRef.current) {
+            try {
+              isListeningRef.current = true;
+              
+              // Set up session-specific listeners for resumed sessions
+              const resumedOutputUnlisten = await listen<string>(
+                `claude-output:${session.id}`,
+                async (event) => {
+                  if (!isMountedRef.current) return;
+                  
+                  try {
+                    setRawJsonlOutput((prev) => [...prev, event.payload]);
+                    const message = JSON.parse(event.payload) as ClaudeStreamMessage;
+                    setMessages((prev) => [...prev, message]);
+                  } catch (err) {
+                    logger.error("Failed to parse resumed session message:", err);
+                  }
+                }
+              );
+
+              const resumedErrorUnlisten = await listen<string>(`claude-error:${session.id}`, (event) => {
+                logger.error("Claude error (resumed):", event.payload);
+                if (isMountedRef.current) {
+                  setError(event.payload);
+                }
+              });
+
+              const resumedCompleteUnlisten = await listen<boolean>(
+                `claude-complete:${session.id}`,
+                (event) => {
+                  logger.debug("Claude complete (resumed):", event.payload);
+                  if (isMountedRef.current) {
+                    setIsLoading(false);
+                    hasActiveSessionRef.current = false;
+                  }
+                }
+              );
+
+              // Store the listeners for cleanup
+              unlistenRefs.current = [resumedOutputUnlisten, resumedErrorUnlisten, resumedCompleteUnlisten];
+            } catch (err) {
+              logger.error("Failed to set up resumed session listeners:", err);
+              isListeningRef.current = false;
+            }
+          }
         }
       };
 
       initializeSession();
     }
-  }, [session?.id]); // Only depend on session.id to avoid unnecessary re-runs
+  }, [session?.id, loadSessionHistory, checkForActiveSession]); // Include all dependencies
 
   // Calculate total tokens from messages
   useEffect(() => {
@@ -1266,6 +1329,18 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   // Cleanup event listeners and track mount state
   useEffect(() => {
     isMountedRef.current = true;
+    // Reset listening state when component mounts to ensure clean state
+    isListeningRef.current = false;
+    
+    // Reset other states to ensure clean initialization
+    setError(null);
+    setRawJsonlOutput([]);
+    setQueuedPrompts([]);
+    
+    // Reset session refs
+    hasActiveSessionRef.current = false;
+
+    // No longer need position fixing since we removed inline styles
 
     // Listen for tab-cleanup events to determine if we should cancel the session
     const handleTabCleanup = (event: Event) => {
@@ -1281,20 +1356,11 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       }
     };
 
-    // Handle window resize to prevent input box layout issues
+    // Handle window resize (placeholder for future features)
     const handleWindowResize = () => {
-      // Force a reflow to ensure floating input stays at bottom
-      const floatingInput = document.querySelector('[class*="fixed bottom-0"]') as HTMLElement;
-      if (floatingInput) {
-        // Briefly remove and restore the fixed positioning to trigger relayout
-        const originalPosition = floatingInput.style.position;
-        floatingInput.style.position = 'absolute';
-        // Use requestAnimationFrame to ensure the change is processed
-        requestAnimationFrame(() => {
-          floatingInput.style.position = originalPosition || 'fixed';
-        });
-      }
+      // Placeholder for window resize handling
     };
+
 
     window.addEventListener("tab-cleanup", handleTabCleanup);
     window.addEventListener("resize", handleWindowResize);
@@ -1303,6 +1369,8 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       logger.debug("[ClaudeCodeSession] Component unmounting, cleaning up listeners");
       isMountedRef.current = false;
       isListeningRef.current = false;
+
+      // Component cleanup
 
       // Remove the event listeners
       window.removeEventListener("tab-cleanup", handleTabCleanup);
@@ -1642,12 +1710,22 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
               {projectPathInput}
               {messagesList}
 
-              {isLoading && messages.length === 0 && (
+              {isLoading && messages.length === 0 && !session && (
                 <div className="flex items-center justify-center h-full">
                   <div className="flex items-center gap-3">
                     <div className="rotating-symbol text-primary" />
                     <span className="text-sm text-muted-foreground">
-                      {session ? "Loading session history..." : "Initializing Claude Code..."}
+                      Initializing Claude Code...
+                    </span>
+                  </div>
+                </div>
+              )}
+              {isLoading && messages.length === 0 && session && (
+                <div className="flex items-center justify-center h-full">
+                  <div className="flex items-center gap-3">
+                    <div className="rotating-symbol text-primary" />
+                    <span className="text-sm text-muted-foreground">
+                      Loading session history...
                     </span>
                   </div>
                 </div>
@@ -1801,21 +1879,17 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
             </motion.div>
           )}
 
-          <div
+          <FloatingPromptInput
+            ref={floatingPromptRef}
+            onSend={handleSendPrompt}
+            onCancel={handleCancelExecution}
+            isLoading={isLoading}
+            disabled={!projectPath}
+            projectPath={projectPath}
             className={cn(
-              "fixed bottom-0 left-0 right-0 transition-all duration-300 z-50",
               showTimeline && "sm:right-96"
             )}
-          >
-            <FloatingPromptInput
-              ref={floatingPromptRef}
-              onSend={handleSendPrompt}
-              onCancel={handleCancelExecution}
-              isLoading={isLoading}
-              disabled={!projectPath}
-              projectPath={projectPath}
-            />
-          </div>
+          />
 
           {/* Token Counter - positioned under the Send button */}
           {totalTokens > 0 && (

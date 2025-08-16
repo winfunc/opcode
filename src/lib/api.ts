@@ -312,6 +312,31 @@ export interface SessionTimeline {
 export type CheckpointStrategy = "manual" | "per_prompt" | "per_tool_use" | "smart";
 
 /**
+ * Represents an environment variable stored in the database
+ */
+export interface EnvironmentVariableGroup {
+  id?: number;
+  name: string;
+  description?: string;
+  enabled: boolean;
+  sort_order: number;
+  is_system: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface EnvironmentVariable {
+  id?: number;
+  key: string;
+  value: string;
+  enabled: boolean;
+  group_id?: number;
+  sort_order: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+/**
  * Result of a checkpoint operation
  */
 export interface CheckpointResult {
@@ -1992,4 +2017,127 @@ export const api = {
   /**
    * Gets checkpoint state statistics (for debugging/monitoring)
    */
+
+  // Environment Variables API methods
+
+  /**
+   * Gets all environment variables from database
+   * @returns Promise resolving to array of environment variables
+   */
+  async getEnvironmentVariables(): Promise<EnvironmentVariable[]> {
+    try {
+      return await invoke<EnvironmentVariable[]>("get_environment_variables");
+    } catch (error) {
+      logger.error("Failed to get environment variables:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Saves environment variables to database (replacing all existing ones)
+   * @param envVars - Array of environment variables to save
+   * @returns Promise resolving when variables are saved
+   */
+  async saveEnvironmentVariables(envVars: EnvironmentVariable[]): Promise<void> {
+    try {
+      return await invoke("save_environment_variables", { envVars });
+    } catch (error) {
+      logger.error("Failed to save environment variables:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Gets all environment variable groups
+   * @returns Promise resolving to array of environment variable groups
+   */
+  async getEnvironmentVariableGroups(): Promise<EnvironmentVariableGroup[]> {
+    try {
+      return await invoke("get_environment_variable_groups");
+    } catch (error) {
+      logger.error("Failed to get environment variable groups:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Creates a new environment variable group
+   * @param name - Group name
+   * @param description - Optional group description
+   * @param sortOrder - Optional sort order
+   * @returns Promise resolving to the created group
+   */
+  async createEnvironmentVariableGroup(
+    name: string,
+    description?: string,
+    sortOrder?: number
+  ): Promise<EnvironmentVariableGroup> {
+    try {
+      return await invoke("create_environment_variable_group", {
+        name,
+        description,
+        sortOrder,
+      });
+    } catch (error) {
+      logger.error("Failed to create environment variable group:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Updates an environment variable group
+   * @param id - Group ID
+   * @param name - Group name
+   * @param description - Optional group description
+   * @param enabled - Whether the group is enabled
+   * @param sortOrder - Sort order
+   * @returns Promise resolving to the updated group
+   */
+  async updateEnvironmentVariableGroup(
+    id: number,
+    name: string,
+    description: string | undefined,
+    enabled: boolean,
+    sortOrder: number
+  ): Promise<EnvironmentVariableGroup> {
+    try {
+      return await invoke("update_environment_variable_group", {
+        id,
+        name,
+        description,
+        enabled,
+        sortOrder,
+      });
+    } catch (error) {
+      logger.error("Failed to update environment variable group:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Deletes an environment variable group
+   * @param id - Group ID
+   * @returns Promise resolving when group is deleted
+   */
+  async deleteEnvironmentVariableGroup(id: number): Promise<void> {
+    try {
+      return await invoke("delete_environment_variable_group", { id });
+    } catch (error) {
+      logger.error("Failed to delete environment variable group:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Gets enabled environment variables as key-value pairs for use in processes
+   * @returns Promise resolving to enabled environment variables
+   */
+  async getEnabledEnvironmentVariables(): Promise<Record<string, string>> {
+    try {
+      return await invoke<Record<string, string>>("get_enabled_environment_variables");
+    } catch (error) {
+      logger.error("Failed to get enabled environment variables:", error);
+      throw error;
+    }
+  },
 };

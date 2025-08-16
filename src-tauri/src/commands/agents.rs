@@ -94,6 +94,32 @@ pub struct AgentData {
     pub hooks: Option<String>,
 }
 
+/// Represents an environment variable group
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct EnvironmentVariableGroup {
+    pub id: Option<i64>,
+    pub name: String,
+    pub description: Option<String>,
+    pub enabled: bool,
+    pub sort_order: i32,
+    pub is_system: bool,
+    pub created_at: Option<String>,
+    pub updated_at: Option<String>,
+}
+
+/// Represents an environment variable stored in the database
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct EnvironmentVariable {
+    pub id: Option<i64>,
+    pub key: String,
+    pub value: String,
+    pub enabled: bool,
+    pub group_id: Option<i64>,
+    pub sort_order: i32,
+    pub created_at: Option<String>,
+    pub updated_at: Option<String>,
+}
+
 /// Database connection state
 pub struct AgentDb(pub Mutex<Connection>);
 
@@ -340,6 +366,255 @@ pub fn init_database(app: &AppHandle) -> SqliteResult<Connection> {
         )",
         [],
     )?;
+    // Create environment variable groups table
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS environment_variable_groups (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE,
+            description TEXT,
+            enabled BOOLEAN NOT NULL DEFAULT 1,
+            sort_order INTEGER DEFAULT 0,
+            is_system BOOLEAN NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )",
+        [],
+    )?;
+
+    // Create environment variables table (added in version update)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS environment_variables (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            key TEXT NOT NULL,
+            value TEXT NOT NULL,
+            enabled BOOLEAN NOT NULL DEFAULT 1,
+            group_id INTEGER REFERENCES environment_variable_groups(id),
+            sort_order INTEGER DEFAULT 0,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )",
+        [],
+    )?;
+    
+    // Create a unique index that properly handles NULL group_id values
+    // This allows same key names in different groups, including the default group (NULL/0)
+    conn.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_env_vars_group_key 
+         ON environment_variables(COALESCE(group_id, 0), key)",
+        [],
+    )?;
+    
+    // Check if we need to migrate the environment_variables table to fix UNIQUE constraint issues
+    {
+        // Check if the table has the old UNIQUE constraint that needs to be removed
+        let mut needs_constraint_migration = false;
+        
+        if let Ok(mut stmt) = conn.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='environment_variables'") {
+            if let Ok(mut rows) = stmt.query([]) {
+                if let Some(row) = rows.next().unwrap_or(None) {
+                    if let Ok(sql) = row.get::<_, String>(0) {
+                        if sql.contains("UNIQUE(group_id, key)") || sql.contains("UNIQUE(key)") {
+                            needs_constraint_migration = true;
+                            log::info!("Detected old UNIQUE constraint in environment_variables table, migrating...");
+                        }
+                    }
+                }
+            }
+        }
+        
+        if needs_constraint_migration {
+            // Backup existing data
+            let _ = conn.execute(
+                "CREATE TABLE environment_variables_constraint_backup AS SELECT * FROM environment_variables",
+                [],
+            );
+            
+            // Drop the old table
+            let _ = conn.execute("DROP TABLE environment_variables", []);
+            
+            // Recreate table with correct structure (no table-level UNIQUE constraint)
+            conn.execute(
+                "CREATE TABLE environment_variables (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    key TEXT NOT NULL,
+                    value TEXT NOT NULL,
+                    enabled BOOLEAN NOT NULL DEFAULT 1,
+                    group_id INTEGER REFERENCES environment_variable_groups(id),
+                    sort_order INTEGER DEFAULT 0,
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )",
+                [],
+            )?;
+            
+            // Create the correct unique index
+            conn.execute(
+                "CREATE UNIQUE INDEX idx_env_vars_group_key 
+                 ON environment_variables(COALESCE(group_id, 0), key)",
+                [],
+            )?;
+            
+            // Restore data, handling potential duplicates by keeping the first occurrence
+            if let Ok(mut stmt) = conn.prepare(
+                "SELECT DISTINCT key, value, enabled, group_id, sort_order, created_at, updated_at 
+                 FROM environment_variables_constraint_backup 
+                 ORDER BY id"
+            ) {
+                if let Ok(rows) = stmt.query_map([], |row| {
+                    Ok((
+                        row.get::<_, String>(0)?,  // key
+                        row.get::<_, String>(1)?,  // value
+                        row.get::<_, bool>(2)?,    // enabled
+                        row.get::<_, Option<i64>>(3)?, // group_id
+                        row.get::<_, i64>(4)?,     // sort_order
+                        row.get::<_, String>(5)?,  // created_at
+                        row.get::<_, String>(6)?,  // updated_at
+                    ))
+                }) {
+                    for row_result in rows {
+                        if let Ok((key, value, enabled, group_id, sort_order, created_at, updated_at)) = row_result {
+                            // Try to insert, ignore if duplicate (due to the unique index)
+                            let _ = conn.execute(
+                                "INSERT OR IGNORE INTO environment_variables 
+                                 (key, value, enabled, group_id, sort_order, created_at, updated_at)
+                                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+                                params![key, value, enabled, group_id, sort_order, created_at, updated_at],
+                            );
+                        }
+                    }
+                }
+            }
+            
+            // Clean up backup table
+            let _ = conn.execute("DROP TABLE environment_variables_constraint_backup", []);
+            
+            log::info!("Successfully migrated environment_variables table constraints");
+        }
+    }
+    
+    // Check if environment_variables table has all required columns and fix if needed
+    {
+        let mut has_id_column = false;
+        let mut has_enabled_column = false;
+        let mut has_group_id_column = false;
+        let mut has_sort_order_column = false;
+        
+        if let Ok(mut stmt) = conn.prepare("PRAGMA table_info(environment_variables)") {
+            if let Ok(column_rows) = stmt.query_map([], |row| {
+                Ok(row.get::<_, String>(1)?) // column name
+            }) {
+                for column_result in column_rows {
+                    if let Ok(column_name) = column_result {
+                        match column_name.as_str() {
+                            "id" => has_id_column = true,
+                            "enabled" => has_enabled_column = true,
+                            "group_id" => has_group_id_column = true,
+                            "sort_order" => has_sort_order_column = true,
+                            _ => {}
+                        }
+                    }
+                }
+            }
+        }
+        
+        // If the table doesn't have id column, we need to recreate it
+        if !has_id_column {
+            log::info!("Migrating environment_variables table to add id column");
+            
+            // Create backup table with old data
+            let _ = conn.execute(
+                "CREATE TABLE environment_variables_backup AS SELECT * FROM environment_variables",
+                [],
+            );
+            
+            // Drop old table
+            let _ = conn.execute("DROP TABLE environment_variables", []);
+            
+            // Recreate table with proper structure
+            conn.execute(
+                "CREATE TABLE environment_variables (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    key TEXT NOT NULL,
+                    value TEXT NOT NULL,
+                    enabled BOOLEAN NOT NULL DEFAULT 1,
+                    group_id INTEGER REFERENCES environment_variable_groups(id),
+                    sort_order INTEGER DEFAULT 0,
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )",
+                [],
+            )?;
+            
+            // Create unique index for proper group_id handling
+            conn.execute(
+                "CREATE UNIQUE INDEX idx_env_vars_group_key 
+                 ON environment_variables(COALESCE(group_id, 0), key)",
+                [],
+            )?;
+            
+            // Migrate data from backup (handle missing columns)
+            if has_enabled_column {
+                let _ = conn.execute(
+                    "INSERT INTO environment_variables (key, value, enabled, group_id, sort_order, created_at, updated_at)
+                     SELECT key, value, enabled, NULL, 0,
+                            COALESCE(created_at, CURRENT_TIMESTAMP),
+                            COALESCE(updated_at, CURRENT_TIMESTAMP)
+                     FROM environment_variables_backup",
+                    [],
+                );
+            } else {
+                let _ = conn.execute(
+                    "INSERT INTO environment_variables (key, value, enabled, group_id, sort_order, created_at, updated_at)
+                     SELECT key, value, 1, NULL, 0,
+                            COALESCE(created_at, CURRENT_TIMESTAMP),
+                            COALESCE(updated_at, CURRENT_TIMESTAMP)
+                     FROM environment_variables_backup",
+                    [],
+                );
+            }
+            
+            // Drop backup table
+            let _ = conn.execute("DROP TABLE environment_variables_backup", []);
+            
+            log::info!("Successfully migrated environment_variables table");
+        } else {
+            // Add missing columns individually for existing tables
+            if !has_enabled_column {
+                let _ = conn.execute(
+                    "ALTER TABLE environment_variables ADD COLUMN enabled BOOLEAN NOT NULL DEFAULT 1",
+                    [],
+                );
+                // Ensure all existing rows have enabled = 1
+                let _ = conn.execute(
+                    "UPDATE environment_variables SET enabled = 1 WHERE enabled IS NULL",
+                    [],
+                );
+                log::info!("Added 'enabled' column to existing environment_variables table");
+            }
+            
+            if !has_group_id_column {
+                let _ = conn.execute(
+                    "ALTER TABLE environment_variables ADD COLUMN group_id INTEGER REFERENCES environment_variable_groups(id)",
+                    [],
+                );
+                log::info!("Added 'group_id' column to existing environment_variables table");
+            }
+            
+            if !has_sort_order_column {
+                let _ = conn.execute(
+                    "ALTER TABLE environment_variables ADD COLUMN sort_order INTEGER DEFAULT 0",
+                    [],
+                );
+                // Ensure all existing rows have sort_order = 0
+                let _ = conn.execute(
+                    "UPDATE environment_variables SET sort_order = 0 WHERE sort_order IS NULL",
+                    [],
+                );
+                log::info!("Added 'sort_order' column to existing environment_variables table");
+            }
+        }
+    }
+
 
     // Create trigger to update the updated_at timestamp
     conn.execute(
@@ -348,6 +623,27 @@ pub fn init_database(app: &AppHandle) -> SqliteResult<Connection> {
          FOR EACH ROW
          BEGIN
              UPDATE app_settings SET updated_at = CURRENT_TIMESTAMP WHERE key = NEW.key;
+         END",
+        [],
+    )?;
+    // Create trigger to update environment variables timestamp
+    conn.execute(
+        "CREATE TRIGGER IF NOT EXISTS update_environment_variables_timestamp
+         AFTER UPDATE ON environment_variables
+         FOR EACH ROW
+         BEGIN
+             UPDATE environment_variables SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+         END",
+        [],
+    )?;
+    
+    // Create trigger to update environment variable groups timestamp
+    conn.execute(
+        "CREATE TRIGGER IF NOT EXISTS update_environment_variable_groups_timestamp
+         AFTER UPDATE ON environment_variable_groups
+         FOR EACH ROW
+         BEGIN
+             UPDATE environment_variable_groups SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
          END",
         [],
     )?;
@@ -2649,4 +2945,428 @@ pub async fn delete_native_agents(db: State<'_, AgentDb>) -> Result<u32, String>
 
     info!("Deleted {} native agents from database", deleted);
     Ok(deleted as u32)
+}
+
+// Environment Variables Management Commands
+
+/// Get all environment variables from database
+#[tauri::command]
+pub async fn get_environment_variables(db: State<'_, AgentDb>) -> Result<Vec<EnvironmentVariable>, String> {
+    let conn = db.0.lock().map_err(|e| e.to_string())?;
+    
+    // Ensure the environment_variables table exists with the correct structure
+    // Use a more conservative approach that doesn't drop data
+    let _ = conn.execute(
+        "CREATE TABLE IF NOT EXISTS environment_variables (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            key TEXT NOT NULL,
+            value TEXT NOT NULL,
+            enabled BOOLEAN NOT NULL DEFAULT 1,
+            group_id INTEGER REFERENCES environment_variable_groups(id),
+            sort_order INTEGER DEFAULT 0,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )",
+        [],
+    );
+    
+    // Create unique index for proper group_id handling
+    let _ = conn.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_env_vars_group_key 
+         ON environment_variables(COALESCE(group_id, 0), key)",
+        [],
+    );
+    
+    // Add missing columns if they don't exist (same logic as in init_database)
+    let _ = conn.execute("ALTER TABLE environment_variables ADD COLUMN enabled BOOLEAN NOT NULL DEFAULT 1", []);
+    let _ = conn.execute("UPDATE environment_variables SET enabled = 1 WHERE enabled IS NULL", []);
+    let _ = conn.execute("ALTER TABLE environment_variables ADD COLUMN group_id INTEGER REFERENCES environment_variable_groups(id)", []);
+    let _ = conn.execute("ALTER TABLE environment_variables ADD COLUMN sort_order INTEGER DEFAULT 0", []);
+    let _ = conn.execute("UPDATE environment_variables SET sort_order = 0 WHERE sort_order IS NULL", []);
+    
+    log::debug!("Environment variables table ensured with correct structure");
+    
+    // Check which columns exist and build appropriate query
+    let mut has_enabled = false;
+    let mut has_group_id = false;
+    let mut has_sort_order = false;
+    
+    if let Ok(mut stmt) = conn.prepare("PRAGMA table_info(environment_variables)") {
+        if let Ok(column_rows) = stmt.query_map([], |row| {
+            Ok(row.get::<_, String>(1)?) // column name
+        }) {
+            for column_result in column_rows {
+                if let Ok(column_name) = column_result {
+                    match column_name.as_str() {
+                        "enabled" => has_enabled = true,
+                        "group_id" => has_group_id = true,
+                        "sort_order" => has_sort_order = true,
+                        _ => {}
+                    }
+                }
+            }
+        }
+    }
+    
+    // Build query based on available columns
+    let query = if has_enabled && has_group_id && has_sort_order {
+        "SELECT id, key, value, enabled, group_id, sort_order, created_at, updated_at FROM environment_variables ORDER BY sort_order, key"
+    } else if has_enabled {
+        "SELECT id, key, value, enabled, NULL as group_id, 0 as sort_order, created_at, updated_at FROM environment_variables ORDER BY key"
+    } else {
+        "SELECT id, key, value, 1 as enabled, NULL as group_id, 0 as sort_order, created_at, updated_at FROM environment_variables ORDER BY key"
+    };
+    
+    let mut stmt = conn.prepare(query).map_err(|e| e.to_string())?;
+    
+    let env_vars = stmt
+        .query_map([], |row| {
+            Ok(EnvironmentVariable {
+                id: Some(row.get(0)?),
+                key: row.get(1)?,
+                value: row.get(2)?,
+                enabled: row.get::<_, bool>(3)?,
+                group_id: {
+                    let val: Option<i64> = row.get(4).ok();
+                    val
+                },
+                sort_order: row.get::<_, i32>(5)?,
+                created_at: Some(row.get(6)?),
+                updated_at: Some(row.get(7)?),
+            })
+        })
+        .map_err(|e| e.to_string())?
+        .collect::<SqliteResult<Vec<_>>>()
+        .map_err(|e| e.to_string())?;
+    
+    // If we had to use fallback queries (missing columns), force an update to ensure proper schema
+    if !has_enabled || !has_group_id || !has_sort_order {
+        log::info!("Updating environment variables to ensure all have required fields");
+        // Force an update cycle to normalize the data
+        let normalized_vars: Vec<EnvironmentVariable> = env_vars.iter().map(|var| {
+            EnvironmentVariable {
+                id: var.id,
+                key: var.key.clone(),
+                value: var.value.clone(),
+                enabled: var.enabled,
+                group_id: var.group_id,
+                sort_order: var.sort_order,
+                created_at: var.created_at.clone(),
+                updated_at: var.updated_at.clone(),
+            }
+        }).collect();
+        
+        // Save back to ensure all fields are properly stored
+        if let Err(e) = save_environment_variables_internal(&conn, normalized_vars.clone()) {
+            log::warn!("Failed to normalize environment variables: {}", e);
+        }
+        
+        return Ok(normalized_vars);
+    }
+    
+    Ok(env_vars)
+}
+
+/// Internal function to save environment variables
+fn save_environment_variables_internal(
+    conn: &rusqlite::Connection,
+    env_vars: Vec<EnvironmentVariable>,
+) -> Result<(), String> {
+    
+    // Ensure the environment_variables table exists (safety check for existing databases)
+    let _ = conn.execute(
+        "CREATE TABLE IF NOT EXISTS environment_variables (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            key TEXT NOT NULL,
+            value TEXT NOT NULL,
+            enabled BOOLEAN NOT NULL DEFAULT 1,
+            group_id INTEGER REFERENCES environment_variable_groups(id),
+            sort_order INTEGER DEFAULT 0,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )",
+        [],
+    );
+    
+    // Create a unique index that allows same key in different groups
+    let _ = conn.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_env_vars_group_key 
+         ON environment_variables(COALESCE(group_id, 0), key)",
+        [],
+    );
+    
+    // Begin transaction
+    let tx = conn.unchecked_transaction().map_err(|e| e.to_string())?;
+    
+    // Clear existing environment variables
+    tx.execute("DELETE FROM environment_variables", [])
+        .map_err(|e| e.to_string())?;
+    
+    // Validate and deduplicate environment variables before insertion
+    // Group variables by (group_id, key) to detect duplicates
+    let mut seen_keys: std::collections::HashMap<(Option<i64>, String), usize> = std::collections::HashMap::new();
+    let mut deduplicated_vars = Vec::new();
+    
+    for (index, env_var) in env_vars.iter().enumerate() {
+        if !env_var.key.trim().is_empty() && !env_var.value.trim().is_empty() {
+            let key_tuple = (env_var.group_id, env_var.key.trim().to_string());
+            
+            if let Some(existing_index) = seen_keys.get(&key_tuple) {
+                log::warn!("Duplicate environment variable key '{}' found in group {} at indices {} and {}. Using the later one.", 
+                    env_var.key, env_var.group_id.unwrap_or(0), existing_index, index);
+                // Replace the existing one with the current one (keep the later one)
+                if let Some(existing_var) = deduplicated_vars.iter_mut().find(|(_, i)| *i == *existing_index) {
+                    existing_var.0 = env_var.clone();
+                }
+            } else {
+                seen_keys.insert(key_tuple, index);
+                deduplicated_vars.push((env_var.clone(), index));
+            }
+        }
+    }
+    
+    log::debug!("Inserting {} deduplicated environment variables", deduplicated_vars.len());
+    
+    // Insert deduplicated environment variables
+    for (env_var, _) in deduplicated_vars {
+        // Use INSERT to ensure we respect the UNIQUE(group_id, key) constraint
+        // This allows same key names in different groups
+        tx.execute(
+            "INSERT INTO environment_variables (key, value, enabled, group_id, sort_order, created_at, updated_at) 
+             VALUES (?1, ?2, ?3, ?4, ?5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+            params![env_var.key.trim(), env_var.value.trim(), env_var.enabled, env_var.group_id, env_var.sort_order],
+        )
+        .map_err(|e| format!("Failed to insert environment variable '{}' in group {}: {}", env_var.key, env_var.group_id.unwrap_or(0), e))?;
+    }
+    
+    // Commit transaction
+    tx.commit().map_err(|e| e.to_string())?;
+    
+    Ok(())
+}
+
+/// Save environment variables to database (replacing all existing ones)
+#[tauri::command]
+pub async fn save_environment_variables(
+    db: State<'_, AgentDb>,
+    env_vars: Vec<EnvironmentVariable>,
+) -> Result<(), String> {
+    let conn = db.0.lock().map_err(|e| e.to_string())?;
+    save_environment_variables_internal(&conn, env_vars)
+}
+
+/// Get enabled environment variables as a HashMap for use in processes
+#[tauri::command]
+pub async fn get_enabled_environment_variables(db: State<'_, AgentDb>) -> Result<std::collections::HashMap<String, String>, String> {
+    let conn = db.0.lock().map_err(|e| e.to_string())?;
+    
+    // Ensure tables exist with proper structure
+    let _ = conn.execute(
+        "CREATE TABLE IF NOT EXISTS environment_variable_groups (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE,
+            description TEXT,
+            enabled BOOLEAN NOT NULL DEFAULT 1,
+            sort_order INTEGER DEFAULT 0,
+            is_system BOOLEAN NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )",
+        [],
+    );
+    
+    let _ = conn.execute(
+        "CREATE TABLE IF NOT EXISTS environment_variables (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            key TEXT NOT NULL,
+            value TEXT NOT NULL,
+            enabled BOOLEAN NOT NULL DEFAULT 1,
+            group_id INTEGER REFERENCES environment_variable_groups(id),
+            sort_order INTEGER DEFAULT 0,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )",
+        [],
+    );
+    
+    // Create a unique index that properly handles NULL group_id values
+    // This allows same key names in different groups, including the default group (NULL/0)
+    let _ = conn.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_env_vars_group_key 
+         ON environment_variables(COALESCE(group_id, 0), key)",
+        [],
+    );
+    
+    // Add missing columns if they don't exist
+    let _ = conn.execute("ALTER TABLE environment_variables ADD COLUMN enabled BOOLEAN NOT NULL DEFAULT 1", []);
+    let _ = conn.execute("UPDATE environment_variables SET enabled = 1 WHERE enabled IS NULL", []);
+    let _ = conn.execute("ALTER TABLE environment_variables ADD COLUMN group_id INTEGER REFERENCES environment_variable_groups(id)", []);
+    let _ = conn.execute("ALTER TABLE environment_variables ADD COLUMN sort_order INTEGER DEFAULT 0", []);
+    let _ = conn.execute("UPDATE environment_variables SET sort_order = 0 WHERE sort_order IS NULL", []);
+    
+    // Query enabled variables from enabled groups with conflict resolution
+    // For variables with the same key in multiple enabled groups, prioritize by group sort_order (ascending)
+    let mut stmt = conn
+        .prepare("
+            SELECT DISTINCT ev.key, ev.value, 
+                   COALESCE(eg.sort_order, 999999) as group_priority,
+                   ev.sort_order
+            FROM environment_variables ev
+            LEFT JOIN environment_variable_groups eg ON ev.group_id = eg.id
+            WHERE ev.enabled = 1 
+            AND (ev.group_id IS NULL OR eg.enabled = 1)
+            ORDER BY ev.key, group_priority ASC, ev.sort_order ASC
+        ")
+        .map_err(|e| e.to_string())?;
+    
+    let mut env_map = std::collections::HashMap::new();
+    let rows = stmt
+        .query_map([], |row| {
+            Ok((
+                row.get::<_, String>(0)?, // key
+                row.get::<_, String>(1)?, // value
+                row.get::<_, i64>(2)?,    // group_priority
+                row.get::<_, i64>(3)?     // sort_order
+            ))
+        })
+        .map_err(|e| e.to_string())?;
+    
+    // Process rows and handle conflicts (same key from different enabled groups)
+    for row in rows {
+        let (key, value, _group_priority, _sort_order) = row.map_err(|e| e.to_string())?;
+        // Only insert if key doesn't exist (first one wins due to ORDER BY)
+        if !env_map.contains_key(&key) {
+            env_map.insert(key, value);
+        }
+    }
+    
+    Ok(env_map)
+}
+
+/// Get all environment variable groups
+#[tauri::command]
+pub async fn get_environment_variable_groups(db: State<'_, AgentDb>) -> Result<Vec<EnvironmentVariableGroup>, String> {
+    let conn = db.0.lock().map_err(|e| e.to_string())?;
+    
+    let mut stmt = conn
+        .prepare("SELECT id, name, description, enabled, sort_order, is_system, created_at, updated_at FROM environment_variable_groups ORDER BY sort_order, name")
+        .map_err(|e| e.to_string())?;
+    
+    let groups = stmt
+        .query_map([], |row| {
+            Ok(EnvironmentVariableGroup {
+                id: Some(row.get(0)?),
+                name: row.get(1)?,
+                description: row.get(2)?,
+                enabled: row.get(3)?,
+                sort_order: row.get::<_, i32>(4).unwrap_or(0),
+                is_system: row.get(5)?,
+                created_at: Some(row.get(6)?),
+                updated_at: Some(row.get(7)?),
+            })
+        })
+        .map_err(|e| e.to_string())?
+        .collect::<SqliteResult<Vec<_>>>()
+        .map_err(|e| e.to_string())?;
+    
+    Ok(groups)
+}
+
+/// Create a new environment variable group
+#[tauri::command]
+pub async fn create_environment_variable_group(
+    db: State<'_, AgentDb>,
+    name: String,
+    description: Option<String>,
+    sort_order: Option<i32>,
+) -> Result<EnvironmentVariableGroup, String> {
+    let conn = db.0.lock().map_err(|e| e.to_string())?;
+    
+    conn.execute(
+        "INSERT INTO environment_variable_groups (name, description, sort_order, is_system) VALUES (?1, ?2, ?3, ?4)",
+        params![name, description, sort_order.unwrap_or(0), false],
+    )
+    .map_err(|e| e.to_string())?;
+    
+    let id = conn.last_insert_rowid();
+    
+    // Fetch the created group
+    let group = conn
+        .query_row(
+            "SELECT id, name, description, enabled, sort_order, is_system, created_at, updated_at FROM environment_variable_groups WHERE id = ?1",
+            params![id],
+            |row| {
+                Ok(EnvironmentVariableGroup {
+                    id: Some(row.get(0)?),
+                    name: row.get(1)?,
+                    description: row.get(2)?,
+                    enabled: row.get(3)?,
+                    sort_order: row.get::<_, i32>(4).unwrap_or(0),
+                    is_system: row.get(5)?,
+                    created_at: Some(row.get(6)?),
+                    updated_at: Some(row.get(7)?),
+                })
+            },
+        )
+        .map_err(|e| e.to_string())?;
+    
+    Ok(group)
+}
+
+/// Update an environment variable group
+#[tauri::command]
+pub async fn update_environment_variable_group(
+    db: State<'_, AgentDb>,
+    id: i64,
+    name: String,
+    description: Option<String>,
+    enabled: bool,
+    sort_order: i32,
+) -> Result<EnvironmentVariableGroup, String> {
+    let conn = db.0.lock().map_err(|e| e.to_string())?;
+    
+    conn.execute(
+        "UPDATE environment_variable_groups SET name = ?1, description = ?2, enabled = ?3, sort_order = ?4 WHERE id = ?5",
+        params![name, description, enabled, sort_order, id],
+    )
+    .map_err(|e| e.to_string())?;
+    
+    // Fetch the updated group
+    let group = conn
+        .query_row(
+            "SELECT id, name, description, enabled, sort_order, is_system, created_at, updated_at FROM environment_variable_groups WHERE id = ?1",
+            params![id],
+            |row| {
+                Ok(EnvironmentVariableGroup {
+                    id: Some(row.get(0)?),
+                    name: row.get(1)?,
+                    description: row.get(2)?,
+                    enabled: row.get(3)?,
+                    sort_order: row.get::<_, i32>(4).unwrap_or(0),
+                    is_system: row.get(5)?,
+                    created_at: Some(row.get(6)?),
+                    updated_at: Some(row.get(7)?),
+                })
+            },
+        )
+        .map_err(|e| e.to_string())?;
+    
+    Ok(group)
+}
+
+/// Delete an environment variable group (only if it's not a system group and has no variables)
+#[tauri::command]
+pub async fn delete_environment_variable_group(db: State<'_, AgentDb>, id: i64) -> Result<(), String> {
+    let conn = db.0.lock().map_err(|e| e.to_string())?;
+    
+    
+    // Delete all environment variables in this group first (cascade delete)
+    conn.execute("DELETE FROM environment_variables WHERE group_id = ?1", params![id])
+        .map_err(|e| e.to_string())?;
+    
+    // Then delete the group
+    conn.execute("DELETE FROM environment_variable_groups WHERE id = ?1", params![id])
+        .map_err(|e| e.to_string())?;
+    
+    Ok(())
 }

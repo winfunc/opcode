@@ -21,7 +21,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   api,
   type ClaudeSettings,
-  type ClaudeInstallation
+  type ClaudeInstallation,
+  type EnvironmentVariable as DbEnvironmentVariable,
+  type EnvironmentVariableGroup
 } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -61,11 +63,6 @@ interface PermissionRule {
   value: string;
 }
 
-interface EnvironmentVariable {
-  id: string;
-  key: string;
-  value: string;
-}
 
 /**
  * Comprehensive Settings UI for managing Claude Code settings
@@ -102,8 +99,11 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
   const [allowRules, setAllowRules] = useState<PermissionRule[]>([]);
   const [denyRules, setDenyRules] = useState<PermissionRule[]>([]);
 
-  // Environment variables state
-  const [envVars, setEnvVars] = useState<EnvironmentVariable[]>([]);
+  // Environment variables state (now using database)
+  const [envVars, setEnvVars] = useState<DbEnvironmentVariable[]>([]);
+  const [envGroups, setEnvGroups] = useState<EnvironmentVariableGroup[]>([]);
+  const [newGroupName, setNewGroupName] = useState<string>("");
+  const [showAddGroup, setShowAddGroup] = useState<boolean>(false);
 
   // Hooks state
   const [userHooksChanged, setUserHooksChanged] = useState(false);
@@ -133,6 +133,7 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
   const trackEvent = useTrackEvent();
   // Load settings on mount
   useEffect(() => {
+    console.log("Settings component mounted, loading settings...");
     loadSettings();
     loadClaudeBinaryPath();
     loadAnalyticsSettings();
@@ -169,9 +170,11 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
    */
   const loadSettings = useCallback(async () => {
     try {
+      console.log("loadSettings function called");
       setLoading(true);
       setError(null);
       const loadedSettings = await api.getClaudeSettings();
+      console.log("Claude settings loaded:", loadedSettings);
 
       // Ensure loadedSettings is an object
       if (!loadedSettings || typeof loadedSettings !== "object") {
@@ -181,6 +184,14 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
       }
 
       setSettings(loadedSettings);
+
+      // Debug log the loaded settings structure
+      logger.debug("Loaded Claude settings:", {
+        hasEnv: !!loadedSettings.env,
+        envType: typeof loadedSettings.env,
+        envKeys: loadedSettings.env ? Object.keys(loadedSettings.env) : [],
+        envLength: loadedSettings.env ? Object.keys(loadedSettings.env).length : 0
+      });
 
       // Parse permissions
       if (loadedSettings.permissions && typeof loadedSettings.permissions === "object") {
@@ -203,19 +214,104 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
         }
       }
 
-      // Parse environment variables
-      if (
-        loadedSettings.env &&
-        typeof loadedSettings.env === "object" &&
-        !Array.isArray(loadedSettings.env)
-      ) {
-        setEnvVars(
-          Object.entries(loadedSettings.env).map(([key, value], index) => ({
-            id: `env-${index}`,
+      // Load environment variables from database
+      try {
+        console.log("Loading environment variables from database...");
+        const dbEnvVars = await api.getEnvironmentVariables();
+        console.log(`Loaded ${dbEnvVars.length} environment variables from database:`, dbEnvVars);
+        logger.debug(`Loaded ${dbEnvVars.length} environment variables from database`);
+        
+        // Check if we need to migrate from Claude settings
+        // We migrate if there are environment variables in Claude settings that haven't been migrated yet
+        if (loadedSettings.env && 
+            typeof loadedSettings.env === "object" && 
+            !Array.isArray(loadedSettings.env) &&
+            Object.keys(loadedSettings.env).length > 0) {
+          logger.debug(`Found ${Object.keys(loadedSettings.env).length} environment variables in Claude settings, starting migration...`);
+          // Migration: convert Claude settings env to database format
+          const migratedVars: DbEnvironmentVariable[] = Object.entries(loadedSettings.env).map(([key, value]) => ({
             key,
             value: value as string,
-          }))
-        );
+            enabled: true,
+            sort_order: 0,
+          }));
+          
+          if (migratedVars.length > 0) {
+            // Merge with existing database variables, with Claude settings taking precedence for conflicts
+            const existingKeys = new Set(dbEnvVars.map(v => v.key));
+            const newVars = migratedVars.filter(v => !existingKeys.has(v.key));
+            const allVars = [...dbEnvVars, ...newVars];
+            
+            // Update any existing variables with values from Claude settings
+            const finalVars = allVars.map(dbVar => {
+              const claudeVar = migratedVars.find(mv => mv.key === dbVar.key);
+              return claudeVar ? { 
+                ...dbVar, 
+                value: claudeVar.value,
+                enabled: dbVar.enabled ?? true, // Ensure enabled field exists
+                group_id: dbVar.group_id ?? undefined,
+                sort_order: dbVar.sort_order ?? 0,
+              } : {
+                ...dbVar,
+                enabled: dbVar.enabled ?? true, // Ensure enabled field exists
+                group_id: dbVar.group_id ?? undefined,
+                sort_order: dbVar.sort_order ?? 0,
+              };
+            });
+            
+            await api.saveEnvironmentVariables(finalVars);
+            logger.info(`Migrated ${migratedVars.length} environment variables from Claude settings to database`);
+            
+            // Remove env from Claude settings to complete migration
+            const settingsWithoutEnv = { ...loadedSettings };
+            delete settingsWithoutEnv.env;
+            await api.saveClaudeSettings(settingsWithoutEnv);
+            
+            // Update local state to reflect the cleaned settings
+            setSettings(settingsWithoutEnv);
+            setEnvVars(finalVars);
+            
+            logger.info("Successfully cleaned environment variables from Claude settings file");
+          }
+        } else {
+          logger.debug("No environment variables found in Claude settings, using database variables only");
+          // Ensure all variables have the required fields with defaults
+          const normalizedVars = dbEnvVars.map(envVar => ({
+            ...envVar,
+            enabled: envVar.enabled ?? true, // Default to true if enabled is undefined
+            group_id: envVar.group_id ?? undefined,
+            sort_order: envVar.sort_order ?? 0,
+          }));
+          setEnvVars(normalizedVars);
+        }
+
+        // Load environment variable groups
+        try {
+          const groups = await api.getEnvironmentVariableGroups();
+          setEnvGroups(groups);
+          logger.debug(`Loaded ${groups.length} environment variable groups`);
+        } catch (error) {
+          logger.error("Failed to load environment variable groups:", error);
+          setEnvGroups([]);
+        }
+      } catch (error) {
+        logger.error("Failed to load environment variables from database:", error);
+        // Fallback to Claude settings if database fails
+        if (
+          loadedSettings.env &&
+          typeof loadedSettings.env === "object" &&
+          !Array.isArray(loadedSettings.env)
+        ) {
+          setEnvVars(
+            Object.entries(loadedSettings.env).map(([key, value]) => ({
+              key,
+              value: value as string,
+              enabled: true,
+              group_id: undefined,
+              sort_order: 0,
+            }))
+          );
+        }
       }
 
       // Load audio notification config from localStorage (independent of Claude settings)
@@ -261,20 +357,74 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
       setError(null);
       setToast(null);
 
-      // Build the settings object
+      // Build the settings object (no longer includes env - it's in database)
       const updatedSettings: ClaudeSettings = {
         ...settings,
         permissions: {
           allow: allowRules.map(rule => rule.value).filter(v => v && String(v).trim()),
           deny: denyRules.map(rule => rule.value).filter(v => v && String(v).trim()),
         },
-        env: envVars.reduce((acc, { key, value }) => {
-          if (key && String(key).trim() && value && String(value).trim()) {
-            acc[key] = String(value);
-          }
-          return acc;
-        }, {} as Record<string, string>),
       };
+      
+      // Explicitly remove env field if it exists (should not happen after migration, but just to be safe)
+      if ('env' in updatedSettings) {
+        delete (updatedSettings as any).env;
+        logger.debug("Removed env field from Claude settings during save");
+      }
+
+      // Save environment variables to database separately
+      try {
+        const filteredEnvVars = envVars.filter(({ key, value }) => 
+          key && String(key).trim() && value && String(value).trim()
+        );
+        
+        // Validate for duplicate keys within the same group
+        const keyGroupMap = new Map<string, Set<number | undefined>>();
+        const duplicates: string[] = [];
+        
+        filteredEnvVars.forEach((envVar) => {
+          const key = envVar.key.trim();
+          const groupId = envVar.group_id;
+          
+          if (!keyGroupMap.has(key)) {
+            keyGroupMap.set(key, new Set());
+          }
+          
+          const groupsForKey = keyGroupMap.get(key)!;
+          if (groupsForKey.has(groupId)) {
+            duplicates.push(`"${key}" in group ${groupId || 'ungrouped'}`);
+          } else {
+            groupsForKey.add(groupId);
+          }
+        });
+        
+        if (duplicates.length > 0) {
+          const errorMessage = `Duplicate environment variable keys found: ${duplicates.join(', ')}. Each key can only appear once per group.`;
+          logger.error(errorMessage);
+          setToast({ message: errorMessage, type: "error" });
+          throw new Error(errorMessage);
+        }
+        
+        // Deduplicate variables with same key in same group (keep the last one)
+        const deduplicatedVars = new Map<string, DbEnvironmentVariable>();
+        filteredEnvVars.forEach((envVar) => {
+          const uniqueKey = `${envVar.group_id || 0}-${envVar.key.trim()}`;
+          deduplicatedVars.set(uniqueKey, envVar);
+        });
+        
+        const finalVars = Array.from(deduplicatedVars.values());
+        logger.debug(`Saving ${finalVars.length} environment variables (deduplicated from ${filteredEnvVars.length})`);
+        
+        await api.saveEnvironmentVariables(finalVars);
+        logger.debug("Environment variables saved to database successfully");
+      } catch (error) {
+        logger.error("Failed to save environment variables to database:", error);
+        if (error instanceof Error && error.message.includes("Duplicate environment variable keys")) {
+          // Don't wrap the error message if it's already our validation error
+          throw error;
+        }
+        throw new Error("Failed to save environment variables");
+      }
 
       // Save audio notification config to localStorage (independent of Claude settings)
       if (audioConfigChanged) {
@@ -425,28 +575,109 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
   /**
    * Add a new environment variable
    */
-  const addEnvVar = () => {
-    const newVar: EnvironmentVariable = {
-      id: `env-${Date.now()}`,
+  const addEnvVar = (groupId?: number) => {
+    const newVar: DbEnvironmentVariable = {
       key: "",
       value: "",
+      enabled: true,
+      group_id: groupId,
+      sort_order: 0,
     };
     setEnvVars((prev) => [...prev, newVar]);
+  };
+
+  /**
+   * Add a new environment variable group
+   */
+  const addEnvGroup = async () => {
+    if (!newGroupName.trim()) return;
+    
+    try {
+      const newGroup = await api.createEnvironmentVariableGroup(
+        newGroupName.trim(),
+        undefined,
+        envGroups.length
+      );
+      setEnvGroups([...envGroups, newGroup]);
+      setNewGroupName("");
+      setShowAddGroup(false);
+      logger.info(`Created new environment variable group: ${newGroup.name}`);
+    } catch (error) {
+      logger.error("Failed to create environment variable group:", error);
+      setToast({ message: "Failed to create group", type: "error" });
+    }
+  };
+
+  /**
+   * Toggle environment variable group enabled state
+   */
+  const toggleGroupEnabled = async (groupId: number, enabled: boolean) => {
+    try {
+      const group = envGroups.find(g => g.id === groupId);
+      if (!group) return;
+
+      const updatedGroup = await api.updateEnvironmentVariableGroup(
+        groupId,
+        group.name,
+        group.description,
+        enabled,
+        group.sort_order
+      );
+      
+      setEnvGroups(groups => 
+        groups.map(g => g.id === groupId ? updatedGroup : g)
+      );
+      logger.info(`Toggled group ${group.name} to ${enabled ? 'enabled' : 'disabled'}`);
+    } catch (error) {
+      logger.error("Failed to toggle group enabled state:", error);
+      setToast({ message: "Failed to update group", type: "error" });
+    }
+  };
+
+  /**
+   * Delete environment variable group
+   */
+  const deleteEnvGroup = async (groupId: number) => {
+    try {
+      await api.deleteEnvironmentVariableGroup(groupId);
+      setEnvGroups(groups => groups.filter(g => g.id !== groupId));
+      // Move variables from deleted group to ungrouped (null group_id)
+      setEnvVars(vars => 
+        vars.map(v => v.group_id === groupId ? { ...v, group_id: undefined } : v)
+      );
+      logger.info(`Deleted environment variable group with ID: ${groupId}`);
+    } catch (error) {
+      logger.error("Failed to delete environment variable group:", error);
+      setToast({ message: "Failed to delete group", type: "error" });
+    }
   };
 
   /**
    * Updates an environment variable
    */
   /**
+   * Check if an environment variable key is duplicated within the same group
+   */
+  const isDuplicateKey = (currentIndex: number, key: string, groupId?: number) => {
+    if (!key.trim()) return false;
+    
+    return envVars.some((envVar, index) => 
+      index !== currentIndex && 
+      envVar.key.trim() === key.trim() && 
+      envVar.group_id === groupId
+    );
+  };
+
+  /**
    * Update an environment variable
    *
-   * @param id - ID of the environment variable
-   * @param field - Field to update (key or value)
+   * @param index - Index of the environment variable in the array
+   * @param field - Field to update (key, value, or enabled)
    * @param value - New value for the field
    */
-  const updateEnvVar = (id: string, field: "key" | "value", value: string) => {
+  const updateEnvVar = (index: number, field: "key" | "value" | "enabled", value: string | boolean) => {
     setEnvVars((prev) =>
-      prev.map((envVar) => (envVar.id === id ? { ...envVar, [field]: value } : envVar))
+      prev.map((envVar, i) => (i === index ? { ...envVar, [field]: value } : envVar))
     );
   };
 
@@ -456,10 +687,10 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
   /**
    * Remove an environment variable
    *
-   * @param id - ID of the environment variable to remove
+   * @param index - Index of the environment variable to remove
    */
-  const removeEnvVar = (id: string) => {
-    setEnvVars((prev) => prev.filter((envVar) => envVar.id !== id));
+  const removeEnvVar = (index: number) => {
+    setEnvVars((prev) => prev.filter((_, i) => i !== index));
   };
 
   /**
@@ -955,49 +1186,239 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
                           {t.settings.environmentVariablesDesc}
                         </p>
                       </div>
-                      <Button variant="outline" size="sm" onClick={addEnvVar} className="gap-2">
-                        <Plus className="h-3 w-3" />
-                        {t.settings.addVariable}
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => setShowAddGroup(!showAddGroup)} 
+                          className="gap-2"
+                        >
+                          <Plus className="h-3 w-3" />
+                          Add Group
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => addEnvVar()} className="gap-2">
+                          <Plus className="h-3 w-3" />
+                          {t.settings.addVariable}
+                        </Button>
+                      </div>
                     </div>
 
-                    <div className="space-y-3">
-                      {envVars.length === 0 ? (
-                        <p className="text-xs text-muted-foreground py-2">
-                          {t.settings.noEnvironmentVariables}
-                        </p>
-                      ) : (
-                        envVars.map((envVar) => (
-                          <motion.div
-                            key={envVar.id}
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            className="flex items-center gap-2"
-                          >
-                            <Input
-                              placeholder="KEY"
-                              value={envVar.key}
-                              onChange={(e) => updateEnvVar(envVar.id, "key", e.target.value)}
-                              className="flex-1 font-mono text-sm"
-                            />
-                            <span className="text-muted-foreground">=</span>
-                            <Input
-                              placeholder="value"
-                              value={envVar.value}
-                              onChange={(e) => updateEnvVar(envVar.id, "value", e.target.value)}
-                              className="flex-1 font-mono text-sm"
-                            />
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => removeEnvVar(envVar.id)}
-                              className="h-8 w-8 hover:text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </motion.div>
-                        ))
-                      )}
+                    {/* Add Group Form */}
+                    {showAddGroup && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg"
+                      >
+                        <Input
+                          placeholder="Group name"
+                          value={newGroupName}
+                          onChange={(e) => setNewGroupName(e.target.value)}
+                          className="flex-1"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') addEnvGroup();
+                            if (e.key === 'Escape') setShowAddGroup(false);
+                          }}
+                        />
+                        <Button variant="default" size="sm" onClick={addEnvGroup}>
+                          Create
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => setShowAddGroup(false)}>
+                          Cancel
+                        </Button>
+                      </motion.div>
+                    )}
+
+                    {/* Environment Variable Groups */}
+                    <div className="space-y-4">
+                      {/* Render grouped variables */}
+                      {envGroups.map((group) => {
+                        const groupVars = envVars.filter(v => v.group_id === group.id);
+                        return (
+                          <div key={group.id} className="border rounded-lg">
+                            <div className="flex items-center justify-between p-3 bg-muted/30 border-b">
+                              <div className="flex items-center gap-2">
+                                <Switch
+                                  checked={group.enabled}
+                                  onCheckedChange={(enabled) => toggleGroupEnabled(group.id!, enabled)}
+                                  variant="high-contrast"
+                                  className="flex-shrink-0"
+                                />
+                                <h4 className="font-medium">{group.name}</h4>
+                                {group.description && (
+                                  <span className="text-sm text-muted-foreground">
+                                    - {group.description}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => addEnvVar(group.id)}
+                                  className="gap-1"
+                                >
+                                  <Plus className="h-3 w-3" />
+                                  Add Variable
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => deleteEnvGroup(group.id!)}
+                                  className="hover:text-destructive"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
+                            <div className="p-3 space-y-3">
+                              {groupVars.length === 0 ? (
+                                <p className="text-xs text-muted-foreground py-2">
+                                  No variables in this group
+                                </p>
+                              ) : (
+                                groupVars.map((envVar) => {
+                                  const globalIndex = envVars.findIndex(v => v === envVar);
+                                  return (
+                                    <motion.div
+                                      key={`env-${globalIndex}`}
+                                      initial={{ opacity: 0, x: -20 }}
+                                      animate={{ opacity: 1, x: 0 }}
+                                      className="flex items-center gap-2"
+                                    >
+                                      <div className="flex-1 relative">
+                                        <Input
+                                          placeholder="KEY"
+                                          value={envVar.key}
+                                          onChange={(e) => updateEnvVar(globalIndex, "key", e.target.value)}
+                                          className={cn(
+                                            "font-mono text-sm",
+                                            isDuplicateKey(globalIndex, envVar.key, envVar.group_id) && 
+                                            "border-red-500 focus:border-red-500 focus:ring-red-500",
+                                            (!envVar.enabled || !group.enabled) && "opacity-60"
+                                          )}
+                                          disabled={!envVar.enabled}
+                                        />
+                                        {isDuplicateKey(globalIndex, envVar.key, envVar.group_id) && (
+                                          <div className="absolute -bottom-5 left-0 text-xs text-red-500">
+                                            Duplicate key in this group
+                                          </div>
+                                        )}
+                                      </div>
+                                      <span className="text-muted-foreground">=</span>
+                                      <Input
+                                        placeholder="value"
+                                        value={envVar.value}
+                                        onChange={(e) => updateEnvVar(globalIndex, "value", e.target.value)}
+                                        className={cn(
+                                          "flex-1 font-mono text-sm",
+                                          (!envVar.enabled || !group.enabled) && "opacity-60"
+                                        )}
+                                        disabled={!envVar.enabled}
+                                      />
+                                      <Switch
+                                        checked={envVar.enabled}
+                                        onCheckedChange={(enabled) => updateEnvVar(globalIndex, "enabled", enabled)}
+                                        variant="high-contrast"
+                                        className={cn(
+                                          "flex-shrink-0",
+                                          !group.enabled && "opacity-60"
+                                        )}
+                                      />
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => removeEnvVar(globalIndex)}
+                                        className="h-8 w-8 hover:text-destructive"
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </motion.div>
+                                  );
+                                })
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      {/* Ungrouped variables */}
+                      {(() => {
+                        const ungroupedVars = envVars.filter(v => !v.group_id);
+                        if (ungroupedVars.length === 0) return null;
+                        
+                        return (
+                          <div className="border rounded-lg">
+                            <div className="flex items-center justify-between p-3 bg-muted/30 border-b">
+                              <h4 className="font-medium">Ungrouped Variables</h4>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => addEnvVar()}
+                                className="gap-1"
+                              >
+                                <Plus className="h-3 w-3" />
+                                Add Variable
+                              </Button>
+                            </div>
+                            <div className="p-3 space-y-3">
+                              {ungroupedVars.map((envVar) => {
+                                const globalIndex = envVars.findIndex(v => v === envVar);
+                                return (
+                                  <motion.div
+                                    key={`env-ungrouped-${globalIndex}`}
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    className="flex items-center gap-2"
+                                  >
+                                    <div className="flex-1 relative">
+                                      <Input
+                                        placeholder="KEY"
+                                        value={envVar.key}
+                                        onChange={(e) => updateEnvVar(globalIndex, "key", e.target.value)}
+                                        className={cn(
+                                          "font-mono text-sm",
+                                          isDuplicateKey(globalIndex, envVar.key, envVar.group_id) && 
+                                          "border-red-500 focus:border-red-500 focus:ring-red-500"
+                                        )}
+                                        disabled={!envVar.enabled}
+                                      />
+                                      {isDuplicateKey(globalIndex, envVar.key, envVar.group_id) && (
+                                        <div className="absolute -bottom-5 left-0 text-xs text-red-500">
+                                          Duplicate key in ungrouped variables
+                                        </div>
+                                      )}
+                                    </div>
+                                    <span className="text-muted-foreground">=</span>
+                                    <Input
+                                      placeholder="value"
+                                      value={envVar.value}
+                                      onChange={(e) => updateEnvVar(globalIndex, "value", e.target.value)}
+                                      className="flex-1 font-mono text-sm"
+                                      disabled={!envVar.enabled}
+                                    />
+                                    <Switch
+                                      checked={envVar.enabled}
+                                      onCheckedChange={(enabled) => updateEnvVar(globalIndex, "enabled", enabled)}
+                                      variant="high-contrast"
+                                      className="flex-shrink-0"
+                                    />
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => removeEnvVar(globalIndex)}
+                                      className="h-8 w-8 hover:text-destructive"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </motion.div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     <div className="pt-2 space-y-2">

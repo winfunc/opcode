@@ -226,6 +226,12 @@ fn extract_first_user_message(jsonl_path: &PathBuf) -> (Option<String>, Option<S
 /// Helper function to create a tokio Command with proper environment variables
 /// This ensures commands like Claude can find Node.js and other dependencies
 fn create_command_with_env(program: &str) -> Command {
+    create_command_with_custom_env(program, &std::collections::HashMap::new())
+}
+
+/// Helper function to create a tokio Command with custom environment variables
+/// This version allows passing additional environment variables from database
+fn create_command_with_custom_env(program: &str, custom_env: &std::collections::HashMap<String, String>) -> Command {
     // Convert std::process::Command to tokio::process::Command
     let _std_cmd = crate::claude_binary::create_command_with_env(program);
 
@@ -308,6 +314,12 @@ fn create_command_with_env(program: &str) -> Command {
                 tokio_cmd.env("PATH", new_path);
             }
         }
+    }
+
+    // Apply custom environment variables from database
+    for (key, value) in custom_env {
+        debug_log!("Setting custom env var: {}={}", key, value);
+        tokio_cmd.env(key, value);
     }
 
     tokio_cmd
@@ -463,7 +475,17 @@ fn create_system_command(
     args: Vec<String>,
     project_path: &str,
 ) -> Command {
-    let mut cmd = create_command_with_env(claude_path);
+    create_system_command_with_env(claude_path, args, project_path, &std::collections::HashMap::new())
+}
+
+/// Creates a system binary command with the given arguments and custom environment variables
+fn create_system_command_with_env(
+    claude_path: &str,
+    args: Vec<String>,
+    project_path: &str,
+    env_vars: &std::collections::HashMap<String, String>,
+) -> Command {
+    let mut cmd = create_command_with_custom_env(claude_path, env_vars);
 
     // Add all arguments
     for arg in args {
@@ -1115,11 +1137,27 @@ pub async fn execute_claude_code(
     prompt: String,
     model: String,
 ) -> Result<(), String> {
+    use crate::commands::agents::{AgentDb, get_enabled_environment_variables};
     log::info!(
         "Starting new Claude Code session in: {} with model: {}",
         project_path,
         model
     );
+
+    // Get enabled environment variables from database
+    let env_vars = match get_enabled_environment_variables(app.state::<AgentDb>()).await {
+        Ok(vars) => {
+            log::info!("Retrieved {} environment variables from database", vars.len());
+            for (key, value) in &vars {
+                log::debug!("Environment variable: {}={}", key, value);
+            }
+            vars
+        },
+        Err(e) => {
+            log::warn!("Failed to get environment variables: {}", e);
+            std::collections::HashMap::new()
+        }
+    };
 
     let claude_path = find_claude_binary(&app)?;
 
@@ -1137,10 +1175,11 @@ pub async fn execute_claude_code(
     // On macOS, when the stored path is the special sidecar identifier, use sidecar to spawn
     #[cfg(target_os = "macos")]
     if claude_path == "claude-code" {
+        // TODO: Update sidecar to also use environment variables
         return spawn_claude_sidecar(app, args, prompt, model, project_path).await;
     }
 
-    let cmd = create_system_command(&claude_path, args, &project_path);
+    let cmd = create_system_command_with_env(&claude_path, args, &project_path, &env_vars);
     spawn_claude_process(app, cmd, prompt, model, project_path).await
 }
 
@@ -1152,11 +1191,21 @@ pub async fn continue_claude_code(
     prompt: String,
     model: String,
 ) -> Result<(), String> {
+    use crate::commands::agents::{AgentDb, get_enabled_environment_variables};
     log::info!(
         "Continuing Claude Code conversation in: {} with model: {}",
         project_path,
         model
     );
+
+    // Get enabled environment variables from database
+    let env_vars = match get_enabled_environment_variables(app.state::<AgentDb>()).await {
+        Ok(vars) => vars,
+        Err(e) => {
+            log::warn!("Failed to get environment variables: {}", e);
+            std::collections::HashMap::new()
+        }
+    };
 
     let claude_path = find_claude_binary(&app)?;
 
@@ -1178,7 +1227,7 @@ pub async fn continue_claude_code(
         return spawn_claude_sidecar(app, args, prompt, model, project_path).await;
     }
 
-    let cmd = create_system_command(&claude_path, args, &project_path);
+    let cmd = create_system_command_with_env(&claude_path, args, &project_path, &env_vars);
     spawn_claude_process(app, cmd, prompt, model, project_path).await
 }
 
@@ -1191,12 +1240,22 @@ pub async fn resume_claude_code(
     prompt: String,
     model: String,
 ) -> Result<(), String> {
+    use crate::commands::agents::{AgentDb, get_enabled_environment_variables};
     log::info!(
         "Resuming Claude Code session: {} in: {} with model: {}",
         session_id,
         project_path,
         model
     );
+
+    // Get enabled environment variables from database
+    let env_vars = match get_enabled_environment_variables(app.state::<AgentDb>()).await {
+        Ok(vars) => vars,
+        Err(e) => {
+            log::warn!("Failed to get environment variables: {}", e);
+            std::collections::HashMap::new()
+        }
+    };
 
     let claude_path = find_claude_binary(&app)?;
 
@@ -1219,7 +1278,7 @@ pub async fn resume_claude_code(
         return spawn_claude_sidecar(app, args, prompt, model, project_path).await;
     }
 
-    let cmd = create_system_command(&claude_path, args, &project_path);
+    let cmd = create_system_command_with_env(&claude_path, args, &project_path, &env_vars);
     spawn_claude_process(app, cmd, prompt, model, project_path).await
 }
 

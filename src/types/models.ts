@@ -18,6 +18,7 @@ export type ClaudeModel =
   | "claude-3-7-sonnet-20250219" // Latest model with enhanced capabilities
   | "claude-sonnet-4-20250514-thinking" // Claude 4 Sonnet with thinking capabilities
   | "claude-opus-4-20250514-thinking" // Claude 4 Opus with thinking capabilities
+  | "claude-opus-4-1-20250805" // Claude Opus 4.1 model
   | "claude-3-7-sonnet-20250219-thinking" // Claude 3.7 Sonnet with thinking capabilities
   | "sonnet" // Legacy Claude 4 Sonnet alias
   | "opus" // Legacy Claude 4 Opus alias
@@ -67,6 +68,7 @@ export const MODEL_DISPLAY_NAMES: Record<ClaudeModel, string> = {
   "claude-3-7-sonnet-20250219": "Claude 3.7 Sonnet",
   "claude-sonnet-4-20250514-thinking": "Claude 4 Sonnet (Thinking)",
   "claude-opus-4-20250514-thinking": "Claude 4 Opus (Thinking)",
+  "claude-opus-4-1-20250805": "Claude Opus 4.1",
   "claude-3-7-sonnet-20250219-thinking": "Claude 3.7 Sonnet (Thinking)",
   sonnet: "Claude 4 Sonnet",
   opus: "Claude 4 Opus",
@@ -123,6 +125,7 @@ export const MODEL_API_MAPPING: Record<ClaudeModel, string> = {
   "claude-3-7-sonnet-20250219": "claude-3-7-sonnet-20250219",
   "claude-sonnet-4-20250514-thinking": "claude-sonnet-4-20250514-thinking",
   "claude-opus-4-20250514-thinking": "claude-opus-4-20250514-thinking",
+  "claude-opus-4-1-20250805": "claude-opus-4-1-20250805",
   "claude-3-7-sonnet-20250219-thinking": "claude-3-7-sonnet-20250219-thinking",
   sonnet: "claude-sonnet-4-20250514", // Legacy mapping to Claude 4 Sonnet
   opus: "claude-opus-4-20250514", // Legacy mapping to Claude 4 Opus

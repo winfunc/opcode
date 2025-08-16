@@ -11,7 +11,8 @@ import { logger } from '@/lib/logger';
 export interface ModelPricing {
   inputPrice: number; // 输入token价格
   outputPrice: number; // 输出token价格
-  cacheWritePrice: number; // 缓存写入价格
+  cacheWritePrice: number; // 5分钟缓存写入价格
+  cacheWrite1hPrice?: number; // 1小时缓存写入价格
   cacheReadPrice: number; // 缓存读取价格
 }
 
@@ -21,26 +22,30 @@ export const MODEL_PRICING: Record<string, ModelPricing> = {
     inputPrice: 0.8,
     outputPrice: 4.0,
     cacheWritePrice: 1.0,
+    cacheWrite1hPrice: 1.6,
     cacheReadPrice: 0.08,
   },
   haiku: {
     inputPrice: 0.8,
     outputPrice: 4.0,
     cacheWritePrice: 1.0,
+    cacheWrite1hPrice: 1.6,
     cacheReadPrice: 0.08,
   },
 
-  // Claude 3.5 Sonnet - 平衡性能和成本
+  // Claude 3.5 Sonnet - 平衡性能和成本 (deprecated)
   "claude-3-5-sonnet-20241022": {
     inputPrice: 3.0,
     outputPrice: 15.0,
     cacheWritePrice: 3.75,
+    cacheWrite1hPrice: 6.0,
     cacheReadPrice: 0.3,
   },
   "sonnet-3-5": {
     inputPrice: 3.0,
     outputPrice: 15.0,
     cacheWritePrice: 3.75,
+    cacheWrite1hPrice: 6.0,
     cacheReadPrice: 0.3,
   },
 
@@ -49,12 +54,14 @@ export const MODEL_PRICING: Record<string, ModelPricing> = {
     inputPrice: 3.0,
     outputPrice: 15.0,
     cacheWritePrice: 3.75,
+    cacheWrite1hPrice: 6.0,
     cacheReadPrice: 0.3,
   },
   "sonnet-3-7": {
     inputPrice: 3.0,
     outputPrice: 15.0,
     cacheWritePrice: 3.75,
+    cacheWrite1hPrice: 6.0,
     cacheReadPrice: 0.3,
   },
 
@@ -63,6 +70,7 @@ export const MODEL_PRICING: Record<string, ModelPricing> = {
     inputPrice: 3.0,
     outputPrice: 15.0,
     cacheWritePrice: 3.75,
+    cacheWrite1hPrice: 6.0,
     cacheReadPrice: 0.3,
   },
   sonnet: {
@@ -70,6 +78,7 @@ export const MODEL_PRICING: Record<string, ModelPricing> = {
     inputPrice: 3.0,
     outputPrice: 15.0,
     cacheWritePrice: 3.75,
+    cacheWrite1hPrice: 6.0,
     cacheReadPrice: 0.3,
   },
 
@@ -78,12 +87,21 @@ export const MODEL_PRICING: Record<string, ModelPricing> = {
     inputPrice: 15.0,
     outputPrice: 75.0,
     cacheWritePrice: 18.75,
+    cacheWrite1hPrice: 30.0,
     cacheReadPrice: 1.5,
+  },
+  "claude-opus-4-1-20250805": {
+    inputPrice: 15.0, // Base Input Tokens: $15 / MTok
+    outputPrice: 75.0, // Output Tokens: $75 / MTok
+    cacheWritePrice: 18.75, // 5m Cache Writes: $18.75 / MTok
+    cacheWrite1hPrice: 30.0, // 1h Cache Writes: $30 / MTok
+    cacheReadPrice: 1.5, // Cache Hits & Refreshes: $1.50 / MTok
   },
   opus: {
     inputPrice: 15.0,
     outputPrice: 75.0,
     cacheWritePrice: 18.75,
+    cacheWrite1hPrice: 30.0,
     cacheReadPrice: 1.5,
   },
 
@@ -92,18 +110,21 @@ export const MODEL_PRICING: Record<string, ModelPricing> = {
     inputPrice: 3.0,
     outputPrice: 15.0,
     cacheWritePrice: 3.75,
+    cacheWrite1hPrice: 6.0,
     cacheReadPrice: 0.3,
   },
   "claude-opus-4-20250514-thinking": {
     inputPrice: 15.0,
     outputPrice: 75.0,
     cacheWritePrice: 18.75,
+    cacheWrite1hPrice: 30.0,
     cacheReadPrice: 1.5,
   },
   "claude-3-7-sonnet-20250219-thinking": {
     inputPrice: 3.0,
     outputPrice: 15.0,
     cacheWritePrice: 3.75,
+    cacheWrite1hPrice: 6.0,
     cacheReadPrice: 0.3,
   },
 };
@@ -224,4 +245,5 @@ export const MODEL_USE_CASES: Record<string, string[]> = {
   "claude-3-7-sonnet-20250219": ["高级推理", "复杂编程", "深度分析", "专业咨询", "创新解决方案"],
   "claude-sonnet-4-20250514": ["平衡性能", "通用任务", "代码生成", "技术分析", "日常工作"],
   "claude-opus-4-20250514": ["最复杂推理", "高级研究", "专业写作", "复杂决策", "创意项目"],
+  "claude-opus-4-1-20250805": ["顶级推理能力", "高端研究分析", "专业级写作", "复杂决策支持", "创新项目开发"],
 };

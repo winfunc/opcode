@@ -16,6 +16,8 @@ use commands::agents::{
     import_agent_from_file, import_agent_from_github, import_native_agents, init_database, kill_agent_session,
     list_agent_runs, list_agent_runs_with_metrics, list_agents, list_claude_installations,
     list_native_agents, list_running_sessions, load_agent_session_history, set_claude_binary_path, stream_session_output, update_agent, AgentDb,
+    get_environment_variables, save_environment_variables, get_enabled_environment_variables,
+    get_environment_variable_groups, create_environment_variable_group, update_environment_variable_group, delete_environment_variable_group,
 };
 use commands::claude::{
     cancel_claude_execution, check_auto_checkpoint, check_claude_version, cleanup_old_checkpoints,
@@ -223,6 +225,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             fetch_github_agents,
             fetch_github_agent_content,
             import_agent_from_github,
+
+            // Environment Variables
+            get_environment_variables,
+            save_environment_variables,
+            get_enabled_environment_variables,
+            get_environment_variable_groups,
+            create_environment_variable_group,
+            update_environment_variable_group,
+            delete_environment_variable_group,
 
             // Usage & Analytics
             get_usage_stats,

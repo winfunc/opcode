@@ -69,11 +69,11 @@ if (shebangMatch) {
 }
 
 // 2. Replace yoga.wasm loading - handle top-level await properly
-// Handle both 1.0.41 and 1.0.67 patterns
+// Handle both 1.0.41 and 1.0.83 patterns
 // 1.0.41: var k81=await nUA(await VP9(CP9(import.meta.url).resolve("./yoga.wasm")));
-// 1.0.67: var B71=await OPA(await WtB(JtB(import.meta.url).resolve("./yoga.wasm")));
+// 1.0.83: var B71=await OPA(await WtB(JtB(import.meta.url).resolve("./yoga.wasm")));
 
-// Try 1.0.67 pattern first (newer version) - 正确的模式
+// Try 1.0.83 pattern first (newer version) - 正确的模式
 const yoga167Pattern =
   /var nV1=await is0\(await Hj9\(zj9\(import\.meta\.url\)\.resolve\("\.\/yoga\.wasm"\)\)\);/;
 const yoga167Replacement = `var nV1=await(async()=>{return await is0(await Bun.file(__embeddedYogaWasm).arrayBuffer())})();`;
@@ -95,7 +95,7 @@ const yoga141Replacement = `var k81=await(async()=>{return await nUA(await Bun.f
 
 if (yoga167Pattern.test(cliContent)) {
   cliContent = cliContent.replace(yoga167Pattern, yoga167Replacement);
-  log.info("✅Replaced yoga.wasm loading with embedded version (1.0.67 pattern)");
+  log.info("✅Replaced yoga.wasm loading with embedded version (1.0.83 pattern)");
 } else if (yoga160Pattern.test(cliContent)) {
   cliContent = cliContent.replace(yoga160Pattern, yoga160Replacement);
   log.info("✅Replaced yoga.wasm loading with embedded version (1.0.60 pattern)");

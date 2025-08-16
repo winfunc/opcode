@@ -242,6 +242,12 @@ const FloatingPromptInputInner = (
       description: t.agents.claude4OpusThinkingDesc,
       icon: <Brain className="h-4 w-4" />,
     },
+    {
+      id: "claude-opus-4-1-20250805",
+      name: "Claude Opus 4.1",
+      description: "Enhanced reasoning capabilities with improved performance",
+      icon: <Sparkles className="h-4 w-4" />,
+    },
   ];
 
   const [prompt, setPrompt] = useState("");
@@ -1029,14 +1035,6 @@ const FloatingPromptInputInner = (
           dragActive && "ring-2 ring-primary ring-offset-2",
           className
         )}
-        style={{
-          position: "fixed", // 强制固定定位
-          bottom: 0,
-          left: 0,
-          right: 0,
-          zIndex: 40, // 确保z-index
-          isolation: "isolate", // 创建新的stacking context
-        }}
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}
         onDragOver={handleDrag}

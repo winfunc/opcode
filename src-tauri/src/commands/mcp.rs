@@ -765,7 +765,6 @@ pub async fn mcp_serve(app: AppHandle) -> Result<String, String> {
 
     // If using sidecar, spawn via tauri_plugin_shell to avoid PATH/sandbox issues
     if claude_path == "claude-code" {
-        use tauri_plugin_shell::process::CommandEvent;
 
         let mut sidecar_cmd = app
             .shell()

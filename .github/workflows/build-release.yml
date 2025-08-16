@@ -37,6 +37,13 @@ jobs:
             bundle-type: deb
             bundle-pattern: "*.deb"
             file-suffix: deb
+          - name: Linux RPM
+            os: ubuntu-latest
+            rust-target: x86_64-unknown-linux-gnu
+            artifact-name: linux-x86_64-rpm
+            bundle-type: rpm
+            bundle-pattern: "*.rpm"
+            file-suffix: rpm
           - name: Windows MSI
             os: windows-latest
             rust-target: x86_64-pc-windows-msvc
@@ -91,7 +98,8 @@ jobs:
             libsoup-3.0-dev \
             libxdo-dev \
             libxcb-shape0-dev \
-            libxcb-xfixes0-dev
+            libxcb-xfixes0-dev \
+            rpm
 
       # 设置Rust工具链
       - name: Setup Rust
@@ -178,6 +186,8 @@ jobs:
             BUNDLE_PATH=$(find src-tauri/target/release/bundle/appimage -name "*.AppImage" | head -1)
           elif [ "${{ matrix.platform.bundle-type }}" = "deb" ]; then
             BUNDLE_PATH=$(find src-tauri/target/release/bundle/deb -name "*.deb" | head -1)
+          elif [ "${{ matrix.platform.bundle-type }}" = "rpm" ]; then
+            BUNDLE_PATH=$(find src-tauri/target/release/bundle/rpm -name "*.rpm" | head -1)
           elif [ "${{ matrix.platform.bundle-type }}" = "msi" ]; then
             BUNDLE_PATH=$(find src-tauri/target/release/bundle/msi -name "*.msi" | head -1)
           elif [ "${{ matrix.platform.bundle-type }}" = "nsis" ]; then
@@ -194,7 +204,7 @@ jobs:
             echo "❌ 未找到构建产物!"
             echo "查找路径:"
             find src-tauri/target -type d -name "bundle" 2>/dev/null || true
-            find src-tauri/target -type f \( -name "*.AppImage" -o -name "*.deb" -o -name "*.msi" -o -name "*.exe" -o -name "*.dmg" \) 2>/dev/null || true
+            find src-tauri/target -type f \( -name "*.AppImage" -o -name "*.deb" -o -name "*.rpm" -o -name "*.msi" -o -name "*.exe" -o -name "*.dmg" \) 2>/dev/null || true
             exit 1
           fi
 
@@ -213,6 +223,8 @@ jobs:
           if [ "${{ matrix.platform.bundle-type }}" = "appimage" ]; then
             NEW_NAME="claudia-linux-x86_64.${EXTENSION}"
           elif [ "${{ matrix.platform.bundle-type }}" = "deb" ]; then
+            NEW_NAME="claudia-linux-x86_64.${EXTENSION}"
+          elif [ "${{ matrix.platform.bundle-type }}" = "rpm" ]; then
             NEW_NAME="claudia-linux-x86_64.${EXTENSION}"
           elif [ "${{ matrix.platform.bundle-type }}" = "msi" ]; then
             NEW_NAME="claudia-windows-x86_64.${EXTENSION}"
@@ -263,9 +275,9 @@ jobs:
         run: |
           mkdir -p ./release-files
           echo "📦 查找所有构建产物..."
-          find ./artifacts -type f \( -name "*.AppImage" -o -name "*.deb" -o -name "*.msi" -o -name "*.exe" -o -name "*.dmg" \) -print
+          find ./artifacts -type f \( -name "*.AppImage" -o -name "*.deb" -o -name "*.rpm" -o -name "*.msi" -o -name "*.exe" -o -name "*.dmg" \) -print
           echo "📦 复制构建产物到发布目录..."
-          find ./artifacts -type f \( -name "*.AppImage" -o -name "*.deb" -o -name "*.msi" -o -name "*.exe" -o -name "*.dmg" \) -exec cp {} ./release-files/ \;
+          find ./artifacts -type f \( -name "*.AppImage" -o -name "*.deb" -o -name "*.rpm" -o -name "*.msi" -o -name "*.exe" -o -name "*.dmg" \) -exec cp {} ./release-files/ \;
           echo "📦 发布文件列表:"
           ls -la ./release-files/
 
@@ -306,6 +318,8 @@ jobs:
                 echo "- **Linux AppImage (x86_64)**: \`$filename\`" >> CHANGELOG.md
               elif [[ "$filename" == *"linux"* && "$filename" == *".deb" ]]; then
                 echo "- **Linux DEB (x86_64)**: \`$filename\`" >> CHANGELOG.md
+              elif [[ "$filename" == *"linux"* && "$filename" == *".rpm" ]]; then
+                echo "- **Linux RPM (x86_64)**: \`$filename\`" >> CHANGELOG.md
               elif [[ "$filename" == *"windows"* && "$filename" == *".msi" ]]; then
                 echo "- **Windows MSI (x86_64)**: \`$filename\`" >> CHANGELOG.md
               elif [[ "$filename" == *"windows"* && "$filename" == *".exe" ]]; then
@@ -342,6 +356,18 @@ jobs:
           echo "# Ubuntu/Debian" >> CHANGELOG.md
           echo "sudo dpkg -i claudia-linux-x86_64.deb" >> CHANGELOG.md
           echo "sudo apt-get install -f  # 解决依赖问题 / Fix dependencies if needed" >> CHANGELOG.md
+          echo "\`\`\`" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "**RPM Package**:" >> CHANGELOG.md
+          echo "- 中文：下载 \`.rpm\` 文件，使用包管理器安装" >> CHANGELOG.md
+          echo "- English: Download the \`.rpm\` file and install using package manager" >> CHANGELOG.md
+          echo "\`\`\`bash" >> CHANGELOG.md
+          echo "# RHEL/CentOS/Fedora" >> CHANGELOG.md
+          echo "sudo rpm -i claudia-linux-x86_64.rpm" >> CHANGELOG.md
+          echo "# 或者使用 dnf (Fedora)" >> CHANGELOG.md
+          echo "sudo dnf install claudia-linux-x86_64.rpm" >> CHANGELOG.md
+          echo "# 或者使用 yum (RHEL/CentOS)" >> CHANGELOG.md
+          echo "sudo yum install claudia-linux-x86_64.rpm" >> CHANGELOG.md
           echo "\`\`\`" >> CHANGELOG.md
           echo "" >> CHANGELOG.md
           echo "#### Windows" >> CHANGELOG.md
