@@ -166,20 +166,93 @@ jobs:
         run: |
           echo "🔍 验证Claude Code二进制文件..."
           if [ -f "binaries/claude-code" ]; then
+            echo "✅ 找到Claude Code二进制文件"
+            echo "📋 文件信息:"
             file binaries/claude-code
-            ldd binaries/claude-code || echo "⚠️ ldd检查失败，可能是静态链接的二进制文件"
             ls -la binaries/claude-code
+            echo "📋 权限检查:"
+            stat binaries/claude-code
+            echo "📋 依赖分析:"
+            ldd binaries/claude-code || {
+              echo "⚠️ ldd检查失败，检查是否为静态链接"
+              readelf -d binaries/claude-code | head -20 || echo "readelf失败"
+              objdump -p binaries/claude-code | grep NEEDED || echo "objdump失败"
+            }
+            echo "📋 验证可执行性:"
+            if [ -x "binaries/claude-code" ]; then
+              echo "✅ 文件具有执行权限"
+              ./binaries/claude-code --version || echo "⚠️ 执行失败，但这可能是正常的"
+            else
+              echo "❌ 文件没有执行权限"
+              chmod +x binaries/claude-code
+              echo "✅ 已添加执行权限"
+            fi
           else
             echo "❌ 未找到Claude Code二进制文件"
+            echo "📋 搜索所有claude-code文件:"
             find . -name "claude-code" -type f 2>/dev/null || true
+            echo "📋 binaries目录内容:"
+            ls -la binaries/ || echo "binaries目录不存在"
+          fi
+
+      # 调试AppImage构建环境
+      - name: Debug AppImage build environment
+        if: matrix.platform.os == 'ubuntu-latest' && matrix.platform.bundle-type == 'appimage'
+        run: |
+          echo "🔍 调试AppImage构建环境..."
+          echo "📋 系统信息:"
+          uname -a
+          echo "📋 已安装工具版本:"
+          which linuxdeploy || echo "linuxdeploy未找到"
+          which ldd || echo "ldd未找到"
+          ldd --version || echo "ldd版本获取失败"
+          which patchelf || echo "patchelf未找到"
+          patchelf --version || echo "patchelf版本获取失败"
+          echo "📋 环境变量:"
+          env | grep -E "(ARCH|NO_STRIP|LINUXDEPLOY)" || echo "无相关环境变量"
+          echo "📋 检查目标二进制文件状态:"
+          if [ -f "src-tauri/target/release/claudia" ]; then
+            echo "✅ 找到主程序二进制文件"
+            file src-tauri/target/release/claudia
+            ldd src-tauri/target/release/claudia || echo "⚠️ 主程序ldd失败"
+          else
+            echo "❌ 主程序二进制文件不存在"
+          fi
+          
+          echo "📋 检查外部二进制文件配置:"
+          if [ -f "binaries/claude-code" ]; then
+            echo "✅ 外部二进制文件存在"
+            echo "📋 详细分析外部二进制文件:"
+            file binaries/claude-code
+            ls -la binaries/claude-code
+            echo "📋 检查二进制文件依赖:"
+            ldd binaries/claude-code 2>&1 || {
+              echo "⚠️ ldd失败，详细错误信息:"
+              ldd binaries/claude-code 2>&1 | cat -v
+              echo "📋 使用 readelf 检查:"
+              readelf -h binaries/claude-code 2>&1 || echo "readelf 也失败"
+              echo "📋 使用 hexdump 检查文件头:"
+              hexdump -C binaries/claude-code | head -5 || echo "hexdump 失败"
+            }
+          else
+            echo "❌ 外部二进制文件不存在"
+            echo "📋 检查构建过程是否创建了该文件:"
+            find . -name "claude-code" -type f 2>/dev/null || echo "整个项目中未找到 claude-code 文件"
           fi
 
       # 构建Tauri应用程序
       - name: Build Tauri application
         run: |
+          echo "🚀 开始构建Tauri应用程序..."
+          echo "📋 构建参数:"
+          echo "  - Bundle type: ${{ matrix.platform.bundle-type }}"
+          echo "  - Rust target: ${{ matrix.platform.rust-target }}"
+          
           if [ "${{ matrix.platform.rust-target }}" = "aarch64-apple-darwin" ]; then
+            echo "📋 执行命令: bun run tauri build --target ${{ matrix.platform.rust-target }} --bundles ${{ matrix.platform.bundle-type }} --verbose"
             bun run tauri build --target ${{ matrix.platform.rust-target }} --bundles ${{ matrix.platform.bundle-type }} --verbose
           else
+            echo "📋 执行命令: bun run tauri build --bundles ${{ matrix.platform.bundle-type }} --verbose"
             bun run tauri build --bundles ${{ matrix.platform.bundle-type }} --verbose
           fi
         shell: bash
@@ -189,6 +262,36 @@ jobs:
           # 设置AppImage构建环境变量
           ARCH: x86_64
           NO_STRIP: 1
+          # 添加调试模式
+          RUST_LOG: debug
+          RUST_BACKTRACE: full
+          # 添加详细日志输出
+          LINUXDEPLOY_OUTPUT_VERSION: 1
+
+      # 构建失败诊断
+      - name: Diagnose build failure
+        if: failure() && matrix.platform.os == 'ubuntu-latest' && matrix.platform.bundle-type == 'appimage'
+        run: |
+          echo "❌ AppImage构建失败，开始诊断..."
+          echo "📋 检查构建日志:"
+          find src-tauri -name "*.log" -type f -exec echo "=== {} ===" \; -exec cat {} \; 2>/dev/null || echo "未找到构建日志"
+          echo "📋 检查AppDir结构:"
+          if [ -d "src-tauri/target/release/bundle/appimage" ]; then
+            find src-tauri/target/release/bundle/appimage -type d -name "*.AppDir" -exec echo "=== AppDir: {} ===" \; -exec ls -la {} \; 2>/dev/null || echo "未找到AppDir"
+          fi
+          echo "📋 检查可能的错误文件:"
+          find src-tauri/target -name "*.stderr" -type f -exec echo "=== {} ===" \; -exec cat {} \; 2>/dev/null || echo "未找到stderr文件"
+          echo "📋 检查 linuxdeploy 相关文件:"
+          find /tmp -name "*linuxdeploy*" -type f 2>/dev/null | head -10 || echo "未找到 linuxdeploy 临时文件"
+          echo "📋 检查系统 ldd 状态:"
+          which ldd
+          ldd --help | head -5 2>/dev/null || echo "ldd help 失败"
+          echo "📋 检查 AppDir 中的二进制文件:"
+          if [ -d "src-tauri/target/release/bundle/appimage" ]; then
+            find src-tauri/target/release/bundle/appimage -name "*.AppDir" -exec find {} -name "claude-code" -type f \; 2>/dev/null || echo "AppDir 中未找到 claude-code"
+          fi
+          echo "📋 检查Rust编译产物:"
+          ls -la src-tauri/target/release/ 2>/dev/null || echo "release目录不存在"
 
       # 查找构建产物
       - name: Find build artifacts
@@ -198,9 +301,21 @@ jobs:
           echo "Bundle type: ${{ matrix.platform.bundle-type }}"
           echo "Rust target: ${{ matrix.platform.rust-target }}"
 
-          # 显示构建目录结构
-          echo "📁 构建目录结构:"
-          find src-tauri/target -type f -name "*.${{ matrix.platform.bundle-pattern }}" 2>/dev/null || true
+          # 显示完整构建目录结构
+          echo "📁 完整构建目录结构:"
+          find src-tauri/target -type f \( -name "*.AppImage" -o -name "*.deb" -o -name "*.rpm" -o -name "*.msi" -o -name "*.exe" -o -name "*.dmg" \) 2>/dev/null || echo "未找到任何构建产物"
+          
+          echo "📁 target目录结构:"
+          ls -la src-tauri/target/ 2>/dev/null || echo "target目录不存在"
+          
+          if [ -d "src-tauri/target/release" ]; then
+            echo "📁 release目录结构:"
+            ls -la src-tauri/target/release/ 2>/dev/null
+            if [ -d "src-tauri/target/release/bundle" ]; then
+              echo "📁 bundle目录结构:"
+              find src-tauri/target/release/bundle -type f 2>/dev/null || echo "bundle目录为空"
+            fi
+          fi
 
           if [ "${{ matrix.platform.bundle-type }}" = "appimage" ]; then
             BUNDLE_PATH=$(find src-tauri/target/release/bundle/appimage -name "*.AppImage" | head -1)

@@ -616,6 +616,57 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
       const group = envGroups.find(g => g.id === groupId);
       if (!group) return;
 
+      // 如果启用当前组，需要检查并禁用有冲突键的其他组
+      if (enabled) {
+        const currentGroupVars = envVars.filter(v => v.group_id === groupId);
+        const currentGroupKeys = new Set(currentGroupVars.map(v => v.key.trim()).filter(key => key));
+        
+        // 检查其他启用的组是否有冲突键
+        const conflictingGroups = envGroups.filter(g => 
+          g.id !== groupId && g.enabled && 
+          envVars.some(v => v.group_id === g.id && currentGroupKeys.has(v.key.trim()))
+        );
+        
+        // 检查未分组变量是否有冲突键
+        const ungroupedVars = envVars.filter(v => !v.group_id);
+        const hasUngroupedConflict = ungroupedVars.some(v => currentGroupKeys.has(v.key.trim()));
+        
+        // 禁用冲突的分组
+        for (const conflictGroup of conflictingGroups) {
+          await api.updateEnvironmentVariableGroup(
+            conflictGroup.id!,
+            conflictGroup.name,
+            conflictGroup.description,
+            false, // 禁用冲突组
+            conflictGroup.sort_order
+          );
+        }
+        
+        // 如果有未分组变量冲突，禁用冲突的未分组变量
+        if (hasUngroupedConflict) {
+          const updatedVars = envVars.map(v => {
+            if (!v.group_id && currentGroupKeys.has(v.key.trim())) {
+              return { ...v, enabled: false };
+            }
+            return v;
+          });
+          setEnvVars(updatedVars);
+          
+          // 更新数据库中的所有环境变量
+          await api.saveEnvironmentVariables(updatedVars);
+        }
+        
+        // 更新组状态
+        setEnvGroups(groups => 
+          groups.map(g => {
+            if (g.id === groupId) return { ...g, enabled: true };
+            if (conflictingGroups.some(cg => cg.id === g.id)) return { ...g, enabled: false };
+            return g;
+          })
+        );
+      }
+
+      // 更新当前组
       const updatedGroup = await api.updateEnvironmentVariableGroup(
         groupId,
         group.name,
@@ -624,9 +675,12 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
         group.sort_order
       );
       
-      setEnvGroups(groups => 
-        groups.map(g => g.id === groupId ? updatedGroup : g)
-      );
+      if (!enabled) {
+        setEnvGroups(groups => 
+          groups.map(g => g.id === groupId ? updatedGroup : g)
+        );
+      }
+      
       logger.info(`Toggled group ${group.name} to ${enabled ? 'enabled' : 'disabled'}`);
     } catch (error) {
       logger.error("Failed to toggle group enabled state:", error);
@@ -675,10 +729,143 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
    * @param field - Field to update (key, value, or enabled)
    * @param value - New value for the field
    */
-  const updateEnvVar = (index: number, field: "key" | "value" | "enabled", value: string | boolean) => {
-    setEnvVars((prev) =>
-      prev.map((envVar, i) => (i === index ? { ...envVar, [field]: value } : envVar))
+  const updateEnvVar = async (index: number, field: "key" | "value" | "enabled", value: string | boolean) => {
+    // 如果是启用未分组变量，需要检查冲突
+    if (field === "enabled" && value === true) {
+      const envVar = envVars[index];
+      if (!envVar.group_id && envVar.key.trim()) {
+        await handleUngroupedVariableToggle(envVar.key.trim(), true);
+      }
+    }
+    
+    const updatedVars = envVars.map((envVar, i) => 
+      i === index ? { ...envVar, [field]: value } : envVar
     );
+    
+    setEnvVars(updatedVars);
+    
+    // 批量保存所有环境变量到数据库
+    try {
+      await api.saveEnvironmentVariables(updatedVars);
+    } catch (error) {
+      logger.error("Failed to save environment variable:", error);
+      setToast({ message: "Failed to save environment variable", type: "error" });
+    }
+  };
+
+  /**
+   * 处理未分组变量的启用/禁用，实现与分组变量的互斥
+   */
+  const handleUngroupedVariableToggle = async (key: string, enabled: boolean) => {
+    if (!enabled) return;
+
+    try {
+      // 查找有相同键的启用分组
+      const conflictingGroups = envGroups.filter(g => 
+        g.enabled && 
+        envVars.some(v => v.group_id === g.id && v.key.trim() === key)
+      );
+
+      // 禁用冲突的分组
+      for (const conflictGroup of conflictingGroups) {
+        await api.updateEnvironmentVariableGroup(
+          conflictGroup.id!,
+          conflictGroup.name,
+          conflictGroup.description,
+          false,
+          conflictGroup.sort_order
+        );
+      }
+
+      // 更新组状态
+      if (conflictingGroups.length > 0) {
+        setEnvGroups(groups => 
+          groups.map(g => {
+            if (conflictingGroups.some(cg => cg.id === g.id)) {
+              return { ...g, enabled: false };
+            }
+            return g;
+          })
+        );
+      }
+
+      logger.info(`Enabled ungrouped variable ${key}, disabled ${conflictingGroups.length} conflicting groups`);
+    } catch (error) {
+      logger.error("Failed to handle ungrouped variable toggle:", error);
+    }
+  };
+
+  /**
+   * 切换未分组变量的整体启用状态
+   */
+  const toggleUngroupedEnabled = async (enabled: boolean) => {
+    try {
+      const ungroupedVars = envVars.filter(v => !v.group_id);
+      
+      if (enabled) {
+        // 启用未分组变量时，需要检查并禁用有冲突键的分组
+        const ungroupedKeys = new Set(ungroupedVars.map(v => v.key.trim()).filter(key => key));
+        
+        const conflictingGroups = envGroups.filter(g => 
+          g.enabled && 
+          envVars.some(v => v.group_id === g.id && ungroupedKeys.has(v.key.trim()))
+        );
+
+        // 禁用冲突的分组
+        for (const conflictGroup of conflictingGroups) {
+          await api.updateEnvironmentVariableGroup(
+            conflictGroup.id!,
+            conflictGroup.name,
+            conflictGroup.description,
+            false,
+            conflictGroup.sort_order
+          );
+        }
+
+        // 更新组状态
+        if (conflictingGroups.length > 0) {
+          setEnvGroups(groups => 
+            groups.map(g => {
+              if (conflictingGroups.some(cg => cg.id === g.id)) {
+                return { ...g, enabled: false };
+              }
+              return g;
+            })
+          );
+        }
+
+        // 启用所有未分组变量
+        const updatedVars = envVars.map(v => {
+          if (!v.group_id) {
+            return { ...v, enabled: true };
+          }
+          return v;
+        });
+        setEnvVars(updatedVars);
+
+        // 更新数据库
+        await api.saveEnvironmentVariables(updatedVars);
+
+        logger.info(`Enabled ungrouped variables, disabled ${conflictingGroups.length} conflicting groups`);
+      } else {
+        // 禁用所有未分组变量
+        const updatedVars = envVars.map(v => {
+          if (!v.group_id) {
+            return { ...v, enabled: false };
+          }
+          return v;
+        });
+        setEnvVars(updatedVars);
+
+        // 更新数据库
+        await api.saveEnvironmentVariables(updatedVars);
+
+        logger.info("Disabled all ungrouped variables");
+      }
+    } catch (error) {
+      logger.error("Failed to toggle ungrouped variables:", error);
+      setToast({ message: "Failed to update ungrouped variables", type: "error" });
+    }
   };
 
   /**
@@ -1348,10 +1535,20 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
                         const ungroupedVars = envVars.filter(v => !v.group_id);
                         if (ungroupedVars.length === 0) return null;
                         
+                        const ungroupedEnabled = ungroupedVars.some(v => v.enabled);
+                        
                         return (
                           <div className="border rounded-lg">
                             <div className="flex items-center justify-between p-3 bg-muted/30 border-b">
-                              <h4 className="font-medium">{t.settings.ungroupedVariables}</h4>
+                              <div className="flex items-center gap-2">
+                                <Switch
+                                  checked={ungroupedEnabled}
+                                  onCheckedChange={(enabled) => toggleUngroupedEnabled(enabled)}
+                                  variant="high-contrast"
+                                  className="flex-shrink-0"
+                                />
+                                <h4 className="font-medium">{t.settings.ungroupedVariables}</h4>
+                              </div>
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -1380,7 +1577,8 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
                                         className={cn(
                                           "font-mono text-sm",
                                           isDuplicateKey(globalIndex, envVar.key, envVar.group_id) && 
-                                          "border-red-500 focus:border-red-500 focus:ring-red-500"
+                                          "border-red-500 focus:border-red-500 focus:ring-red-500",
+                                          (!envVar.enabled || !ungroupedEnabled) && "opacity-60"
                                         )}
                                         disabled={!envVar.enabled}
                                       />
@@ -1395,14 +1593,21 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
                                       placeholder="value"
                                       value={envVar.value}
                                       onChange={(e) => updateEnvVar(globalIndex, "value", e.target.value)}
-                                      className="flex-1 font-mono text-sm"
+                                      className={cn(
+                                        "flex-1 font-mono text-sm",
+                                        (!envVar.enabled || !ungroupedEnabled) && "opacity-60"
+                                      )}
                                       disabled={!envVar.enabled}
                                     />
                                     <Switch
                                       checked={envVar.enabled}
                                       onCheckedChange={(enabled) => updateEnvVar(globalIndex, "enabled", enabled)}
                                       variant="high-contrast"
-                                      className="flex-shrink-0"
+                                      className={cn(
+                                        "flex-shrink-0",
+                                        !ungroupedEnabled && "opacity-60"
+                                      )}
+                                      disabled={!ungroupedEnabled}
                                     />
                                     <Button
                                       variant="ghost"
