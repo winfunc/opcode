@@ -300,6 +300,13 @@ export const ar: Translations = {
     settingsSavedSuccessfully: "تم حفظ الإعدادات بنجاح!",
     failedToSaveSettings: "فشل في حفظ الإعدادات",
     refresh: "تحديث",
+    
+    // ترجمات متعلقة بتجميع متغيرات البيئة
+    addGroup: "إضافة مجموعة",
+    noVariablesInGroup: "لا توجد متغيرات في هذه المجموعة",
+    ungroupedVariables: "متغيرات غير مجمعة",
+    duplicateKeyInUngroupedVariables: "مفتاح مكرر في المتغيرات غير المجمعة",
+    cssColorValuesDesc: "استخدم قيم ألوان CSS (hex، rgb، oklch، إلخ). التغييرات تطبق فوراً.",
   },
 
   claude: {

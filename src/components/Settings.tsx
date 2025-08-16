@@ -927,7 +927,7 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
                           </div>
 
                           <p className="text-xs text-muted-foreground">
-                            Use CSS color values (hex, rgb, oklch, etc.). Changes apply immediately.
+                            {t.settings.cssColorValuesDesc}
                           </p>
                         </div>
                       )}
@@ -1194,7 +1194,7 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
                           className="gap-2"
                         >
                           <Plus className="h-3 w-3" />
-                          Add Group
+                          {t.settings.addGroup}
                         </Button>
                         <Button variant="outline" size="sm" onClick={() => addEnvVar()} className="gap-2">
                           <Plus className="h-3 w-3" />
@@ -1260,7 +1260,7 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
                                   className="gap-1"
                                 >
                                   <Plus className="h-3 w-3" />
-                                  Add Variable
+                                  {t.settings.addVariable}
                                 </Button>
                                 <Button
                                   variant="ghost"
@@ -1275,7 +1275,7 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
                             <div className="p-3 space-y-3">
                               {groupVars.length === 0 ? (
                                 <p className="text-xs text-muted-foreground py-2">
-                                  No variables in this group
+                                  {t.settings.noVariablesInGroup}
                                 </p>
                               ) : (
                                 groupVars.map((envVar) => {
@@ -1351,7 +1351,7 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
                         return (
                           <div className="border rounded-lg">
                             <div className="flex items-center justify-between p-3 bg-muted/30 border-b">
-                              <h4 className="font-medium">Ungrouped Variables</h4>
+                              <h4 className="font-medium">{t.settings.ungroupedVariables}</h4>
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -1359,7 +1359,7 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
                                 className="gap-1"
                               >
                                 <Plus className="h-3 w-3" />
-                                Add Variable
+                                {t.settings.addVariable}
                               </Button>
                             </div>
                             <div className="p-3 space-y-3">
@@ -1386,7 +1386,7 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
                                       />
                                       {isDuplicateKey(globalIndex, envVar.key, envVar.group_id) && (
                                         <div className="absolute -bottom-5 left-0 text-xs text-red-500">
-                                          Duplicate key in ungrouped variables
+                                          {t.settings.duplicateKeyInUngroupedVariables}
                                         </div>
                                       )}
                                     </div>

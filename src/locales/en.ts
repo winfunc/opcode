@@ -304,6 +304,13 @@ export const en: Translations = {
     settingsSavedSuccessfully: "Settings saved successfully!",
     failedToSaveSettings: "Failed to save settings",
     refresh: "Refresh",
+    
+    // Environment variables grouping related translations
+    addGroup: "Add Group",
+    noVariablesInGroup: "No variables in this group",
+    ungroupedVariables: "Ungrouped Variables",
+    duplicateKeyInUngroupedVariables: "Duplicate key in ungrouped variables",
+    cssColorValuesDesc: "Use CSS color values (hex, rgb, oklch, etc.). Changes apply immediately.",
   },
 
   claude: {

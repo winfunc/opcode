@@ -311,6 +311,13 @@ export const ru: Translations = {
     settingsSavedSuccessfully: "Настройки успешно сохранены!",
     failedToSaveSettings: "Не удалось сохранить настройки",
     refresh: "Обновить",
+    
+    // Переводы для группировки переменных окружения
+    addGroup: "Добавить группу",
+    noVariablesInGroup: "В этой группе нет переменных",
+    ungroupedVariables: "Несгруппированные переменные",
+    duplicateKeyInUngroupedVariables: "Дублирующийся ключ в несгруппированных переменных",
+    cssColorValuesDesc: "Используйте значения CSS цветов (hex, rgb, oklch и т.д.). Изменения применяются немедленно.",
   },
 
   claude: {

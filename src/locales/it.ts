@@ -307,6 +307,13 @@ export const it: Translations = {
     settingsSavedSuccessfully: "Impostazioni salvate con successo!",
     failedToSaveSettings: "Impossibile salvare le impostazioni",
     refresh: "Aggiorna",
+    
+    // Traduzioni relative al raggruppamento delle variabili d'ambiente
+    addGroup: "Aggiungi gruppo",
+    noVariablesInGroup: "Nessuna variabile in questo gruppo",
+    ungroupedVariables: "Variabili non raggruppate",
+    duplicateKeyInUngroupedVariables: "Chiave duplicata nelle variabili non raggruppate",
+    cssColorValuesDesc: "Usa valori di colore CSS (hex, rgb, oklch, ecc.). Le modifiche si applicano immediatamente.",
   },
 
   claude: {

@@ -307,6 +307,13 @@ export const hi: Translations = {
     settingsSavedSuccessfully: "सेटिंग्स सफलतापूर्वक सहेजी गईं!",
     failedToSaveSettings: "सेटिंग्स सहेजने में विफल",
     refresh: "ताज़ा करें",
+    
+    // पर्यावरण चर समूहीकरण संबंधित अनुवाद
+    addGroup: "समूह जोड़ें",
+    noVariablesInGroup: "इस समूह में कोई चर नहीं हैं",
+    ungroupedVariables: "असमूहीकृत चर",
+    duplicateKeyInUngroupedVariables: "असमूहीकृत चरों में डुप्लिकेट कुंजी",
+    cssColorValuesDesc: "CSS रंग मान (hex, rgb, oklch आदि) का उपयोग करें। परिवर्तन तुरंत लागू होते हैं।",
   },
 
   claude: {

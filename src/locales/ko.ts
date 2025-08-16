@@ -305,6 +305,13 @@ export const ko: Translations = {
     settingsSavedSuccessfully: "설정이 성공적으로 저장되었습니다!",
     failedToSaveSettings: "설정 저장 실패",
     refresh: "새로고침",
+    
+    // 환경 변수 그룹 관련 번역
+    addGroup: "그룹 추가",
+    noVariablesInGroup: "이 그룹에는 변수가 없습니다",
+    ungroupedVariables: "그룹화되지 않은 변수",
+    duplicateKeyInUngroupedVariables: "그룹화되지 않은 변수에 중복 키가 있습니다",
+    cssColorValuesDesc: "CSS 색상 값(hex, rgb, oklch 등)을 사용하세요. 변경 사항이 즉시 적용됩니다.",
   },
 
   claude: {

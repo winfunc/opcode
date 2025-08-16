@@ -336,6 +336,13 @@ export interface Translations {
     settingsSavedSuccessfully: string;
     failedToSaveSettings: string;
     refresh: string;
+    
+    // 环境变量分组相关
+    addGroup: string;
+    noVariablesInGroup: string;
+    ungroupedVariables: string;
+    duplicateKeyInUngroupedVariables: string;
+    cssColorValuesDesc: string;
   };
 
   // Claude相关

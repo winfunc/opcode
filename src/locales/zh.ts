@@ -301,6 +301,13 @@ export const zh: Translations = {
     settingsSavedSuccessfully: "设置保存成功！",
     failedToSaveSettings: "保存设置失败",
     refresh: "刷新",
+    
+    // 环境变量分组相关翻译
+    addGroup: "添加分组",
+    noVariablesInGroup: "此分组中没有变量",
+    ungroupedVariables: "未分组变量",
+    duplicateKeyInUngroupedVariables: "未分组变量中存在重复键",
+    cssColorValuesDesc: "使用 CSS 颜色值（hex、rgb、oklch 等）。更改会立即应用。",
   },
 
   claude: {

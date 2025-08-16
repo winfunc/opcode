@@ -306,6 +306,13 @@ export const ja: Translations = {
     settingsSavedSuccessfully: "設定が正常に保存されました！",
     failedToSaveSettings: "設定の保存に失敗しました",
     refresh: "更新",
+    
+    // 環境変数グループ関連の翻訳
+    addGroup: "グループを追加",
+    noVariablesInGroup: "このグループには変数がありません",
+    ungroupedVariables: "グループ化されていない変数",
+    duplicateKeyInUngroupedVariables: "グループ化されていない変数に重複キーがあります",
+    cssColorValuesDesc: "CSS色値（hex、rgb、oklch等）を使用してください。変更は即座に適用されます。",
   },
 
   claude: {

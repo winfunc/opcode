@@ -99,7 +99,10 @@ jobs:
             libxdo-dev \
             libxcb-shape0-dev \
             libxcb-xfixes0-dev \
-            rpm
+            rpm \
+            file \
+            patchelf \
+            libc6-dev
 
       # 设置Rust工具链
       - name: Setup Rust
@@ -157,6 +160,20 @@ jobs:
           mkdir -p src-tauri/target/release/bundle
           echo "📁 创建构建目录完成"
 
+      # 验证Claude Code二进制文件
+      - name: Verify Claude Code binary
+        if: matrix.platform.os == 'ubuntu-latest'
+        run: |
+          echo "🔍 验证Claude Code二进制文件..."
+          if [ -f "binaries/claude-code" ]; then
+            file binaries/claude-code
+            ldd binaries/claude-code || echo "⚠️ ldd检查失败，可能是静态链接的二进制文件"
+            ls -la binaries/claude-code
+          else
+            echo "❌ 未找到Claude Code二进制文件"
+            find . -name "claude-code" -type f 2>/dev/null || true
+          fi
+
       # 构建Tauri应用程序
       - name: Build Tauri application
         run: |
@@ -169,6 +186,9 @@ jobs:
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          # 设置AppImage构建环境变量
+          ARCH: x86_64
+          NO_STRIP: 1
 
       # 查找构建产物
       - name: Find build artifacts
