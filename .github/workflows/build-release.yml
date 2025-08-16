@@ -23,13 +23,6 @@ jobs:
       fail-fast: false
       matrix:
         platform:
-          - name: Linux AppImage
-            os: ubuntu-latest
-            rust-target: x86_64-unknown-linux-gnu
-            artifact-name: linux-x86_64-appimage
-            bundle-type: appimage
-            bundle-pattern: "*.AppImage"
-            file-suffix: appimage
           - name: Linux DEB
             os: ubuntu-latest
             rust-target: x86_64-unknown-linux-gnu
@@ -195,51 +188,6 @@ jobs:
             ls -la binaries/ || echo "binaries目录不存在"
           fi
 
-      # 调试AppImage构建环境
-      - name: Debug AppImage build environment
-        if: matrix.platform.os == 'ubuntu-latest' && matrix.platform.bundle-type == 'appimage'
-        run: |
-          echo "🔍 调试AppImage构建环境..."
-          echo "📋 系统信息:"
-          uname -a
-          echo "📋 已安装工具版本:"
-          which linuxdeploy || echo "linuxdeploy未找到"
-          which ldd || echo "ldd未找到"
-          ldd --version || echo "ldd版本获取失败"
-          which patchelf || echo "patchelf未找到"
-          patchelf --version || echo "patchelf版本获取失败"
-          echo "📋 环境变量:"
-          env | grep -E "(ARCH|NO_STRIP|LINUXDEPLOY)" || echo "无相关环境变量"
-          echo "📋 检查目标二进制文件状态:"
-          if [ -f "src-tauri/target/release/claudia" ]; then
-            echo "✅ 找到主程序二进制文件"
-            file src-tauri/target/release/claudia
-            ldd src-tauri/target/release/claudia || echo "⚠️ 主程序ldd失败"
-          else
-            echo "❌ 主程序二进制文件不存在"
-          fi
-          
-          echo "📋 检查外部二进制文件配置:"
-          if [ -f "binaries/claude-code" ]; then
-            echo "✅ 外部二进制文件存在"
-            echo "📋 详细分析外部二进制文件:"
-            file binaries/claude-code
-            ls -la binaries/claude-code
-            echo "📋 检查二进制文件依赖:"
-            ldd binaries/claude-code 2>&1 || {
-              echo "⚠️ ldd失败，详细错误信息:"
-              ldd binaries/claude-code 2>&1 | cat -v
-              echo "📋 使用 readelf 检查:"
-              readelf -h binaries/claude-code 2>&1 || echo "readelf 也失败"
-              echo "📋 使用 hexdump 检查文件头:"
-              hexdump -C binaries/claude-code | head -5 || echo "hexdump 失败"
-            }
-          else
-            echo "❌ 外部二进制文件不存在"
-            echo "📋 检查构建过程是否创建了该文件:"
-            find . -name "claude-code" -type f 2>/dev/null || echo "整个项目中未找到 claude-code 文件"
-          fi
-
       # 构建Tauri应用程序
       - name: Build Tauri application
         run: |
@@ -259,39 +207,8 @@ jobs:
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          # 设置AppImage构建环境变量
-          ARCH: x86_64
-          NO_STRIP: 1
-          # 添加调试模式
-          RUST_LOG: debug
-          RUST_BACKTRACE: full
-          # 添加详细日志输出
-          LINUXDEPLOY_OUTPUT_VERSION: 1
 
-      # 构建失败诊断
-      - name: Diagnose build failure
-        if: failure() && matrix.platform.os == 'ubuntu-latest' && matrix.platform.bundle-type == 'appimage'
-        run: |
-          echo "❌ AppImage构建失败，开始诊断..."
-          echo "📋 检查构建日志:"
-          find src-tauri -name "*.log" -type f -exec echo "=== {} ===" \; -exec cat {} \; 2>/dev/null || echo "未找到构建日志"
-          echo "📋 检查AppDir结构:"
-          if [ -d "src-tauri/target/release/bundle/appimage" ]; then
-            find src-tauri/target/release/bundle/appimage -type d -name "*.AppDir" -exec echo "=== AppDir: {} ===" \; -exec ls -la {} \; 2>/dev/null || echo "未找到AppDir"
-          fi
-          echo "📋 检查可能的错误文件:"
-          find src-tauri/target -name "*.stderr" -type f -exec echo "=== {} ===" \; -exec cat {} \; 2>/dev/null || echo "未找到stderr文件"
-          echo "📋 检查 linuxdeploy 相关文件:"
-          find /tmp -name "*linuxdeploy*" -type f 2>/dev/null | head -10 || echo "未找到 linuxdeploy 临时文件"
-          echo "📋 检查系统 ldd 状态:"
-          which ldd
-          ldd --help | head -5 2>/dev/null || echo "ldd help 失败"
-          echo "📋 检查 AppDir 中的二进制文件:"
-          if [ -d "src-tauri/target/release/bundle/appimage" ]; then
-            find src-tauri/target/release/bundle/appimage -name "*.AppDir" -exec find {} -name "claude-code" -type f \; 2>/dev/null || echo "AppDir 中未找到 claude-code"
-          fi
-          echo "📋 检查Rust编译产物:"
-          ls -la src-tauri/target/release/ 2>/dev/null || echo "release目录不存在"
+
 
       # 查找构建产物
       - name: Find build artifacts
@@ -303,7 +220,7 @@ jobs:
 
           # 显示完整构建目录结构
           echo "📁 完整构建目录结构:"
-          find src-tauri/target -type f \( -name "*.AppImage" -o -name "*.deb" -o -name "*.rpm" -o -name "*.msi" -o -name "*.exe" -o -name "*.dmg" \) 2>/dev/null || echo "未找到任何构建产物"
+          find src-tauri/target -type f \( -name "*.deb" -o -name "*.rpm" -o -name "*.msi" -o -name "*.exe" -o -name "*.dmg" \) 2>/dev/null || echo "未找到任何构建产物"
           
           echo "📁 target目录结构:"
           ls -la src-tauri/target/ 2>/dev/null || echo "target目录不存在"
@@ -317,9 +234,7 @@ jobs:
             fi
           fi
 
-          if [ "${{ matrix.platform.bundle-type }}" = "appimage" ]; then
-            BUNDLE_PATH=$(find src-tauri/target/release/bundle/appimage -name "*.AppImage" | head -1)
-          elif [ "${{ matrix.platform.bundle-type }}" = "deb" ]; then
+          if [ "${{ matrix.platform.bundle-type }}" = "deb" ]; then
             BUNDLE_PATH=$(find src-tauri/target/release/bundle/deb -name "*.deb" | head -1)
           elif [ "${{ matrix.platform.bundle-type }}" = "rpm" ]; then
             BUNDLE_PATH=$(find src-tauri/target/release/bundle/rpm -name "*.rpm" | head -1)
@@ -339,7 +254,7 @@ jobs:
             echo "❌ 未找到构建产物!"
             echo "查找路径:"
             find src-tauri/target -type d -name "bundle" 2>/dev/null || true
-            find src-tauri/target -type f \( -name "*.AppImage" -o -name "*.deb" -o -name "*.rpm" -o -name "*.msi" -o -name "*.exe" -o -name "*.dmg" \) 2>/dev/null || true
+            find src-tauri/target -type f \( -name "*.deb" -o -name "*.rpm" -o -name "*.msi" -o -name "*.exe" -o -name "*.dmg" \) 2>/dev/null || true
             exit 1
           fi
 
@@ -355,9 +270,7 @@ jobs:
           EXTENSION="${ORIGINAL_NAME##*.}"
 
           # 根据平台和架构生成文件名，不包含文件类型后缀
-          if [ "${{ matrix.platform.bundle-type }}" = "appimage" ]; then
-            NEW_NAME="claudia-linux-x86_64.${EXTENSION}"
-          elif [ "${{ matrix.platform.bundle-type }}" = "deb" ]; then
+          if [ "${{ matrix.platform.bundle-type }}" = "deb" ]; then
             NEW_NAME="claudia-linux-x86_64.${EXTENSION}"
           elif [ "${{ matrix.platform.bundle-type }}" = "rpm" ]; then
             NEW_NAME="claudia-linux-x86_64.${EXTENSION}"
@@ -410,9 +323,9 @@ jobs:
         run: |
           mkdir -p ./release-files
           echo "📦 查找所有构建产物..."
-          find ./artifacts -type f \( -name "*.AppImage" -o -name "*.deb" -o -name "*.rpm" -o -name "*.msi" -o -name "*.exe" -o -name "*.dmg" \) -print
+          find ./artifacts -type f \( -name "*.deb" -o -name "*.rpm" -o -name "*.msi" -o -name "*.exe" -o -name "*.dmg" \) -print
           echo "📦 复制构建产物到发布目录..."
-          find ./artifacts -type f \( -name "*.AppImage" -o -name "*.deb" -o -name "*.rpm" -o -name "*.msi" -o -name "*.exe" -o -name "*.dmg" \) -exec cp {} ./release-files/ \;
+          find ./artifacts -type f \( -name "*.deb" -o -name "*.rpm" -o -name "*.msi" -o -name "*.exe" -o -name "*.dmg" \) -exec cp {} ./release-files/ \;
           echo "📦 发布文件列表:"
           ls -la ./release-files/
 
@@ -449,9 +362,7 @@ jobs:
           for file in ./release-files/*; do
             if [ -f "$file" ]; then
               filename=$(basename "$file")
-              if [[ "$filename" == *"linux"* && "$filename" == *".AppImage" ]]; then
-                echo "- **Linux AppImage (x86_64)**: \`$filename\`" >> CHANGELOG.md
-              elif [[ "$filename" == *"linux"* && "$filename" == *".deb" ]]; then
+              if [[ "$filename" == *"linux"* && "$filename" == *".deb" ]]; then
                 echo "- **Linux DEB (x86_64)**: \`$filename\`" >> CHANGELOG.md
               elif [[ "$filename" == *"linux"* && "$filename" == *".rpm" ]]; then
                 echo "- **Linux RPM (x86_64)**: \`$filename\`" >> CHANGELOG.md
@@ -476,14 +387,6 @@ jobs:
           echo "### 🔧 安装说明 / Installation Instructions" >> CHANGELOG.md
           echo "" >> CHANGELOG.md
           echo "#### Linux" >> CHANGELOG.md
-          echo "**AppImage**:" >> CHANGELOG.md
-          echo "- 中文：下载 \`.AppImage\` 文件，添加执行权限后直接运行" >> CHANGELOG.md
-          echo "- English: Download the \`.AppImage\` file, add execute permission and run directly" >> CHANGELOG.md
-          echo "\`\`\`bash" >> CHANGELOG.md
-          echo "chmod +x claudia-linux-x86_64.AppImage" >> CHANGELOG.md
-          echo "./claudia-linux-x86_64.AppImage" >> CHANGELOG.md
-          echo "\`\`\`" >> CHANGELOG.md
-          echo "" >> CHANGELOG.md
           echo "**DEB Package**:" >> CHANGELOG.md
           echo "- 中文：下载 \`.deb\` 文件，使用包管理器安装" >> CHANGELOG.md
           echo "- English: Download the \`.deb\` file and install using package manager" >> CHANGELOG.md
