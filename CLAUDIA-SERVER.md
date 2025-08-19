@@ -58,13 +58,19 @@ The server implements the same functionality as the Rust/Tauri backend:
 
 ## API Endpoints
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/status/health` | GET | Server health check |
-| `/api/claude/execute` | POST | Start new Claude session |
-| `/api/claude/sessions/running` | GET | List running sessions |
-| `/api/projects` | GET | List all projects |
-| `/ws` | WebSocket | Real-time streaming |
+| Endpoint                         | Method    | Description                    |
+|----------------------------------|-----------|--------------------------------|
+| `/api/status/health`             | GET       | Server health check            |
+| `/api/status/info`               | GET       | Server info/config summary     |
+| `/api/claude/version`            | GET       | Claude CLI version             |
+| `/api/claude/execute`            | POST      | Start new Claude session       |
+| `/api/claude/continue`           | POST      | Continue an existing session   |
+| `/api/claude/resume`             | POST      | Resume a paused session        |
+| `/api/claude/cancel/{id}`        | POST      | Cancel a running session       |
+| `/api/claude/sessions/running`   | GET       | List running sessions          |
+| `/api/projects`                  | GET       | List all projects              |
+| `/api/projects`                  | POST      | Create a new project           |
+| `/ws`                            | WebSocket | Real-time streaming            |
 
 See [README.md](README.md) for complete API documentation.
 
