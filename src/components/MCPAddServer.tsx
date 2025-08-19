@@ -36,17 +36,17 @@ export const MCPAddServer: React.FC<MCPAddServerProps> = ({
 }) => {
   const [transport, setTransport] = useState<"stdio" | "sse">("stdio");
   const [saving, setSaving] = useState(false);
-  
+
   // Analytics tracking
   const trackEvent = useTrackEvent();
-  
+
   // Stdio server state
   const [stdioName, setStdioName] = useState("");
   const [stdioCommand, setStdioCommand] = useState("");
   const [stdioArgs, setStdioArgs] = useState("");
   const [stdioScope, setStdioScope] = useState("local");
   const [stdioEnvVars, setStdioEnvVars] = useState<EnvironmentVariable[]>([]);
-  
+
   // SSE server state
   const [sseName, setSseName] = useState("");
   const [sseUrl, setSseUrl] = useState("");
@@ -62,26 +62,31 @@ export const MCPAddServer: React.FC<MCPAddServerProps> = ({
       key: "",
       value: "",
     };
-    
+
     if (type === "stdio") {
-      setStdioEnvVars(prev => [...prev, newVar]);
+      setStdioEnvVars((prev) => [...prev, newVar]);
     } else {
-      setSseEnvVars(prev => [...prev, newVar]);
+      setSseEnvVars((prev) => [...prev, newVar]);
     }
   };
 
   /**
    * Updates an environment variable
    */
-  const updateEnvVar = (type: "stdio" | "sse", id: string, field: "key" | "value", value: string) => {
+  const updateEnvVar = (
+    type: "stdio" | "sse",
+    id: string,
+    field: "key" | "value",
+    value: string,
+  ) => {
     if (type === "stdio") {
-      setStdioEnvVars(prev => prev.map(v => 
-        v.id === id ? { ...v, [field]: value } : v
-      ));
+      setStdioEnvVars((prev) =>
+        prev.map((v) => (v.id === id ? { ...v, [field]: value } : v)),
+      );
     } else {
-      setSseEnvVars(prev => prev.map(v => 
-        v.id === id ? { ...v, [field]: value } : v
-      ));
+      setSseEnvVars((prev) =>
+        prev.map((v) => (v.id === id ? { ...v, [field]: value } : v)),
+      );
     }
   };
 
@@ -90,9 +95,9 @@ export const MCPAddServer: React.FC<MCPAddServerProps> = ({
    */
   const removeEnvVar = (type: "stdio" | "sse", id: string) => {
     if (type === "stdio") {
-      setStdioEnvVars(prev => prev.filter(v => v.id !== id));
+      setStdioEnvVars((prev) => prev.filter((v) => v.id !== id));
     } else {
-      setSseEnvVars(prev => prev.filter(v => v.id !== id));
+      setSseEnvVars((prev) => prev.filter((v) => v.id !== id));
     }
   };
 
@@ -104,26 +109,29 @@ export const MCPAddServer: React.FC<MCPAddServerProps> = ({
       onError("Server name is required");
       return;
     }
-    
+
     if (!stdioCommand.trim()) {
       onError("Command is required");
       return;
     }
-    
+
     try {
       setSaving(true);
-      
+
       // Parse arguments
       const args = stdioArgs.trim() ? stdioArgs.split(/\s+/) : [];
-      
+
       // Convert env vars to object
-      const env = stdioEnvVars.reduce((acc, { key, value }) => {
-        if (key.trim() && value.trim()) {
-          acc[key] = value;
-        }
-        return acc;
-      }, {} as Record<string, string>);
-      
+      const env = stdioEnvVars.reduce(
+        (acc, { key, value }) => {
+          if (key.trim() && value.trim()) {
+            acc[key] = value;
+          }
+          return acc;
+        },
+        {} as Record<string, string>,
+      );
+
       const result = await api.mcpAdd(
         stdioName,
         "stdio",
@@ -131,16 +139,16 @@ export const MCPAddServer: React.FC<MCPAddServerProps> = ({
         args,
         env,
         undefined,
-        stdioScope
+        stdioScope,
       );
-      
+
       if (result.success) {
         // Track server added
         trackEvent.mcpServerAdded({
           server_type: "stdio",
-          configuration_method: "manual"
+          configuration_method: "manual",
         });
-        
+
         // Reset form
         setStdioName("");
         setStdioCommand("");
@@ -167,23 +175,26 @@ export const MCPAddServer: React.FC<MCPAddServerProps> = ({
       onError("Server name is required");
       return;
     }
-    
+
     if (!sseUrl.trim()) {
       onError("URL is required");
       return;
     }
-    
+
     try {
       setSaving(true);
-      
+
       // Convert env vars to object
-      const env = sseEnvVars.reduce((acc, { key, value }) => {
-        if (key.trim() && value.trim()) {
-          acc[key] = value;
-        }
-        return acc;
-      }, {} as Record<string, string>);
-      
+      const env = sseEnvVars.reduce(
+        (acc, { key, value }) => {
+          if (key.trim() && value.trim()) {
+            acc[key] = value;
+          }
+          return acc;
+        },
+        {} as Record<string, string>,
+      );
+
       const result = await api.mcpAdd(
         sseName,
         "sse",
@@ -191,16 +202,16 @@ export const MCPAddServer: React.FC<MCPAddServerProps> = ({
         [],
         env,
         sseUrl,
-        sseScope
+        sseScope,
       );
-      
+
       if (result.success) {
         // Track server added
         trackEvent.mcpServerAdded({
           server_type: "sse",
-          configuration_method: "manual"
+          configuration_method: "manual",
         });
-        
+
         // Reset form
         setSseName("");
         setSseUrl("");
@@ -221,7 +232,10 @@ export const MCPAddServer: React.FC<MCPAddServerProps> = ({
   /**
    * Renders environment variable inputs
    */
-  const renderEnvVars = (type: "stdio" | "sse", envVars: EnvironmentVariable[]) => {
+  const renderEnvVars = (
+    type: "stdio" | "sse",
+    envVars: EnvironmentVariable[],
+  ) => {
     return (
       <div className="space-y-3">
         <div className="flex items-center justify-between">
@@ -236,7 +250,7 @@ export const MCPAddServer: React.FC<MCPAddServerProps> = ({
             Add Variable
           </Button>
         </div>
-        
+
         {envVars.length > 0 && (
           <div className="space-y-2">
             {envVars.map((envVar) => (
@@ -244,14 +258,18 @@ export const MCPAddServer: React.FC<MCPAddServerProps> = ({
                 <Input
                   placeholder="KEY"
                   value={envVar.key}
-                  onChange={(e) => updateEnvVar(type, envVar.id, "key", e.target.value)}
+                  onChange={(e) =>
+                    updateEnvVar(type, envVar.id, "key", e.target.value)
+                  }
                   className="flex-1 font-mono text-sm"
                 />
                 <span className="text-muted-foreground">=</span>
                 <Input
                   placeholder="value"
                   value={envVar.value}
-                  onChange={(e) => updateEnvVar(type, envVar.id, "value", e.target.value)}
+                  onChange={(e) =>
+                    updateEnvVar(type, envVar.id, "value", e.target.value)
+                  }
                   className="flex-1 font-mono text-sm"
                 />
                 <Button
@@ -279,7 +297,10 @@ export const MCPAddServer: React.FC<MCPAddServerProps> = ({
         </p>
       </div>
 
-      <Tabs value={transport} onValueChange={(v) => setTransport(v as "stdio" | "sse")}>
+      <Tabs
+        value={transport}
+        onValueChange={(v) => setTransport(v as "stdio" | "sse")}
+      >
         <TabsList className="grid w-full grid-cols-2 max-w-sm mb-6">
           <TabsTrigger value="stdio" className="gap-2">
             <Terminal className="h-4 w-4 text-amber-500" />
@@ -343,7 +364,10 @@ export const MCPAddServer: React.FC<MCPAddServerProps> = ({
                   onValueChange={(value: string) => setStdioScope(value)}
                   options={[
                     { value: "local", label: "Local (this project only)" },
-                    { value: "project", label: "Project (shared via .mcp.json)" },
+                    {
+                      value: "project",
+                      label: "Project (shared via .mcp.json)",
+                    },
                     { value: "user", label: "User (all projects)" },
                   ]}
                 />
@@ -412,7 +436,10 @@ export const MCPAddServer: React.FC<MCPAddServerProps> = ({
                   onValueChange={(value: string) => setSseScope(value)}
                   options={[
                     { value: "local", label: "Local (this project only)" },
-                    { value: "project", label: "Project (shared via .mcp.json)" },
+                    {
+                      value: "project",
+                      label: "Project (shared via .mcp.json)",
+                    },
                     { value: "user", label: "User (all projects)" },
                   ]}
                 />
@@ -453,7 +480,10 @@ export const MCPAddServer: React.FC<MCPAddServerProps> = ({
           </div>
           <div className="space-y-2 text-xs text-muted-foreground">
             <div className="font-mono bg-background p-2 rounded">
-              <p>• Postgres: /path/to/postgres-mcp-server --connection-string "postgresql://..."</p>
+              <p>
+                • Postgres: /path/to/postgres-mcp-server --connection-string
+                "postgresql://..."
+              </p>
               <p>• Weather API: /usr/local/bin/weather-cli --api-key ABC123</p>
               <p>• SSE Server: https://api.example.com/mcp/stream</p>
             </div>
@@ -462,4 +492,4 @@ export const MCPAddServer: React.FC<MCPAddServerProps> = ({
       </Card>
     </div>
   );
-}; 
+};

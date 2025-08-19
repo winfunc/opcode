@@ -24,7 +24,7 @@ interface ClaudeMemoriesDropdownProps {
 
 /**
  * ClaudeMemoriesDropdown component - Shows all CLAUDE.md files in a project
- * 
+ *
  * @example
  * <ClaudeMemoriesDropdown
  *   projectPath="/Users/example/project"
@@ -40,14 +40,14 @@ export const ClaudeMemoriesDropdown: React.FC<ClaudeMemoriesDropdownProps> = ({
   const [files, setFiles] = useState<ClaudeMdFile[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Load CLAUDE.md files when dropdown opens
   useEffect(() => {
     if (isOpen && files.length === 0) {
       loadClaudeMdFiles();
     }
   }, [isOpen]);
-  
+
   const loadClaudeMdFiles = async () => {
     try {
       setLoading(true);
@@ -61,13 +61,13 @@ export const ClaudeMemoriesDropdown: React.FC<ClaudeMemoriesDropdownProps> = ({
       setLoading(false);
     }
   };
-  
+
   const formatFileSize = (bytes: number): string => {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
-  
+
   return (
     <div className={cn("w-full", className)}>
       <Card className="overflow-hidden">
@@ -80,7 +80,9 @@ export const ClaudeMemoriesDropdown: React.FC<ClaudeMemoriesDropdownProps> = ({
             <FileText className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm font-medium">CLAUDE.md Memories</span>
             {files.length > 0 && !loading && (
-              <span className="text-xs text-muted-foreground">({files.length})</span>
+              <span className="text-xs text-muted-foreground">
+                ({files.length})
+              </span>
             )}
           </div>
           <motion.div
@@ -90,7 +92,7 @@ export const ClaudeMemoriesDropdown: React.FC<ClaudeMemoriesDropdownProps> = ({
             <ChevronDown className="h-4 w-4 text-muted-foreground" />
           </motion.div>
         </button>
-        
+
         {/* Dropdown Content */}
         <AnimatePresence>
           {isOpen && (
@@ -123,7 +125,9 @@ export const ClaudeMemoriesDropdown: React.FC<ClaudeMemoriesDropdownProps> = ({
                         className="flex items-center justify-between p-3 hover:bg-accent/50 transition-colors border-b border-border last:border-b-0"
                       >
                         <div className="flex-1 min-w-0 mr-2">
-                          <p className="text-xs font-mono truncate">{file.relative_path}</p>
+                          <p className="text-xs font-mono truncate">
+                            {file.relative_path}
+                          </p>
                           <div className="flex items-center space-x-3 mt-1">
                             <span className="text-xs text-muted-foreground">
                               {formatFileSize(file.size)}
@@ -155,4 +159,4 @@ export const ClaudeMemoriesDropdown: React.FC<ClaudeMemoriesDropdownProps> = ({
       </Card>
     </div>
   );
-}; 
+};

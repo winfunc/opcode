@@ -32,7 +32,7 @@ const buttonVariants = cva(
       variant: "default",
       size: "default",
     },
-  }
+  },
 );
 
 export interface ButtonProps
@@ -43,7 +43,7 @@ export interface ButtonProps
 
 /**
  * Button component with multiple variants and sizes
- * 
+ *
  * @example
  * <Button variant="outline" size="lg" onClick={() => console.log('clicked')}>
  *   Click me
@@ -58,8 +58,8 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         {...props}
       />
     );
-  }
+  },
 );
 Button.displayName = "Button";
 
-export { Button, buttonVariants }; 
+export { Button, buttonVariants };

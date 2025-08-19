@@ -3,11 +3,11 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to release (e.g., v1.0.0)'
+        description: "Version to release (e.g., v1.0.0)"
         required: true
         type: string
 
@@ -19,21 +19,20 @@ jobs:
   build-linux:
     uses: ./.github/workflows/build-linux.yml
     secrets: inherit
-  
+
   build-macos:
     uses: ./.github/workflows/build-macos.yml
     secrets: inherit
-  
 
   # Create release after all builds complete
   create-release:
     name: Create Release
     needs: [build-linux, build-macos]
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Determine version
         id: version
         run: |
@@ -44,36 +43,36 @@ jobs:
           fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Version: $VERSION"
-      
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
-      
+
       - name: Prepare release assets
         run: |
           mkdir -p release-assets
-          
+
           # Linux artifacts
           if [ -d "artifacts/linux-x86_64" ]; then
             cp artifacts/linux-x86_64/*.deb release-assets/Claudia_${{ steps.version.outputs.version }}_linux_x86_64.deb || true
             cp artifacts/linux-x86_64/*.AppImage release-assets/Claudia_${{ steps.version.outputs.version }}_linux_x86_64.AppImage || true
           fi
-          
+
           # macOS artifacts
           if [ -d "artifacts/macos-universal" ]; then
             cp artifacts/macos-universal/Claudia.dmg release-assets/Claudia_${{ steps.version.outputs.version }}_macos_universal.dmg || true
             cp artifacts/macos-universal/Claudia.app.zip release-assets/Claudia_${{ steps.version.outputs.version }}_macos_universal.app.tar.gz || true
           fi
-          
+
           # Create source code archives
           # Clean version without 'v' prefix for archive names
           CLEAN_VERSION="${{ steps.version.outputs.version }}"
           CLEAN_VERSION="${CLEAN_VERSION#v}"
-          
+
           # Create source code archives (excluding .git and other unnecessary files)
           echo "Creating source code archives..."
-          
+
           # Create a clean export of the repository
           git archive --format=tar.gz --prefix=claudia-${CLEAN_VERSION}/ -o release-assets/claudia-${CLEAN_VERSION}.tar.gz HEAD
           git archive --format=zip --prefix=claudia-${CLEAN_VERSION}/ -o release-assets/claudia-${CLEAN_VERSION}.zip HEAD
@@ -86,7 +85,7 @@ jobs:
             fi
           done
           cd ..
-      
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
@@ -117,4 +116,3 @@ jobs:
 
             - macOS: Open the `.dmg` and drag Claudia to Applications.
             - Linux: `chmod +x` the `.AppImage` and run it, or install the `.deb` on Debian/Ubuntu.
-            

@@ -6,12 +6,22 @@ import { Label } from "@/components/ui/label";
 import { api, type Session } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { open } from "@tauri-apps/plugin-dialog";
-import { FloatingPromptInput, type FloatingPromptInputRef } from "./FloatingPromptInput";
+import {
+  FloatingPromptInput,
+  type FloatingPromptInputRef,
+} from "./FloatingPromptInput";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { TimelineNavigator } from "./TimelineNavigator";
 import { CheckpointSettings } from "./CheckpointSettings";
 import { SlashCommandsManager } from "./SlashCommandsManager";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { SplitPane } from "@/components/ui/split-pane";
 import { WebviewPreview } from "./WebviewPreview";
 
@@ -39,7 +49,9 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   className,
   onStreamingChange,
 }) => {
-  const [projectPath, setProjectPath] = useState(initialProjectPath || session?.project_path || "");
+  const [projectPath, setProjectPath] = useState(
+    initialProjectPath || session?.project_path || "",
+  );
   const [error, setError] = useState<string | null>(null);
   const [copyPopoverOpen, setCopyPopoverOpen] = useState(false);
   const [isFirstPrompt, setIsFirstPrompt] = useState(!session);
@@ -48,10 +60,13 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   const [showTimeline, setShowTimeline] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showForkDialog, setShowForkDialog] = useState(false);
-  const [showSlashCommandsSettings, setShowSlashCommandsSettings] = useState(false);
+  const [showSlashCommandsSettings, setShowSlashCommandsSettings] =
+    useState(false);
   const [forkCheckpointId, setForkCheckpointId] = useState<string | null>(null);
   const [forkSessionName, setForkSessionName] = useState("");
-  const [queuedPrompts, setQueuedPrompts] = useState<Array<{ id: string; prompt: string; model: "sonnet" | "opus" }>>([]);
+  const [queuedPrompts, setQueuedPrompts] = useState<
+    Array<{ id: string; prompt: string; model: "sonnet" | "opus" }>
+  >([]);
   const [showPreview, setShowPreview] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isPreviewMaximized, setIsPreviewMaximized] = useState(false);
@@ -65,13 +80,13 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     isStreaming,
     currentSessionId: _currentSessionId,
     clearMessages,
-    loadMessages
+    loadMessages,
   } = useClaudeMessages({
     onSessionInfo: (info) => {
       setClaudeSessionId(info.sessionId);
     },
     onTokenUpdate: setTotalTokens,
-    onStreamingChange
+    onStreamingChange,
   });
 
   const {
@@ -80,14 +95,14 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     loadCheckpoints,
     createCheckpoint: _createCheckpoint,
     restoreCheckpoint,
-    forkCheckpoint
+    forkCheckpoint,
   } = useCheckpoints({
     sessionId: claudeSessionId,
-    projectId: session?.project_id || '',
+    projectId: session?.project_id || "",
     projectPath: projectPath,
-    onToast: (message: string, type: 'success' | 'error') => {
+    onToast: (message: string, type: "success" | "error") => {
       console.log(`Toast: ${type} - ${message}`);
-    }
+    },
   });
 
   // Handle path selection
@@ -95,10 +110,10 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     const selected = await open({
       directory: true,
       multiple: false,
-      title: "Select Project Directory"
+      title: "Select Project Directory",
     });
-    
-    if (selected && typeof selected === 'string') {
+
+    if (selected && typeof selected === "string") {
       setProjectPath(selected);
       setError(null);
       setIsFirstPrompt(true);
@@ -106,38 +121,43 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   };
 
   // Handle sending prompts
-  const handleSendPrompt = useCallback(async (prompt: string, model: "sonnet" | "opus") => {
-    if (!projectPath || !prompt.trim()) return;
+  const handleSendPrompt = useCallback(
+    async (prompt: string, model: "sonnet" | "opus") => {
+      if (!projectPath || !prompt.trim()) return;
 
-    // Add to queue if streaming
-    if (isStreaming) {
-      const id = Date.now().toString();
-      setQueuedPrompts(prev => [...prev, { id, prompt, model }]);
-      return;
-    }
-
-    try {
-      setError(null);
-      
-      if (isFirstPrompt) {
-        await api.executeClaudeCode(projectPath, prompt, model);
-        setIsFirstPrompt(false);
-      } else if (claudeSessionId) {
-        await api.continueClaudeCode(projectPath, prompt, model);
+      // Add to queue if streaming
+      if (isStreaming) {
+        const id = Date.now().toString();
+        setQueuedPrompts((prev) => [...prev, { id, prompt, model }]);
+        return;
       }
-    } catch (error) {
-      console.error("Failed to send prompt:", error);
-      setError(error instanceof Error ? error.message : "Failed to send prompt");
-    }
-  }, [projectPath, isStreaming, isFirstPrompt, claudeSessionId]);
+
+      try {
+        setError(null);
+
+        if (isFirstPrompt) {
+          await api.executeClaudeCode(projectPath, prompt, model);
+          setIsFirstPrompt(false);
+        } else if (claudeSessionId) {
+          await api.continueClaudeCode(projectPath, prompt, model);
+        }
+      } catch (error) {
+        console.error("Failed to send prompt:", error);
+        setError(
+          error instanceof Error ? error.message : "Failed to send prompt",
+        );
+      }
+    },
+    [projectPath, isStreaming, isFirstPrompt, claudeSessionId],
+  );
 
   // Process queued prompts
   const processQueuedPrompts = useCallback(async () => {
     if (queuedPrompts.length === 0 || isStreaming) return;
 
     const nextPrompt = queuedPrompts[0];
-    setQueuedPrompts(prev => prev.slice(1));
-    
+    setQueuedPrompts((prev) => prev.slice(1));
+
     await handleSendPrompt(nextPrompt.prompt, nextPrompt.model);
   }, [queuedPrompts, isStreaming, handleSendPrompt]);
 
@@ -146,7 +166,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     if (!isStreaming && queuedPrompts.length > 0) {
       processQueueTimeoutRef.current = setTimeout(processQueuedPrompts, 500);
     }
-    
+
     return () => {
       if (processQueueTimeoutRef.current) {
         clearTimeout(processQueueTimeoutRef.current);
@@ -157,7 +177,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   // Copy handlers
   const handleCopyAsJsonl = async () => {
     try {
-      await navigator.clipboard.writeText(rawJsonlOutput.join('\n'));
+      await navigator.clipboard.writeText(rawJsonlOutput.join("\n"));
       setCopyPopoverOpen(false);
       console.log("Session output copied as JSONL");
     } catch (error) {
@@ -168,25 +188,28 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   const handleCopyAsMarkdown = async () => {
     try {
       const markdown = messages
-        .filter(msg => msg.type === 'user' || msg.type === 'assistant')
-        .map(msg => {
-          if (msg.type === 'user') {
-            return `## User\n\n${msg.message || ''}`;
-          } else if (msg.type === 'assistant' && msg.message?.content) {
-            const content = Array.isArray(msg.message.content) 
-              ? msg.message.content.map((item: any) => {
-                  if (typeof item === 'string') return item;
-                  if (item.type === 'text') return item.text;
-                  return '';
-                }).filter(Boolean).join('')
+        .filter((msg) => msg.type === "user" || msg.type === "assistant")
+        .map((msg) => {
+          if (msg.type === "user") {
+            return `## User\n\n${msg.message || ""}`;
+          } else if (msg.type === "assistant" && msg.message?.content) {
+            const content = Array.isArray(msg.message.content)
+              ? msg.message.content
+                  .map((item: any) => {
+                    if (typeof item === "string") return item;
+                    if (item.type === "text") return item.text;
+                    return "";
+                  })
+                  .filter(Boolean)
+                  .join("")
               : msg.message.content;
             return `## Assistant\n\n${content}`;
           }
-          return '';
+          return "";
         })
         .filter(Boolean)
-        .join('\n\n---\n\n');
-      
+        .join("\n\n---\n\n");
+
       await navigator.clipboard.writeText(markdown);
       setCopyPopoverOpen(false);
       console.log("Session output copied as Markdown");
@@ -205,7 +228,10 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   const handleConfirmFork = async () => {
     if (!forkCheckpointId || !forkSessionName.trim()) return;
 
-    const forkedSession = await forkCheckpoint(forkCheckpointId, forkSessionName);
+    const forkedSession = await forkCheckpoint(
+      forkCheckpointId,
+      forkSessionName,
+    );
     if (forkedSession) {
       setShowForkDialog(false);
       // Navigate to forked session
@@ -248,7 +274,9 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
           onCopyAsJsonl={handleCopyAsJsonl}
           onCopyAsMarkdown={handleCopyAsMarkdown}
           onToggleTimeline={() => setShowTimeline(!showTimeline)}
-          onProjectSettings={onProjectSettings ? () => onProjectSettings(projectPath) : undefined}
+          onProjectSettings={
+            onProjectSettings ? () => onProjectSettings(projectPath) : undefined
+          }
           onSlashCommandsSettings={() => setShowSlashCommandsSettings(true)}
           setCopyPopoverOpen={setCopyPopoverOpen}
         />
@@ -268,7 +296,11 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                   />
                   <PromptQueue
                     queuedPrompts={queuedPrompts}
-                    onRemove={(id) => setQueuedPrompts(prev => prev.filter(p => p.id !== id))}
+                    onRemove={(id) =>
+                      setQueuedPrompts((prev) =>
+                        prev.filter((p) => p.id !== id),
+                      )
+                    }
                   />
                 </div>
               }
@@ -278,7 +310,9 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                   isMaximized={isPreviewMaximized}
                   onClose={() => setShowPreview(false)}
                   onUrlChange={setPreviewUrl}
-                  onToggleMaximize={() => setIsPreviewMaximized(!isPreviewMaximized)}
+                  onToggleMaximize={() =>
+                    setIsPreviewMaximized(!isPreviewMaximized)
+                  }
                 />
               }
               initialSplit={60}
@@ -294,7 +328,9 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
               />
               <PromptQueue
                 queuedPrompts={queuedPrompts}
-                onRemove={(id) => setQueuedPrompts(prev => prev.filter(p => p.id !== id))}
+                onRemove={(id) =>
+                  setQueuedPrompts((prev) => prev.filter((p) => p.id !== id))
+                }
               />
             </div>
           )}
@@ -356,9 +392,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         )}
 
         {showSlashCommandsSettings && projectPath && (
-          <SlashCommandsManager
-            projectPath={projectPath}
-          />
+          <SlashCommandsManager projectPath={projectPath} />
         )}
 
         {/* Fork dialog */}
@@ -367,7 +401,8 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
             <DialogHeader>
               <DialogTitle>Fork Session from Checkpoint</DialogTitle>
               <DialogDescription>
-                Create a new session branching from this checkpoint. The original session will remain unchanged.
+                Create a new session branching from this checkpoint. The
+                original session will remain unchanged.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
@@ -383,10 +418,13 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowForkDialog(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setShowForkDialog(false)}
+              >
                 Cancel
               </Button>
-              <Button 
+              <Button
                 onClick={handleConfirmFork}
                 disabled={!forkSessionName.trim()}
               >
