@@ -150,10 +150,20 @@ export class ProjectService {
     const projectDir = join(this.projectsDir, projectId);
     await fs.mkdir(projectDir, { recursive: true });
     
-    // Get creation time
+    // Get creation time (prefer birthtime if available, else mtime)
     const stats = await fs.stat(projectDir);
-    const createdAt = Math.floor(stats.ctime.getTime() / 1000);
-    
+    const createdAt = Math.floor(
+      ((stats.birthtime?.getTime?.() ?? 0) || stats.mtime.getTime()) / 1000
+    );
+
+    // Persist metadata for reliable path and timestamps
+    const metadataPath = join(projectDir, 'metadata.json');
+    await fs.writeFile(
+      metadataPath,
+      JSON.stringify({ path, created_at: createdAt, version: 1 }, null, 2),
+      'utf-8'
+    );
+
     return {
       id: projectId,
       path,
