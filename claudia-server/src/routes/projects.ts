@@ -2,6 +2,19 @@ import { Router } from 'express';
 import type { ProjectService } from '../services/project.js';
 import type { SuccessResponse, ErrorResponse } from '../types/index.js';
 
+/**
+ * Create an Express Router exposing project-related HTTP endpoints.
+ *
+ * The returned router is configured with routes for listing and creating projects,
+ * retrieving project sessions, finding and reading/saving `CLAUDE.md` files, and
+ * listing directory contents. Handlers delegate data operations to the provided
+ * ProjectService and respond with a consistent SuccessResponse or ErrorResponse
+ * shape that includes a timestamp. Validation failures return 400, missing
+ * resources return 404 where appropriate, and unexpected errors return 500 with
+ * route-specific error codes.
+ *
+ * @returns An Express Router wired with project management and CLAUDE file endpoints.
+ */
 export function createProjectRoutes(projectService: ProjectService): Router {
   const router = Router();
 

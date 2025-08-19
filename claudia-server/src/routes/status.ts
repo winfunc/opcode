@@ -3,6 +3,16 @@ import type { SuccessResponse } from '../types/index.js';
 import { homedir } from 'os';
 import { join } from 'path';
 
+/**
+ * Create an Express Router with status-related endpoints.
+ *
+ * Exposes three GET endpoints:
+ * - GET /health: returns runtime health data (status, uptime, memory usage, Node version) and a timestamp.
+ * - GET /info: returns server metadata (name, version, description) and runtime/environment details (node version, platform, architecture, pid, cwd, claude_home) with a timestamp.
+ * - GET /home: returns the current user's home directory and the server's Claude-specific directory path with a timestamp.
+ *
+ * @returns An Express Router configured with the above endpoints.
+ */
 export function createStatusRoutes(): Router {
   const router = Router();
 
