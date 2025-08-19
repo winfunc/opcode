@@ -49,8 +49,8 @@ class ClaudiaClient {
    */
   async connectWebSocket(sessionId) {
     return new Promise((resolve, reject) => {
-      this.ws = new WebSocket(WS_URL);
-
+      const wsUrl = this.serverUrl.replace(/^http(s?):\/\//, 'ws$1://') + '/ws';
+      this.ws = new WebSocket(wsUrl);
       this.ws.on('open', () => {
         console.log('📡 Connected to WebSocket');
         
