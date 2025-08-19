@@ -9,6 +9,23 @@ import type {
   ErrorResponse
 } from '../types/index.js';
 
+/**
+ * Creates an Express Router with endpoints for managing and interacting with Claude code executions.
+ *
+ * The router exposes these routes:
+ * - GET  /version                        — check Claude code version/installation status
+ * - POST /execute                        — start a new Claude execution (requires project_path, prompt, model)
+ * - POST /continue                       — continue an existing conversation (requires project_path, prompt, model)
+ * - POST /resume                         — resume a session (requires project_path, session_id, prompt, model)
+ * - POST /cancel/:sessionId              — cancel a running execution
+ * - GET  /sessions/running               — list running Claude sessions
+ * - GET  /sessions/:sessionId            — get session information
+ * - GET  /sessions/:sessionId/history    — load session history/output
+ *
+ * All endpoints return a standardized SuccessResponse or ErrorResponse object with a timestamp and appropriate HTTP status codes for validation, not-found, and internal errors.
+ *
+ * @returns An Express Router configured with the Claude-related routes.
+ */
 export function createClaudeRoutes(
   claudeService: ClaudeService,
   projectService: ProjectService

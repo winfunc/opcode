@@ -177,7 +177,16 @@ class ClaudiaClient {
 }
 
 /**
- * Example usage
+ * Example entrypoint demonstrating end-to-end usage of ClaudiaClient.
+ *
+ * Performs a health check against the Claudia server, starts a Claude session
+ * for the current working directory, connects to the server WebSocket to stream
+ * real-time responses, and installs a SIGINT handler for graceful shutdown.
+ *
+ * This is an example/demo helper — it performs network I/O, logs status to stdout,
+ * and exits the process on error or when the user interrupts (Ctrl+C).
+ *
+ * @returns {Promise<void>} Resolves when the setup completes; the process may continue running to receive streamed responses.
  */
 async function example() {
   const client = new ClaudiaClient();

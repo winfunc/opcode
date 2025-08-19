@@ -4,7 +4,24 @@ import { ClaudiaServer } from './server.js';
 import type { ServerConfig } from './types/index.js';
 
 /**
- * Parse command line arguments
+ * Parse command-line arguments into a partial ServerConfig.
+ *
+ * Recognized options:
+ * - `--port`, `-p <number>` — sets `port`
+ * - `--host`, `-h <host>` — sets `host`
+ * - `--claude-binary <path>` — sets `claude_binary_path`
+ * - `--claude-home <path>` — sets `claude_home_dir`
+ * - `--help` — prints help and exits (0)
+ * - `--version` — prints the version and exits (0)
+ *
+ * Options that take a value expect the value as the next argument and will
+ * ignore values that start with `-`. Unknown options beginning with `-`
+ * result in an error message and exit(1).
+ *
+ * Note: this function may call `process.exit()` as a side effect for help,
+ * version, or unrecognized option handling.
+ *
+ * @returns A Partial<ServerConfig> populated with any recognized CLI options.
  */
 function parseArgs(): Partial<ServerConfig> {
   const args = process.argv.slice(2);
@@ -61,7 +78,10 @@ function parseArgs(): Partial<ServerConfig> {
 }
 
 /**
- * Print help information
+ * Print the command-line help/usage information for the Claudia Server CLI.
+ *
+ * Outputs usage, supported options, examples, relevant environment variables,
+ * and available API endpoints to the process standard output.
  */
 function printHelp(): void {
   console.log(`
@@ -106,7 +126,14 @@ For more information, visit: https://github.com/getAsterisk/claudia
 }
 
 /**
- * Main function
+ * Start the Claudia server using CLI arguments and environment variables.
+ *
+ * Parses command-line options, merges them with environment variables to construct a partial ServerConfig,
+ * instantiates and starts a ClaudiaServer, and logs the effective runtime configuration (port, host,
+ * CORS origins, max concurrent sessions, and optionally Claude binary/home paths). On startup failure
+ * the function logs the error and exits the process with code 1.
+ *
+ * @returns A promise that resolves when the server has started.
  */
 async function main(): Promise<void> {
   try {
