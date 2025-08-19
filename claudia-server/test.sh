@@ -15,13 +15,23 @@ LOG_FILE="/tmp/claudia-server-test.log"
 # Start server in background
 echo "Starting server on port $SERVER_PORT..."
 cd "$(dirname "$0")"
-timeout 30s node dist/index.js --port $SERVER_PORT > "$LOG_FILE" 2>&1 &
+node dist/index.js --port $SERVER_PORT > "$LOG_FILE" 2>&1 &
 SERVER_PID=$!
 
-# Wait for server to start
+# Wait for server to start with health check
 echo "Waiting for server to start..."
-sleep 3
-
+for i in {1..30}; do
+  if curl -s "http://localhost:$SERVER_PORT/api/status/health" >/dev/null 2>&1; then
+    echo "Server started successfully"
+    break
+  fi
+  if [ $i -eq 30 ]; then
+    echo "❌ Server failed to start within 30 seconds"
+    kill $SERVER_PID 2>/dev/null || true
+    exit 1
+  fi
+  sleep 1
+done
 # Test health endpoint
 echo "✅ Testing health endpoint..."
 response=$(curl -s -w "%{http_code}" "$SERVER_URL/api/status/health" -o /tmp/health_response.json)
