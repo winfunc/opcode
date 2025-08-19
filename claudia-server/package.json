@@ -2,9 +2,16 @@
   "name": "claudia-server",
   "version": "1.0.0",
   "description": "Standalone TypeScript server for Claude Code integration",
-  "bin": {
-    "claudia-server": "./dist/index.js",
-    "claudia-cli": "./dist/cli.js"
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "cli": "node dist/cli.js",
+    "prepare": "npm run build",
+    "test": "jest",
+    "lint": "eslint src --ext .ts",
+    "format": "prettier --write src/**/*.ts",
+    "clean": "rm -rf dist"
   },
   "type": "module",
   "scripts": {
