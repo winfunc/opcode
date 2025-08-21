@@ -374,11 +374,8 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
         },
       };
       
-      // Explicitly remove env field if it exists (should not happen after migration, but just to be safe)
-      if ('env' in updatedSettings) {
-        delete (updatedSettings as any).env;
-        logger.debug("Removed env field from Claude settings during save");
-      }
+      // Keep env field in Claude settings - do not remove it
+      // Environment variables are now managed through database but we preserve the original settings
 
       // Save environment variables to database separately
       try {
