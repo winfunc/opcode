@@ -221,30 +221,35 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
         console.log(`Loaded ${dbEnvVars.length} environment variables from database:`, dbEnvVars);
         logger.debug(`Loaded ${dbEnvVars.length} environment variables from database`);
         
-        // Check if we need to migrate from Claude settings
-        // We migrate if there are environment variables in Claude settings that haven't been migrated yet
+        // Check if we need to migrate specific environment variables from Claude settings
+        // Only migrate ANTHROPIC_API_KEY, ANTHROPIC_AUTH_TOKEN, ANTHROPIC_BASE_URL
+        const targetEnvVars = ['ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN', 'ANTHROPIC_BASE_URL'];
+        
         if (loadedSettings.env && 
             typeof loadedSettings.env === "object" && 
-            !Array.isArray(loadedSettings.env) &&
-            Object.keys(loadedSettings.env).length > 0) {
-          logger.debug(`Found ${Object.keys(loadedSettings.env).length} environment variables in Claude settings, starting migration...`);
-          // Migration: convert Claude settings env to database format
-          const migratedVars: DbEnvironmentVariable[] = Object.entries(loadedSettings.env).map(([key, value]) => ({
-            key,
-            value: value as string,
-            enabled: true,
-            sort_order: 0,
-          }));
+            !Array.isArray(loadedSettings.env)) {
           
-          if (migratedVars.length > 0) {
+          // Filter only the target environment variables that exist in Claude settings
+          const envToMigrate = targetEnvVars
+            .filter(key => key in loadedSettings.env)
+            .map(key => ({
+              key,
+              value: loadedSettings.env[key] as string,
+              enabled: true,
+              sort_order: 0,
+            }));
+          
+          if (envToMigrate.length > 0) {
+            logger.debug(`Found ${envToMigrate.length} target environment variables in Claude settings for migration: ${envToMigrate.map(v => v.key).join(', ')}`);
+            
             // Merge with existing database variables, with Claude settings taking precedence for conflicts
             const existingKeys = new Set(dbEnvVars.map(v => v.key));
-            const newVars = migratedVars.filter(v => !existingKeys.has(v.key));
+            const newVars = envToMigrate.filter(v => !existingKeys.has(v.key));
             const allVars = [...dbEnvVars, ...newVars];
             
             // Update any existing variables with values from Claude settings
             const finalVars = allVars.map(dbVar => {
-              const claudeVar = migratedVars.find(mv => mv.key === dbVar.key);
+              const claudeVar = envToMigrate.find(mv => mv.key === dbVar.key);
               return claudeVar ? { 
                 ...dbVar, 
                 value: claudeVar.value,
@@ -260,25 +265,27 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
             });
             
             await api.saveEnvironmentVariables(finalVars);
-            logger.info(`Migrated ${migratedVars.length} environment variables from Claude settings to database`);
+            logger.info(`Migrated ${envToMigrate.length} target environment variables from Claude settings to database: ${envToMigrate.map(v => v.key).join(', ')}`);
             
-            // Remove env from Claude settings to complete migration
-            const settingsWithoutEnv = { ...loadedSettings };
-            delete settingsWithoutEnv.env;
-            await api.saveClaudeSettings(settingsWithoutEnv);
-            
-            // Update local state to reflect the cleaned settings
-            setSettings(settingsWithoutEnv);
+            // Do not remove env from Claude settings - keep other environment variables intact
             setEnvVars(finalVars);
-            
-            logger.info("Successfully cleaned environment variables from Claude settings file");
+          } else {
+            logger.debug("No target environment variables found in Claude settings for migration");
+            // Ensure all variables have the required fields with defaults
+            const normalizedVars = dbEnvVars.map(envVar => ({
+              ...envVar,
+              enabled: envVar.enabled ?? true,
+              group_id: envVar.group_id ?? undefined,
+              sort_order: envVar.sort_order ?? 0,
+            }));
+            setEnvVars(normalizedVars);
           }
         } else {
           logger.debug("No environment variables found in Claude settings, using database variables only");
           // Ensure all variables have the required fields with defaults
           const normalizedVars = dbEnvVars.map(envVar => ({
             ...envVar,
-            enabled: envVar.enabled ?? true, // Default to true if enabled is undefined
+            enabled: envVar.enabled ?? true,
             group_id: envVar.group_id ?? undefined,
             sort_order: envVar.sort_order ?? 0,
           }));
