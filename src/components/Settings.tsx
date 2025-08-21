@@ -221,27 +221,24 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
         console.log(`Loaded ${dbEnvVars.length} environment variables from database:`, dbEnvVars);
         logger.debug(`Loaded ${dbEnvVars.length} environment variables from database`);
         
-        // Check if we need to migrate specific environment variables from Claude settings
-        // Only migrate ANTHROPIC_API_KEY, ANTHROPIC_AUTH_TOKEN, ANTHROPIC_BASE_URL
-        const targetEnvVars = ['ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN', 'ANTHROPIC_BASE_URL'];
+        // 从 Claude 设置中迁移所有环境变量到数据库（不再只迁移特定的三个）
         
         if (loadedSettings.env && 
             typeof loadedSettings.env === "object" && 
             !Array.isArray(loadedSettings.env)) {
           
-          // Filter only the target environment variables that exist in Claude settings
-          const envToMigrate = targetEnvVars
-            .filter(key => loadedSettings.env && typeof loadedSettings.env === 'object' && key in loadedSettings.env)
-            .map(key => ({
+          // 从 Claude 设置中的 env 对象迁移所有键值对
+          const envToMigrate = Object.entries(loadedSettings.env as Record<string, unknown>)
+            .map(([key, value]) => ({
               key,
-              value: (loadedSettings.env as Record<string, string>)[key],
+              value: String(value ?? ""),
               enabled: true,
               sort_order: 0,
               group_id: undefined,
             }));
           
           if (envToMigrate.length > 0) {
-            logger.debug(`Found ${envToMigrate.length} target environment variables in Claude settings for migration: ${envToMigrate.map(v => v.key).join(', ')}`);
+            logger.debug(`Found ${envToMigrate.length} environment variables in Claude settings for migration: ${envToMigrate.map(v => v.key).join(', ')}`);
             
             // Merge with existing database variables, with Claude settings taking precedence for conflicts
             const existingKeys = new Set(dbEnvVars.map(v => v.key));
@@ -266,12 +263,12 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
             });
             
             await api.saveEnvironmentVariables(finalVars);
-            logger.info(`Migrated ${envToMigrate.length} target environment variables from Claude settings to database: ${envToMigrate.map(v => v.key).join(', ')}`);
+            logger.info(`Migrated ${envToMigrate.length} environment variables from Claude settings to database: ${envToMigrate.map(v => v.key).join(', ')}`);
             
             // Do not remove env from Claude settings - keep other environment variables intact
             setEnvVars(finalVars);
           } else {
-            logger.debug("No target environment variables found in Claude settings for migration");
+            logger.debug("No environment variables found in Claude settings for migration");
             // Ensure all variables have the required fields with defaults
             const normalizedVars = dbEnvVars.map(envVar => ({
               ...envVar,
