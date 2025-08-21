@@ -231,12 +231,13 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
           
           // Filter only the target environment variables that exist in Claude settings
           const envToMigrate = targetEnvVars
-            .filter(key => key in loadedSettings.env)
+            .filter(key => loadedSettings.env && typeof loadedSettings.env === 'object' && key in loadedSettings.env)
             .map(key => ({
               key,
-              value: loadedSettings.env[key] as string,
+              value: (loadedSettings.env as Record<string, string>)[key],
               enabled: true,
               sort_order: 0,
+              group_id: undefined,
             }));
           
           if (envToMigrate.length > 0) {
@@ -254,12 +255,12 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, className }) => {
                 ...dbVar, 
                 value: claudeVar.value,
                 enabled: dbVar.enabled ?? true, // Ensure enabled field exists
-                group_id: dbVar.group_id ?? undefined,
+                group_id: (dbVar as DbEnvironmentVariable).group_id ?? undefined,
                 sort_order: dbVar.sort_order ?? 0,
               } : {
                 ...dbVar,
                 enabled: dbVar.enabled ?? true, // Ensure enabled field exists
-                group_id: dbVar.group_id ?? undefined,
+                group_id: (dbVar as DbEnvironmentVariable).group_id ?? undefined,
                 sort_order: dbVar.sort_order ?? 0,
               };
             });
