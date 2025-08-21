@@ -617,7 +617,7 @@ dependencies = [
 
 [[package]]
 name = "claudia"
-version = "0.1.64"
+version = "0.1.65"
 dependencies = [
  "anyhow",
  "async-trait",

@@ -1,7 +1,7 @@
 {
   "name": "claudia",
   "private": true,
-  "version": "0.1.64",
+  "version": "0.1.65",
   "license": "AGPL-3.0",
   "type": "module",
   "scripts": {
