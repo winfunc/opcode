@@ -535,7 +535,7 @@ export const HooksEditor: React.FC<HooksEditorProps> = ({
           if (matchers) {
             fixed[event] = matchers.map((matcher) => ({
               ...matcher,
-              matcher: matcher.matcher.trim() || ".*", // Fix empty patterns
+              matcher: (matcher.matcher || "").trim() || ".*", // Fix empty patterns
               hooks: matcher.hooks.map((hook) => ({
                 ...hook,
                 command: hook.command.trim() || "echo 'Hook triggered'", // Fix empty commands
@@ -655,14 +655,14 @@ export const HooksEditor: React.FC<HooksEditorProps> = ({
             <Input
               id={`matcher-${matcher.id}`}
               placeholder={t.hooks.patternPlaceholder}
-              value={matcher.matcher || ""}
+              value={matcher.matcher ?? ""}
               onChange={(e) => updateMatcher(event, matcher.id, { matcher: e.target.value })}
               disabled={readOnly}
               className="flex-1"
             />
 
             <Select
-              value={matcher.matcher || "custom"}
+              value={matcher.matcher ?? "custom"}
               onValueChange={(value) => {
                 if (value !== "custom") {
                   updateMatcher(event, matcher.id, { matcher: value });
