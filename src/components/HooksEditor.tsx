@@ -368,8 +368,12 @@ export const HooksEditor: React.FC<HooksEditorProps> = ({
 
     const newMatcher: EditableHookMatcher = {
       id: HooksManager.generateId(),
-      matcher: "",
-      hooks: [],
+      matcher: ".*", // Default to match all instead of empty string
+      hooks: [{
+        id: HooksManager.generateId(),
+        type: "command" as const,
+        command: "echo 'Hook triggered'", // Default command instead of empty
+      }],
       expanded: true,
     };
 
@@ -389,7 +393,7 @@ export const HooksEditor: React.FC<HooksEditorProps> = ({
     const newCommand: EditableHookCommand = {
       id: HooksManager.generateId(),
       type: "command",
-      command: "",
+      command: "echo 'Direct command executed'", // Default command instead of empty
     };
 
     setEditableHooks((prev) => ({
@@ -519,6 +523,41 @@ export const HooksEditor: React.FC<HooksEditorProps> = ({
         (w) => `${w.message} in command: ${(w.command || "").substring(0, 50)}...`
       )
     );
+    
+    // Auto-fix empty patterns and commands if there are validation errors
+    if (result.errors.length > 0) {
+      setEditableHooks((prev) => {
+        const fixed = { ...prev };
+        
+        // Fix empty matchers
+        matcherEvents.forEach((event) => {
+          const matchers = fixed[event] as EditableHookMatcher[];
+          if (matchers) {
+            fixed[event] = matchers.map((matcher) => ({
+              ...matcher,
+              matcher: matcher.matcher.trim() || ".*", // Fix empty patterns
+              hooks: matcher.hooks.map((hook) => ({
+                ...hook,
+                command: hook.command.trim() || "echo 'Hook triggered'", // Fix empty commands
+              })).filter((hook) => hook.command.trim()), // Remove truly empty commands
+            })).filter((matcher) => matcher.hooks.length > 0); // Remove matchers with no valid commands
+          }
+        });
+        
+        // Fix empty direct commands
+        directEvents.forEach((event) => {
+          const commands = fixed[event] as EditableHookCommand[];
+          if (commands) {
+            fixed[event] = commands.map((cmd) => ({
+              ...cmd,
+              command: cmd.command.trim() || "echo 'Command executed'", // Fix empty commands
+            })).filter((cmd) => cmd.command.trim()); // Remove truly empty commands
+          }
+        });
+        
+        return fixed;
+      });
+    }
   }, [hooks]);
 
   useEffect(() => {
@@ -531,7 +570,7 @@ export const HooksEditor: React.FC<HooksEditorProps> = ({
     const newCommand: EditableHookCommand = {
       id: HooksManager.generateId(),
       type: "command",
-      command: "",
+      command: "echo 'Command executed'", // Default command instead of empty
     };
 
     setEditableHooks((prev) => ({
@@ -889,8 +928,24 @@ export const HooksEditor: React.FC<HooksEditorProps> = ({
 
           {/* Validation Messages */}
           {validationErrors.length > 0 && (
-            <div className="p-3 bg-red-500/10 rounded-md space-y-1">
-              <p className="text-sm font-medium text-red-600">{t.hooks.validationErrors}</p>
+            <div className="p-3 bg-red-500/10 rounded-md space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-red-600">{t.hooks.validationErrors}</p>
+                {!readOnly && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      // Manually trigger the auto-fix logic
+                      validateHooks();
+                    }}
+                    className="text-red-600 border-red-200 hover:bg-red-50"
+                  >
+                    <Shield className="h-3 w-3 mr-1" />
+                    Fix Issues
+                  </Button>
+                )}
+              </div>
               {validationErrors.map((error, i) => (
                 <p key={i} className="text-xs text-red-600">
                   • {error}

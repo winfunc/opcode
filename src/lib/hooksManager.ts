@@ -155,38 +155,61 @@ export class HooksManager {
       for (const matcher of matchers) {
         // Validate regex pattern if provided
         if (matcher.matcher) {
-          try {
-            new RegExp(matcher.matcher);
-          } catch (regexError) {
+          // Check for empty or whitespace-only patterns
+          if (!matcher.matcher.trim()) {
             errors.push({
               event,
               matcher: matcher.matcher,
-              message: `Invalid regex pattern: ${regexError instanceof Error ? regexError.message : "Unknown error"}`,
+              message: "Empty regex pattern - please provide a valid pattern",
             });
+          } else {
+            try {
+              new RegExp(matcher.matcher);
+            } catch (regexError) {
+              errors.push({
+                event,
+                matcher: matcher.matcher,
+                message: `Invalid regex pattern: ${regexError instanceof Error ? regexError.message : "Unknown error"}`,
+              });
+            }
           }
+        } else {
+          errors.push({
+            event,
+            matcher: matcher.matcher || "(empty)",
+            message: "Missing regex pattern - please provide a pattern to match tools",
+          });
         }
 
         // Validate commands
         if (matcher.hooks && Array.isArray(matcher.hooks)) {
-          for (const hook of matcher.hooks) {
-            if (!hook.command || !hook.command.trim()) {
-              errors.push({
-                event,
-                matcher: matcher.matcher,
-                message: "Empty command",
-              });
+          if (matcher.hooks.length === 0) {
+            errors.push({
+              event,
+              matcher: matcher.matcher,
+              message: "No commands defined - please add at least one command",
+            });
+          } else {
+            for (const hook of matcher.hooks) {
+              if (!hook.command || !hook.command.trim()) {
+                errors.push({
+                  event,
+                  matcher: matcher.matcher,
+                  message: "Empty command - please provide a command to execute",
+                });
+              } else {
+                // Check for dangerous patterns
+                const dangers = this.checkDangerousPatterns(hook.command);
+                warnings.push(
+                  ...dangers.map((d) => ({
+                    event,
+                    matcher: matcher.matcher,
+                    command: hook.command,
+                    message: d,
+                  }))
+                );
+              }
             }
-
-            // Check for dangerous patterns
-            const dangers = this.checkDangerousPatterns(hook.command || "");
-            warnings.push(
-              ...dangers.map((d) => ({
-                event,
-                matcher: matcher.matcher,
-                command: hook.command || "",
-                message: d,
-              }))
-            );
           }
         }
       }
@@ -201,19 +224,19 @@ export class HooksManager {
         if (!hook.command || !hook.command.trim()) {
           errors.push({
             event,
-            message: "Empty command",
+            message: "Empty command - please provide a command to execute",
           });
+        } else {
+          // Check for dangerous patterns
+          const dangers = this.checkDangerousPatterns(hook.command);
+          warnings.push(
+            ...dangers.map((d) => ({
+              event,
+              command: hook.command,
+              message: d,
+            }))
+          );
         }
-
-        // Check for dangerous patterns
-        const dangers = this.checkDangerousPatterns(hook.command || "");
-        warnings.push(
-          ...dangers.map((d) => ({
-            event,
-            command: hook.command || "",
-            message: d,
-          }))
-        );
       }
     }
 
