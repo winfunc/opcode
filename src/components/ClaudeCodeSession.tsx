@@ -345,11 +345,10 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       return;
     }
 
-    // Only show loading if we don't have any messages yet
-    const shouldShowLoading = messages.length === 0;
-    if (shouldShowLoading) {
-      setIsLoading(true);
-    }
+    // Always show loading for history load to give user feedback
+    setIsLoading(true);
+    setError(null); // Clear any existing errors
+    
     try {
       logger.debug("[ClaudeCodeSession] Loading session history for:", session.id);
       
@@ -367,28 +366,36 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         historyOutput = await api.getSessionOutput(parseInt(session.id));
       }
       
-      // Parse the JSONL output into messages
+      // Always update raw output
       const lines = historyOutput.split("\n").filter((line) => line.trim());
+      setRawJsonlOutput(lines);
+      
+      // Parse the JSONL output into messages
       const parsedMessages: ClaudeStreamMessage[] = [];
       for (const line of lines) {
         try {
           const message = JSON.parse(line) as ClaudeStreamMessage;
           parsedMessages.push(message);
-        } catch (_err) {
-          // Skip invalid JSON lines
-          logger.warn('Failed to parse message:', line);
+        } catch (parseErr) {
+          // Log parsing errors but continue processing
+          logger.warn('[ClaudeCodeSession] Failed to parse message:', line, parseErr);
         }
       }
       
-      logger.debug("[ClaudeCodeSession] Loaded", parsedMessages.length, "messages");
+      logger.debug("[ClaudeCodeSession] Loaded", parsedMessages.length, "messages from", lines.length, "lines");
       
       // Only update messages if component is still mounted
       if (isMountedRef.current) {
         setMessages(parsedMessages);
+        // If we have messages, we're not in a "first prompt" state
+        if (parsedMessages.length > 0) {
+          setIsFirstPrompt(false);
+        }
       }
     } catch (err) {
       logger.error("[ClaudeCodeSession] Failed to load session history:", err);
       if (isMountedRef.current) {
+        setError(`Failed to load session history: ${err instanceof Error ? err.message : 'Unknown error'}`);
         await handleApiError(err as Error, {
           operation: "loadSessionHistory",
           component: "ClaudeCodeSession",
@@ -396,11 +403,11 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         });
       }
     } finally {
-      if (isMountedRef.current && shouldShowLoading) {
+      if (isMountedRef.current) {
         setIsLoading(false);
       }
     }
-  }, [session?.id, session?.project_id, messages.length]);
+  }, [session?.id, session?.project_id]); // Removed messages.length dependency to avoid infinite loops
 
   // Report streaming state changes
   useEffect(() => {
@@ -808,6 +815,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
 
             setMessages((prev) => [...prev, message]);
           } catch (err) {
+            logger.error("[ClaudeCodeSession] Failed to parse or process message:", err, "payload:", payload);
             await handleError(err as Error, { operation: "parseClaudeMessage", payload });
           }
         }

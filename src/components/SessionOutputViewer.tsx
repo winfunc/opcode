@@ -112,6 +112,7 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
         if (!skipCache) {
           const cached = getCachedOutput(session.id);
           if (cached) {
+            logger.debug("[SessionOutputViewer] Using cached output, messages count:", cached.messages.length);
             const cachedJsonlLines = cached.output
               .split("\n")
               .filter((line: string) => line.trim());
@@ -119,8 +120,11 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
             setMessages(cached.messages);
             // If cache is recent (less than 5 seconds old) and session isn't running, use cache only
             if (Date.now() - cached.lastUpdated < 5000 && session.status !== "running") {
+              logger.debug("[SessionOutputViewer] Cache is recent and session not running, using cached data only");
               return;
             }
+          } else {
+            logger.debug("[SessionOutputViewer] No cached output found for session:", session.id);
           }
         }
 
