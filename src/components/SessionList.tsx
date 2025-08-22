@@ -125,6 +125,24 @@ export const SessionList: React.FC<SessionListProps> = ({
     try {
       // Import the API to use deleteSession
       const { api } = await import("@/lib/api");
+      
+      // Check if the session is currently running and stop it if needed
+      try {
+        const runningSessions = await api.listRunningClaudeSessions();
+        const runningSession = runningSessions.find((s: any) => s.session_id === sessionToDelete.id);
+        
+        if (runningSession) {
+          // Cancel the running session first
+          await api.cancelClaudeExecution(sessionToDelete.id);
+          // Wait a bit for the cancellation to complete
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      } catch (runningCheckError) {
+        console.warn("Could not check/stop running session:", runningCheckError);
+        // Continue with deletion anyway
+      }
+      
+      // Delete the session
       await api.deleteSession(sessionToDelete.id, projectId);
       onSessionDeleted?.(sessionToDelete.id);
     } catch (error) {
@@ -138,6 +156,7 @@ export const SessionList: React.FC<SessionListProps> = ({
 
   // Handle delete button click
   const handleDeleteClick = (e: React.MouseEvent, session: Session) => {
+    e.preventDefault();
     e.stopPropagation(); // Prevent session click
     setSessionToDelete(session);
   };
@@ -191,7 +210,16 @@ export const SessionList: React.FC<SessionListProps> = ({
                   "transition-all hover:shadow-md hover:scale-[1.01] active:scale-[0.99] cursor-pointer",
                   session.todo_data ? "border-l-4 border-l-primary" : ""
                 )}
-                onClick={() => {
+                onClick={(e) => {
+                  // Check if the click target is within the delete button area
+                  const target = e.target as HTMLElement;
+                  const deleteButton = target.closest('[data-delete-button="true"]');
+                  
+                  // If clicked on delete button area, don't trigger session click
+                  if (deleteButton) {
+                    return;
+                  }
+                  
                   // Only call the onSessionClick callback, don't emit the event
                   // The event is used by RunningClaudeSessions, not SessionList
                   onSessionClick?.(session);
@@ -244,8 +272,11 @@ export const SessionList: React.FC<SessionListProps> = ({
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-6 w-6 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                        className="h-6 w-6 text-muted-foreground hover:text-destructive hover:bg-destructive/10 z-10 relative"
                         onClick={(e) => handleDeleteClick(e, session)}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onMouseUp={(e) => e.stopPropagation()}
+                        data-delete-button="true"
                       >
                         <Trash2 className="h-3 w-3" />
                       </Button>
@@ -269,12 +300,21 @@ export const SessionList: React.FC<SessionListProps> = ({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t.sessions.deleteSessionConfirm}</DialogTitle>
-            <DialogDescription>
-              {t.sessions.deleteSessionDesc.replace("{sessionId}", sessionToDelete?.id || "")}
+            <DialogDescription className="space-y-2">
+              <div>
+                {t.sessions.deleteSessionDesc.replace("{sessionId}", sessionToDelete?.id || "")}
+              </div>
+              {sessionToDelete?.first_message && (
+                <div className="text-xs text-muted-foreground bg-muted p-2 rounded">
+                  <span className="font-medium">First message:</span> {truncateText(getFirstLine(sessionToDelete.first_message), 80)}
+                </div>
+              )}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setSessionToDelete(null)}>{t.common.cancel}</Button>
+            <Button variant="outline" onClick={() => setSessionToDelete(null)} disabled={isDeleting}>
+              {t.common.cancel}
+            </Button>
             <Button variant="destructive" onClick={handleDeleteSession} disabled={isDeleting}>
               {isDeleting ? t.sessions.deletingSession : t.common.delete}
             </Button>
