@@ -53,6 +53,7 @@ zstd = "0.13"
 uuid = { version = "1.6", features = ["v4", "serde"] }
 walkdir = "2"
 serde_yaml = "0.9"
+url = "2.5"
 
 
 [target.'cfg(target_os = "macos")'.dependencies]
