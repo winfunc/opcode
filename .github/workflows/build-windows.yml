@@ -2,6 +2,7 @@ name: Build Windows App
 
 on:
   push:
+    branches: [main, i18n]
     tags: ['v*']
   workflow_dispatch:
 
