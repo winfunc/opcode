@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Toast, ToastContainer } from "@/components/ui/toast";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 interface MarkdownEditorProps {
   /**
@@ -27,6 +28,7 @@ interface MarkdownEditorProps {
 export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
   className,
 }) => {
+  const { t } = useTranslation();
   const [content, setContent] = useState<string>("");
   const [originalContent, setOriginalContent] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -50,7 +52,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
       setOriginalContent(prompt);
     } catch (err) {
       console.error("Failed to load system prompt:", err);
-      setError("Failed to load CLAUDE.md file");
+      setError(t('fileEditor.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -63,11 +65,11 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
       setToast(null);
       await api.saveSystemPrompt(content);
       setOriginalContent(content);
-      setToast({ message: "CLAUDE.md saved successfully", type: "success" });
+      setToast({ message: t('fileEditor.saveSuccess'), type: "success" });
     } catch (err) {
       console.error("Failed to save system prompt:", err);
-      setError("Failed to save CLAUDE.md file");
-      setToast({ message: "Failed to save CLAUDE.md", type: "error" });
+      setError(t('fileEditor.saveFailed'));
+      setToast({ message: t('fileEditor.saveFailed'), type: "error" });
     } finally {
       setSaving(false);
     }
@@ -83,7 +85,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
             <div>
               <h1 className="text-3xl font-bold tracking-tight">CLAUDE.md</h1>
               <p className="mt-1 text-sm text-muted-foreground">
-                Edit your Claude Code system prompt
+                {t('fileEditor.description')}
               </p>
             </div>
             <Button
@@ -94,12 +96,12 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
               {saving ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
+                  {t('common.saving')}
                 </>
               ) : (
                 <>
                   <Save className="mr-2 h-4 w-4" />
-                  Save
+                  {t('common.save')}
                 </>
               )}
             </Button>

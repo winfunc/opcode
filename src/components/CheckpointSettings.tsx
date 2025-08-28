@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { api, type CheckpointStrategy } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 interface CheckpointSettingsProps {
   sessionId: string;
@@ -41,6 +42,7 @@ export const CheckpointSettings: React.FC<CheckpointSettingsProps> = ({
   projectPath,
   className,
 }) => {
+  const { t } = useTranslation();
   const [autoCheckpointEnabled, setAutoCheckpointEnabled] = useState(true);
   const [checkpointStrategy, setCheckpointStrategy] = useState<CheckpointStrategy>("smart");
   const [totalCheckpoints, setTotalCheckpoints] = useState(0);

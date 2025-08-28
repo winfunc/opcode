@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { 
   ArrowLeft, 
   Play, 
@@ -88,6 +89,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
   onBack,
   className,
 }) => {
+  const { t } = useTranslation();
   const [projectPath] = useState(initialProjectPath || "");
   const [task, setTask] = useState(agent.default_task || "");
   const [model, setModel] = useState(agent.model || "sonnet");
@@ -347,7 +349,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
         const duration = executionStartTime ? Date.now() - executionStartTime : undefined;
         setExecutionStartTime(null);
         if (!event.payload) {
-          setError("Agent execution failed");
+          setError(t('agents.execution.failed'));
           // Update tab status to error
           if (tabId) {
             updateTabStatus(tabId, 'error');
@@ -372,7 +374,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
       const cancelUnlisten = await listen<boolean>(`agent-cancelled:${executionRunId}`, () => {
         setIsRunning(false);
         setExecutionStartTime(null);
-        setError("Agent execution was cancelled");
+        setError(t('agents.execution.stopped'));
         // Update tab status to idle when cancelled
         if (tabId) {
           updateTabStatus(tabId, 'idle');
@@ -437,7 +439,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
         type: "result",
         subtype: "error",
         is_error: true,
-        result: "Execution stopped by user",
+        result: t('agents.execution.executionStopped'),
         duration_ms: elapsedTime * 1000,
         usage: {
           input_tokens: totalTokens,
@@ -551,7 +553,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
         }
         if (msg.usage) {
           const total = msg.usage.input_tokens + msg.usage.output_tokens;
-          markdown += `- **Total Tokens:** ${total} (${msg.usage.input_tokens} in, ${msg.usage.output_tokens} out)\n`;
+          markdown += `- **${t('dashboard.metrics.totalTokens')}:** ${total} (${msg.usage.input_tokens} in, ${msg.usage.output_tokens} out)\n`;
         }
       }
     }
@@ -574,14 +576,14 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
                 size="icon"
                 onClick={handleBackWithConfirmation}
                 className="h-9 w-9 -ml-2"
-                title="Back"
+                title={t('common.back')}
               >
                 <ArrowLeft className="h-4 w-4" />
               </Button>
               <div>
                 <h1 className="text-heading-1">{agent.name}</h1>
                 <p className="mt-1 text-body-small text-muted-foreground">
-                  {isRunning ? 'Running' : messages.length > 0 ? 'Complete' : 'Ready'} • {model === 'opus' ? 'Claude 4 Opus' : 'Claude 4 Sonnet'}
+                  {isRunning ? t('agents.execution.running') : messages.length > 0 ? t('agents.execution.completed') : 'Ready'} • {model === 'opus' ? 'Claude 4 Opus' : 'Claude 4 Sonnet'}
                 </p>
               </div>
             </div>
@@ -731,7 +733,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
                     ) : (
                       <>
                         <Play className="mr-2 h-4 w-4" />
-                        Execute
+                        {t('common.execute')}
                       </>
                     )}
                   </Button>

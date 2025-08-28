@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import type { Project } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 interface ProjectListProps {
   /**
@@ -89,6 +90,7 @@ export const ProjectList: React.FC<ProjectListProps> = ({
   onOpenProject,
   className,
 }) => {
+  const { t } = useTranslation();
   const [showAll, setShowAll] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   
@@ -118,9 +120,9 @@ export const ProjectList: React.FC<ProjectListProps> = ({
         <div className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold">Projects</h1>
+              <h1 className="text-3xl font-bold">{t('projects.title')}</h1>
               <p className="mt-1 text-body-small text-muted-foreground">
-                Select a project to start working with Claude Code
+                {t('projects.searchProjects').replace('...', '')}
               </p>
             </div>
             <motion.div
@@ -133,7 +135,7 @@ export const ProjectList: React.FC<ProjectListProps> = ({
                 className="flex items-center gap-2"
               >
                 <FolderOpen className="h-4 w-4" />
-                Open Project
+                {t('projects.openProject')}
               </Button>
             </motion.div>
           </div>
@@ -145,20 +147,20 @@ export const ProjectList: React.FC<ProjectListProps> = ({
           {displayedProjects.length > 0 ? (
             <Card className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-heading-4">Recent Projects</h2>
+                <h2 className="text-heading-4">{t('projects.recentProjects')}</h2>
             {!showAll ? (
               <button 
                 onClick={handleViewAll}
                 className="text-caption text-muted-foreground hover:text-foreground transition-colors"
               >
-                View all ({projects.length})
+                {t('common.filter')} ({projects.length})
               </button>
             ) : (
               <button 
                 onClick={handleViewLess}
                 className="text-caption text-muted-foreground hover:text-foreground transition-colors"
               >
-                View less
+                {t('common.filter')}
               </button>
             )}
           </div>
@@ -245,7 +247,7 @@ export const ProjectList: React.FC<ProjectListProps> = ({
                 <div className="w-16 h-16 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
                   <FolderOpen className="h-8 w-8 text-primary" />
                 </div>
-                <h3 className="text-heading-3 mb-2">No recent projects</h3>
+                <h3 className="text-heading-3 mb-2">{t('projects.noProjects')}</h3>
                 <p className="text-body-small text-muted-foreground mb-6">
                   Open a project to get started with Claude Code
                 </p>

@@ -90,7 +90,7 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
       }
     } catch (err) {
       console.error("Failed to load timeline:", err);
-      setError("Failed to load timeline");
+      setError(t('timeline.errors.loadFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -143,7 +143,7 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
       await loadTimeline();
     } catch (err) {
       console.error("Failed to create checkpoint:", err);
-      setError("Failed to create checkpoint");
+      setError(t('timeline.errors.createFailed'));
     } finally {
       setIsLoading(false);
     }

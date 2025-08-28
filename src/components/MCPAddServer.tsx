@@ -8,6 +8,7 @@ import { SelectComponent } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { api } from "@/lib/api";
 import { useTrackEvent } from "@/hooks";
+import { useTranslation } from "react-i18next";
 
 interface MCPAddServerProps {
   /**
@@ -34,6 +35,7 @@ export const MCPAddServer: React.FC<MCPAddServerProps> = ({
   onServerAdded,
   onError,
 }) => {
+  const { t } = useTranslation();
   const [transport, setTransport] = useState<"stdio" | "sse">("stdio");
   const [saving, setSaving] = useState(false);
   
@@ -225,7 +227,7 @@ export const MCPAddServer: React.FC<MCPAddServerProps> = ({
     return (
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <Label className="text-sm font-medium">Environment Variables</Label>
+          <Label className="text-sm font-medium">{t('mcpAddServer.environmentVariables')}</Label>
           <Button
             variant="outline"
             size="sm"
@@ -233,7 +235,7 @@ export const MCPAddServer: React.FC<MCPAddServerProps> = ({
             className="gap-2"
           >
             <Plus className="h-3 w-3" />
-            Add Variable
+            {t('mcpAddServer.addVariable')}
           </Button>
         </div>
         
@@ -273,9 +275,9 @@ export const MCPAddServer: React.FC<MCPAddServerProps> = ({
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h3 className="text-base font-semibold">Add MCP Server</h3>
+        <h3 className="text-base font-semibold">{t('mcpAddServer.title')}</h3>
         <p className="text-sm text-muted-foreground mt-1">
-          Configure a new Model Context Protocol server
+          {t('mcpAddServer.description')}
         </p>
       </div>
 

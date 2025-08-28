@@ -24,6 +24,7 @@ import { SlashCommandPicker } from "./SlashCommandPicker";
 import { ImagePreview } from "./ImagePreview";
 import { type FileEntry, type SlashCommand } from "@/lib/api";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { useTranslation } from "react-i18next";
 
 interface FloatingPromptInputProps {
   /**
@@ -95,8 +96,8 @@ const THINKING_MODES: ThinkingModeConfig[] = [
   },
   {
     id: "think",
-    name: "Think",
-    description: "Basic reasoning",
+    name: t('thinking.think'),
+    description: t('thinking.basicReasoning'),
     level: 1,
     phrase: "think",
     icon: <Lightbulb className="h-3.5 w-3.5" />,
@@ -105,8 +106,8 @@ const THINKING_MODES: ThinkingModeConfig[] = [
   },
   {
     id: "think_hard",
-    name: "Think Hard",
-    description: "Deeper analysis",
+    name: t('thinking.thinkHard'),
+    description: t('thinking.deeperAnalysis'),
     level: 2,
     phrase: "think hard",
     icon: <Brain className="h-3.5 w-3.5" />,
@@ -115,8 +116,8 @@ const THINKING_MODES: ThinkingModeConfig[] = [
   },
   {
     id: "think_harder",
-    name: "Think Harder",
-    description: "Extensive reasoning",
+    name: t('thinking.thinkHarder'),
+    description: t('thinking.extensiveReasoning'),
     level: 3,
     phrase: "think harder",
     icon: <Cpu className="h-3.5 w-3.5" />,
@@ -125,8 +126,8 @@ const THINKING_MODES: ThinkingModeConfig[] = [
   },
   {
     id: "ultrathink",
-    name: "Ultrathink",
-    description: "Maximum computation",
+    name: t('thinking.ultrathink'),
+    description: t('thinking.maximumComputation'),
     level: 4,
     phrase: "ultrathink",
     icon: <Rocket className="h-3.5 w-3.5" />,
@@ -172,16 +173,16 @@ type Model = {
 const MODELS: Model[] = [
   {
     id: "sonnet",
-    name: "Claude 4 Sonnet",
-    description: "Faster, efficient for most tasks",
+    name: t('models.sonnet'),
+    description: t('models.sonnetDescription'),
     icon: <Zap className="h-3.5 w-3.5" />,
     shortName: "S",
     color: "text-primary"
   },
   {
     id: "opus",
-    name: "Claude 4 Opus",
-    description: "More capable, better for complex tasks",
+    name: t('models.opus'),
+    description: t('models.opusDescription'),
     icon: <Zap className="h-3.5 w-3.5" />,
     shortName: "O",
     color: "text-primary"

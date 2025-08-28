@@ -8,6 +8,7 @@ import { api, type Project, type Session, type ClaudeMdFile } from '@/lib/api';
 import { ProjectList } from '@/components/ProjectList';
 import { SessionList } from '@/components/SessionList';
 import { Button } from '@/components/ui/button';
+import { useTranslation } from 'react-i18next';
 
 // Lazy load heavy components
 const ClaudeCodeSession = lazy(() => import('@/components/ClaudeCodeSession').then(m => ({ default: m.ClaudeCodeSession })));
@@ -29,6 +30,7 @@ interface TabPanelProps {
 }
 
 const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
+  const { t } = useTranslation();
   const { updateTab } = useTabState();
   const [projects, setProjects] = React.useState<Project[]>([]);
   const [selectedProject, setSelectedProject] = React.useState<Project | null>(null);
@@ -273,7 +275,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
         if (!tab.agentRunId) {
           return (
             <div className="h-full">
-              <div className="p-4">No agent run ID specified</div>
+              <div className="p-4">{t('agents.errors.noRunId')}</div>
             </div>
           );
         }
@@ -323,15 +325,15 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
       
       case 'claude-file':
         if (!tab.claudeFileId) {
-          return <div className="p-4">No Claude file ID specified</div>;
+          return <div className="p-4">{t('errors.notFound')}</div>;
         }
         // Note: We need to get the actual file object for ClaudeFileEditor
         // For now, returning a placeholder
-        return <div className="p-4">Claude file editor not yet implemented in tabs</div>;
+        return <div className="p-4">{t('fileEditor.title')}</div>;
       
       case 'agent-execution':
         if (!tab.agentData) {
-          return <div className="p-4">No agent data specified</div>;
+          return <div className="p-4">{t('agents.messages.loadFailed')}</div>;
         }
         return (
           <AgentExecution
@@ -360,14 +362,14 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
         // TODO: Implement import agent component
         return (
           <div className="h-full">
-            <div className="p-4">Import agent functionality coming soon...</div>
+            <div className="p-4">{t('agents.import.importAgent')}</div>
           </div>
         );
       
       default:
         return (
           <div className="h-full">
-            <div className="p-4">Unknown tab type: {tab.type}</div>
+            <div className="p-4">{t('errors.generalError')}: {tab.type}</div>
           </div>
         );
     }
@@ -399,6 +401,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
 
 export const TabContent: React.FC = () => {
   const { tabs, activeTabId, createChatTab, createProjectsTab, findTabBySessionId, createClaudeFileTab, createAgentExecutionTab, createCreateAgentTab, createImportAgentTab, closeTab, updateTab } = useTabState();
+  const { t } = useTranslation();
   
   // Listen for events to open sessions in tabs
   useEffect(() => {
@@ -516,14 +519,14 @@ export const TabContent: React.FC = () => {
       {tabs.length === 0 && (
         <div className="flex items-center justify-center h-full text-muted-foreground">
           <div className="text-center">
-            <p className="text-lg mb-2">No projects open</p>
-            <p className="text-sm mb-4">Click to start a new project</p>
+            <p className="text-lg mb-2">{t('projects.noOpenProjects')}</p>
+            <p className="text-sm mb-4">{t('projects.clickToStart')}</p>
             <Button
               onClick={() => createProjectsTab()}
               size="default"
             >
               <Plus className="w-4 h-4 mr-2" />
-              New Project
+              {t('projects.newProject')}
             </Button>
           </div>
         </div>

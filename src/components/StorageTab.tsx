@@ -44,6 +44,7 @@ import {
 } from "@/components/ui/tooltip";
 import { api } from "@/lib/api";
 import { Toast, ToastContainer } from "./ui/toast";
+import { useTranslation } from "react-i18next";
 
 interface TableInfo {
   name: string;
@@ -81,6 +82,7 @@ interface QueryResult {
  * StorageTab component - A beautiful SQLite database viewer/editor
  */
 export const StorageTab: React.FC = () => {
+  const { t } = useTranslation();
   const [tables, setTables] = useState<TableInfo[]>([]);
   const [selectedTable, setSelectedTable] = useState<string>("");
   const [tableData, setTableData] = useState<TableData | null>(null);
@@ -131,7 +133,7 @@ export const StorageTab: React.FC = () => {
       }
     } catch (err) {
       console.error("Failed to load tables:", err);
-      setError("Failed to load tables");
+      setError(t('settings.storage.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -156,7 +158,7 @@ export const StorageTab: React.FC = () => {
       setCurrentPage(page);
     } catch (err) {
       console.error("Failed to load table data:", err);
-      setError("Failed to load table data");
+      setError(t('settings.storage.dataLoadFailed'));
     } finally {
       setLoading(false);
     }
@@ -335,7 +337,7 @@ export const StorageTab: React.FC = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Database className="h-4 w-4 text-primary" />
-              <h3 className="text-sm font-semibold">Database Storage</h3>
+              <h3 className="text-sm font-semibold">{t('settings.storage.title')}</h3>
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -345,7 +347,7 @@ export const StorageTab: React.FC = () => {
                 className="gap-2 h-8 text-xs"
               >
                 <Terminal className="h-3 w-3" />
-                SQL Query
+                {t('settings.storage.sqlQuery')}
               </Button>
               <Button
                 variant="destructive"
@@ -354,7 +356,7 @@ export const StorageTab: React.FC = () => {
                 className="gap-2 h-8 text-xs"
               >
                 <RefreshCw className="h-3 w-3" />
-                Reset DB
+                {t('settings.storage.resetDatabase')}
               </Button>
             </div>
           </div>
@@ -363,7 +365,7 @@ export const StorageTab: React.FC = () => {
           <div className="flex items-center gap-3">
             <Select value={selectedTable} onValueChange={setSelectedTable}>
               <SelectTrigger className="w-[200px] h-8 text-xs">
-                <SelectValue placeholder="Select a table">
+                <SelectValue placeholder={t('settings.storage.selectTable')}>
                   {selectedTable && (
                     <div className="flex items-center gap-2">
                       <Table className="h-3 w-3" />
@@ -389,7 +391,7 @@ export const StorageTab: React.FC = () => {
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
               <Input
-                placeholder="Search in table..."
+                placeholder={t('settings.storage.searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => handleSearch(e.target.value)}
                 className="pl-8 h-8 text-xs"
@@ -404,7 +406,7 @@ export const StorageTab: React.FC = () => {
                 className="gap-2 h-8 text-xs"
               >
                 <Plus className="h-3 w-3" />
-                New Row
+                {t('settings.storage.newRow')}
               </Button>
             )}
           </div>
@@ -435,7 +437,7 @@ export const StorageTab: React.FC = () => {
                     </th>
                   ))}
                   <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground">
-                    Actions
+                    {t('settings.storage.actions')}
                   </th>
                 </tr>
               </thead>
@@ -650,7 +652,7 @@ export const StorageTab: React.FC = () => {
       <Dialog open={!!newRow} onOpenChange={() => setNewRow(null)}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>New Row</DialogTitle>
+            <DialogTitle>{t('settings.storage.newRow')}</DialogTitle>
             <DialogDescription>
               Add a new row to the {selectedTable} table.
             </DialogDescription>
@@ -760,7 +762,7 @@ export const StorageTab: React.FC = () => {
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                "Delete"
+                t('settings.storage.delete')
               )}
             </Button>
           </DialogFooter>
@@ -934,7 +936,7 @@ export const StorageTab: React.FC = () => {
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                "Execute"
+                t('settings.storage.executeQuery')
               )}
             </Button>
           </DialogFooter>

@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import gooeyLogo from "../../src-tauri/icons/icon.png";
 import type { CSSProperties } from "react";
+import { useTranslation } from "react-i18next";
 
 /**
  * StartupIntro - a lightweight startup overlay shown on app launch.
@@ -8,6 +9,7 @@ import type { CSSProperties } from "react";
  * - Uses existing shimmer/rotating-symbol styles from shimmer.css.
  */
 export function StartupIntro({ visible }: { visible: boolean }) {
+  const { t } = useTranslation();
   // Simple entrance animations only
   return (
     <AnimatePresence>
@@ -67,7 +69,7 @@ export function StartupIntro({ visible }: { visible: boolean }) {
                 />
                 <motion.img
                   src={gooeyLogo}
-                  alt="Gooey"
+                  alt={t('startup.welcome')}
                   className="h-20 w-20 rounded-lg shadow-sm"
                   transition={{ repeat: Infinity, repeatType: "loop", ease: "linear", duration: 0.5 }}
                 />

@@ -26,6 +26,8 @@ import { useTabState } from "@/hooks/useTabState";
 import { AnalyticsConsentBanner } from "@/components/AnalyticsConsent";
 import { useAppLifecycle, useTrackEvent } from "@/hooks";
 import { StartupIntro } from "@/components/StartupIntro";
+import { useTranslation } from "react-i18next";
+import { logger } from "@/lib/i18nLogger";
 
 type View = 
   | "welcome" 
@@ -47,6 +49,7 @@ type View =
  * AppContent component - Contains the main app logic, wrapped by providers
  */
 function AppContent() {
+  const { t } = useTranslation();
   const [view, setView] = useState<View>("tabs");
   const { createClaudeMdTab, createSettingsTab, createUsageTab, createMCPTab, createAgentsTab } = useTabState();
   const [projects, setProjects] = useState<Project[]>([]);
@@ -66,6 +69,12 @@ function AppContent() {
   // Initialize analytics lifecycle tracking
   useAppLifecycle();
   const trackEvent = useTrackEvent();
+  
+  // Log app start
+  useEffect(() => {
+    logger.info('appStarted');
+    logger.info('appReady');
+  }, []);
   
   // Track user journey milestones
   const [hasTrackedFirstChat] = useState(false);
@@ -154,11 +163,13 @@ function AppContent() {
     try {
       setLoading(true);
       setError(null);
+      logger.info('loadingProjects');
       const projectList = await api.listProjects();
       setProjects(projectList);
+      logger.info('projectsLoaded', { count: projectList.length });
     } catch (err) {
-      console.error("Failed to load projects:", err);
-      setError("Failed to load projects. Please ensure ~/.claude directory exists.");
+      logger.error('errorOccurred', err);
+      setError(t('errors.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -175,8 +186,8 @@ function AppContent() {
       setSessions(sessionList);
       setSelectedProject(project);
     } catch (err) {
-      console.error("Failed to load sessions:", err);
-      setError("Failed to load sessions for this project.");
+      logger.error('errorOccurred', err);
+      setError(t('errors.loadFailed'));
     } finally {
       setLoading(false);
     }

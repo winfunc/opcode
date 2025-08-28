@@ -146,7 +146,7 @@ export const LSWidget: React.FC<{ path: string; result?: any }> = ({ path, resul
       <div className="space-y-2">
         <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
           <FolderOpen className="h-4 w-4 text-primary" />
-          <span className="text-sm">Directory contents for:</span>
+          <span className="text-sm">{t('toolWidgets.directoryContentsFor')}:</span>
           <code className="text-sm font-mono bg-background px-2 py-0.5 rounded">
             {path}
           </code>
@@ -159,7 +159,7 @@ export const LSWidget: React.FC<{ path: string; result?: any }> = ({ path, resul
   return (
     <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
       <FolderOpen className="h-4 w-4 text-primary" />
-      <span className="text-sm">Listing directory:</span>
+      <span className="text-sm">{t('toolWidgets.listingDirectory')}:</span>
       <code className="text-sm font-mono bg-background px-2 py-0.5 rounded">
         {path}
       </code>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
 import { 
@@ -101,6 +102,7 @@ export const FilePicker: React.FC<FilePickerProps> = ({
   initialQuery = "",
   className,
 }) => {
+  const { t } = useTranslation();
   const searchQuery = initialQuery;
   
   const [currentPath, setCurrentPath] = useState(basePath);
@@ -402,7 +404,7 @@ export const FilePicker: React.FC<FilePickerProps> = ({
         {/* Show loading only if no cached data */}
         {isLoading && displayEntries.length === 0 && (
           <div className="flex items-center justify-center h-full">
-            <span className="text-sm text-muted-foreground">Loading...</span>
+            <span className="text-sm text-muted-foreground">{t('common.loading')}</span>
           </div>
         )}
 
@@ -423,7 +425,7 @@ export const FilePicker: React.FC<FilePickerProps> = ({
           <div className="flex flex-col items-center justify-center h-full">
             <Search className="h-8 w-8 text-muted-foreground mb-2" />
             <span className="text-sm text-muted-foreground">
-              {searchQuery.trim() ? 'No files found' : 'Empty directory'}
+              {searchQuery.trim() ? t('filePicker.noFilesFound') : t('filePicker.emptyDirectory')}
             </span>
           </div>
         )}
@@ -448,7 +450,7 @@ export const FilePicker: React.FC<FilePickerProps> = ({
                     "text-left text-sm",
                     isSelected && "bg-accent"
                   )}
-                  title={entry.is_directory ? "Click to select • Double-click to enter" : "Click to select"}
+                  title={entry.is_directory ? `${t('projects.filePicker.clickToSelect')} • ${t('projects.filePicker.doubleClickToEnter')}` : t('projects.filePicker.clickToSelect')}
                 >
                   <Icon className={cn(
                     "h-4 w-4 flex-shrink-0",

@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { SelectComponent } from "@/components/ui/select";
 import { api } from "@/lib/api";
+import { useTranslation } from "react-i18next";
 
 interface MCPImportExportProps {
   /**
@@ -24,6 +25,7 @@ export const MCPImportExport: React.FC<MCPImportExportProps> = ({
   onImportCompleted,
   onError,
 }) => {
+  const { t } = useTranslation();
   const [importingDesktop, setImportingDesktop] = useState(false);
   const [importingJson, setImportingJson] = useState(false);
   const [importScope, setImportScope] = useState("local");
@@ -144,7 +146,7 @@ export const MCPImportExport: React.FC<MCPImportExportProps> = ({
    */
   const handleExport = () => {
     // TODO: Implement export functionality
-    onError("Export functionality coming soon!");
+                  onError(t('notifications.exportSuccess'));
   };
 
   /**
@@ -153,19 +155,19 @@ export const MCPImportExport: React.FC<MCPImportExportProps> = ({
   const handleStartMCPServer = async () => {
     try {
       await api.mcpServe();
-      onError("Claude Code MCP server started. You can now connect to it from other applications.");
+      onError(t('mcp.messages.addFailed'));
     } catch (error) {
       console.error("Failed to start MCP server:", error);
-      onError("Failed to start Claude Code as MCP server");
+      onError(t('errors.connectionFailed'));
     }
   };
 
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h3 className="text-base font-semibold">Import & Export</h3>
+        <h3 className="text-base font-semibold">{t('common.import')} & {t('common.export')}</h3>
         <p className="text-sm text-muted-foreground mt-1">
-          Import MCP servers from other sources or export your configuration
+          {t('mcp.serverList')}
         </p>
       </div>
 
@@ -175,7 +177,7 @@ export const MCPImportExport: React.FC<MCPImportExportProps> = ({
           <div className="space-y-3">
             <div className="flex items-center gap-2 mb-2">
               <Settings2 className="h-4 w-4 text-slate-500" />
-              <Label className="text-sm font-medium">Import Scope</Label>
+              <Label className="text-sm font-medium">{t('common.import')} {t('settings.permissions.description')}</Label>
             </div>
             <SelectComponent
               value={importScope}

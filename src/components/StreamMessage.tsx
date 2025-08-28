@@ -14,6 +14,7 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { getClaudeSyntaxTheme } from "@/lib/claudeSyntaxTheme";
 import { useTheme } from "@/hooks";
 import type { ClaudeStreamMessage } from "./AgentExecution";
+import { useTranslation } from "react-i18next";
 import {
   TodoWidget,
   TodoReadWidget,
@@ -52,6 +53,7 @@ interface StreamMessageProps {
  * Component to render a single Claude Code stream message
  */
 const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, className, streamMessages, onLinkDetected }) => {
+  const { t } = useTranslation();
   // State to track tool results mapped by tool call ID
   const [toolResults, setToolResults] = useState<Map<string, any>>(new Map());
   
@@ -424,7 +426,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                         <div key={idx} className="space-y-2">
                           <div className="flex items-center gap-2">
                             <CheckCircle2 className="h-4 w-4 text-green-500" />
-                            <span className="text-sm font-medium">Tool Result</span>
+                            <span className="text-sm font-medium">{t('toolWidgets.toolResult')}</span>
                           </div>
                           
                           {beforeReminder && (
@@ -459,7 +461,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                         <div key={idx} className="space-y-2">
                           <div className="flex items-center gap-2">
                             <CheckCircle2 className="h-4 w-4 text-green-500" />
-                            <span className="text-sm font-medium">Edit Result</span>
+                            <span className="text-sm font-medium">{t('toolWidgets.editResult')}</span>
                           </div>
                           <EditResultWidget content={contentText} />
                         </div>
@@ -477,7 +479,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                         <div key={idx} className="space-y-2">
                           <div className="flex items-center gap-2">
                             <CheckCircle2 className="h-4 w-4 text-green-500" />
-                            <span className="text-sm font-medium">MultiEdit Result</span>
+                            <span className="text-sm font-medium">{t('toolWidgets.multiEditResult')}</span>
                           </div>
                           <MultiEditResultWidget content={contentText} />
                         </div>
@@ -527,7 +529,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                         <div key={idx} className="space-y-2">
                           <div className="flex items-center gap-2">
                             <CheckCircle2 className="h-4 w-4 text-green-500" />
-                            <span className="text-sm font-medium">Directory Contents</span>
+                            <span className="text-sm font-medium">{t('toolWidgets.directoryContents')}</span>
                           </div>
                           <LSResultWidget content={contentText} />
                         </div>
@@ -566,7 +568,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                         <div key={idx} className="space-y-2">
                           <div className="flex items-center gap-2">
                             <CheckCircle2 className="h-4 w-4 text-green-500" />
-                            <span className="text-sm font-medium">Read Result</span>
+                            <span className="text-sm font-medium">{t('toolWidgets.readResult')}</span>
                           </div>
                           <ReadResultWidget content={contentText} filePath={filePath} />
                         </div>
@@ -580,10 +582,10 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                         <div key={idx} className="space-y-2">
                           <div className="flex items-center gap-2">
                             <CheckCircle2 className="h-4 w-4 text-green-500" />
-                            <span className="text-sm font-medium">Tool Result</span>
+                            <span className="text-sm font-medium">{t('toolWidgets.toolResult')}</span>
                           </div>
                           <div className="ml-6 p-3 bg-muted/50 rounded-md border text-sm text-muted-foreground italic">
-                            Tool did not return any output
+                            {t('toolWidgets.noOutput')}
                           </div>
                         </div>
                       );
@@ -598,7 +600,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                           ) : (
                             <CheckCircle2 className="h-4 w-4 text-green-500" />
                           )}
-                          <span className="text-sm font-medium">Tool Result</span>
+                          <span className="text-sm font-medium">{t('toolWidgets.toolResult')}</span>
                         </div>
                         <div className="ml-6 p-2 bg-background rounded-md border">
                           <pre className="text-xs font-mono overflow-x-auto whitespace-pre-wrap">
@@ -653,7 +655,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
               )}
               <div className="flex-1 space-y-2">
                 <h4 className="font-semibold text-sm">
-                  {isError ? "Execution Failed" : "Execution Complete"}
+                  {isError ? t('execution.failed') : t('execution.complete')}
                 </h4>
                 
                 {message.result && (
@@ -691,13 +693,13 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                 
                 <div className="text-xs text-muted-foreground space-y-1 mt-2">
                   {(message.cost_usd !== undefined || message.total_cost_usd !== undefined) && (
-                    <div>Cost: ${((message.cost_usd || message.total_cost_usd)!).toFixed(4)} USD</div>
+                    <div>{t('dashboard.metrics.totalCost')}: ${((message.cost_usd || message.total_cost_usd)!).toFixed(4)} USD</div>
                   )}
                   {message.duration_ms !== undefined && (
-                    <div>Duration: {(message.duration_ms / 1000).toFixed(2)}s</div>
+                    <div>{t('sessions.sessionInfo.duration')}: {(message.duration_ms / 1000).toFixed(2)}s</div>
                   )}
                   {message.num_turns !== undefined && (
-                    <div>Turns: {message.num_turns}</div>
+                    <div>{t('execution.turns')}: {message.num_turns}</div>
                   )}
                   {message.usage && (
                     <div>

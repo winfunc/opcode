@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Toast, ToastContainer } from "@/components/ui/toast";
 import { api, type ClaudeMdFile } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 interface ClaudeFileEditorProps {
   /**
@@ -36,6 +37,7 @@ export const ClaudeFileEditor: React.FC<ClaudeFileEditorProps> = ({
   onBack,
   className,
 }) => {
+  const { t } = useTranslation();
   const [content, setContent] = useState<string>("");
   const [originalContent, setOriginalContent] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -72,11 +74,11 @@ export const ClaudeFileEditor: React.FC<ClaudeFileEditorProps> = ({
       setToast(null);
       await api.saveClaudeMdFile(file.absolute_path, content);
       setOriginalContent(content);
-      setToast({ message: "File saved successfully", type: "success" });
+      setToast({ message: t('fileEditor.saveSuccess'), type: "success" });
     } catch (err) {
       console.error("Failed to save file:", err);
       setError("Failed to save CLAUDE.md file");
-      setToast({ message: "Failed to save file", type: "error" });
+      setToast({ message: t('fileEditor.saveFailed'), type: "error" });
     } finally {
       setSaving(false);
     }
@@ -129,7 +131,7 @@ export const ClaudeFileEditor: React.FC<ClaudeFileEditorProps> = ({
             ) : (
               <Save className="mr-2 h-4 w-4" />
             )}
-            {saving ? "Saving..." : "Save"}
+            {saving ? t('common.saving') : t('common.save')}
           </Button>
         </motion.div>
         

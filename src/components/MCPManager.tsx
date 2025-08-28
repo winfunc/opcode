@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
@@ -27,6 +28,7 @@ interface MCPManagerProps {
 export const MCPManager: React.FC<MCPManagerProps> = ({
   className: _className,
 }) => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState("servers");
   const [servers, setServers] = useState<MCPServer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,7 +55,7 @@ export const MCPManager: React.FC<MCPManagerProps> = ({
       setServers(serverList);
     } catch (err) {
       console.error("MCPManager: Failed to load MCP servers:", err);
-      setError("Failed to load MCP servers. Make sure Claude Code is installed.");
+      setError(t('errors.loadFailed') || "Failed to load MCP servers. Make sure Claude Code is installed.");
     } finally {
       setLoading(false);
     }
@@ -101,7 +103,7 @@ export const MCPManager: React.FC<MCPManagerProps> = ({
         <div className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-heading-1">MCP Servers</h1>
+              <h1 className="text-heading-1">{t('mcp.title')}</h1>
               <p className="mt-1 text-body-small text-muted-foreground">
                 Manage Model Context Protocol servers
               </p>

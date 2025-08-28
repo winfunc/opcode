@@ -5,6 +5,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AnalyticsErrorBoundary } from "./components/AnalyticsErrorBoundary";
 import { analytics, resourceMonitor } from "./lib/analytics";
 import { PostHogProvider } from "posthog-js/react";
+import "./i18n/i18n"; // Initialize i18n
 import "./assets/shimmer.css";
 import "./styles.css";
 

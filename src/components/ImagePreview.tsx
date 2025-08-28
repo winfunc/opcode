@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { motion, AnimatePresence } from "framer-motion";
 import { convertFileSrc } from "@tauri-apps/api/core";
+import { useTranslation } from "react-i18next";
 
 interface ImagePreviewProps {
   /**
@@ -40,6 +41,7 @@ export const ImagePreview: React.FC<ImagePreviewProps> = ({
   onRemove,
   className,
 }) => {
+  const { t } = useTranslation();
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [imageErrors, setImageErrors] = useState<Set<number>>(new Set());
@@ -89,12 +91,12 @@ export const ImagePreview: React.FC<ImagePreviewProps> = ({
               >
                 {imageErrors.has(index) ? (
                   <div className="w-full h-full bg-muted flex items-center justify-center">
-                    <span className="text-xs text-muted-foreground">Error</span>
+                    <span className="text-xs text-muted-foreground">{t('imagePreview.error')}</span>
                   </div>
                 ) : (
                   <img
                     src={getImageSrc(imagePath)}
-                    alt={`Preview ${index + 1}`}
+                    alt={t('imagePreview.preview', { index: index + 1 })}
                     className="w-full h-full object-cover"
                     onError={() => handleImageError(index)}
                   />
@@ -137,12 +139,12 @@ export const ImagePreview: React.FC<ImagePreviewProps> = ({
         onOpenChange={(open) => !open && setSelectedImageIndex(null)}
       >
         <DialogContent className="max-w-4xl max-h-[90vh] p-0">
-          <DialogTitle className="sr-only">Image Preview</DialogTitle>
+          <DialogTitle className="sr-only">{t('imagePreview.imagePreview')}</DialogTitle>
           {selectedImageIndex !== null && (
             <div className="relative w-full h-full flex items-center justify-center p-4">
               <img
                 src={getImageSrc(displayImages[selectedImageIndex])}
-                alt={`Full preview ${selectedImageIndex + 1}`}
+                alt={t('imagePreview.fullPreview', { index: selectedImageIndex + 1 })}
                 className="max-w-full max-h-full object-contain"
                 onError={() => handleImageError(selectedImageIndex)}
               />

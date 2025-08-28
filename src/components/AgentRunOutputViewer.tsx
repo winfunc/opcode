@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Maximize2, 
@@ -27,6 +28,7 @@ import { formatISOTimestamp } from '@/lib/date-utils';
 import { AGENT_ICONS } from './CCAgents';
 import type { ClaudeStreamMessage } from './AgentExecution';
 import { useTabState } from '@/hooks/useTabState';
+import { useTranslation } from 'react-i18next';
 
 interface AgentRunOutputViewerProps {
   /**
@@ -57,6 +59,7 @@ export function AgentRunOutputViewer({
   tabId,
   className 
 }: AgentRunOutputViewerProps) {
+  const { t } = useTranslation();
   const { updateTabTitle, updateTabStatus } = useTabState();
   const [run, setRun] = useState<AgentRunWithMetrics | null>(null);
   const [messages, setMessages] = useState<ClaudeStreamMessage[]>([]);
@@ -331,10 +334,10 @@ export function AgentRunOutputViewer({
     let markdown = `# Agent Execution: ${run.agent_name}\n\n`;
     markdown += `**Task:** ${run.task}\n`;
     markdown += `**Model:** ${run.model === 'opus' ? 'Claude 4 Opus' : 'Claude 4 Sonnet'}\n`;
-    markdown += `**Date:** ${formatISOTimestamp(run.created_at)}\n`;
-    if (run.metrics?.duration_ms) markdown += `**Duration:** ${(run.metrics.duration_ms / 1000).toFixed(2)}s\n`;
-    if (run.metrics?.total_tokens) markdown += `**Total Tokens:** ${run.metrics.total_tokens}\n`;
-    if (run.metrics?.cost_usd) markdown += `**Cost:** $${run.metrics.cost_usd.toFixed(4)} USD\n`;
+    markdown += `**${t('common.date')}:** ${formatISOTimestamp(run.created_at)}\n`;
+    if (run.metrics?.duration_ms) markdown += `**${t('toolWidgets.duration')}:** ${(run.metrics.duration_ms / 1000).toFixed(2)}s\n`;
+    if (run.metrics?.total_tokens) markdown += `**${t('dashboard.metrics.totalTokens')}:** ${run.metrics.total_tokens}\n`;
+    if (run.metrics?.cost_usd) markdown += `**${t('toolWidgets.cost')}:** $${run.metrics.cost_usd.toFixed(4)} USD\n`;
     markdown += `\n---\n\n`;
 
     for (const msg of messages) {
@@ -535,7 +538,7 @@ export function AgentRunOutputViewer({
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading agent run...</p>
+          <p className="text-muted-foreground">{t('agents.loadingRun')}</p>
         </div>
       </div>
     );
@@ -557,7 +560,7 @@ export function AgentRunOutputViewer({
                     {run.status === 'running' && (
                       <div className="flex items-center gap-1">
                         <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                        <span className="text-xs text-green-600 font-medium">Running</span>
+                        <span className="text-xs text-green-600 font-medium">{t('agents.execution.running')}</span>
                       </div>
                     )}
                   </CardTitle>
@@ -670,12 +673,12 @@ export function AgentRunOutputViewer({
               <div className="flex items-center justify-center h-full">
                 <div className="flex items-center space-x-2">
                   <RefreshCw className="h-4 w-4 animate-spin" />
-                  <span>Loading output...</span>
+                  <span>{t('agents.loadingOutput')}</span>
                 </div>
               </div>
             ) : messages.length === 0 ? (
               <div className="flex items-center justify-center h-full text-muted-foreground">
-                <p>No output available yet</p>
+                <p>{t('agents.noOutputYet')}</p>
               </div>
             ) : (
               <div 

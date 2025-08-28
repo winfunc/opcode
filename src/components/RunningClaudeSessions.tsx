@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { Play, Loader2, Terminal, AlertCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -99,7 +100,7 @@ export const RunningClaudeSessions: React.FC<RunningClaudeSessionsProps> = ({
       <div className="flex items-center gap-2">
         <div className="flex items-center gap-1">
           <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-          <h3 className="text-sm font-medium">Active Claude Sessions</h3>
+          <h3 className="text-sm font-medium">{t('agents.runningAgents')}</h3>
         </div>
         <span className="text-xs text-muted-foreground">
           ({runningSessions.length} running)

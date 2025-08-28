@@ -30,6 +30,7 @@ import type { ClaudeStreamMessage } from "./AgentExecution";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useTrackEvent, useComponentMetrics, useWorkflowTracking } from "@/hooks";
 import { SessionPersistenceService } from "@/services/sessionPersistence";
+import { useTranslation } from "react-i18next";
 
 interface ClaudeCodeSessionProps {
   /**
@@ -75,6 +76,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   onStreamingChange,
   onProjectPathChange,
 }) => {
+  const { t } = useTranslation();
   const [projectPath] = useState(initialProjectPath || session?.project_path || "");
   const [messages, setMessages] = useState<ClaudeStreamMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -331,7 +333,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       }, 100);
     } catch (err) {
       console.error("Failed to load session history:", err);
-      setError("Failed to load session history");
+      setError(t('session.errors.loadFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -434,7 +436,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     console.log('[ClaudeCodeSession] handleSendPrompt called with:', { prompt, model, projectPath, claudeSessionId, effectiveSession });
     
     if (!projectPath) {
-      setError("Please select a project directory first");
+      setError(t('session.errors.selectProjectFirst'));
       return;
     }
 
@@ -814,7 +816,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       }
     } catch (err) {
       console.error("Failed to send prompt:", err);
-      setError("Failed to send prompt");
+      setError(t('session.errors.sendFailed'));
       setIsLoading(false);
       hasActiveSessionRef.current = false;
     }
@@ -1539,7 +1541,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                     <div className="flex items-center gap-1.5 text-xs">
                       <Hash className="h-3 w-3 text-muted-foreground" />
                       <span className="font-mono">{totalTokens.toLocaleString()}</span>
-                      <span className="text-muted-foreground">tokens</span>
+                      <span className="text-muted-foreground">{t('execution.tokens')}</span>
                     </div>
                   </motion.div>
                 </div>
@@ -1561,7 +1563,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
               <div className="h-full flex flex-col">
                 {/* Timeline Header */}
                 <div className="flex items-center justify-between p-4 border-b border-border">
-                  <h3 className="text-lg font-semibold">Session Timeline</h3>
+                  <h3 className="text-lg font-semibold">{t('sessions.timeline')}</h3>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -1595,18 +1597,18 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       <Dialog open={showForkDialog} onOpenChange={setShowForkDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Fork Session</DialogTitle>
+            <DialogTitle>{t('sessions.forkSession')}</DialogTitle>
             <DialogDescription>
-              Create a new session branch from the selected checkpoint.
+              {t('sessions.forkDescription')}
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="fork-name">New Session Name</Label>
+              <Label htmlFor="fork-name">{t('sessions.newSessionName')}</Label>
               <Input
                 id="fork-name"
-                placeholder="e.g., Alternative approach"
+                placeholder={t('sessions.namePlaceholder')}
                 value={forkSessionName}
                 onChange={(e) => setForkSessionName(e.target.value)}
                 onKeyPress={(e) => {
@@ -1624,13 +1626,13 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
               onClick={() => setShowForkDialog(false)}
               disabled={isLoading}
             >
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               onClick={handleConfirmFork}
               disabled={isLoading || !forkSessionName.trim()}
             >
-              Create Fork
+              {t('sessions.createFork')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1655,9 +1657,9 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         <Dialog open={showSlashCommandsSettings} onOpenChange={setShowSlashCommandsSettings}>
           <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
             <DialogHeader>
-              <DialogTitle>Slash Commands</DialogTitle>
+              <DialogTitle>{t('settings.slashCommands.title')}</DialogTitle>
               <DialogDescription>
-                Manage project-specific slash commands for {projectPath}
+                {t('settings.slashCommands.manageProjectSpecific', { projectPath })}
               </DialogDescription>
             </DialogHeader>
             <div className="flex-1 overflow-y-auto">
