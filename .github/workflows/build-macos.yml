@@ -17,19 +17,7 @@ on:
         required: true
       APPLE_PASSWORD:
         required: true
-  workflow_dispatch:
-    inputs:
-      skip_build:
-        description: 'Skip build and use artifacts from a previous run'
-        required: false
-        default: false
-        type: boolean
-      run_id:
-        description: 'Run ID to download artifacts from (leave empty for latest)'
-        required: false
-        type: string
-  push:
-    branches: [main, i18n]
+  # 移除了 push 和 workflow_dispatch，只保留 workflow_call
 
 jobs:
   build:
