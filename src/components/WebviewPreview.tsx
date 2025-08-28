@@ -62,6 +62,7 @@ const WebviewPreviewComponent: React.FC<WebviewPreviewProps> = ({
   onUrlChange,
   className,
 }) => {
+  const { t } = useTranslation();
   const [currentUrl, setCurrentUrl] = useState(initialUrl);
   const [inputUrl, setInputUrl] = useState(initialUrl);
   const [isLoading, setIsLoading] = useState(false);

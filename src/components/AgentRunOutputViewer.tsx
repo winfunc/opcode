@@ -28,7 +28,6 @@ import { formatISOTimestamp } from '@/lib/date-utils';
 import { AGENT_ICONS } from './CCAgents';
 import type { ClaudeStreamMessage } from './AgentExecution';
 import { useTabState } from '@/hooks/useTabState';
-import { useTranslation } from 'react-i18next';
 
 interface AgentRunOutputViewerProps {
   /**

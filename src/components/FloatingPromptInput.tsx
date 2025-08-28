@@ -84,57 +84,6 @@ type ThinkingModeConfig = {
   shortName: string;
 };
 
-const THINKING_MODES: ThinkingModeConfig[] = [
-  {
-    id: "auto",
-    name: "Auto",
-    description: "Let Claude decide",
-    level: 0,
-    icon: <Sparkles className="h-3.5 w-3.5" />,
-    color: "text-muted-foreground",
-    shortName: "A"
-  },
-  {
-    id: "think",
-    name: t('thinking.think'),
-    description: t('thinking.basicReasoning'),
-    level: 1,
-    phrase: "think",
-    icon: <Lightbulb className="h-3.5 w-3.5" />,
-    color: "text-primary",
-    shortName: "T"
-  },
-  {
-    id: "think_hard",
-    name: t('thinking.thinkHard'),
-    description: t('thinking.deeperAnalysis'),
-    level: 2,
-    phrase: "think hard",
-    icon: <Brain className="h-3.5 w-3.5" />,
-    color: "text-primary",
-    shortName: "T+"
-  },
-  {
-    id: "think_harder",
-    name: t('thinking.thinkHarder'),
-    description: t('thinking.extensiveReasoning'),
-    level: 3,
-    phrase: "think harder",
-    icon: <Cpu className="h-3.5 w-3.5" />,
-    color: "text-primary",
-    shortName: "T++"
-  },
-  {
-    id: "ultrathink",
-    name: t('thinking.ultrathink'),
-    description: t('thinking.maximumComputation'),
-    level: 4,
-    phrase: "ultrathink",
-    icon: <Rocket className="h-3.5 w-3.5" />,
-    color: "text-primary",
-    shortName: "Ultra"
-  }
-];
 
 /**
  * ThinkingModeIndicator component - Shows visual indicator bars for thinking level
@@ -170,24 +119,6 @@ type Model = {
   color: string;
 };
 
-const MODELS: Model[] = [
-  {
-    id: "sonnet",
-    name: t('models.sonnet'),
-    description: t('models.sonnetDescription'),
-    icon: <Zap className="h-3.5 w-3.5" />,
-    shortName: "S",
-    color: "text-primary"
-  },
-  {
-    id: "opus",
-    name: t('models.opus'),
-    description: t('models.opusDescription'),
-    icon: <Zap className="h-3.5 w-3.5" />,
-    shortName: "O",
-    color: "text-primary"
-  }
-];
 
 /**
  * FloatingPromptInput component - Fixed position prompt input with model picker
@@ -213,6 +144,7 @@ const FloatingPromptInputInner = (
   }: FloatingPromptInputProps,
   ref: React.Ref<FloatingPromptInputRef>,
 ) => {
+  const { t } = useTranslation();
   const [prompt, setPrompt] = useState("");
   const [selectedModel, setSelectedModel] = useState<"sonnet" | "opus">(defaultModel);
   const [selectedThinkingMode, setSelectedThinkingMode] = useState<ThinkingMode>("auto");
@@ -231,6 +163,78 @@ const FloatingPromptInputInner = (
   const expandedTextareaRef = useRef<HTMLTextAreaElement>(null);
   const unlistenDragDropRef = useRef<(() => void) | null>(null);
   const [textareaHeight, setTextareaHeight] = useState<number>(48);
+
+  // Define thinking modes and models inside component to access t function
+  const THINKING_MODES: ThinkingModeConfig[] = [
+    {
+      id: "auto",
+      name: "Auto",
+      description: "Let Claude decide",
+      level: 0,
+      icon: <Sparkles className="h-3.5 w-3.5" />,
+      color: "text-muted-foreground",
+      shortName: "A"
+    },
+    {
+      id: "think",
+      name: t('thinking.think'),
+      description: t('thinking.basicReasoning'),
+      level: 1,
+      phrase: "think",
+      icon: <Lightbulb className="h-3.5 w-3.5" />,
+      color: "text-primary",
+      shortName: "T"
+    },
+    {
+      id: "think_hard",
+      name: t('thinking.thinkHard'),
+      description: t('thinking.deeperAnalysis'),
+      level: 2,
+      phrase: "think hard",
+      icon: <Brain className="h-3.5 w-3.5" />,
+      color: "text-primary",
+      shortName: "T+"
+    },
+    {
+      id: "think_harder",
+      name: t('thinking.thinkHarder'),
+      description: t('thinking.extensiveReasoning'),
+      level: 3,
+      phrase: "think harder",
+      icon: <Cpu className="h-3.5 w-3.5" />,
+      color: "text-primary",
+      shortName: "T++"
+    },
+    {
+      id: "ultrathink",
+      name: t('thinking.ultrathink'),
+      description: t('thinking.maximumComputation'),
+      level: 4,
+      phrase: "ultrathink",
+      icon: <Rocket className="h-3.5 w-3.5" />,
+      color: "text-primary",
+      shortName: "Ultra"
+    }
+  ];
+
+  const MODELS: Model[] = [
+    {
+      id: "sonnet",
+      name: t('models.sonnet'),
+      description: t('models.sonnetDescription'),
+      icon: <Zap className="h-3.5 w-3.5" />,
+      shortName: "S",
+      color: "text-primary"
+    },
+    {
+      id: "opus",
+      name: t('models.opus'),
+      description: t('models.opusDescription'),
+      icon: <Zap className="h-3.5 w-3.5" />,
+      shortName: "O",
+      color: "text-primary"
+    }
+  ];
 
   // Expose a method to add images programmatically
   React.useImperativeHandle(

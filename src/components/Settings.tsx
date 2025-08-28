@@ -271,6 +271,7 @@ export const Settings: React.FC<SettingsProps> = ({
    */
   const changeLanguageAndRefresh = async (language: string) => {
     try {
+      setRefreshingLanguage(true);
       await i18n.changeLanguage(language);
       setToast({ message: t('settings.general.language.refreshing'), type: "success" });
       
@@ -281,6 +282,7 @@ export const Settings: React.FC<SettingsProps> = ({
     } catch (err) {
       console.error("Failed to change language:", err);
       setToast({ message: t('settings.general.language.refreshFailed'), type: "error" });
+      setRefreshingLanguage(false);
     }
   };
 
