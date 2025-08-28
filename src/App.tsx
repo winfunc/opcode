@@ -404,7 +404,7 @@ function AppContent() {
       /> */}
       
       {/* Analytics Consent Banner */}
-      <AnalyticsConsentBanner />
+      {/* <AnalyticsConsentBanner /> */}
       
       {/* Main Content */}
       <div className="flex-1 overflow-hidden">

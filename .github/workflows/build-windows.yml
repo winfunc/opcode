@@ -1,0 +1,35 @@
+name: Build Windows App
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v1
+        
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        
+      - name: Install dependencies
+        run: bun install
+        
+      - name: Build app
+        run: bun tauri build
+        
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-app
+          path: src-tauri/target/release/bundle/

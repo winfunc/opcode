@@ -741,7 +741,7 @@ export const Settings: React.FC<SettingsProps> = ({
                     <div className="border-t border-border pt-4 mt-6" />
                     
                     {/* Analytics Toggle */}
-                    <div className="flex items-center justify-between">
+                    {/* <div className="flex items-center justify-between">
                       <div className="space-y-1">
                         <Label htmlFor="analytics-enabled">{t('settings.general.analytics.label')}</Label>
                         <p className="text-caption text-muted-foreground">
@@ -767,7 +767,7 @@ export const Settings: React.FC<SettingsProps> = ({
                           }
                         }}
                       />
-                    </div>
+                    </div> */}
                     
                     {/* Privacy Info */}
                     {analyticsEnabled && (
