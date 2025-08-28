@@ -29,7 +29,7 @@ on:
         required: false
         type: string
   push:
-    branches: [main]
+    branches: [main, i18n]
 
 jobs:
   build:
