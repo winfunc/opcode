@@ -1790,21 +1790,54 @@ pub async fn get_claude_binary_path(db: State<'_, AgentDb>) -> Result<Option<Str
 pub async fn set_claude_binary_path(db: State<'_, AgentDb>, path: String) -> Result<(), String> {
     let conn = db.0.lock().map_err(|e| e.to_string())?;
 
-    // Validate that the path exists and is executable
-    let path_buf = std::path::PathBuf::from(&path);
-    if !path_buf.exists() {
-        return Err(format!("File does not exist: {}", path));
-    }
+    // Special handling for PATH-based commands (like "claude" or "claude.cmd")
+    if path == "claude" || path == "claude.cmd" {
+        // Verify that the command is available in PATH by trying to run --version
+        let test_result = if cfg!(target_os = "windows") {
+            // On Windows, try both variants
+            std::process::Command::new("claude.cmd")
+                .arg("--version")
+                .output()
+                .or_else(|_| {
+                    std::process::Command::new("claude")
+                        .arg("--version")
+                        .output()
+                })
+        } else {
+            std::process::Command::new("claude")
+                .arg("--version")
+                .output()
+        };
+        
+        match test_result {
+            Ok(output) if output.status.success() => {
+                log::info!("Successfully verified claude command in PATH");
+            },
+            Ok(output) => {
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                return Err(format!("Claude command failed: {}", stderr));
+            },
+            Err(e) => {
+                return Err(format!("Cannot execute claude command: {}. Make sure Claude Code is installed and in your system PATH.", e));
+            }
+        }
+    } else {
+        // For full paths, validate that the path exists and is executable
+        let path_buf = std::path::PathBuf::from(&path);
+        if !path_buf.exists() {
+            return Err(format!("File does not exist: {}", path));
+        }
 
-    // Check if it's executable (on Unix systems)
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        let metadata = std::fs::metadata(&path_buf)
-            .map_err(|e| format!("Failed to read file metadata: {}", e))?;
-        let permissions = metadata.permissions();
-        if permissions.mode() & 0o111 == 0 {
-            return Err(format!("File is not executable: {}", path));
+        // Check if it's executable (on Unix systems)
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let metadata = std::fs::metadata(&path_buf)
+                .map_err(|e| format!("Failed to read file metadata: {}", e))?;
+            let permissions = metadata.permissions();
+            if permissions.mode() & 0o111 == 0 {
+                return Err(format!("File is not executable: {}", path));
+            }
         }
     }
 
@@ -1816,6 +1849,7 @@ pub async fn set_claude_binary_path(db: State<'_, AgentDb>, path: String) -> Res
     )
     .map_err(|e| format!("Failed to save Claude binary path: {}", e))?;
 
+    log::info!("Successfully saved Claude binary path: {}", path);
     Ok(())
 }
 
@@ -1862,30 +1896,36 @@ fn create_command_with_env(program: &str) -> Command {
         }
     }
 
+    // Path separator based on OS
+    let path_separator = if cfg!(target_os = "windows") { ";" } else { ":" };
+    
     // Add NVM support if the program is in an NVM directory
     if program.contains("/.nvm/versions/node/") {
         if let Some(node_bin_dir) = std::path::Path::new(program).parent() {
             let current_path = std::env::var("PATH").unwrap_or_default();
             let node_bin_str = node_bin_dir.to_string_lossy();
             if !current_path.contains(&node_bin_str.as_ref()) {
-                let new_path = format!("{}:{}", node_bin_str, current_path);
+                let new_path = format!("{}{}{}", node_bin_str, path_separator, current_path);
                 tokio_cmd.env("PATH", new_path);
             }
         }
     }
 
-    // Ensure PATH contains common Homebrew locations
-    if let Ok(existing_path) = std::env::var("PATH") {
-        let mut paths: Vec<&str> = existing_path.split(':').collect();
-        for p in ["/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "/bin"].iter() {
-            if !paths.contains(p) {
-                paths.push(p);
+    // Ensure PATH contains common locations (Unix-specific)
+    #[cfg(not(target_os = "windows"))]
+    {
+        if let Ok(existing_path) = std::env::var("PATH") {
+            let mut paths: Vec<&str> = existing_path.split(path_separator).collect();
+            for p in ["/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "/bin"].iter() {
+                if !paths.contains(p) {
+                    paths.push(p);
+                }
             }
+            let joined = paths.join(path_separator);
+            tokio_cmd.env("PATH", joined);
+        } else {
+            tokio_cmd.env("PATH", "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin");
         }
-        let joined = paths.join(":");
-        tokio_cmd.env("PATH", joined);
-    } else {
-        tokio_cmd.env("PATH", "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin");
     }
 
     tokio_cmd
