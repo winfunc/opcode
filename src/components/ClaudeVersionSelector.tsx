@@ -236,7 +236,12 @@ export const ClaudeVersionSelector: React.FC<ClaudeVersionSelectorProps> = ({
                     <div className="flex items-center gap-2 py-1">
                       <Terminal className="h-3.5 w-3.5 text-muted-foreground" />
                       <div className="flex-1">
-                        <div className="font-mono text-sm">{installation.path}</div>
+                        <div className="font-mono text-sm">
+                          {installation.path}
+                          {installation.command_type === "CCR" && (
+                            <span className="ml-2 text-xs text-blue-600 font-medium">(CCR Proxy)</span>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           <span>{installation.version || "Unknown version"}</span>
                           <span>•</span>
@@ -244,6 +249,11 @@ export const ClaudeVersionSelector: React.FC<ClaudeVersionSelectorProps> = ({
                           <Badge variant={getInstallationTypeColor(installation)} className="text-xs ml-2">
                             {installation.installation_type}
                           </Badge>
+                          {installation.command_type === "CCR" && (
+                            <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                              Router
+                            </Badge>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -305,9 +315,17 @@ export const ClaudeVersionSelector: React.FC<ClaudeVersionSelectorProps> = ({
                       <div className="flex items-center gap-2 w-full">
                         {getInstallationIcon(installation)}
                         <div className="flex-1 min-w-0">
-                          <div className="font-medium truncate">{installation.path}</div>
+                          <div className="font-medium truncate">
+                            {installation.path}
+                            {installation.command_type === "CCR" && (
+                              <span className="ml-2 text-xs text-blue-600 font-medium">(CCR Proxy)</span>
+                            )}
+                          </div>
                           <div className="text-xs text-muted-foreground">
                             {installation.version || "Version unknown"} • {installation.source}
+                            {installation.command_type === "CCR" && (
+                              <span className="ml-1 text-blue-600">• CCR</span>
+                            )}
                           </div>
                         </div>
                         <Badge variant="outline" className="text-xs">
@@ -327,9 +345,17 @@ export const ClaudeVersionSelector: React.FC<ClaudeVersionSelectorProps> = ({
                       <div className="flex items-center gap-2 w-full">
                         {getInstallationIcon(installation)}
                         <div className="flex-1 min-w-0">
-                          <div className="font-medium truncate">{installation.path}</div>
+                          <div className="font-medium truncate">
+                            {installation.path}
+                            {installation.command_type === "CCR" && (
+                              <span className="ml-2 text-xs text-blue-600 font-medium">(CCR Proxy)</span>
+                            )}
+                          </div>
                           <div className="text-xs text-muted-foreground">
                             {installation.version || "Version unknown"} • {installation.source}
+                            {installation.command_type === "CCR" && (
+                              <span className="ml-1 text-blue-600">• CCR</span>
+                            )}
                           </div>
                         </div>
                         <Badge variant="outline" className="text-xs">

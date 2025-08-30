@@ -109,6 +109,8 @@ export interface ClaudeInstallation {
   source: string;
   /** Type of installation */
   installation_type: "System" | "Custom";
+  /** Command type (Claude or CCR) */
+  command_type: "Claude" | "CCR";
 }
 
 // Agent API types

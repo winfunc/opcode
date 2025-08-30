@@ -279,15 +279,28 @@ fn create_command_with_env(program: &str) -> Command {
     tokio_cmd
 }
 
-/// Creates a system binary command with the given arguments
-fn create_system_command(
-    claude_path: &str,
+/// Creates a system command with the proper arguments based on command type
+fn create_command_with_installation(
+    installation: &crate::claude_binary::ClaudeInstallation,
     args: Vec<String>,
     project_path: &str,
 ) -> Command {
-    let mut cmd = create_command_with_env(claude_path);
+    let mut cmd = create_command_with_env(&installation.path);
     
-    // Add all arguments
+    // Handle different command types appropriately
+    match installation.command_type {
+        crate::claude_binary::CommandType::CCR => {
+            // CCR (Claude Code Router) uses "ccr code" as the base command
+            // The "code" subcommand starts the Claude Code interface with CCR as proxy
+            // CCR then intercepts and routes requests to configured AI providers
+            cmd.arg("code");
+        }
+        crate::claude_binary::CommandType::Claude => {
+            // Direct Claude command - no additional arguments needed
+        }
+    }
+    
+    // Add all other arguments - CCR should pass them through to Claude
     for arg in args {
         cmd.arg(arg);
     }
@@ -923,7 +936,8 @@ pub async fn execute_claude_code(
         model
     );
 
-    let claude_path = find_claude_binary(&app)?;
+    let installation = crate::claude_binary::find_claude_installation(&app)?;
+    log::info!("Using installation: path={}, command_type={:?}", installation.path, installation.command_type);
     
     let args = vec![
         "-p".to_string(),
@@ -936,7 +950,7 @@ pub async fn execute_claude_code(
         "--dangerously-skip-permissions".to_string(),
     ];
 
-    let cmd = create_system_command(&claude_path, args, &project_path);
+    let cmd = create_command_with_installation(&installation, args, &project_path);
     spawn_claude_process(app, cmd, prompt, model, project_path).await
 }
 
@@ -954,7 +968,8 @@ pub async fn continue_claude_code(
         model
     );
 
-    let claude_path = find_claude_binary(&app)?;
+    let installation = crate::claude_binary::find_claude_installation(&app)?;
+    log::info!("Using installation: path={}, command_type={:?}", installation.path, installation.command_type);
     
     let args = vec![
         "-c".to_string(), // Continue flag
@@ -968,7 +983,7 @@ pub async fn continue_claude_code(
         "--dangerously-skip-permissions".to_string(),
     ];
 
-    let cmd = create_system_command(&claude_path, args, &project_path);
+    let cmd = create_command_with_installation(&installation, args, &project_path);
     spawn_claude_process(app, cmd, prompt, model, project_path).await
 }
 
@@ -988,7 +1003,8 @@ pub async fn resume_claude_code(
         model
     );
 
-    let claude_path = find_claude_binary(&app)?;
+    let installation = crate::claude_binary::find_claude_installation(&app)?;
+    log::info!("Using installation: path={}, command_type={:?}", installation.path, installation.command_type);
     
     let args = vec![
         "--resume".to_string(),
@@ -1003,7 +1019,7 @@ pub async fn resume_claude_code(
         "--dangerously-skip-permissions".to_string(),
     ];
 
-    let cmd = create_system_command(&claude_path, args, &project_path);
+    let cmd = create_command_with_installation(&installation, args, &project_path);
     spawn_claude_process(app, cmd, prompt, model, project_path).await
 }
 

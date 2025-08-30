@@ -1790,35 +1790,66 @@ pub async fn get_claude_binary_path(db: State<'_, AgentDb>) -> Result<Option<Str
 pub async fn set_claude_binary_path(db: State<'_, AgentDb>, path: String) -> Result<(), String> {
     let conn = db.0.lock().map_err(|e| e.to_string())?;
 
-    // Special handling for PATH-based commands (like "claude" or "claude.cmd")
-    if path == "claude" || path == "claude.cmd" {
+    // Special handling for PATH-based commands (like "claude", "claude.cmd", "ccr", "ccr.cmd")
+    if path == "claude" || path == "claude.cmd" || path == "ccr" || path == "ccr.cmd" {
         // Verify that the command is available in PATH by trying to run --version
-        let test_result = if cfg!(target_os = "windows") {
-            // On Windows, try both variants
-            std::process::Command::new("claude.cmd")
-                .arg("--version")
-                .output()
-                .or_else(|_| {
-                    std::process::Command::new("claude")
-                        .arg("--version")
-                        .output()
-                })
+        let test_result = if path.starts_with("ccr") {
+            // For CCR commands, test with ccr --version
+            if cfg!(target_os = "windows") {
+                std::process::Command::new("ccr.cmd")
+                    .arg("--version")
+                    .output()
+                    .or_else(|_| {
+                        std::process::Command::new("ccr")
+                            .arg("--version")
+                            .output()
+                    })
+            } else {
+                std::process::Command::new("ccr")
+                    .arg("--version")
+                    .output()
+            }
         } else {
-            std::process::Command::new("claude")
-                .arg("--version")
-                .output()
+            // For Claude commands, test with claude --version
+            if cfg!(target_os = "windows") {
+                // On Windows, try both variants
+                std::process::Command::new("claude.cmd")
+                    .arg("--version")
+                    .output()
+                    .or_else(|_| {
+                        std::process::Command::new("claude")
+                            .arg("--version")
+                            .output()
+                    })
+            } else {
+                std::process::Command::new("claude")
+                    .arg("--version")
+                    .output()
+            }
         };
         
         match test_result {
             Ok(output) if output.status.success() => {
-                log::info!("Successfully verified claude command in PATH");
+                log::info!("Successfully verified {} command in PATH", path);
             },
             Ok(output) => {
                 let stderr = String::from_utf8_lossy(&output.stderr);
-                return Err(format!("Claude command failed: {}", stderr));
+                let stdout = String::from_utf8_lossy(&output.stdout);
+                log::warn!("{} command returned non-zero status. stdout: {}, stderr: {}", path, stdout, stderr);
+                
+                // For CCR, be more lenient as it might have different version output behavior
+                if path.starts_with("ccr") {
+                    log::info!("CCR command found but version check had issues, continuing anyway as CCR might be functional");
+                } else {
+                    return Err(format!("Claude command failed: {}", stderr));
+                }
             },
             Err(e) => {
-                return Err(format!("Cannot execute claude command: {}. Make sure Claude Code is installed and in your system PATH.", e));
+                if path.starts_with("ccr") {
+                    return Err(format!("Cannot execute ccr command: {}. Make sure Claude Code Router is installed and in your system PATH.", e));
+                } else {
+                    return Err(format!("Cannot execute claude command: {}. Make sure Claude Code is installed and in your system PATH.", e));
+                }
             }
         }
     } else {

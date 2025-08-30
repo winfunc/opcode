@@ -17,6 +17,15 @@ pub enum InstallationType {
     Custom,
 }
 
+/// Command type for Claude installations
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum CommandType {
+    /// Standard claude command
+    Claude,
+    /// CCR (Cursor) command requiring "code" argument
+    CCR,
+}
+
 /// Represents a Claude installation with metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ClaudeInstallation {
@@ -28,12 +37,14 @@ pub struct ClaudeInstallation {
     pub source: String,
     /// Type of installation
     pub installation_type: InstallationType,
+    /// Command type (claude or ccr)
+    pub command_type: CommandType,
 }
 
-/// Main function to find the Claude binary
-/// Checks database first for stored path and preference, then prioritizes accordingly
-pub fn find_claude_binary(app_handle: &tauri::AppHandle) -> Result<String, String> {
-    info!("Searching for claude binary...");
+/// Find the best Claude installation and return its information
+/// This is the new preferred function that returns full installation details
+pub fn find_claude_installation(app_handle: &tauri::AppHandle) -> Result<ClaudeInstallation, String> {
+    info!("Searching for claude installation...");
 
     // First check if we have a stored path and preference in the database
     if let Ok(app_data_dir) = app_handle.path().app_data_dir() {
@@ -51,20 +62,30 @@ pub fn find_claude_binary(app_handle: &tauri::AppHandle) -> Result<String, Strin
                     // Check if the path still exists
                     let path_buf = PathBuf::from(&stored_path);
                     if path_buf.exists() && path_buf.is_file() {
-                        return Ok(stored_path);
+                        // Determine command type from path
+                        let command_type = if stored_path.contains("ccr") {
+                            CommandType::CCR
+                        } else {
+                            CommandType::Claude
+                        };
+
+                        // Get version
+                        let version = match command_type {
+                            CommandType::Claude => get_claude_version(&stored_path).ok().flatten(),
+                            CommandType::CCR => get_ccr_version(&stored_path).ok().flatten(),
+                        };
+
+                        return Ok(ClaudeInstallation {
+                            path: stored_path,
+                            version,
+                            source: "database".to_string(),
+                            installation_type: InstallationType::Custom,
+                            command_type,
+                        });
                     } else {
                         warn!("Stored claude path no longer exists: {}", stored_path);
                     }
                 }
-                
-                // Check user preference
-                let preference = conn.query_row(
-                    "SELECT value FROM app_settings WHERE key = 'claude_installation_preference'",
-                    [],
-                    |row| row.get::<_, String>(0),
-                ).unwrap_or_else(|_| "system".to_string());
-                
-                info!("User preference for Claude installation: {}", preference);
             }
         }
     }
@@ -90,19 +111,25 @@ pub fn find_claude_binary(app_handle: &tauri::AppHandle) -> Result<String, Strin
 
     // Log all found installations
     for installation in &installations {
-        info!("Found Claude installation: {:?}", installation);
+        info!("Found installation: {:?}", installation);
     }
 
     // Select the best installation (highest version)
     if let Some(best) = select_best_installation(installations) {
         info!(
-            "Selected Claude installation: path={}, version={:?}, source={}",
-            best.path, best.version, best.source
+            "Selected installation: path={}, version={:?}, source={}, command_type={:?}",
+            best.path, best.version, best.source, best.command_type
         );
-        Ok(best.path)
+        Ok(best)
     } else {
         Err("No valid Claude installation found".to_string())
     }
+}
+
+/// Main function to find the Claude binary (backward compatibility)
+/// Checks database first for stored path and preference, then prioritizes accordingly
+pub fn find_claude_binary(app_handle: &tauri::AppHandle) -> Result<String, String> {
+    find_claude_installation(app_handle).map(|installation| installation.path)
 }
 
 /// Discovers all available Claude installations and returns them for selection
@@ -173,12 +200,13 @@ fn discover_system_installations() -> Vec<ClaudeInstallation> {
     info!("Starting system-wide Claude installation discovery");
 
     // 1. Try 'which' command first (now works in production)
-    debug!("Trying 'which' command to find Claude");
-    if let Some(installation) = try_which_command() {
-        info!("Found Claude via 'which': {:?}", installation);
-        installations.push(installation);
+    debug!("Trying 'which' command to find Claude and CCR");
+    let which_installations = try_which_command();
+    if which_installations.is_empty() {
+        debug!("'which' command did not find Claude or CCR");
     } else {
-        debug!("'which' command did not find Claude");
+        info!("Found {} installations via 'which': {:?}", which_installations.len(), which_installations);
+        installations.extend(which_installations);
     }
 
     // 2. Check NVM paths
@@ -221,11 +249,28 @@ fn discover_system_installations() -> Vec<ClaudeInstallation> {
     installations
 }
 
-/// Try using the 'which' command to find Claude
-fn try_which_command() -> Option<ClaudeInstallation> {
+/// Try using the 'which' command to find Claude and CCR
+fn try_which_command() -> Vec<ClaudeInstallation> {
+    let mut installations = Vec::new();
+    
+    // Try to find 'claude' command
     debug!("Trying 'which claude' to find binary...");
+    if let Some(installation) = try_which_for_binary("claude", CommandType::Claude) {
+        installations.push(installation);
+    }
+    
+    // Try to find 'ccr' command
+    debug!("Trying 'which ccr' to find binary...");
+    if let Some(installation) = try_which_for_binary("ccr", CommandType::CCR) {
+        installations.push(installation);
+    }
+    
+    installations
+}
 
-    match Command::new("which").arg("claude").output() {
+/// Helper function to find a specific binary using 'which'
+fn try_which_for_binary(binary_name: &str, command_type: CommandType) -> Option<ClaudeInstallation> {
+    match Command::new("which").arg(binary_name).output() {
         Ok(output) if output.status.success() => {
             let output_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
 
@@ -233,8 +278,8 @@ fn try_which_command() -> Option<ClaudeInstallation> {
                 return None;
             }
 
-            // Parse aliased output: "claude: aliased to /path/to/claude"
-            let path = if output_str.starts_with("claude:") && output_str.contains("aliased to") {
+            // Parse aliased output: "binary: aliased to /path/to/binary"
+            let path = if output_str.starts_with(&format!("{}:", binary_name)) && output_str.contains("aliased to") {
                 output_str
                     .split("aliased to")
                     .nth(1)
@@ -243,7 +288,7 @@ fn try_which_command() -> Option<ClaudeInstallation> {
                 Some(output_str)
             }?;
 
-            debug!("'which' found claude at: {}", path);
+            debug!("'which' found {} at: {}", binary_name, path);
 
             // Verify the path exists
             if !PathBuf::from(&path).exists() {
@@ -251,14 +296,18 @@ fn try_which_command() -> Option<ClaudeInstallation> {
                 return None;
             }
 
-            // Get version
-            let version = get_claude_version(&path).ok().flatten();
+            // Get version based on command type
+            let version = match command_type {
+                CommandType::Claude => get_claude_version(&path).ok().flatten(),
+                CommandType::CCR => get_ccr_version(&path).ok().flatten(),
+            };
 
             Some(ClaudeInstallation {
                 path,
                 version,
                 source: "which".to_string(),
                 installation_type: InstallationType::System,
+                command_type,
             })
         }
         _ => None,
@@ -281,22 +330,38 @@ fn find_nvm_installations() -> Vec<ClaudeInstallation> {
         if let Ok(entries) = std::fs::read_dir(&nvm_dir) {
             for entry in entries.flatten() {
                 if entry.file_type().map(|t| t.is_dir()).unwrap_or(false) {
-                    let claude_path = entry.path().join("bin").join("claude");
+                    let bin_dir = entry.path().join("bin");
+                    let node_version = entry.file_name().to_string_lossy().to_string();
 
+                    // Check for claude
+                    let claude_path = bin_dir.join("claude");
                     if claude_path.exists() && claude_path.is_file() {
                         let path_str = claude_path.to_string_lossy().to_string();
-                        let node_version = entry.file_name().to_string_lossy().to_string();
-
                         debug!("Found Claude in NVM node {}: {}", node_version, path_str);
 
-                        // Get Claude version
                         let version = get_claude_version(&path_str).ok().flatten();
-
                         installations.push(ClaudeInstallation {
                             path: path_str,
                             version,
                             source: format!("nvm ({})", node_version),
                             installation_type: InstallationType::System,
+                            command_type: CommandType::Claude,
+                        });
+                    }
+
+                    // Check for ccr
+                    let ccr_path = bin_dir.join("ccr");
+                    if ccr_path.exists() && ccr_path.is_file() {
+                        let path_str = ccr_path.to_string_lossy().to_string();
+                        debug!("Found CCR in NVM node {}: {}", node_version, path_str);
+
+                        let version = get_ccr_version(&path_str).ok().flatten();
+                        installations.push(ClaudeInstallation {
+                            path: path_str,
+                            version,
+                            source: format!("nvm ({})", node_version),
+                            installation_type: InstallationType::System,
+                            command_type: CommandType::CCR,
                         });
                     }
                 }
@@ -311,58 +376,37 @@ fn find_nvm_installations() -> Vec<ClaudeInstallation> {
 fn find_standard_installations() -> Vec<ClaudeInstallation> {
     let mut installations = Vec::new();
 
-    // Common installation paths for claude
-    let mut paths_to_check: Vec<(String, String)> = vec![
-        ("/usr/local/bin/claude".to_string(), "system".to_string()),
-        (
-            "/opt/homebrew/bin/claude".to_string(),
-            "homebrew".to_string(),
-        ),
-        ("/usr/bin/claude".to_string(), "system".to_string()),
-        ("/bin/claude".to_string(), "system".to_string()),
+    // Define common directory paths to check
+    let mut directories_to_check: Vec<(PathBuf, String)> = vec![
+        (PathBuf::from("/usr/local/bin"), "system".to_string()),
+        (PathBuf::from("/opt/homebrew/bin"), "homebrew".to_string()),
+        (PathBuf::from("/usr/bin"), "system".to_string()),
+        (PathBuf::from("/bin"), "system".to_string()),
     ];
 
     // Also check user-specific paths
     if let Some(home) = dirs::home_dir() {
-        // Cross-platform user paths
-        paths_to_check.extend(vec![
-            (
-                home.join(".claude").join("local").join("claude").to_string_lossy().to_string(),
-                "claude-local".to_string(),
-            ),
-            (
-                home.join(".local").join("bin").join("claude").to_string_lossy().to_string(),
-                "local-bin".to_string(),
-            ),
-            (
-                home.join(".npm-global").join("bin").join("claude").to_string_lossy().to_string(),
-                "npm-global".to_string(),
-            ),
-            (home.join(".yarn").join("bin").join("claude").to_string_lossy().to_string(), "yarn".to_string()),
-            (home.join(".bun").join("bin").join("claude").to_string_lossy().to_string(), "bun".to_string()),
-            (home.join("bin").join("claude").to_string_lossy().to_string(), "home-bin".to_string()),
-            // Check common node_modules locations
-            (
-                home.join("node_modules").join(".bin").join("claude").to_string_lossy().to_string(),
-                "node-modules".to_string(),
-            ),
-            (
-                home.join(".config").join("yarn").join("global").join("node_modules").join(".bin").join("claude").to_string_lossy().to_string(),
-                "yarn-global".to_string(),
-            ),
+        directories_to_check.extend(vec![
+            (home.join(".claude").join("local"), "claude-local".to_string()),
+            (home.join(".local").join("bin"), "local-bin".to_string()),
+            (home.join(".npm-global").join("bin"), "npm-global".to_string()),
+            (home.join(".yarn").join("bin"), "yarn".to_string()),
+            (home.join(".bun").join("bin"), "bun".to_string()),
+            (home.join("bin"), "home-bin".to_string()),
+            (home.join("node_modules").join(".bin"), "node-modules".to_string()),
+            (home.join(".config").join("yarn").join("global").join("node_modules").join(".bin"), "yarn-global".to_string()),
         ]);
         
         // Windows-specific paths
         if cfg!(target_os = "windows") {
-            debug!("Adding Windows-specific Claude paths");
+            debug!("Adding Windows-specific paths");
             
             // Check APPDATA npm global path
             if let Ok(appdata) = std::env::var("APPDATA") {
-                paths_to_check.push((
-                    format!("{}\\npm\\claude.cmd", appdata),
+                directories_to_check.push((
+                    PathBuf::from(appdata).join("npm"),
                     "npm-global-appdata".to_string(),
                 ));
-                debug!("Added APPDATA npm path: {}\\npm\\claude.cmd", appdata);
             }
             
             // Check npm prefix path from npm config
@@ -373,39 +417,64 @@ fn find_standard_installations() -> Vec<ClaudeInstallation> {
                     let npm_prefix_raw = String::from_utf8_lossy(&output.stdout);
                     let npm_prefix = npm_prefix_raw.trim();
                     if !npm_prefix.is_empty() {
-                        paths_to_check.push((
-                            format!("{}\\claude.cmd", npm_prefix),
+                        directories_to_check.push((
+                            PathBuf::from(npm_prefix),
                             "npm-prefix".to_string(),
                         ));
-                        debug!("Added npm prefix path: {}\\claude.cmd", npm_prefix);
                     }
                 }
             }
             
-            // Windows claude.cmd variants
-            paths_to_check.push((home.join("AppData").join("Roaming").join("npm").join("claude.cmd").to_string_lossy().to_string(), "npm-roaming".to_string()));
+            directories_to_check.push((home.join("AppData").join("Roaming").join("npm"), "npm-roaming".to_string()));
         }
     }
 
-    // Check each path
-    for (path, source) in paths_to_check {
-        let path_buf = PathBuf::from(&path);
-        if path_buf.exists() && path_buf.is_file() {
-            debug!("Found claude at standard path: {} ({})", path, source);
+    // For each directory, check for both claude and ccr binaries
+    for (dir_path, source) in directories_to_check {
+        // Check for claude
+        let claude_path = if cfg!(target_os = "windows") {
+            dir_path.join("claude.cmd")
+        } else {
+            dir_path.join("claude")
+        };
+        
+        if claude_path.exists() && claude_path.is_file() {
+            let path_str = claude_path.to_string_lossy().to_string();
+            debug!("Found claude at standard path: {} ({})", path_str, source);
 
-            // Get version
-            let version = get_claude_version(&path).ok().flatten();
-
+            let version = get_claude_version(&path_str).ok().flatten();
             installations.push(ClaudeInstallation {
-                path,
+                path: path_str,
                 version,
-                source,
+                source: source.clone(),
                 installation_type: InstallationType::System,
+                command_type: CommandType::Claude,
+            });
+        }
+
+        // Check for ccr
+        let ccr_path = if cfg!(target_os = "windows") {
+            dir_path.join("ccr.cmd")
+        } else {
+            dir_path.join("ccr")
+        };
+        
+        if ccr_path.exists() && ccr_path.is_file() {
+            let path_str = ccr_path.to_string_lossy().to_string();
+            debug!("Found ccr at standard path: {} ({})", path_str, source);
+
+            let version = get_ccr_version(&path_str).ok().flatten();
+            installations.push(ClaudeInstallation {
+                path: path_str,
+                version,
+                source: source.clone(),
+                installation_type: InstallationType::System,
+                command_type: CommandType::CCR,
             });
         }
     }
 
-    // Also check if claude is available in PATH (without full path)
+    // Also check if binaries are available in PATH (without full path)
     // Try both 'claude' and 'claude.cmd' for Windows compatibility
     let claude_commands = if cfg!(target_os = "windows") {
         vec!["claude", "claude.cmd"]
@@ -413,19 +482,68 @@ fn find_standard_installations() -> Vec<ClaudeInstallation> {
         vec!["claude"]
     };
     
+    let mut found_claude_in_path = false;
     for cmd in claude_commands {
-        if let Ok(output) = Command::new(cmd).arg("--version").output() {
-            if output.status.success() {
-                debug!("{} is available in PATH", cmd);
-                let version = extract_version_from_output(&output.stdout);
+        if !found_claude_in_path {
+            if let Ok(output) = Command::new(cmd).arg("--version").output() {
+                if output.status.success() {
+                    debug!("{} is available in PATH", cmd);
+                    let version = extract_version_from_output(&output.stdout);
 
-                installations.push(ClaudeInstallation {
-                    path: cmd.to_string(),
-                    version,
-                    source: "PATH".to_string(),
-                    installation_type: InstallationType::System,
-                });
-                break; // Only add one PATH entry
+                    installations.push(ClaudeInstallation {
+                        path: cmd.to_string(),
+                        version,
+                        source: "PATH".to_string(),
+                        installation_type: InstallationType::System,
+                        command_type: CommandType::Claude,
+                    });
+                    found_claude_in_path = true;
+                }
+            }
+        }
+    }
+
+    // Check for ccr in PATH
+    let ccr_commands = if cfg!(target_os = "windows") {
+        vec!["ccr", "ccr.cmd"]
+    } else {
+        vec!["ccr"]
+    };
+    
+    let mut found_ccr_in_path = false;
+    for cmd in ccr_commands {
+        if !found_ccr_in_path {
+            // For CCR, we need to check if 'ccr code --version' works to get Claude version
+            if let Ok(output) = Command::new(cmd).args(["code", "--version"]).output() {
+                if output.status.success() {
+                    debug!("{} code is available in PATH", cmd);
+                    let version = extract_version_from_output(&output.stdout);
+
+                    installations.push(ClaudeInstallation {
+                        path: cmd.to_string(),
+                        version,
+                        source: "PATH".to_string(),
+                        installation_type: InstallationType::System,
+                        command_type: CommandType::CCR,
+                    });
+                    found_ccr_in_path = true;
+                }
+            } else {
+                // If 'ccr code' doesn't work, check if ccr itself exists but may not support Claude
+                if let Ok(output) = Command::new(cmd).arg("--version").output() {
+                    if output.status.success() {
+                        debug!("{} is available in PATH but may not support Claude Code", cmd);
+                        // Still add it but without version info, user can try to use it
+                        installations.push(ClaudeInstallation {
+                            path: cmd.to_string(),
+                            version: None,
+                            source: "PATH".to_string(),
+                            installation_type: InstallationType::System,
+                            command_type: CommandType::CCR,
+                        });
+                        found_ccr_in_path = true;
+                    }
+                }
             }
         }
     }
@@ -445,6 +563,31 @@ fn get_claude_version(path: &str) -> Result<Option<String>, String> {
         }
         Err(e) => {
             warn!("Failed to get version for {}: {}", path, e);
+            Ok(None)
+        }
+    }
+}
+
+/// Get CCR version by running 'ccr code --version' command
+/// Since ccr code is essentially Claude, we need to get the Claude version through ccr
+fn get_ccr_version(path: &str) -> Result<Option<String>, String> {
+    match Command::new(path).args(["code", "--version"]).output() {
+        Ok(output) => {
+            if output.status.success() {
+                Ok(extract_version_from_output(&output.stdout))
+            } else {
+                // If 'ccr code --version' fails, try just 'ccr --version' to see if ccr itself is working
+                match Command::new(path).arg("--version").output() {
+                    Ok(fallback_output) if fallback_output.status.success() => {
+                        debug!("ccr code --version failed but ccr --version worked, ccr may not support Claude");
+                        Ok(None) // CCR exists but doesn't support Claude
+                    }
+                    _ => Ok(None)
+                }
+            }
+        }
+        Err(e) => {
+            warn!("Failed to get CCR version for {}: {}", path, e);
             Ok(None)
         }
     }
