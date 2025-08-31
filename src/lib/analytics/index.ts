@@ -27,8 +27,8 @@ class AnalyticsService {
     
     // Default configuration - pulled from Vite environment variables
     this.config = {
-      apiKey: import.meta.env.VITE_PUBLIC_POSTHOG_KEY || 'phc_YOUR_PROJECT_API_KEY',
-      apiHost: import.meta.env.VITE_PUBLIC_POSTHOG_HOST || 'https://app.posthog.com',
+      apiKey: 'phc_6seRe1SJkFckJU2qQWeeIy62kaSoaUbCsdVCm1TQZg8',
+      apiHost: 'https://us.i.posthog.com',
       persistence: 'localStorage',
       autocapture: false, // We'll manually track events
       disable_session_recording: true, // Privacy first
