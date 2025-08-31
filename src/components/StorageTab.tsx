@@ -529,8 +529,9 @@ export const StorageTab: React.FC = () => {
                   onClick={() => loadTableData(currentPage - 1)}
                   disabled={currentPage === 1}
                   className="h-7 text-xs"
+                  aria-label={`Go to previous page (page ${currentPage - 1} of ${tableData?.total_pages || 1})`}
                 >
-                  <ChevronLeft className="h-3 w-3" />
+                  <ChevronLeft className="h-3 w-3" aria-hidden="true" />
                   Previous
                 </Button>
                 <div className="text-xs">
@@ -542,9 +543,10 @@ export const StorageTab: React.FC = () => {
                   onClick={() => loadTableData(currentPage + 1)}
                   disabled={currentPage === tableData.total_pages}
                   className="h-7 text-xs"
+                  aria-label={`Go to next page (page ${currentPage + 1} of ${tableData?.total_pages || 1})`}
                 >
                   Next
-                  <ChevronRight className="h-3 w-3" />
+                  <ChevronRight className="h-3 w-3" aria-hidden="true" />
                 </Button>
               </div>
             </div>

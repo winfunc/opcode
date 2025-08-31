@@ -449,11 +449,14 @@ export const FilePicker: React.FC<FilePickerProps> = ({
                     isSelected && "bg-accent"
                   )}
                   title={entry.is_directory ? "Click to select • Double-click to enter" : "Click to select"}
+                  aria-label={entry.is_directory 
+                    ? `${entry.name} directory. Click to select or double-click to enter.`
+                    : `${entry.name} file${entry.size > 0 ? `, ${formatFileSize(entry.size)}` : ''}. Click to select.`}
                 >
                   <Icon className={cn(
                     "h-4 w-4 flex-shrink-0",
                     entry.is_directory ? "text-blue-500" : "text-muted-foreground"
-                  )} />
+                  )} aria-hidden="true" />
                   
                   <span className="flex-1 truncate">
                     {entry.name}

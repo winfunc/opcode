@@ -387,8 +387,9 @@ export const Settings: React.FC<SettingsProps> = ({
       
       {/* Content */}
       {loading ? (
-        <div className="flex-1 flex items-center justify-center">
+        <div className="flex-1 flex items-center justify-center" aria-live="polite" aria-label="Loading settings">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <span className="sr-only">Loading settings...</span>
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto p-6">
@@ -633,7 +634,7 @@ export const Settings: React.FC<SettingsProps> = ({
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
                           <Label htmlFor="cleanup">Chat Transcript Retention (days)</Label>
-                          <p className="text-caption text-muted-foreground mt-1">
+                          <p className="text-caption text-muted-foreground mt-1" id="cleanup-description">
                             How long to retain chat transcripts locally (default: 30 days)
                           </p>
                         </div>
@@ -648,6 +649,7 @@ export const Settings: React.FC<SettingsProps> = ({
                             updateSetting("cleanupPeriodDays", value);
                           }}
                           className="w-24"
+                          aria-describedby="cleanup-description"
                         />
                       </div>
                     </div>
@@ -792,6 +794,7 @@ export const Settings: React.FC<SettingsProps> = ({
                         size="sm"
                         onClick={() => addPermissionRule("allow")}
                         className="gap-2 hover:border-green-500/50 hover:text-green-500"
+                        aria-label="Add new allow rule"
                       >
                         <Plus className="h-3 w-3" />
                         Add Rule
@@ -816,12 +819,14 @@ export const Settings: React.FC<SettingsProps> = ({
                               value={rule.value}
                               onChange={(e) => updatePermissionRule("allow", rule.id, e.target.value)}
                               className="flex-1"
+                              aria-label="Allow rule pattern"
                             />
                             <Button
                               variant="ghost"
                               size="icon"
                               onClick={() => removePermissionRule("allow", rule.id)}
                               className="h-8 w-8"
+                              aria-label="Remove allow rule"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -840,6 +845,7 @@ export const Settings: React.FC<SettingsProps> = ({
                         size="sm"
                         onClick={() => addPermissionRule("deny")}
                         className="gap-2 hover:border-red-500/50 hover:text-red-500"
+                        aria-label="Add new deny rule"
                       >
                         <Plus className="h-3 w-3" />
                         Add Rule
@@ -864,12 +870,14 @@ export const Settings: React.FC<SettingsProps> = ({
                               value={rule.value}
                               onChange={(e) => updatePermissionRule("deny", rule.id, e.target.value)}
                               className="flex-1"
+                              aria-label="Deny rule pattern"
                             />
                             <Button
                               variant="ghost"
                               size="icon"
                               onClick={() => removePermissionRule("deny", rule.id)}
                               className="h-8 w-8"
+                              aria-label="Remove deny rule"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -935,6 +943,7 @@ export const Settings: React.FC<SettingsProps> = ({
                             value={envVar.key}
                             onChange={(e) => updateEnvVar(envVar.id, "key", e.target.value)}
                             className="flex-1 font-mono text-sm"
+                            aria-label="Environment variable key"
                           />
                           <span className="text-muted-foreground">=</span>
                           <Input
@@ -942,12 +951,14 @@ export const Settings: React.FC<SettingsProps> = ({
                             value={envVar.value}
                             onChange={(e) => updateEnvVar(envVar.id, "value", e.target.value)}
                             className="flex-1 font-mono text-sm"
+                            aria-label="Environment variable value"
                           />
                           <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => removeEnvVar(envVar.id)}
                             className="h-8 w-8 hover:text-destructive"
+                            aria-label="Remove environment variable"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>

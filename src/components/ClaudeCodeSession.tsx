@@ -1333,10 +1333,13 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 20 }}
                 className="fixed bottom-24 left-1/2 -translate-x-1/2 z-30 w-full max-w-3xl px-4"
+                role="region"
+                aria-label="Prompt queue"
+                aria-live="polite"
               >
                 <div className="bg-background/95 backdrop-blur-md border rounded-lg shadow-lg p-3 space-y-2">
                   <div className="flex items-center justify-between">
-                    <div className="text-xs font-medium text-muted-foreground mb-1">
+                    <div id="queue-header" className="text-xs font-medium text-muted-foreground mb-1">
                       Queued Prompts ({queuedPrompts.length})
                     </div>
                     <TooltipSimple content={queuedPromptsCollapsed ? "Expand queue" : "Collapse queue"} side="top">
@@ -1344,21 +1347,28 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                         whileTap={{ scale: 0.97 }}
                         transition={{ duration: 0.15 }}
                       >
-                        <Button variant="ghost" size="icon" onClick={() => setQueuedPromptsCollapsed(prev => !prev)}>
-                          {queuedPromptsCollapsed ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => setQueuedPromptsCollapsed(prev => !prev)}
+                          aria-label={queuedPromptsCollapsed ? "Expand queued prompts" : "Collapse queued prompts"}
+                        >
+                          {queuedPromptsCollapsed ? <ChevronUp className="h-3 w-3" aria-hidden="true" /> : <ChevronDown className="h-3 w-3" aria-hidden="true" />}
                         </Button>
                       </motion.div>
                     </TooltipSimple>
                   </div>
-                  {!queuedPromptsCollapsed && queuedPrompts.map((queuedPrompt, index) => (
-                    <motion.div
-                      key={queuedPrompt.id}
-                      initial={{ opacity: 0, y: 4 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -4 }}
-                      transition={{ duration: 0.15, delay: index * 0.02 }}
-                      className="flex items-start gap-2 bg-muted/50 rounded-md p-2"
-                    >
+                  {!queuedPromptsCollapsed && (
+                    <ul role="list" aria-labelledby="queue-header" className="space-y-2">
+                      {queuedPrompts.map((queuedPrompt, index) => (
+                        <motion.li
+                          key={queuedPrompt.id}
+                          initial={{ opacity: 0, y: 4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -4 }}
+                          transition={{ duration: 0.15, delay: index * 0.02 }}
+                          className="flex items-start gap-2 bg-muted/50 rounded-md p-2"
+                        >
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-xs font-medium text-muted-foreground">#{index + 1}</span>
@@ -1377,12 +1387,15 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                           size="icon"
                           className="h-6 w-6 flex-shrink-0"
                           onClick={() => setQueuedPrompts(prev => prev.filter(p => p.id !== queuedPrompt.id))}
+                          aria-label={`Remove queued prompt: ${queuedPrompt.prompt.slice(0, 50)}${queuedPrompt.prompt.length > 50 ? '...' : ''}`}
                         >
                           <X className="h-3 w-3" />
                         </Button>
                       </motion.div>
-                    </motion.div>
-                  ))}
+                        </motion.li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               </motion.div>
             )}
@@ -1431,7 +1444,8 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                     }}
                       className="px-3 py-2 hover:bg-accent rounded-none"
                     >
-                      <ChevronUp className="h-4 w-4" />
+                      <ChevronUp className="h-4 w-4"
+                      aria-label="Scroll to top" />
                     </Button>
                   </motion.div>
                 </TooltipSimple>
@@ -1464,7 +1478,8 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                       }}
                       className="px-3 py-2 hover:bg-accent rounded-none"
                     >
-                      <ChevronDown className="h-4 w-4" />
+                      <ChevronDown className="h-4 w-4"
+                      aria-label="Scroll to bottom" />
                     </Button>
                   </motion.div>
                 </TooltipSimple>
@@ -1496,6 +1511,9 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                           size="icon"
                           onClick={() => setShowTimeline(!showTimeline)}
                           className="h-9 w-9 text-muted-foreground hover:text-foreground"
+                          aria-label="Session timeline"
+                          aria-haspopup="dialog"
+                          aria-expanded={showTimeline}
                         >
                           <GitBranch className={cn("h-3.5 w-3.5", showTimeline && "text-primary")} />
                         </Button>
@@ -1514,6 +1532,8 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                               variant="ghost"
                               size="icon"
                               className="h-9 w-9 text-muted-foreground hover:text-foreground"
+                              aria-label="Copy Conversation"
+                              aria-haspopup="menu"
                             >
                               <Copy className="h-3.5 w-3.5" />
                             </Button>
@@ -1556,6 +1576,8 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                         size="icon"
                         onClick={() => setShowSettings(!showSettings)}
                         className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        aria-label="Checkpoint Settings"
+                        aria-haspopup="dialog"
                       >
                         <Wrench className={cn("h-3.5 w-3.5", showSettings && "text-primary")} />
                       </Button>
