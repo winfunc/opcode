@@ -30,20 +30,23 @@ export const PromptQueue: React.FC<PromptQueueProps> = React.memo(({
       animate={{ opacity: 1, height: 'auto' }}
       exit={{ opacity: 0, height: 0 }}
       className={cn("border-t bg-muted/20", className)}
+      role="region"
+      aria-label="Prompt queue"
+      aria-live="polite"
     >
       <div className="px-4 py-3">
         <div className="flex items-center gap-2 mb-2">
           <Clock className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm font-medium">Queued Prompts</span>
+          <span id="queue-title" className="text-sm font-medium">Queued Prompts</span>
           <Badge variant="secondary" className="text-xs">
             {queuedPrompts.length}
           </Badge>
         </div>
         
-        <div className="space-y-2 max-h-32 overflow-y-auto">
+        <ul role="list" aria-labelledby="queue-title" className="space-y-2 max-h-32 overflow-y-auto">
           <AnimatePresence mode="popLayout">
             {queuedPrompts.map((queuedPrompt, index) => (
-              <motion.div
+              <motion.li
                 key={queuedPrompt.id}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -53,9 +56,9 @@ export const PromptQueue: React.FC<PromptQueueProps> = React.memo(({
               >
                 <div className="flex-shrink-0 mt-0.5">
                   {queuedPrompt.model === "opus" ? (
-                    <Sparkles className="h-3.5 w-3.5 text-purple-500" />
+                    <Sparkles className="h-3.5 w-3.5 text-purple-500" aria-label="Opus model" />
                   ) : (
-                    <Zap className="h-3.5 w-3.5 text-amber-500" />
+                    <Zap className="h-3.5 w-3.5 text-amber-500" aria-label="Sonnet model" />
                   )}
                 </div>
                 
@@ -71,13 +74,14 @@ export const PromptQueue: React.FC<PromptQueueProps> = React.memo(({
                   size="icon"
                   className="h-6 w-6 flex-shrink-0"
                   onClick={() => onRemove(queuedPrompt.id)}
+                  aria-label={`Remove queued prompt: ${queuedPrompt.prompt.slice(0, 50)}${queuedPrompt.prompt.length > 50 ? '...' : ''}`}
                 >
-                  <X className="h-3 w-3" />
+                  <X className="h-3 w-3" aria-hidden="true" />
                 </Button>
-              </motion.div>
+              </motion.li>
             ))}
           </AnimatePresence>
-        </div>
+        </ul>
       </div>
     </motion.div>
   );
