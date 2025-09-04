@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/getasterisk-opcode-badge.png)](https://mseep.ai/app/getasterisk-opcode)
+
 <div align="center">
   <img src="src-tauri/icons/icon.png" alt="opcode Logo" width="120" height="120">
 
