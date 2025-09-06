@@ -28,7 +28,7 @@ import { SplitPane } from "@/components/ui/split-pane";
 import { WebviewPreview } from "./WebviewPreview";
 import type { ClaudeStreamMessage } from "./AgentExecution";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useTrackEvent, useComponentMetrics, useWorkflowTracking } from "@/hooks";
+import { useTrackEvent, useComponentMetrics, useWorkflowTracking, useScreenReaderAnnouncements } from "@/hooks";
 import { SessionPersistenceService } from "@/services/sessionPersistence";
 
 interface ClaudeCodeSessionProps {
@@ -139,6 +139,15 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   useComponentMetrics('ClaudeCodeSession');
   // const aiTracking = useAIInteractionTracking('sonnet'); // Default model
   const workflowTracking = useWorkflowTracking('claude_session');
+  
+  // Screen reader announcements
+  const {
+    announceClaudeStarted,
+    announceClaudeFinished,
+    announceAssistantMessage,
+    announceToolExecution,
+    announceToolCompleted
+  } = useScreenReaderAnnouncements();
   
   // Call onProjectPathChange when component mounts with initial path
   useEffect(() => {
@@ -480,6 +489,9 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       setError(null);
       hasActiveSessionRef.current = true;
       
+      // Announce that Claude is starting to process
+      announceClaudeStarted();
+      
       // For resuming sessions, ensure we have the session ID
       if (effectiveSession && !claudeSessionId) {
         setClaudeSessionId(effectiveSession.id);
@@ -570,6 +582,60 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
           }
         });
 
+        // Helper to find tool name by tool use ID from previous messages
+        function findToolNameById(toolUseId: string): string | null {
+          // Search backwards through messages for the tool use
+          for (let i = messages.length - 1; i >= 0; i--) {
+            const msg = messages[i];
+            if (msg.type === 'assistant' && msg.message?.content) {
+              const toolUse = msg.message.content.find((c: any) => 
+                c.type === 'tool_use' && c.id === toolUseId
+              );
+              if (toolUse?.name) {
+                return toolUse.name;
+              }
+            }
+          }
+          return null;
+        }
+
+        // Helper to announce incoming messages to screen readers
+        function announceIncomingMessage(message: ClaudeStreamMessage) {
+          if (message.type === 'assistant' && message.message?.content) {
+            // Announce tool execution
+            const toolUses = message.message.content.filter((c: any) => c.type === 'tool_use');
+            toolUses.forEach((toolUse: any) => {
+              const toolName = toolUse.name || 'unknown tool';
+              const description = toolUse.input?.description || 
+                                toolUse.input?.command || 
+                                toolUse.input?.file_path ||
+                                toolUse.input?.pattern ||
+                                toolUse.input?.prompt?.substring(0, 50);
+              announceToolExecution(toolName, description);
+            });
+            
+            // Announce text content
+            const textContent = message.message.content
+              .filter((c: any) => c.type === 'text')
+              .map((c: any) => typeof c.text === 'string' ? c.text : (c.text?.text || ''))
+              .join(' ')
+              .trim();
+              
+            if (textContent) {
+              announceAssistantMessage(textContent);
+            }
+          } else if (message.type === 'system') {
+            // Announce system messages if they have meaningful content
+            if (message.subtype === 'init') {
+              // Don't announce init messages as they're just setup
+              return;
+            } else if (message.result || message.error) {
+              const content = message.result || message.error || 'System message received';
+              announceAssistantMessage(content);
+            }
+          }
+        }
+
         // Helper to process any JSONL stream message string
         function handleStreamMessage(payload: string) {
           try {
@@ -580,6 +646,9 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
             setRawJsonlOutput((prev) => [...prev, payload]);
 
             const message = JSON.parse(payload) as ClaudeStreamMessage;
+            
+            // Announce incoming messages to screen readers
+            announceIncomingMessage(message);
             
             // Track enhanced tool execution
             if (message.type === 'assistant' && message.message?.content) {
@@ -609,6 +678,14 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
               const toolResults = message.message.content.filter((c: any) => c.type === 'tool_result');
               toolResults.forEach((result: any) => {
                 const isError = result.is_error || false;
+                
+                // Announce tool completion
+                if (result.tool_use_id) {
+                  // Try to find the tool name from previous messages
+                  const toolName = findToolNameById(result.tool_use_id) || 'Tool';
+                  // announceToolCompleted(toolName, !isError); // Disabled to prevent interrupting other announcements
+                }
+                
                 // Note: We don't have execution time here, but we can track success/failure
                 if (isError) {
                   sessionMetrics.current.toolsFailed += 1;
@@ -659,6 +736,9 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
           setIsLoading(false);
           hasActiveSessionRef.current = false;
           isListeningRef.current = false; // Reset listening state
+          
+          // Announce that Claude has finished
+          announceClaudeFinished();
           
           // Track enhanced session stopped metrics when session completes
           if (effectiveSession && claudeSessionId) {
