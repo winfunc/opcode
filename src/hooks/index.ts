@@ -24,3 +24,4 @@ export {
   useAsyncPerformanceTracker 
 } from './usePerformanceMonitor';
 export { TAB_SCREEN_NAMES } from './useAnalytics';
+export { useScreenReaderAnnouncements } from './useScreenReaderAnnouncements';
