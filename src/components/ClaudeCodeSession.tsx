@@ -489,8 +489,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       setError(null);
       hasActiveSessionRef.current = true;
       
-      // Announce that Claude is starting to process
-      announceClaudeStarted();
+      // Don't announce "Claude says" here - wait for actual content to arrive
       
       // For resuming sessions, ensure we have the session ID
       if (effectiveSession && !claudeSessionId) {
