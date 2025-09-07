@@ -225,6 +225,7 @@ const FloatingPromptInputInner = (
   const [cursorPosition, setCursorPosition] = useState(0);
   const [embeddedImages, setEmbeddedImages] = useState<string[]>([]);
   const [dragActive, setDragActive] = useState(false);
+  const [isComposing, setIsComposing] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const expandedTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -679,7 +680,8 @@ const FloatingPromptInputInner = (
       return;
     }
 
-    if (e.key === "Enter" && !e.shiftKey && !isExpanded && !showFilePicker && !showSlashCommandPicker) {
+    const composing = (e as any).nativeEvent?.isComposing || isComposing || (e as any).keyCode === 229;
+    if (e.key === "Enter" && !e.shiftKey && !isExpanded && !showFilePicker && !showSlashCommandPicker && !composing) {
       e.preventDefault();
       handleSend();
     }
@@ -834,6 +836,8 @@ const FloatingPromptInputInner = (
                 ref={expandedTextareaRef}
                 value={prompt}
                 onChange={handleTextChange}
+                onCompositionStart={() => setIsComposing(true)}
+                onCompositionEnd={() => setIsComposing(false)}
                 onPaste={handlePaste}
                 placeholder="Type your message..."
                 className="min-h-[200px] resize-none"
@@ -1157,6 +1161,8 @@ const FloatingPromptInputInner = (
                   value={prompt}
                   onChange={handleTextChange}
                   onKeyDown={handleKeyDown}
+                  onCompositionStart={() => setIsComposing(true)}
+                  onCompositionEnd={() => setIsComposing(false)}
                   onPaste={handlePaste}
                   placeholder={dragActive ? "Drop images here..." : "Message Claude (@ for files, / for commands)..."}
                   disabled={disabled}
