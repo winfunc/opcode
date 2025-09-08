@@ -47,7 +47,7 @@ pub fn find_claude_binary(app_handle: &tauri::AppHandle) -> Result<String, Strin
                     |row| row.get::<_, String>(0),
                 ) {
                     info!("Found stored claude path in database: {}", stored_path);
-                    
+
                     // Check if the path still exists
                     let path_buf = PathBuf::from(&stored_path);
                     if path_buf.exists() && path_buf.is_file() {
@@ -56,14 +56,14 @@ pub fn find_claude_binary(app_handle: &tauri::AppHandle) -> Result<String, Strin
                         warn!("Stored claude path no longer exists: {}", stored_path);
                     }
                 }
-                
+
                 // Check user preference
                 let preference = conn.query_row(
                     "SELECT value FROM app_settings WHERE key = 'claude_installation_preference'",
                     [],
                     |row| row.get::<_, String>(0),
                 ).unwrap_or_else(|_| "system".to_string());
-                
+
                 info!("User preference for Claude installation: {}", preference);
             }
         }
@@ -128,17 +128,18 @@ fn source_preference(installation: &ClaudeInstallation) -> u8 {
     match installation.source.as_str() {
         "which" => 1,
         "homebrew" => 2,
-        "system" => 3,
-        source if source.starts_with("nvm") => 4,
-        "local-bin" => 5,
-        "claude-local" => 6,
-        "npm-global" => 7,
-        "yarn" | "yarn-global" => 8,
-        "bun" => 9,
-        "node-modules" => 10,
-        "home-bin" => 11,
-        "PATH" => 12,
-        _ => 13,
+        source if source.starts_with("mise") => 3,  // mise/asdf installations
+        "system" => 4,
+        source if source.starts_with("nvm") => 5,
+        "local-bin" => 6,
+        "claude-local" => 7,
+        "npm-global" => 8,
+        "yarn" | "yarn-global" => 9,
+        "bun" => 10,
+        "node-modules" => 11,
+        "home-bin" => 12,
+        "PATH" => 13,
+        _ => 14,
     }
 }
 
@@ -154,7 +155,10 @@ fn discover_system_installations() -> Vec<ClaudeInstallation> {
     // 2. Check NVM paths
     installations.extend(find_nvm_installations());
 
-    // 3. Check standard paths
+    // 3. Check mise/asdf paths
+    installations.extend(find_mise_installations());
+
+    // 4. Check standard paths
     installations.extend(find_standard_installations());
 
     // Remove duplicates by path
@@ -240,6 +244,84 @@ fn find_nvm_installations() -> Vec<ClaudeInstallation> {
                             source: format!("nvm ({})", node_version),
                             installation_type: InstallationType::System,
                         });
+                    }
+                }
+            }
+        }
+    }
+
+    installations
+}
+
+/// Find Claude installations managed by mise (formerly rtx)
+fn find_mise_installations() -> Vec<ClaudeInstallation> {
+    let mut installations = Vec::new();
+
+    if let Ok(home) = std::env::var("HOME") {
+        // Check both common mise installation paths
+        let mise_dirs = vec![
+            PathBuf::from(&home).join(".local").join("share").join("mise").join("installs"),
+            PathBuf::from(&home).join(".local").join("share").join("rtx").join("installs"), // legacy rtx path
+            PathBuf::from(&home).join(".asdf").join("installs"), // asdf compatibility
+        ];
+
+        for mise_base in mise_dirs {
+            debug!("Checking mise directory: {:?}", mise_base);
+
+            // Check for npm-anthropic-ai-claude-code installations
+            let npm_claude_dir = mise_base.join("npm-anthropic-ai-claude-code");
+            if npm_claude_dir.exists() {
+                if let Ok(versions) = std::fs::read_dir(&npm_claude_dir) {
+                    for version_entry in versions.flatten() {
+                        if version_entry.file_type().map(|t| t.is_dir()).unwrap_or(false) {
+                            let claude_path = version_entry.path().join("bin").join("claude");
+
+                            if claude_path.exists() && claude_path.is_file() {
+                                let path_str = claude_path.to_string_lossy().to_string();
+                                let version_name = version_entry.file_name().to_string_lossy().to_string();
+
+                                debug!("Found Claude in mise (npm-anthropic-ai-claude-code {}): {}", version_name, path_str);
+
+                                // Get Claude version
+                                let version = get_claude_version(&path_str).ok().flatten();
+
+                                installations.push(ClaudeInstallation {
+                                    path: path_str,
+                                    version,
+                                    source: format!("mise ({})", version_name),
+                                    installation_type: InstallationType::System,
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Also check for generic claude installations
+            let claude_dir = mise_base.join("claude");
+            if claude_dir.exists() {
+                if let Ok(versions) = std::fs::read_dir(&claude_dir) {
+                    for version_entry in versions.flatten() {
+                        if version_entry.file_type().map(|t| t.is_dir()).unwrap_or(false) {
+                            let claude_path = version_entry.path().join("bin").join("claude");
+
+                            if claude_path.exists() && claude_path.is_file() {
+                                let path_str = claude_path.to_string_lossy().to_string();
+                                let version_name = version_entry.file_name().to_string_lossy().to_string();
+
+                                debug!("Found Claude in mise (claude {}): {}", version_name, path_str);
+
+                                // Get Claude version
+                                let version = get_claude_version(&path_str).ok().flatten();
+
+                                installations.push(ClaudeInstallation {
+                                    path: path_str,
+                                    version,
+                                    source: format!("mise ({})", version_name),
+                                    installation_type: InstallationType::System,
+                                });
+                            }
+                        }
                     }
                 }
             }
@@ -350,10 +432,10 @@ fn get_claude_version(path: &str) -> Result<Option<String>, String> {
 /// Extract version string from command output
 fn extract_version_from_output(stdout: &[u8]) -> Option<String> {
     let output_str = String::from_utf8_lossy(stdout);
-    
+
     // Debug log the raw output
     debug!("Raw version output: {:?}", output_str);
-    
+
     // Use regex to directly extract version pattern (e.g., "1.0.41")
     // This pattern matches:
     // - One or more digits, followed by
@@ -363,7 +445,7 @@ fn extract_version_from_output(stdout: &[u8]) -> Option<String> {
     // - One or more digits
     // - Optionally followed by pre-release/build metadata
     let version_regex = regex::Regex::new(r"(\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?(?:\+[a-zA-Z0-9.-]+)?)").ok()?;
-    
+
     if let Some(captures) = version_regex.captures(&output_str) {
         if let Some(version_match) = captures.get(1) {
             let version = version_match.as_str().to_string();
@@ -371,7 +453,7 @@ fn extract_version_from_output(stdout: &[u8]) -> Option<String> {
             return Some(version);
         }
     }
-    
+
     debug!("No version found in output");
     None
 }
@@ -451,7 +533,7 @@ fn compare_versions(a: &str, b: &str) -> Ordering {
 /// This ensures commands like Claude can find Node.js and other dependencies
 pub fn create_command_with_env(program: &str) -> Command {
     let mut cmd = Command::new(program);
-    
+
     info!("Creating command for: {}", program);
 
     // Inherit essential environment variables from parent process
@@ -479,7 +561,7 @@ pub fn create_command_with_env(program: &str) -> Command {
             cmd.env(&key, &value);
         }
     }
-    
+
     // Log proxy-related environment variables for debugging
     info!("Command will use proxy settings:");
     if let Ok(http_proxy) = std::env::var("HTTP_PROXY") {
@@ -502,7 +584,7 @@ pub fn create_command_with_env(program: &str) -> Command {
             }
         }
     }
-    
+
     // Add Homebrew support if the program is in a Homebrew directory
     if program.contains("/homebrew/") || program.contains("/opt/homebrew/") {
         if let Some(program_dir) = std::path::Path::new(program).parent() {
@@ -512,6 +594,89 @@ pub fn create_command_with_env(program: &str) -> Command {
             if !current_path.contains(&homebrew_bin_str.as_ref()) {
                 let new_path = format!("{}:{}", homebrew_bin_str, current_path);
                 debug!("Adding Homebrew bin directory to PATH: {}", homebrew_bin_str);
+                cmd.env("PATH", new_path);
+            }
+        }
+    }
+
+    // Always check for mise-installed Node.js (not just when Claude is in mise)
+    // This is needed because Claude might be installed elsewhere but Node.js could be in mise
+    {
+        debug!("Checking for mise-installed Node.js to add to PATH");
+        
+        // Try to find Node.js in mise installations
+        if let Ok(home) = std::env::var("HOME") {
+            let mut paths_to_add = Vec::new();
+            
+            // Check all common mise installation paths for Node.js
+            let mise_dirs = vec![
+                PathBuf::from(&home).join(".local").join("share").join("mise").join("installs"),
+                PathBuf::from(&home).join(".local").join("share").join("rtx").join("installs"),
+                PathBuf::from(&home).join(".asdf").join("installs"),
+            ];
+            
+            for mise_base in mise_dirs {
+                // Check for Node.js installations
+                let node_dir = mise_base.join("node");
+                if node_dir.exists() {
+                    if let Ok(versions) = std::fs::read_dir(&node_dir) {
+                        // Find the highest version of Node.js
+                        let mut node_versions: Vec<PathBuf> = versions
+                            .filter_map(|entry| entry.ok())
+                            .filter(|entry| entry.file_type().map(|t| t.is_dir()).unwrap_or(false))
+                            .map(|entry| entry.path())
+                            .collect();
+                        
+                        // Sort versions to get the latest
+                        node_versions.sort();
+                        
+                        // Add the latest Node.js bin directory to paths
+                        if let Some(latest_node) = node_versions.last() {
+                            let node_bin = latest_node.join("bin");
+                            if node_bin.exists() {
+                                paths_to_add.push(node_bin.to_string_lossy().to_string());
+                                info!("Found Node.js in mise: {}", node_bin.display());
+                            }
+                        }
+                    }
+                }
+                
+                // Also check for nodejs (some systems use this name)
+                let nodejs_dir = mise_base.join("nodejs");
+                if nodejs_dir.exists() {
+                    if let Ok(versions) = std::fs::read_dir(&nodejs_dir) {
+                        let mut node_versions: Vec<PathBuf> = versions
+                            .filter_map(|entry| entry.ok())
+                            .filter(|entry| entry.file_type().map(|t| t.is_dir()).unwrap_or(false))
+                            .map(|entry| entry.path())
+                            .collect();
+                        
+                        node_versions.sort();
+                        
+                        if let Some(latest_node) = node_versions.last() {
+                            let node_bin = latest_node.join("bin");
+                            if node_bin.exists() {
+                                paths_to_add.push(node_bin.to_string_lossy().to_string());
+                                info!("Found Node.js in mise (nodejs): {}", node_bin.display());
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Add mise shims directory as fallback
+            let mise_shims = PathBuf::from(&home).join(".local").join("share").join("mise").join("shims");
+            if mise_shims.exists() {
+                paths_to_add.push(mise_shims.to_string_lossy().to_string());
+                debug!("Adding mise shims directory: {}", mise_shims.display());
+            }
+            
+            // Update PATH with all found directories
+            if !paths_to_add.is_empty() {
+                let current_path = std::env::var("PATH").unwrap_or_default();
+                let additional_paths = paths_to_add.join(":");
+                let new_path = format!("{}:{}", additional_paths, current_path);
+                info!("Updated PATH for mise Node.js support: {}", additional_paths);
                 cmd.env("PATH", new_path);
             }
         }
