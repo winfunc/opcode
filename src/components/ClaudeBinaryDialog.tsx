@@ -85,7 +85,8 @@ export function ClaudeBinaryDialog({ open, onOpenChange, onSuccess, onError }: C
                   <AlertCircle className="w-4 h-4 text-muted-foreground" />
                   <p className="text-sm text-muted-foreground">
                     <span className="font-medium">Searched locations:</span> PATH, /usr/local/bin, 
-                    /opt/homebrew/bin, ~/.nvm/versions/node/*/bin, ~/.claude/local, ~/.local/bin
+                    /opt/homebrew/bin, ~/.nvm/versions/node/*/bin, ~/.claude/local, ~/.local/bin, 
+                    ~/.local/share/mise/shims, ~/.local/share/mise/installs/*/bin
                   </p>
                 </div>
               </>

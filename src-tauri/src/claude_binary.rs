@@ -130,15 +130,16 @@ fn source_preference(installation: &ClaudeInstallation) -> u8 {
         "homebrew" => 2,
         "system" => 3,
         source if source.starts_with("nvm") => 4,
-        "local-bin" => 5,
-        "claude-local" => 6,
-        "npm-global" => 7,
-        "yarn" | "yarn-global" => 8,
-        "bun" => 9,
-        "node-modules" => 10,
-        "home-bin" => 11,
-        "PATH" => 12,
-        _ => 13,
+        "mise" | source if source.starts_with("mise") => 5,
+        "local-bin" => 6,
+        "claude-local" => 7,
+        "npm-global" => 8,
+        "yarn" | "yarn-global" => 9,
+        "bun" => 10,
+        "node-modules" => 11,
+        "home-bin" => 12,
+        "PATH" => 13,
+        _ => 14,
     }
 }
 
@@ -154,7 +155,10 @@ fn discover_system_installations() -> Vec<ClaudeInstallation> {
     // 2. Check NVM paths
     installations.extend(find_nvm_installations());
 
-    // 3. Check standard paths
+    // 3. Check mise installations
+    installations.extend(find_mise_installations());
+
+    // 4. Check standard paths
     installations.extend(find_standard_installations());
 
     // Remove duplicates by path
@@ -249,6 +253,54 @@ fn find_nvm_installations() -> Vec<ClaudeInstallation> {
     installations
 }
 
+/// Check mise installations (both shims and all installed versions)
+fn find_mise_installations() -> Vec<ClaudeInstallation> {
+    let mut installations = Vec::new();
+
+    if let Ok(home) = std::env::var("HOME") {
+        // Check all mise installations
+        let mise_installs_dir = PathBuf::from(&home).join(".local/share/mise/installs");
+        
+        if let Ok(tools) = std::fs::read_dir(&mise_installs_dir) {
+            for tool_entry in tools.flatten() {
+                if tool_entry.file_type().map(|t| t.is_dir()).unwrap_or(false) {
+                    let tool_name = tool_entry.file_name().to_string_lossy().to_string();
+                    
+                    // Check each version of this tool
+                    if let Ok(versions) = std::fs::read_dir(tool_entry.path()) {
+                        for version_entry in versions.flatten() {
+                            // Skip symlinks and hidden files
+                            if version_entry.file_name().to_string_lossy().starts_with('.') {
+                                continue;
+                            }
+                            
+                            let claude_path = version_entry.path().join("bin").join("claude");
+                            
+                            if claude_path.exists() && claude_path.is_file() {
+                                let path_str = claude_path.to_string_lossy().to_string();
+                                let version_name = version_entry.file_name().to_string_lossy().to_string();
+                                
+                                debug!("Found Claude in mise {}/{}: {}", tool_name, version_name, path_str);
+                                
+                                // Get Claude version
+                                let version = get_claude_version(&path_str).ok().flatten();
+                                
+                                installations.push(ClaudeInstallation {
+                                    path: path_str,
+                                    version,
+                                    source: format!("mise ({}/{})", tool_name, version_name),
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    installations
+}
+
 /// Check standard installation paths
 fn find_standard_installations() -> Vec<ClaudeInstallation> {
     let mut installations = Vec::new();
@@ -274,6 +326,10 @@ fn find_standard_installations() -> Vec<ClaudeInstallation> {
             (
                 format!("{}/.local/bin/claude", home),
                 "local-bin".to_string(),
+            ),
+            (
+                format!("{}/.local/share/mise/shims/claude", home),
+                "mise".to_string(),
             ),
             (
                 format!("{}/.npm-global/bin/claude", home),

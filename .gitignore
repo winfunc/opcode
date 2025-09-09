@@ -32,6 +32,8 @@ temp_lib/
 AGENTS.md
 CLAUDE.md
 *_TASK.md
+.serena/
+settings.local.json
 
 # Claude project-specific files
 .claude/
