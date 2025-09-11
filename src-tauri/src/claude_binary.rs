@@ -502,6 +502,37 @@ pub fn create_command_with_env(program: &str) -> Command {
             }
         }
     }
+    // Also add NVM Node.js when Claude isn't in NVM but needs Node.js
+    else {
+        let current_path = std::env::var("PATH").unwrap_or_default();
+        if !current_path.contains("/.nvm/versions/node/") {
+            if let Ok(home) = std::env::var("HOME") {
+                let nvm_base = PathBuf::from(&home).join(".nvm").join("versions").join("node");
+                if nvm_base.exists() {
+                    if let Ok(entries) = std::fs::read_dir(&nvm_base) {
+                        let mut node_versions: Vec<String> = entries
+                            .filter_map(|entry| entry.ok())
+                            .filter(|entry| entry.file_type().map(|t| t.is_dir()).unwrap_or(false))
+                            .map(|entry| entry.file_name().to_string_lossy().to_string())
+                            .collect();
+                        
+                        // Sort to get latest version (simple string sort works for NVM format)
+                        node_versions.sort_by(|a, b| b.cmp(a));
+                        
+                        if let Some(latest_version) = node_versions.first() {
+                            let node_bin_path = nvm_base.join(latest_version).join("bin");
+                            if node_bin_path.exists() {
+                                let node_bin_str = node_bin_path.to_string_lossy();
+                                let new_path = format!("{}:{}", node_bin_str, current_path);
+                                debug!("Adding NVM Node.js to PATH for Claude execution: {}", node_bin_str);
+                                cmd.env("PATH", new_path);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
     
     // Add Homebrew support if the program is in a Homebrew directory
     if program.contains("/homebrew/") || program.contains("/opt/homebrew/") {
