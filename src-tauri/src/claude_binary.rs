@@ -519,3 +519,80 @@ pub fn create_command_with_env(program: &str) -> Command {
 
     cmd
 }
+
+/// Helper function to create a Command with proper environment variables and profile config directory
+/// This ensures commands like Claude can find Node.js and other dependencies, and use the correct profile
+pub fn create_command_with_env_and_profile(program: &str, config_directory: &str) -> tokio::process::Command {
+    let mut cmd = tokio::process::Command::new(program);
+
+    info!("Creating command for: {} with profile config: {}", program, config_directory);
+
+    // Inherit essential environment variables from parent process
+    for (key, value) in std::env::vars() {
+        // Pass through PATH and other essential environment variables
+        if key == "PATH"
+            || key == "HOME"
+            || key == "USER"
+            || key == "SHELL"
+            || key == "LANG"
+            || key == "LC_ALL"
+            || key.starts_with("LC_")
+            || key == "NODE_PATH"
+            || key == "NVM_DIR"
+            || key == "NVM_BIN"
+            || key == "HOMEBREW_PREFIX"
+            || key == "HOMEBREW_CELLAR"
+            // Add proxy environment variables (only uppercase)
+            || key == "HTTP_PROXY"
+            || key == "HTTPS_PROXY"
+            || key == "NO_PROXY"
+            || key == "ALL_PROXY"
+        {
+            debug!("Inheriting env var: {}={}", key, value);
+            cmd.env(&key, &value);
+        }
+    }
+
+    // Set the CLAUDE_CONFIG_DIR environment variable for the profile
+    cmd.env("CLAUDE_CONFIG_DIR", config_directory);
+    info!("Set CLAUDE_CONFIG_DIR={}", config_directory);
+
+    // Log proxy-related environment variables for debugging
+    info!("Command will use proxy settings:");
+    if let Ok(http_proxy) = std::env::var("HTTP_PROXY") {
+        info!("  HTTP_PROXY={}", http_proxy);
+    }
+    if let Ok(https_proxy) = std::env::var("HTTPS_PROXY") {
+        info!("  HTTPS_PROXY={}", https_proxy);
+    }
+
+    // Add NVM support if the program is in an NVM directory
+    if program.contains("/.nvm/versions/node/") {
+        if let Some(node_bin_dir) = std::path::Path::new(program).parent() {
+            // Ensure the Node.js bin directory is in PATH
+            let current_path = std::env::var("PATH").unwrap_or_default();
+            let node_bin_str = node_bin_dir.to_string_lossy();
+            if !current_path.contains(&node_bin_str.as_ref()) {
+                let new_path = format!("{}:{}", node_bin_str, current_path);
+                debug!("Adding NVM bin directory to PATH: {}", node_bin_str);
+                cmd.env("PATH", new_path);
+            }
+        }
+    }
+
+    // Add Homebrew support if the program is in a Homebrew directory
+    if program.contains("/homebrew/") || program.contains("/opt/homebrew/") {
+        if let Some(program_dir) = std::path::Path::new(program).parent() {
+            // Ensure the Homebrew bin directory is in PATH
+            let current_path = std::env::var("PATH").unwrap_or_default();
+            let homebrew_bin_str = program_dir.to_string_lossy();
+            if !current_path.contains(&homebrew_bin_str.as_ref()) {
+                let new_path = format!("{}:{}", homebrew_bin_str, current_path);
+                debug!("Adding Homebrew bin directory to PATH: {}", homebrew_bin_str);
+                cmd.env("PATH", new_path);
+            }
+        }
+    }
+
+    cmd
+}

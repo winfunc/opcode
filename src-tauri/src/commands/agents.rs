@@ -92,6 +92,27 @@ pub struct AgentData {
     pub hooks: Option<String>,
 }
 
+/// Represents a Claude profile for managing different configurations
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ClaudeProfile {
+    pub id: Option<i64>,
+    pub name: String,
+    pub config_directory: String,
+    pub description: Option<String>,
+    pub is_default: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// Request structure for creating or updating a Claude profile
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CreateProfileRequest {
+    pub name: String,
+    pub config_directory: String,
+    pub description: Option<String>,
+    pub is_default: bool,
+}
+
 /// Database connection state
 pub struct AgentDb(pub Mutex<Connection>);
 
@@ -339,6 +360,63 @@ pub fn init_database(app: &AppHandle) -> SqliteResult<Connection> {
          END",
         [],
     )?;
+
+    // Create claude_profiles table for managing multiple Claude configurations
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS claude_profiles (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE,
+            config_directory TEXT NOT NULL UNIQUE,
+            description TEXT,
+            is_default BOOLEAN NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )",
+        [],
+    )?;
+
+    // Create trigger to update the updated_at timestamp for profiles
+    conn.execute(
+        "CREATE TRIGGER IF NOT EXISTS update_claude_profiles_timestamp
+         AFTER UPDATE ON claude_profiles
+         FOR EACH ROW
+         BEGIN
+             UPDATE claude_profiles SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+         END",
+        [],
+    )?;
+
+    // Migration: Create default profile if none exist and ~/.claude directory exists
+    let profiles_exist = conn.query_row(
+        "SELECT COUNT(*) FROM claude_profiles",
+        [],
+        |row| row.get::<_, i64>(0),
+    ).unwrap_or(0) > 0;
+
+    if !profiles_exist {
+        // Check if ~/.claude directory exists
+        if let Some(home_dir) = dirs::home_dir() {
+            let claude_dir = home_dir.join(".claude");
+            if claude_dir.exists() {
+                info!("Migrating existing ~/.claude directory to default profile");
+                let claude_dir_str = claude_dir.to_string_lossy().to_string();
+                let _ = conn.execute(
+                    "INSERT INTO claude_profiles (name, config_directory, description, is_default)
+                     VALUES ('Personal', ?1, 'Default profile migrated from existing configuration', 1)",
+                    params![claude_dir_str],
+                );
+            } else {
+                // Create a default profile pointing to ~/.claude even if it doesn't exist yet
+                info!("Creating default profile for ~/.claude directory");
+                let claude_dir_str = claude_dir.to_string_lossy().to_string();
+                let _ = conn.execute(
+                    "INSERT INTO claude_profiles (name, config_directory, description, is_default)
+                     VALUES ('Personal', ?1, 'Default profile for personal projects', 1)",
+                    params![claude_dir_str],
+                );
+            }
+        }
+    }
 
     Ok(conn)
 }
@@ -1965,5 +2043,342 @@ pub async fn load_agent_session_history(
         Ok(messages)
     } else {
         Err(format!("Session file not found: {}", session_id))
+    }
+}
+
+// ============================================================================
+// Claude Profile Management Commands
+// ============================================================================
+
+/// List all Claude profiles
+#[tauri::command]
+pub async fn list_claude_profiles(db: State<'_, AgentDb>) -> Result<Vec<ClaudeProfile>, String> {
+    let conn = db.0.lock().map_err(|e| e.to_string())?;
+
+    let mut stmt = conn
+        .prepare("SELECT id, name, config_directory, description, is_default, created_at, updated_at FROM claude_profiles ORDER BY is_default DESC, name ASC")
+        .map_err(|e| e.to_string())?;
+
+    let profile_iter = stmt
+        .query_map([], |row| {
+            Ok(ClaudeProfile {
+                id: Some(row.get(0)?),
+                name: row.get(1)?,
+                config_directory: row.get(2)?,
+                description: row.get(3)?,
+                is_default: row.get(4)?,
+                created_at: row.get(5)?,
+                updated_at: row.get(6)?,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+
+    let mut profiles = Vec::new();
+    for profile in profile_iter {
+        profiles.push(profile.map_err(|e| e.to_string())?);
+    }
+
+    Ok(profiles)
+}
+
+/// Create a new Claude profile
+#[tauri::command]
+pub async fn create_claude_profile(
+    db: State<'_, AgentDb>,
+    request: CreateProfileRequest,
+) -> Result<ClaudeProfile, String> {
+    let conn = db.0.lock().map_err(|e| e.to_string())?;
+
+    // Validate the profile directory
+    let expanded_dir = validate_and_expand_directory(&request.config_directory)?;
+
+    // If this should be the default, unset any existing default
+    if request.is_default {
+        let _ = conn.execute(
+            "UPDATE claude_profiles SET is_default = 0",
+            [],
+        );
+    }
+
+    // Insert the new profile
+    let result = conn.execute(
+        "INSERT INTO claude_profiles (name, config_directory, description, is_default)
+         VALUES (?1, ?2, ?3, ?4)",
+        params![
+            request.name,
+            expanded_dir,
+            request.description,
+            request.is_default
+        ],
+    );
+
+    match result {
+        Ok(_) => {
+            let profile_id = conn.last_insert_rowid();
+
+            // Fetch and return the created profile
+            let mut stmt = conn
+                .prepare("SELECT id, name, config_directory, description, is_default, created_at, updated_at FROM claude_profiles WHERE id = ?1")
+                .map_err(|e| e.to_string())?;
+
+            let profile = stmt
+                .query_row([profile_id], |row| {
+                    Ok(ClaudeProfile {
+                        id: Some(row.get(0)?),
+                        name: row.get(1)?,
+                        config_directory: row.get(2)?,
+                        description: row.get(3)?,
+                        is_default: row.get(4)?,
+                        created_at: row.get(5)?,
+                        updated_at: row.get(6)?,
+                    })
+                })
+                .map_err(|e| e.to_string())?;
+
+            Ok(profile)
+        }
+        Err(rusqlite::Error::SqliteFailure(err, _)) if err.code == rusqlite::ErrorCode::ConstraintViolation => {
+            if err.extended_code == rusqlite::ffi::SQLITE_CONSTRAINT_UNIQUE {
+                Err("A profile with this name or directory already exists".to_string())
+            } else {
+                Err("Constraint violation when creating profile".to_string())
+            }
+        }
+        Err(e) => Err(format!("Failed to create profile: {}", e)),
+    }
+}
+
+/// Update an existing Claude profile
+#[tauri::command]
+pub async fn update_claude_profile(
+    db: State<'_, AgentDb>,
+    id: i64,
+    request: CreateProfileRequest,
+) -> Result<ClaudeProfile, String> {
+    let conn = db.0.lock().map_err(|e| e.to_string())?;
+
+    // Validate the profile directory
+    let expanded_dir = validate_and_expand_directory(&request.config_directory)?;
+
+    // If this should be the default, unset any existing default
+    if request.is_default {
+        let _ = conn.execute(
+            "UPDATE claude_profiles SET is_default = 0 WHERE id != ?1",
+            params![id],
+        );
+    }
+
+    // Update the profile
+    let result = conn.execute(
+        "UPDATE claude_profiles
+         SET name = ?1, config_directory = ?2, description = ?3, is_default = ?4
+         WHERE id = ?5",
+        params![
+            request.name,
+            expanded_dir,
+            request.description,
+            request.is_default,
+            id
+        ],
+    );
+
+    match result {
+        Ok(rows_affected) => {
+            if rows_affected == 0 {
+                return Err("Profile not found".to_string());
+            }
+
+            // Fetch and return the updated profile
+            let mut stmt = conn
+                .prepare("SELECT id, name, config_directory, description, is_default, created_at, updated_at FROM claude_profiles WHERE id = ?1")
+                .map_err(|e| e.to_string())?;
+
+            let profile = stmt
+                .query_row([id], |row| {
+                    Ok(ClaudeProfile {
+                        id: Some(row.get(0)?),
+                        name: row.get(1)?,
+                        config_directory: row.get(2)?,
+                        description: row.get(3)?,
+                        is_default: row.get(4)?,
+                        created_at: row.get(5)?,
+                        updated_at: row.get(6)?,
+                    })
+                })
+                .map_err(|e| e.to_string())?;
+
+            Ok(profile)
+        }
+        Err(rusqlite::Error::SqliteFailure(err, _)) if err.code == rusqlite::ErrorCode::ConstraintViolation => {
+            if err.extended_code == rusqlite::ffi::SQLITE_CONSTRAINT_UNIQUE {
+                Err("A profile with this name or directory already exists".to_string())
+            } else {
+                Err("Constraint violation when updating profile".to_string())
+            }
+        }
+        Err(e) => Err(format!("Failed to update profile: {}", e)),
+    }
+}
+
+/// Delete a Claude profile
+#[tauri::command]
+pub async fn delete_claude_profile(db: State<'_, AgentDb>, id: i64) -> Result<String, String> {
+    let conn = db.0.lock().map_err(|e| e.to_string())?;
+
+    // Check if this is the default profile
+    let is_default = conn
+        .query_row(
+            "SELECT is_default FROM claude_profiles WHERE id = ?1",
+            params![id],
+            |row| row.get::<_, bool>(0),
+        )
+        .map_err(|e| match e {
+            rusqlite::Error::QueryReturnedNoRows => "Profile not found".to_string(),
+            _ => e.to_string(),
+        })?;
+
+    // Check if this is the only profile
+    let profile_count = conn
+        .query_row(
+            "SELECT COUNT(*) FROM claude_profiles",
+            [],
+            |row| row.get::<_, i64>(0),
+        )
+        .unwrap_or(0);
+
+    if profile_count <= 1 {
+        return Err("Cannot delete the last profile. At least one profile must exist.".to_string());
+    }
+
+    // Delete the profile
+    let result = conn.execute(
+        "DELETE FROM claude_profiles WHERE id = ?1",
+        params![id],
+    );
+
+    match result {
+        Ok(rows_affected) => {
+            if rows_affected == 0 {
+                return Err("Profile not found".to_string());
+            }
+
+            // If we deleted the default profile, set another one as default
+            if is_default {
+                let _ = conn.execute(
+                    "UPDATE claude_profiles SET is_default = 1 WHERE id = (SELECT id FROM claude_profiles ORDER BY created_at ASC LIMIT 1)",
+                    [],
+                );
+            }
+
+            Ok("Profile deleted successfully".to_string())
+        }
+        Err(e) => Err(format!("Failed to delete profile: {}", e)),
+    }
+}
+
+/// Get the default Claude profile
+#[tauri::command]
+pub async fn get_default_profile(db: State<'_, AgentDb>) -> Result<Option<ClaudeProfile>, String> {
+    let conn = db.0.lock().map_err(|e| e.to_string())?;
+
+    let mut stmt = conn
+        .prepare("SELECT id, name, config_directory, description, is_default, created_at, updated_at FROM claude_profiles WHERE is_default = 1 LIMIT 1")
+        .map_err(|e| e.to_string())?;
+
+    match stmt.query_row([], |row| {
+        Ok(ClaudeProfile {
+            id: Some(row.get(0)?),
+            name: row.get(1)?,
+            config_directory: row.get(2)?,
+            description: row.get(3)?,
+            is_default: row.get(4)?,
+            created_at: row.get(5)?,
+            updated_at: row.get(6)?,
+        })
+    }) {
+        Ok(profile) => Ok(Some(profile)),
+        Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+/// Set a profile as the default
+#[tauri::command]
+pub async fn set_default_profile(db: State<'_, AgentDb>, id: i64) -> Result<String, String> {
+    let conn = db.0.lock().map_err(|e| e.to_string())?;
+
+    // First, unset all defaults
+    conn.execute("UPDATE claude_profiles SET is_default = 0", [])
+        .map_err(|e| e.to_string())?;
+
+    // Then set the specified profile as default
+    let result = conn.execute(
+        "UPDATE claude_profiles SET is_default = 1 WHERE id = ?1",
+        params![id],
+    );
+
+    match result {
+        Ok(rows_affected) => {
+            if rows_affected == 0 {
+                Err("Profile not found".to_string())
+            } else {
+                Ok("Default profile updated successfully".to_string())
+            }
+        }
+        Err(e) => Err(format!("Failed to set default profile: {}", e)),
+    }
+}
+
+/// Validate profile directory path
+#[tauri::command]
+pub async fn validate_profile_directory(path: String) -> Result<bool, String> {
+    match validate_and_expand_directory(&path) {
+        Ok(_) => Ok(true),
+        Err(e) => Err(e),
+    }
+}
+
+/// Helper function to validate and expand directory paths
+fn validate_and_expand_directory(path: &str) -> Result<String, String> {
+    // Expand tilde to home directory
+    let expanded_path = if path.starts_with("~/") {
+        match dirs::home_dir() {
+            Some(home) => home.join(&path[2..]).to_string_lossy().to_string(),
+            None => return Err("Could not determine home directory".to_string()),
+        }
+    } else if path == "~" {
+        match dirs::home_dir() {
+            Some(home) => home.to_string_lossy().to_string(),
+            None => return Err("Could not determine home directory".to_string()),
+        }
+    } else {
+        path.to_string()
+    };
+
+    // Validate the path is reasonable (not trying to escape user space)
+    let path_buf = std::path::PathBuf::from(&expanded_path);
+
+    // Check if path is absolute
+    if !path_buf.is_absolute() {
+        return Err("Profile directory must be an absolute path".to_string());
+    }
+
+    // Check if we can create the directory (don't actually create it, just validate permissions)
+    if let Some(parent) = path_buf.parent() {
+        if parent.exists() {
+            // Check if parent is writable
+            match std::fs::metadata(parent) {
+                Ok(_) => {
+                    // Directory looks valid, return the expanded path
+                    Ok(expanded_path)
+                }
+                Err(e) => Err(format!("Cannot access parent directory: {}", e)),
+            }
+        } else {
+            // Parent doesn't exist, check if we can create it
+            Err("Parent directory does not exist. Please create it first or choose an existing directory.".to_string())
+        }
+    } else {
+        Err("Invalid directory path".to_string())
     }
 }

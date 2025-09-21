@@ -30,6 +30,7 @@ import type { ClaudeStreamMessage } from "./AgentExecution";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useTrackEvent, useComponentMetrics, useWorkflowTracking } from "@/hooks";
 import { SessionPersistenceService } from "@/services/sessionPersistence";
+import type { ClaudeProfile } from "@/lib/api";
 
 interface ClaudeCodeSessionProps {
   /**
@@ -40,6 +41,10 @@ interface ClaudeCodeSessionProps {
    * Initial project path (for new sessions)
    */
   initialProjectPath?: string;
+  /**
+   * Pre-selected Claude profile for this session
+   */
+  selectedProfile?: ClaudeProfile;
   /**
    * Callback to go back
    */
@@ -71,6 +76,7 @@ interface ClaudeCodeSessionProps {
 export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   session,
   initialProjectPath = "",
+  selectedProfile: initialSelectedProfile,
   className,
   onStreamingChange,
   onProjectPathChange,
@@ -105,6 +111,10 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   
   // Add collapsed state for queued prompts
   const [queuedPromptsCollapsed, setQueuedPromptsCollapsed] = useState(false);
+
+  // Profile selection state
+  const [selectedProfile, setSelectedProfile] = useState<ClaudeProfile | null>(initialSelectedProfile || null);
+  const [defaultProfile, setDefaultProfile] = useState<ClaudeProfile | null>(null);
   
   const parentRef = useRef<HTMLDivElement>(null);
   const unlistenRefs = useRef<UnlistenFn[]>([]);
@@ -150,6 +160,24 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   useEffect(() => {
     queuedPromptsRef.current = queuedPrompts;
   }, [queuedPrompts]);
+
+  // Load default profile on component mount
+  useEffect(() => {
+    const loadDefaultProfile = async () => {
+      try {
+        const profiles = await api.listClaudeProfiles();
+        const defaultProf = profiles.find(p => p.is_default);
+        if (defaultProf) {
+          setDefaultProfile(defaultProf);
+          console.log('[ClaudeCodeSession] Loaded default profile:', defaultProf);
+        }
+      } catch (err) {
+        console.error('Failed to load default profile:', err);
+      }
+    };
+
+    loadDefaultProfile();
+  }, []);
 
   // Get effective session info (from prop or extracted) - use useMemo to ensure it updates
   const effectiveSession = useMemo(() => {
@@ -432,7 +460,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
 
   const handleSendPrompt = async (prompt: string, model: "sonnet" | "opus") => {
     console.log('[ClaudeCodeSession] handleSendPrompt called with:', { prompt, model, projectPath, claudeSessionId, effectiveSession });
-    
+
     if (!projectPath) {
       setError("Please select a project directory first");
       return;
@@ -447,6 +475,12 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       };
       setQueuedPrompts(prev => [...prev, newPrompt]);
       return;
+    }
+
+    // If this is a new session without a profile, we should have gotten one from the split dropdown
+    // This shouldn't happen now, but keeping as fallback
+    if (isFirstPrompt && !selectedProfile) {
+      console.warn("New session started without profile selection - this should not happen with the split dropdown");
     }
 
     try {
@@ -803,13 +837,31 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
           console.log('[ClaudeCodeSession] Resuming session:', effectiveSession.id);
           trackEvent.sessionResumed(effectiveSession.id);
           trackEvent.modelSelected(model);
-          await api.resumeClaudeCode(projectPath, effectiveSession.id, prompt, model);
+
+          // Always use profile-aware resume (selected profile or default profile)
+          const profileToUse = selectedProfile || defaultProfile;
+          if (profileToUse) {
+            console.log('[ClaudeCodeSession] Resuming with profile:', profileToUse);
+            await api.resumeClaudeCodeWithProfile(profileToUse.id!, projectPath, effectiveSession.id, prompt, model);
+          } else {
+            console.log('[ClaudeCodeSession] No profile available, resuming without profile');
+            await api.resumeClaudeCode(projectPath, effectiveSession.id, prompt, model);
+          }
         } else {
           console.log('[ClaudeCodeSession] Starting new session');
           setIsFirstPrompt(false);
           trackEvent.sessionCreated(model, 'prompt_input');
           trackEvent.modelSelected(model);
-          await api.executeClaudeCode(projectPath, prompt, model);
+
+          // Always use profile-aware execution (selected profile or default profile)
+          const profileToUse = selectedProfile || defaultProfile;
+          if (profileToUse) {
+            console.log('[ClaudeCodeSession] Using profile:', profileToUse);
+            await api.executeClaudeCodeWithProfile(profileToUse.id!, projectPath, prompt, model);
+          } else {
+            console.log('[ClaudeCodeSession] No profile available, using legacy execution');
+            await api.executeClaudeCode(projectPath, prompt, model);
+          }
         }
       }
     } catch (err) {
@@ -1085,6 +1137,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     }
   };
 
+
   // Cleanup event listeners and track mount state
   useEffect(() => {
     isMountedRef.current = true;
@@ -1170,10 +1223,12 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                   top: virtualItem.start,
                 }}
               >
-                <StreamMessage 
-                  message={message} 
+                <StreamMessage
+                  message={message}
                   streamMessages={messages}
                   onLinkDetected={handleLinkDetected}
+                  profileName={(selectedProfile || defaultProfile)?.name}
+                  profileConfigDir={(selectedProfile || defaultProfile)?.config_directory}
                 />
               </motion.div>
             );
@@ -1666,6 +1721,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
           </DialogContent>
         </Dialog>
       )}
+
       </div>
     </TooltipProvider>
   );

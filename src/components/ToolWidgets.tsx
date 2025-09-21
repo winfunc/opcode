@@ -47,6 +47,7 @@ import {
   LayoutList,
   Activity,
   Hash,
+  User,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -1803,7 +1804,9 @@ export const SystemInitializedWidget: React.FC<{
   model?: string;
   cwd?: string;
   tools?: string[];
-}> = ({ sessionId, model, cwd, tools = [] }) => {
+  profileName?: string;
+  profileConfigDir?: string;
+}> = ({ sessionId, model, cwd, tools = [], profileName, profileConfigDir }) => {
   const [mcpExpanded, setMcpExpanded] = useState(false);
   
   // Separate regular tools from MCP tools
@@ -1910,6 +1913,26 @@ export const SystemInitializedWidget: React.FC<{
                   <span className="text-muted-foreground">Working Directory:</span>
                   <code className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded break-all">
                     {cwd}
+                  </code>
+                </div>
+              )}
+
+              {profileName && (
+                <div className="flex items-center gap-2 text-xs">
+                  <User className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-muted-foreground">Profile:</span>
+                  <code className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">
+                    {profileName}
+                  </code>
+                </div>
+              )}
+
+              {profileConfigDir && (
+                <div className="flex items-center gap-2 text-xs">
+                  <Settings className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-muted-foreground">CLAUDE_CONFIG_DIR:</span>
+                  <code className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded break-all">
+                    {profileConfigDir}
                   </code>
                 </div>
               )}

@@ -418,6 +418,40 @@ export interface SlashCommand {
 }
 
 /**
+ * Represents a Claude profile for managing different configurations
+ */
+export interface ClaudeProfile {
+  /** Unique identifier for the profile */
+  id?: number;
+  /** Profile name */
+  name: string;
+  /** Configuration directory path */
+  config_directory: string;
+  /** Optional description */
+  description?: string;
+  /** Whether this is the default profile */
+  is_default: boolean;
+  /** Creation timestamp */
+  created_at: string;
+  /** Last update timestamp */
+  updated_at: string;
+}
+
+/**
+ * Request structure for creating or updating a Claude profile
+ */
+export interface CreateProfileRequest {
+  /** Profile name */
+  name: string;
+  /** Configuration directory path */
+  config_directory: string;
+  /** Optional description */
+  description?: string;
+  /** Whether this should be the default profile */
+  is_default: boolean;
+}
+
+/**
  * Result of adding a server
  */
 export interface AddServerResult {
@@ -1938,6 +1972,195 @@ export const api = {
       return await invoke<string>("slash_command_delete", { commandId, projectPath });
     } catch (error) {
       console.error("Failed to delete slash command:", error);
+      throw error;
+    }
+  },
+
+  // ============================================================================
+  // Claude Profile Management Functions
+  // ============================================================================
+
+  /**
+   * Lists all Claude profiles
+   * @returns Promise resolving to an array of Claude profiles
+   */
+  async listClaudeProfiles(): Promise<ClaudeProfile[]> {
+    try {
+      return await invoke<ClaudeProfile[]>("list_claude_profiles");
+    } catch (error) {
+      console.error("Failed to list Claude profiles:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Creates a new Claude profile
+   * @param request - Profile creation request data
+   * @returns Promise resolving to the created profile
+   */
+  async createClaudeProfile(request: CreateProfileRequest): Promise<ClaudeProfile> {
+    try {
+      return await invoke<ClaudeProfile>("create_claude_profile", { request });
+    } catch (error) {
+      console.error("Failed to create Claude profile:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Updates an existing Claude profile
+   * @param id - Profile ID to update
+   * @param request - Updated profile data
+   * @returns Promise resolving to the updated profile
+   */
+  async updateClaudeProfile(id: number, request: CreateProfileRequest): Promise<ClaudeProfile> {
+    try {
+      return await invoke<ClaudeProfile>("update_claude_profile", { id, request });
+    } catch (error) {
+      console.error("Failed to update Claude profile:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Deletes a Claude profile
+   * @param id - Profile ID to delete
+   * @returns Promise resolving to deletion message
+   */
+  async deleteClaudeProfile(id: number): Promise<string> {
+    try {
+      return await invoke<string>("delete_claude_profile", { id });
+    } catch (error) {
+      console.error("Failed to delete Claude profile:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Gets the default Claude profile
+   * @returns Promise resolving to the default profile or null if none exists
+   */
+  async getDefaultProfile(): Promise<ClaudeProfile | null> {
+    try {
+      return await invoke<ClaudeProfile | null>("get_default_profile");
+    } catch (error) {
+      console.error("Failed to get default profile:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Sets a profile as the default
+   * @param id - Profile ID to set as default
+   * @returns Promise resolving to success message
+   */
+  async setDefaultProfile(id: number): Promise<string> {
+    try {
+      return await invoke<string>("set_default_profile", { id });
+    } catch (error) {
+      console.error("Failed to set default profile:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Validates a profile directory path
+   * @param path - Directory path to validate
+   * @returns Promise resolving to true if valid, throws error if invalid
+   */
+  async validateProfileDirectory(path: string): Promise<boolean> {
+    try {
+      return await invoke<boolean>("validate_profile_directory", { path });
+    } catch (error) {
+      console.error("Failed to validate profile directory:", error);
+      throw error;
+    }
+  },
+
+  // ============================================================================
+  // Profile-Aware Session Creation Functions
+  // ============================================================================
+
+  /**
+   * Executes Claude Code with a specific profile
+   * @param profileId - Profile ID to use
+   * @param projectPath - Path to the project
+   * @param prompt - Initial prompt
+   * @param model - Model to use
+   * @returns Promise resolving when execution starts
+   */
+  async executeClaudeCodeWithProfile(
+    profileId: number,
+    projectPath: string,
+    prompt: string,
+    model: string
+  ): Promise<void> {
+    try {
+      return await invoke<void>("execute_claude_code_with_profile", {
+        profileId,
+        projectPath,
+        prompt,
+        model,
+      });
+    } catch (error) {
+      console.error("Failed to execute Claude Code with profile:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Continues Claude Code conversation with a specific profile
+   * @param profileId - Profile ID to use
+   * @param projectPath - Path to the project
+   * @param prompt - Continuation prompt
+   * @param model - Model to use
+   * @returns Promise resolving when execution starts
+   */
+  async continueClaudeCodeWithProfile(
+    profileId: number,
+    projectPath: string,
+    prompt: string,
+    model: string
+  ): Promise<void> {
+    try {
+      return await invoke<void>("continue_claude_code_with_profile", {
+        profileId,
+        projectPath,
+        prompt,
+        model,
+      });
+    } catch (error) {
+      console.error("Failed to continue Claude Code with profile:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Resumes Claude Code session with a specific profile
+   * @param profileId - Profile ID to use
+   * @param projectPath - Path to the project
+   * @param sessionId - Session ID to resume
+   * @param prompt - Resume prompt
+   * @param model - Model to use
+   * @returns Promise resolving when execution starts
+   */
+  async resumeClaudeCodeWithProfile(
+    profileId: number,
+    projectPath: string,
+    sessionId: string,
+    prompt: string,
+    model: string
+  ): Promise<void> {
+    try {
+      return await invoke<void>("resume_claude_code_with_profile", {
+        profileId,
+        projectPath,
+        sessionId,
+        prompt,
+        model,
+      });
+    } catch (error) {
+      console.error("Failed to resume Claude Code with profile:", error);
       throw error;
     }
   },

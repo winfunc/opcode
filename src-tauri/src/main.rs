@@ -14,7 +14,11 @@ use commands::agents::{
     get_live_session_output, get_session_output, get_session_status, import_agent,
     import_agent_from_file, import_agent_from_github, init_database, kill_agent_session,
     list_agent_runs, list_agent_runs_with_metrics, list_agents, list_claude_installations,
-    list_running_sessions, load_agent_session_history, set_claude_binary_path, stream_session_output, update_agent, AgentDb,
+    list_running_sessions, load_agent_session_history, set_claude_binary_path, stream_session_output, update_agent,
+    // Profile management commands
+    list_claude_profiles, create_claude_profile, update_claude_profile, delete_claude_profile,
+    get_default_profile, set_default_profile, validate_profile_directory,
+    AgentDb,
 };
 use commands::claude::{
     cancel_claude_execution, check_auto_checkpoint, check_claude_version, cleanup_old_checkpoints,
@@ -27,6 +31,8 @@ use commands::claude::{
     save_claude_md_file, save_claude_settings, save_system_prompt, search_files,
     track_checkpoint_message, track_session_messages, update_checkpoint_settings,
     get_hooks_config, update_hooks_config, validate_hook_command,
+    // Profile-aware session creation commands
+    execute_claude_code_with_profile, continue_claude_code_with_profile, resume_claude_code_with_profile,
     ClaudeProcessState,
 };
 use commands::mcp::{
@@ -284,6 +290,20 @@ fn main() {
             // Proxy Settings
             get_proxy_settings,
             save_proxy_settings,
+
+            // Claude Profile Management
+            list_claude_profiles,
+            create_claude_profile,
+            update_claude_profile,
+            delete_claude_profile,
+            get_default_profile,
+            set_default_profile,
+            validate_profile_directory,
+
+            // Profile-Aware Session Creation
+            execute_claude_code_with_profile,
+            continue_claude_code_with_profile,
+            resume_claude_code_with_profile,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -13,6 +13,7 @@ export interface Tab {
   claudeFileId?: string; // for claude-file tabs
   initialProjectPath?: string; // for chat tabs
   projectPath?: string; // for agent-execution tabs
+  selectedProfile?: any; // for chat tabs - selected Claude profile
   status: 'active' | 'idle' | 'running' | 'complete' | 'error';
   hasUnsavedChanges: boolean;
   order: number;
