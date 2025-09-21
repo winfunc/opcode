@@ -230,6 +230,7 @@ const FloatingPromptInputInner = (
   const expandedTextareaRef = useRef<HTMLTextAreaElement>(null);
   const unlistenDragDropRef = useRef<(() => void) | null>(null);
   const [textareaHeight, setTextareaHeight] = useState<number>(48);
+  const isIMEComposingRef = useRef(false);
 
   // Expose a method to add images programmatically
   React.useImperativeHandle(
@@ -431,23 +432,6 @@ const FloatingPromptInputInner = (
       textareaRef.current.focus();
     }
   }, [isExpanded]);
-
-  const handleSend = () => {
-    if (prompt.trim() && !disabled) {
-      let finalPrompt = prompt.trim();
-      
-      // Append thinking phrase if not auto mode
-      const thinkingMode = THINKING_MODES.find(m => m.id === selectedThinkingMode);
-      if (thinkingMode && thinkingMode.phrase) {
-        finalPrompt = `${finalPrompt}.\n\n${thinkingMode.phrase}.`;
-      }
-      
-      onSend(finalPrompt, selectedModel);
-      setPrompt("");
-      setEmbeddedImages([]);
-      setTextareaHeight(48); // Reset height after sending
-    }
-  };
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = e.target.value;
@@ -657,6 +641,66 @@ const FloatingPromptInputInner = (
     }, 0);
   };
 
+  const handleCompositionStart = () => {
+    isIMEComposingRef.current = true;
+  };
+
+  const handleCompositionEnd = () => {
+    setTimeout(() => {
+      isIMEComposingRef.current = false;
+    }, 0);
+  };
+
+  const isIMEInteraction = (event?: React.KeyboardEvent) => {
+    if (isIMEComposingRef.current) {
+      return true;
+    }
+
+    if (!event) {
+      return false;
+    }
+
+    const nativeEvent = event.nativeEvent;
+
+    if (nativeEvent.isComposing) {
+      return true;
+    }
+
+    const key = nativeEvent.key;
+    if (key === 'Process' || key === 'Unidentified') {
+      return true;
+    }
+
+    const keyboardEvent = nativeEvent as unknown as KeyboardEvent;
+    const keyCode = keyboardEvent.keyCode ?? (keyboardEvent as unknown as { which?: number }).which;
+    if (keyCode === 229) {
+      return true;
+    }
+
+    return false;
+  };
+
+  const handleSend = () => {
+    if (isIMEInteraction()) {
+      return;
+    }
+
+    if (prompt.trim() && !disabled) {
+      let finalPrompt = prompt.trim();
+
+      // Append thinking phrase if not auto mode
+      const thinkingMode = THINKING_MODES.find(m => m.id === selectedThinkingMode);
+      if (thinkingMode && thinkingMode.phrase) {
+        finalPrompt = `${finalPrompt}.\n\n${thinkingMode.phrase}.`;
+      }
+
+      onSend(finalPrompt, selectedModel);
+      setPrompt("");
+      setEmbeddedImages([]);
+      setTextareaHeight(48); // Reset height after sending
+    }
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (showFilePicker && e.key === 'Escape') {
       e.preventDefault();
@@ -679,7 +723,16 @@ const FloatingPromptInputInner = (
       return;
     }
 
-    if (e.key === "Enter" && !e.shiftKey && !isExpanded && !showFilePicker && !showSlashCommandPicker) {
+    if (
+      e.key === "Enter" &&
+      !e.shiftKey &&
+      !isExpanded &&
+      !showFilePicker &&
+      !showSlashCommandPicker
+    ) {
+      if (isIMEInteraction(e)) {
+        return;
+      }
       e.preventDefault();
       handleSend();
     }
@@ -834,6 +887,8 @@ const FloatingPromptInputInner = (
                 ref={expandedTextareaRef}
                 value={prompt}
                 onChange={handleTextChange}
+                onCompositionStart={handleCompositionStart}
+                onCompositionEnd={handleCompositionEnd}
                 onPaste={handlePaste}
                 placeholder="Type your message..."
                 className="min-h-[200px] resize-none"
@@ -1157,15 +1212,21 @@ const FloatingPromptInputInner = (
                   value={prompt}
                   onChange={handleTextChange}
                   onKeyDown={handleKeyDown}
+                  onCompositionStart={handleCompositionStart}
+                  onCompositionEnd={handleCompositionEnd}
                   onPaste={handlePaste}
-                  placeholder={dragActive ? "Drop images here..." : "Message Claude (@ for files, / for commands)..."}
+                  placeholder={
+                    dragActive
+                      ? "Drop images here..."
+                      : "Message Claude (@ for files, / for commands)..."
+                  }
                   disabled={disabled}
                   className={cn(
                     "resize-none pr-20 pl-3 py-2.5 transition-all duration-150",
                     dragActive && "border-primary",
                     textareaHeight >= 240 && "overflow-y-auto scrollbar-thin"
                   )}
-                  style={{ 
+                  style={{
                     height: `${textareaHeight}px`,
                     overflowY: textareaHeight >= 240 ? 'auto' : 'hidden'
                   }}

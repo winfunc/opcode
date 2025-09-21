@@ -105,7 +105,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   
   // Add collapsed state for queued prompts
   const [queuedPromptsCollapsed, setQueuedPromptsCollapsed] = useState(false);
-  
+
   const parentRef = useRef<HTMLDivElement>(null);
   const unlistenRefs = useRef<UnlistenFn[]>([]);
   const hasActiveSessionRef = useRef(false);
@@ -114,6 +114,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   const isMountedRef = useRef(true);
   const isListeningRef = useRef(false);
   const sessionStartTime = useRef<number>(Date.now());
+  const isIMEComposingRef = useRef(false);
   
   // Session metrics state for enhanced analytics
   const sessionMetrics = useRef({
@@ -1051,6 +1052,16 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     setShowForkDialog(true);
   };
 
+  const handleCompositionStart = () => {
+    isIMEComposingRef.current = true;
+  };
+
+  const handleCompositionEnd = () => {
+    setTimeout(() => {
+      isIMEComposingRef.current = false;
+    }, 0);
+  };
+
   const handleConfirmFork = async () => {
     if (!forkCheckpointId || !forkSessionName.trim() || !effectiveSession) return;
     
@@ -1639,11 +1650,16 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                 placeholder="e.g., Alternative approach"
                 value={forkSessionName}
                 onChange={(e) => setForkSessionName(e.target.value)}
-                onKeyPress={(e) => {
+                onKeyDown={(e) => {
                   if (e.key === "Enter" && !isLoading) {
+                    if (e.nativeEvent.isComposing || isIMEComposingRef.current) {
+                      return;
+                    }
                     handleConfirmFork();
                   }
                 }}
+                onCompositionStart={handleCompositionStart}
+                onCompositionEnd={handleCompositionEnd}
               />
             </div>
           </div>

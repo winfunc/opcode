@@ -107,6 +107,9 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
   
   // Hooks configuration state
   const [isHooksDialogOpen, setIsHooksDialogOpen] = useState(false);
+
+  // IME composition state
+  const isIMEComposingRef = useRef(false);
   const [activeHooksTab, setActiveHooksTab] = useState("project");
 
   // Execution stats
@@ -413,60 +416,29 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
 
       // Call the API to kill the agent session
       const success = await api.killAgentSession(runId);
-      
+
       if (success) {
         console.log(`Successfully stopped agent session ${runId}`);
       } else {
         console.warn(`Failed to stop agent session ${runId} - it may have already finished`);
       }
-      
+
       // Update UI state
       setIsRunning(false);
       setExecutionStartTime(null);
-      // Update tab status to idle when stopped
-      if (tabId) {
-        updateTabStatus(tabId, 'idle');
-      }
-      
-      // Clean up listeners
-      unlistenRefs.current.forEach(unlisten => unlisten());
-      unlistenRefs.current = [];
-      
-      // Add a message indicating execution was stopped
-      setMessages(prev => [...prev, {
-        type: "result",
-        subtype: "error",
-        is_error: true,
-        result: "Execution stopped by user",
-        duration_ms: elapsedTime * 1000,
-        usage: {
-          input_tokens: totalTokens,
-          output_tokens: 0
-        }
-      }]);
     } catch (err) {
       console.error("Failed to stop agent:", err);
-      // Still update UI state even if the backend call failed
-      setIsRunning(false);
-      setExecutionStartTime(null);
-      // Update tab status to idle
-      if (tabId) {
-        updateTabStatus(tabId, 'idle');
-      }
-      
-      // Show error message
-      setMessages(prev => [...prev, {
-        type: "result",
-        subtype: "error",
-        is_error: true,
-        result: `Failed to stop execution: ${err instanceof Error ? err.message : 'Unknown error'}`,
-        duration_ms: elapsedTime * 1000,
-        usage: {
-          input_tokens: totalTokens,
-          output_tokens: 0
-        }
-      }]);
     }
+  };
+
+  const handleCompositionStart = () => {
+    isIMEComposingRef.current = true;
+  };
+
+  const handleCompositionEnd = () => {
+    setTimeout(() => {
+      isIMEComposingRef.current = false;
+    }, 0);
   };
 
   const handleBackWithConfirmation = () => {
@@ -707,11 +679,16 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
                   placeholder="What would you like the agent to do?"
                   disabled={isRunning}
                   className="flex-1 h-9"
-                  onKeyPress={(e) => {
+                  onKeyDown={(e) => {
                     if (e.key === "Enter" && !isRunning && projectPath && task.trim()) {
+                      if (e.nativeEvent.isComposing || isIMEComposingRef.current) {
+                        return;
+                      }
                       handleExecute();
                     }
                   }}
+                  onCompositionStart={handleCompositionStart}
+                  onCompositionEnd={handleCompositionEnd}
                 />
                 <motion.div
                   whileTap={{ scale: 0.97 }}
