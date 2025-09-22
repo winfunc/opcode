@@ -1395,10 +1395,10 @@ export const MCPWidget: React.FC<{
           )}>
             <div className="relative">
               <div className={cn(
-                "rounded-lg border bg-zinc-950/50 overflow-hidden",
+                "rounded-lg border bg-background/50 overflow-hidden",
                 !isExpanded && isLargeInput && "max-h-[200px]"
               )}>
-                <div className="px-3 py-2 border-b bg-zinc-900/50 flex items-center gap-2">
+                <div className="px-3 py-2 border-b bg-muted/50 flex items-center gap-2">
                   <Code className="h-3 w-3 text-violet-500" />
                   <span className="text-xs font-mono text-muted-foreground">Parameters</span>
                 </div>
@@ -1425,7 +1425,7 @@ export const MCPWidget: React.FC<{
               
               {/* Gradient fade for collapsed view */}
               {!isExpanded && isLargeInput && (
-                <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-zinc-950/80 to-transparent pointer-events-none" />
+                <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-background/80 to-transparent pointer-events-none" />
               )}
             </div>
             
