@@ -834,21 +834,17 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
 
         // Execute the appropriate command
         if (effectiveSession && !isFirstPrompt) {
-          console.log('[ClaudeCodeSession] Resuming session:', effectiveSession.id);
           trackEvent.sessionResumed(effectiveSession.id);
           trackEvent.modelSelected(model);
 
           // Always use profile-aware resume (selected profile or default profile)
           const profileToUse = selectedProfile || defaultProfile;
           if (profileToUse) {
-            console.log('[ClaudeCodeSession] Resuming with profile:', profileToUse);
             await api.resumeClaudeCodeWithProfile(profileToUse.id!, projectPath, effectiveSession.id, prompt, model);
           } else {
-            console.log('[ClaudeCodeSession] No profile available, resuming without profile');
             await api.resumeClaudeCode(projectPath, effectiveSession.id, prompt, model);
           }
         } else {
-          console.log('[ClaudeCodeSession] Starting new session');
           setIsFirstPrompt(false);
           trackEvent.sessionCreated(model, 'prompt_input');
           trackEvent.modelSelected(model);
@@ -856,10 +852,8 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
           // Always use profile-aware execution (selected profile or default profile)
           const profileToUse = selectedProfile || defaultProfile;
           if (profileToUse) {
-            console.log('[ClaudeCodeSession] Using profile:', profileToUse);
             await api.executeClaudeCodeWithProfile(profileToUse.id!, projectPath, prompt, model);
           } else {
-            console.log('[ClaudeCodeSession] No profile available, using legacy execution');
             await api.executeClaudeCode(projectPath, prompt, model);
           }
         }
