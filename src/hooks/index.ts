@@ -19,8 +19,9 @@ export {
   useAIInteractionTracking,
   useNetworkPerformanceTracking
 } from './useAnalytics';
-export { 
-  usePerformanceMonitor, 
-  useAsyncPerformanceTracker 
+export {
+  usePerformanceMonitor,
+  useAsyncPerformanceTracker
 } from './usePerformanceMonitor';
+export { useAutoScroll } from './useAutoScroll';
 export { TAB_SCREEN_NAMES } from './useAnalytics';

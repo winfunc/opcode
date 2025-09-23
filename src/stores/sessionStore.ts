@@ -124,9 +124,8 @@ const sessionStore: StateCreator<
     // Delete session
     deleteSession: async (sessionId: string, projectId: string) => {
       try {
-        // Note: API doesn't have a deleteSession method, so this is a placeholder
-        console.warn('deleteSession not implemented in API');
-        
+        await api.deleteSession(sessionId, projectId);
+
         // Update local state
         set((state) => ({
           sessions: {
@@ -140,7 +139,7 @@ const sessionStore: StateCreator<
           )
         }));
       } catch (error) {
-        set({ 
+        set({
           error: error instanceof Error ? error.message : 'Failed to delete session'
         });
         throw error;

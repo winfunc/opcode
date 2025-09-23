@@ -56,7 +56,7 @@ import { useTheme } from "@/hooks";
 import { Button } from "@/components/ui/button";
 import { createPortal } from "react-dom";
 import * as Diff from 'diff';
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { detectLinks, makeLinksClickable } from "@/lib/linkDetector";
 import ReactMarkdown from "react-markdown";
 import { open } from "@tauri-apps/plugin-shell";
@@ -348,6 +348,8 @@ export const LSResultWidget: React.FC<{ content: string }> = ({ content }) => {
  * Widget for Read tool
  */
 export const ReadWidget: React.FC<{ filePath: string; result?: any }> = ({ filePath, result }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+
   // If we have a result, show it using the ReadResultWidget
   if (result) {
     let resultContent = '';
@@ -364,17 +366,41 @@ export const ReadWidget: React.FC<{ filePath: string; result?: any }> = ({ fileP
         resultContent = JSON.stringify(result.content, null, 2);
       }
     }
-    
+
+    const lineCount = resultContent.split('\n').filter(line => line.trim()).length;
+
     return (
-      <div className="space-y-2">
-        <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
-          <FileText className="h-4 w-4 text-primary" />
-          <span className="text-sm">File content:</span>
-          <code className="text-sm font-mono bg-background px-2 py-0.5 rounded flex-1 truncate">
-            {filePath}
-          </code>
-        </div>
-        {resultContent && <ReadResultWidget content={resultContent} filePath={filePath} />}
+      <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 overflow-hidden">
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="w-full px-4 py-3 flex items-center justify-between hover:bg-blue-500/10 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <FileText className="h-4 w-4 text-blue-500" />
+            <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
+              {filePath}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">({lineCount} lines)</span>
+            <ChevronRight className={cn(
+              "h-4 w-4 text-blue-500 transition-transform",
+              isExpanded && "rotate-90"
+            )} />
+          </div>
+        </button>
+
+        {isExpanded && resultContent && (
+          <div className="border-t border-blue-500/20">
+            <ReadResultWidget content={resultContent} filePath={filePath} forceExpanded={true} />
+          </div>
+        )}
+
+        {!isExpanded && (
+          <div className="px-4 py-3 text-xs text-muted-foreground text-center bg-blue-500/5 border-t border-blue-500/20">
+            Click to expand and view file content ({lineCount} lines)
+          </div>
+        )}
       </div>
     );
   }
@@ -399,7 +425,7 @@ export const ReadWidget: React.FC<{ filePath: string; result?: any }> = ({ fileP
 /**
  * Widget for Read tool result - shows file content with line numbers
  */
-export const ReadResultWidget: React.FC<{ content: string; filePath?: string }> = ({ content, filePath }) => {
+export const ReadResultWidget: React.FC<{ content: string; filePath?: string; forceExpanded?: boolean }> = ({ content, filePath, forceExpanded = false }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const { theme } = useTheme();
   const syntaxTheme = getClaudeSyntaxTheme(theme);
@@ -502,7 +528,34 @@ export const ReadResultWidget: React.FC<{ content: string; filePath?: string }> 
   const language = getLanguage(filePath);
   const { codeContent, startLineNumber } = parseContent(content);
   const lineCount = content.split('\n').filter(line => line.trim()).length;
-  const isLargeFile = lineCount > 20;
+  const isLargeFile = lineCount > 10; // Lower threshold for collapse
+
+  // When forceExpanded is true, show content directly without any wrapper styling
+  if (forceExpanded) {
+    return (
+      <div className="relative overflow-x-auto">
+        <SyntaxHighlighter
+          language={language}
+          style={syntaxTheme}
+          showLineNumbers
+          startingLineNumber={startLineNumber}
+          wrapLongLines={false}
+          customStyle={{
+            margin: 0,
+            background: 'transparent',
+            lineHeight: '1.6'
+          }}
+          codeTagProps={{
+            style: {
+              fontSize: '0.75rem'
+            }
+          }}
+        >
+          {codeContent}
+        </SyntaxHighlighter>
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-lg overflow-hidden border bg-zinc-950 w-full">
@@ -518,18 +571,16 @@ export const ReadResultWidget: React.FC<{ content: string; filePath?: string }> 
             </span>
           )}
         </div>
-        {isLargeFile && (
-          <button
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ChevronRight className={cn("h-3 w-3 transition-transform", isExpanded && "rotate-90")} />
-            {isExpanded ? "Collapse" : "Expand"}
-          </button>
-        )}
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ChevronRight className={cn("h-3 w-3 transition-transform", isExpanded && "rotate-90")} />
+          {isExpanded ? "Collapse" : `Expand (${lineCount} lines)`}
+        </button>
       </div>
-      
-      {(!isLargeFile || isExpanded) && (
+
+      {isExpanded && (
         <div className="relative overflow-x-auto">
           <SyntaxHighlighter
             language={language}
@@ -559,9 +610,9 @@ export const ReadResultWidget: React.FC<{ content: string; filePath?: string }> 
         </div>
       )}
       
-      {isLargeFile && !isExpanded && (
+      {!isExpanded && (
         <div className="px-4 py-3 text-xs text-muted-foreground text-center bg-zinc-900/30">
-          Click "Expand" to view the full file
+          Click "Expand" to view the file content ({lineCount} lines)
         </div>
       )}
     </div>
@@ -698,6 +749,7 @@ export const BashWidget: React.FC<{
  */
 export const WriteWidget: React.FC<{ filePath: string; content: string; result?: any }> = ({ filePath, content, result: _result }) => {
   const [isMaximized, setIsMaximized] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const { theme } = useTheme();
   const syntaxTheme = getClaudeSyntaxTheme(theme);
   
@@ -849,6 +901,8 @@ export const WriteWidget: React.FC<{ filePath: string; content: string; result?:
     </div>
   );
 
+  const lineCount = content.split('\n').length;
+
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
@@ -857,8 +911,23 @@ export const WriteWidget: React.FC<{ filePath: string; content: string; result?:
         <code className="text-sm font-mono bg-background px-2 py-0.5 rounded flex-1 truncate">
           {filePath}
         </code>
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ChevronRight className={cn("h-3 w-3 transition-transform", isExpanded && "rotate-90")} />
+          {isExpanded ? "Collapse" : `Preview (${lineCount} lines)`}
+        </button>
       </div>
-      <CodePreview codeContent={displayContent} truncated={true} />
+
+      {isExpanded && <CodePreview codeContent={displayContent} truncated={true} />}
+
+      {!isExpanded && (
+        <div className="px-4 py-3 text-xs text-muted-foreground text-center bg-muted/30 rounded-lg">
+          Click "Preview" to view the file content ({lineCount} lines)
+        </div>
+      )}
+
       <MaximizedView />
     </div>
   );
@@ -1120,12 +1189,13 @@ const getLanguage = (path: string) => {
 /**
  * Widget for Edit tool - shows the edit operation
  */
-export const EditWidget: React.FC<{ 
-  file_path: string; 
-  old_string: string; 
+export const EditWidget: React.FC<{
+  file_path: string;
+  old_string: string;
   new_string: string;
   result?: any;
 }> = ({ file_path, old_string, new_string, result: _result }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
   const { theme } = useTheme();
   const syntaxTheme = getClaudeSyntaxTheme(theme);
 
@@ -1135,6 +1205,7 @@ export const EditWidget: React.FC<{
   });
   const language = getLanguage(file_path);
 
+
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2 mb-2">
@@ -1143,9 +1214,17 @@ export const EditWidget: React.FC<{
         <code className="text-sm font-mono bg-background px-2 py-0.5 rounded flex-1 truncate">
           {file_path}
         </code>
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ChevronRight className={cn("h-3 w-3 transition-transform", isExpanded && "rotate-90")} />
+          {isExpanded ? "Collapse" : "Show Diff"}
+        </button>
       </div>
 
-      <div className="rounded-lg border bg-zinc-950 overflow-hidden text-xs font-mono">
+      {isExpanded && (
+        <div className="rounded-lg border bg-zinc-950 overflow-hidden text-xs font-mono">
         <div className="max-h-[440px] overflow-y-auto overflow-x-auto">
           {diffResult.map((part, index) => {
             const partClass = part.added 
@@ -1194,7 +1273,14 @@ export const EditWidget: React.FC<{
             );
           })}
         </div>
-      </div>
+        </div>
+      )}
+
+      {!isExpanded && (
+        <div className="px-4 py-3 text-xs text-muted-foreground text-center bg-muted/30 rounded-lg">
+          Click "Show Diff" to view the edit changes
+        </div>
+      )}
     </div>
   );
 };
@@ -1203,6 +1289,7 @@ export const EditWidget: React.FC<{
  * Widget for Edit tool result - shows a diff view
  */
 export const EditResultWidget: React.FC<{ content: string }> = ({ content }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
   const { theme } = useTheme();
   const syntaxTheme = getClaudeSyntaxTheme(theme);
   
@@ -1240,45 +1327,65 @@ export const EditResultWidget: React.FC<{ content: string }> = ({ content }) => 
   const startLineNumber = firstNumberedLine ? parseInt(firstNumberedLine.lineNumber) : 1;
   const language = getLanguage(filePath);
 
+  const resultLineCount = codeContent.split('\n').length;
+
   return (
     <div className="rounded-lg border bg-zinc-950 overflow-hidden">
-      <div className="px-4 py-2 border-b bg-emerald-950/30 flex items-center gap-2">
-        <GitBranch className="h-3.5 w-3.5 text-emerald-500" />
-        <span className="text-xs font-mono text-emerald-400">Edit Result</span>
-        {filePath && (
-          <>
-            <ChevronRight className="h-3 w-3 text-muted-foreground" />
-            <span className="text-xs font-mono text-muted-foreground">{filePath}</span>
-          </>
-        )}
-      </div>
-      <div className="overflow-x-auto max-h-[440px]">
-        <SyntaxHighlighter
-          language={language}
-          style={syntaxTheme}
-          showLineNumbers
-          startingLineNumber={startLineNumber}
-          wrapLongLines={false}
-          customStyle={{
-            margin: 0,
-            background: 'transparent',
-            lineHeight: '1.6'
-          }}
-          codeTagProps={{
-            style: {
-              fontSize: '0.75rem'
-            }
-          }}
-          lineNumberStyle={{
-            minWidth: "3.5rem",
-            paddingRight: "1rem",
-            textAlign: "right",
-            opacity: 0.5,
-          }}
+      <div className="px-4 py-2 border-b bg-emerald-950/30 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <GitBranch className="h-3.5 w-3.5 text-emerald-500" />
+          <span className="text-xs font-mono text-emerald-400">Edit Result</span>
+          {filePath && (
+            <>
+              <ChevronRight className="h-3 w-3 text-muted-foreground" />
+              <span className="text-xs font-mono text-muted-foreground">{filePath}</span>
+            </>
+          )}
+        </div>
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
-          {codeContent}
-        </SyntaxHighlighter>
+          <ChevronRight className={cn("h-3 w-3 transition-transform", isExpanded && "rotate-90")} />
+          {isExpanded ? "Collapse" : `View (${resultLineCount} lines)`}
+        </button>
       </div>
+
+      {isExpanded && (
+        <div className="overflow-x-auto max-h-[440px]">
+          <SyntaxHighlighter
+            language={language}
+            style={syntaxTheme}
+            showLineNumbers
+            startingLineNumber={startLineNumber}
+            wrapLongLines={false}
+            customStyle={{
+              margin: 0,
+              background: 'transparent',
+              lineHeight: '1.6'
+            }}
+            codeTagProps={{
+              style: {
+                fontSize: '0.75rem'
+              }
+            }}
+            lineNumberStyle={{
+              minWidth: "3.5rem",
+              paddingRight: "1rem",
+              textAlign: "right",
+              opacity: 0.5,
+            }}
+          >
+            {codeContent}
+          </SyntaxHighlighter>
+        </div>
+      )}
+
+      {!isExpanded && (
+        <div className="px-4 py-3 text-xs text-muted-foreground text-center bg-emerald-950/10">
+          Edit completed successfully. Click "View" to see the result ({resultLineCount} lines)
+        </div>
+      )}
     </div>
   );
 };
@@ -1696,22 +1803,34 @@ export const MultiEditWidget: React.FC<{
 /**
  * Widget for displaying MultiEdit tool results with diffs
  */
-export const MultiEditResultWidget: React.FC<{ 
+export const MultiEditResultWidget: React.FC<{
   content: string;
   edits?: Array<{ old_string: string; new_string: string }>;
 }> = ({ content, edits }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+
   // If we have the edits array, show a nice diff view
   if (edits && edits.length > 0) {
     return (
       <div className="space-y-3">
-        <div className="flex items-center gap-2 px-3 py-2 bg-green-500/10 rounded-t-md border-b border-green-500/20">
-          <GitBranch className="h-4 w-4 text-green-500" />
-          <span className="text-sm font-medium text-green-600 dark:text-green-400">
-            {edits.length} Changes Applied
-          </span>
+        <div className="flex items-center justify-between px-3 py-2 bg-green-500/10 rounded-t-md border-b border-green-500/20">
+          <div className="flex items-center gap-2">
+            <GitBranch className="h-4 w-4 text-green-500" />
+            <span className="text-sm font-medium text-green-600 dark:text-green-400">
+              {edits.length} Changes Applied
+            </span>
+          </div>
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ChevronRight className={cn("h-3 w-3 transition-transform", isExpanded && "rotate-90")} />
+            {isExpanded ? "Collapse" : "View Changes"}
+          </button>
         </div>
-        
-        <div className="space-y-4">
+
+        {isExpanded && (
+          <div className="space-y-4">
           {edits.map((edit, index) => {
             // Split the strings into lines for diff display
             const oldLines = edit.old_string.split('\n');
@@ -1757,7 +1876,14 @@ export const MultiEditResultWidget: React.FC<{
               </div>
             );
           })}
-        </div>
+          </div>
+        )}
+
+        {!isExpanded && (
+          <div className="px-4 py-3 text-xs text-muted-foreground text-center bg-green-500/5 rounded-md">
+            {edits.length} changes applied successfully. Click "View Changes" to see details.
+          </div>
+        )}
       </div>
     );
   }
@@ -1800,16 +1926,18 @@ export const SystemReminderWidget: React.FC<{ message: string }> = ({ message })
  */
 export const SystemInitializedWidget: React.FC<{
   sessionId?: string;
+  childSessionId?: string;
   model?: string;
   cwd?: string;
   tools?: string[];
-}> = ({ sessionId, model, cwd, tools = [] }) => {
+}> = ({ sessionId, childSessionId, model, cwd, tools = [] }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
   const [mcpExpanded, setMcpExpanded] = useState(false);
-  
+
   // Separate regular tools from MCP tools
   const regularTools = tools.filter(tool => !tool.startsWith('mcp__'));
   const mcpTools = tools.filter(tool => tool.startsWith('mcp__'));
-  
+
   // Tool icon mapping for regular tools
   const toolIcons: Record<string, LucideIcon> = {
     'task': CheckSquare,
@@ -1829,13 +1957,13 @@ export const SystemInitializedWidget: React.FC<{
     'todowrite': ListPlus,
     'websearch': Globe2,
   };
-  
+
   // Get icon for a tool, fallback to Wrench
   const getToolIcon = (toolName: string) => {
     const normalizedName = toolName.toLowerCase();
     return toolIcons[normalizedName] || Wrench;
   };
-  
+
   // Format MCP tool name (remove mcp__ prefix and format underscores)
   const formatMcpToolName = (toolName: string) => {
     // Remove mcp__ prefix
@@ -1863,7 +1991,7 @@ export const SystemInitializedWidget: React.FC<{
         .join(' ')
     };
   };
-  
+
   // Group MCP tools by provider
   const mcpToolsByProvider = mcpTools.reduce((acc, tool) => {
     const { provider } = formatMcpToolName(tool);
@@ -1873,48 +2001,77 @@ export const SystemInitializedWidget: React.FC<{
     acc[provider].push(tool);
     return acc;
   }, {} as Record<string, string[]>);
-  
+
   return (
-    <Card className="border-blue-500/20 bg-blue-500/5">
-      <CardContent className="p-4">
-        <div className="flex items-start gap-3">
-          <Settings className="h-5 w-5 text-blue-500 mt-0.5" />
-          <div className="flex-1 space-y-4">
-            <h4 className="font-semibold text-sm">System Initialized</h4>
-            
+    <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 overflow-hidden">
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full px-4 py-3 flex items-center justify-between hover:bg-blue-500/10 transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <Settings className="h-4 w-4 text-blue-500" />
+          <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
+            System Initialized
+          </span>
+        </div>
+        <ChevronRight className={cn(
+          "h-4 w-4 text-blue-500 transition-transform",
+          isExpanded && "rotate-90"
+        )} />
+      </button>
+
+      {isExpanded && (
+        <div className="px-4 pb-4 pt-2 border-t border-blue-500/20">
+          <div className="space-y-4">
+
             {/* Session Info */}
-            <div className="space-y-2">
+            <div className="space-y-1">
               {sessionId && (
                 <div className="flex items-center gap-2 text-xs">
                   <Fingerprint className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-muted-foreground">Session ID:</span>
+                  <span className="text-muted-foreground">Primary Session:</span>
                   <code className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">
-                    {sessionId}
+                    ...{sessionId.slice(-8)}
                   </code>
+                  <span className="text-muted-foreground text-xs">
+                    ({new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })})
+                  </span>
                 </div>
               )}
-              
-              {model && (
-                <div className="flex items-center gap-2 text-xs">
-                  <Cpu className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-muted-foreground">Model:</span>
+
+              {childSessionId && childSessionId !== sessionId && (
+                <div className="flex items-center gap-2 text-xs ml-4">
+                  <span className="text-muted-foreground">└─ Child:</span>
                   <code className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">
-                    {model}
+                    ...{childSessionId.slice(-8)}
                   </code>
-                </div>
-              )}
-              
-              {cwd && (
-                <div className="flex items-center gap-2 text-xs">
-                  <FolderOpen className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-muted-foreground">Working Directory:</span>
-                  <code className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded break-all">
-                    {cwd}
-                  </code>
+                  <span className="text-muted-foreground text-xs">
+                    (current)
+                  </span>
                 </div>
               )}
             </div>
-            
+
+            {model && (
+              <div className="flex items-center gap-2 text-xs">
+                <Cpu className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-muted-foreground">Model:</span>
+                <code className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">
+                  {model}
+                </code>
+              </div>
+            )}
+
+            {cwd && (
+              <div className="flex items-center gap-2 text-xs">
+                <FolderOpen className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-muted-foreground">Working Directory:</span>
+                <code className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded break-all">
+                  {cwd}
+                </code>
+              </div>
+            )}
+
             {/* Regular Tools */}
             {regularTools.length > 0 && (
               <div className="space-y-2">
@@ -1928,9 +2085,9 @@ export const SystemInitializedWidget: React.FC<{
                   {regularTools.map((tool, idx) => {
                     const Icon = getToolIcon(tool);
                     return (
-                      <Badge 
-                        key={idx} 
-                        variant="secondary" 
+                      <Badge
+                        key={idx}
+                        variant="secondary"
                         className="text-xs py-0.5 px-2 flex items-center gap-1"
                       >
                         <Icon className="h-3 w-3" />
@@ -1941,7 +2098,7 @@ export const SystemInitializedWidget: React.FC<{
                 </div>
               </div>
             )}
-            
+
             {/* MCP Tools */}
             {mcpTools.length > 0 && (
               <div className="space-y-2">
@@ -1956,7 +2113,7 @@ export const SystemInitializedWidget: React.FC<{
                     mcpExpanded && "rotate-180"
                   )} />
                 </button>
-                
+
                 {mcpExpanded && (
                   <div className="ml-5 space-y-3">
                     {Object.entries(mcpToolsByProvider).map(([provider, providerTools]) => (
@@ -1970,9 +2127,9 @@ export const SystemInitializedWidget: React.FC<{
                           {providerTools.map((tool, idx) => {
                             const { method } = formatMcpToolName(tool);
                             return (
-                              <Badge 
-                                key={idx} 
-                                variant="outline" 
+                              <Badge
+                                key={idx}
+                                variant="outline"
                                 className="text-xs py-0 px-1.5 font-normal"
                               >
                                 {method}
@@ -1986,7 +2143,7 @@ export const SystemInitializedWidget: React.FC<{
                 )}
               </div>
             )}
-            
+
             {/* Show message if no tools */}
             {tools.length === 0 && (
               <div className="text-xs text-muted-foreground italic">
@@ -1995,8 +2152,8 @@ export const SystemInitializedWidget: React.FC<{
             )}
           </div>
         </div>
-      </CardContent>
-    </Card>
+      )}
+    </div>
   );
 };
 

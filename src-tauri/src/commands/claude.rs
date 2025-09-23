@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use base64;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io::{BufRead, BufReader};
@@ -2178,4 +2179,247 @@ pub async fn validate_hook_command(command: String) -> Result<serde_json::Value,
         }
         Err(e) => Err(format!("Failed to validate command: {}", e)),
     }
+}
+
+/// Deletes a session file and its associated data
+///
+/// This function removes a session's JSONL file from the project directory
+/// and also cleans up any associated todo data if it exists.
+///
+/// # Arguments
+/// * `session_id` - The UUID of the session to delete
+/// * `project_id` - The ID of the project containing the session
+///
+/// # Returns
+/// * `Ok(String)` - Success message with session ID
+/// * `Err(String)` - Error message if deletion fails
+///
+/// # Errors
+/// * Project directory not found
+/// * Permission denied when deleting files
+/// * File system errors during deletion
+#[tauri::command]
+pub async fn delete_session(session_id: String, project_id: String) -> Result<String, String> {
+    log::info!(
+        "Deleting session: {} from project: {}",
+        session_id,
+        project_id
+    );
+
+    let claude_dir = get_claude_dir().map_err(|e| e.to_string())?;
+    let project_dir = claude_dir.join("projects").join(&project_id);
+
+    // Check if project directory exists
+    if !project_dir.exists() {
+        return Err(format!("Project directory not found: {}", project_id));
+    }
+
+    // Delete the session JSONL file
+    let session_file = project_dir.join(format!("{}.jsonl", session_id));
+    if session_file.exists() {
+        fs::remove_file(&session_file)
+            .map_err(|e| format!("Failed to delete session file: {}", e))?;
+        log::info!("Deleted session file: {:?}", session_file);
+    } else {
+        log::warn!("Session file not found: {:?}", session_file);
+    }
+
+    // Delete associated todo data if it exists
+    let todos_dir = project_dir.join("todos");
+    if todos_dir.exists() {
+        let todo_file = todos_dir.join(format!("{}.json", session_id));
+        if todo_file.exists() {
+            fs::remove_file(&todo_file)
+                .map_err(|e| format!("Failed to delete todo file: {}", e))?;
+            log::info!("Deleted todo file: {:?}", todo_file);
+        }
+    }
+
+    Ok(format!("Session {} deleted successfully", session_id))
+}
+
+/// Deletes multiple sessions and their associated data
+///
+/// This function deletes multiple session files and their associated todo data.
+///
+/// # Arguments
+/// * `session_ids` - A vector of session IDs to delete
+/// * `project_id` - The ID of the project containing the sessions
+///
+/// # Returns
+/// * `Ok(String)` - Success message with count of deleted sessions
+/// * `Err(String)` - Error message if deletion fails
+///
+/// # Errors
+/// * Project directory not found
+/// * Permission denied when deleting files
+/// * File system errors during deletion
+#[tauri::command]
+pub async fn delete_sessions_bulk(
+    session_ids: Vec<String>,
+    project_id: String,
+) -> Result<String, String> {
+    log::info!(
+        "Bulk deleting {} sessions from project: {}",
+        session_ids.len(),
+        project_id
+    );
+
+    let claude_dir = get_claude_dir().map_err(|e| e.to_string())?;
+    let project_dir = claude_dir.join("projects").join(&project_id);
+
+    // Check if project directory exists
+    if !project_dir.exists() {
+        return Err(format!("Project directory not found: {}", project_id));
+    }
+
+    let mut deleted_count = 0;
+    let mut errors = Vec::new();
+
+    for session_id in session_ids {
+        // Delete the session JSONL file
+        let session_file = project_dir.join(format!("{}.jsonl", session_id));
+        if session_file.exists() {
+            match fs::remove_file(&session_file) {
+                Ok(_) => {
+                    log::info!("Deleted session file: {:?}", session_file);
+                    deleted_count += 1;
+                }
+                Err(e) => {
+                    let error_msg = format!("Failed to delete session {}: {}", session_id, e);
+                    log::error!("{}", error_msg);
+                    errors.push(error_msg);
+                    continue;
+                }
+            }
+        } else {
+            log::warn!("Session file not found: {:?}", session_file);
+        }
+
+        // Delete associated todo data if it exists
+        let todos_dir = project_dir.join("todos");
+        if todos_dir.exists() {
+            let todo_file = todos_dir.join(format!("{}.json", session_id));
+            if todo_file.exists() {
+                if let Err(e) = fs::remove_file(&todo_file) {
+                    log::warn!("Failed to delete todo file for session {}: {}", session_id, e);
+                    // Don't count this as a fatal error since the main session was deleted
+                } else {
+                    log::info!("Deleted todo file: {:?}", todo_file);
+                }
+            }
+        }
+    }
+
+    if !errors.is_empty() {
+        return Err(format!(
+            "Deleted {} sessions successfully, but {} failed: {}",
+            deleted_count,
+            errors.len(),
+            errors.join("; ")
+        ));
+    }
+
+    Ok(format!("{} sessions deleted successfully", deleted_count))
+}
+
+/// Saves a pasted image (base64 data) to a file and returns the relative path
+///
+/// This function takes base64 image data and saves it as a file in the actual project's
+/// images directory (not the Claude storage), so Claude can access it directly.
+///
+/// # Arguments
+/// * `project_id` - The ID of the project to save the image in
+/// * `session_id` - The ID of the current session (used for unique naming)
+/// * `base64_data` - The base64 data URL (e.g., "data:image/png;base64,...")
+///
+/// # Returns
+/// * `Ok(String)` - The relative path to the saved image (e.g., "./images/session_123_image_1.png")
+/// * `Err(String)` - Error message if saving fails
+///
+/// # Errors
+/// * Project directory not found
+/// * Invalid base64 data format
+/// * File system errors during image creation
+/// * Permission denied when creating directories or files
+#[tauri::command]
+pub async fn save_pasted_image(
+    project_id: String,
+    session_id: String,
+    base64_data: String,
+) -> Result<String, String> {
+    log::info!(
+        "Saving pasted image for project: {}, session: {}",
+        project_id,
+        session_id
+    );
+
+    let claude_dir = get_claude_dir().map_err(|e| e.to_string())?;
+    let claude_project_dir = claude_dir.join("projects").join(&project_id);
+
+    // Check if Claude project directory exists
+    if !claude_project_dir.exists() {
+        return Err(format!("Project directory not found: {}", project_id));
+    }
+
+    // Get the actual project path from the Claude project directory
+    let actual_project_path = get_project_path_from_sessions(&claude_project_dir)
+        .unwrap_or_else(|_| decode_project_path(&project_id));
+
+    // Create images directory in the actual project directory (where Claude can find it)
+    let images_dir = std::path::PathBuf::from(&actual_project_path).join("images");
+    if !images_dir.exists() {
+        fs::create_dir_all(&images_dir)
+            .map_err(|e| format!("Failed to create images directory: {}", e))?;
+        log::info!("Created images directory: {:?}", images_dir);
+    }
+
+    // Parse the base64 data URL
+    if !base64_data.starts_with("data:image/") {
+        return Err("Invalid image data format".to_string());
+    }
+
+    // Extract file extension from MIME type
+    let mime_part = base64_data
+        .split(';')
+        .next()
+        .ok_or("Invalid data URL format")?;
+    let extension = match mime_part {
+        "data:image/png" => "png",
+        "data:image/jpeg" => "jpg",
+        "data:image/jpg" => "jpg",
+        "data:image/gif" => "gif",
+        "data:image/webp" => "webp",
+        _ => "png", // Default to PNG
+    };
+
+    // Extract base64 content
+    let base64_content = base64_data
+        .split(',')
+        .nth(1)
+        .ok_or("Invalid base64 data format")?;
+
+    // Decode base64
+    use base64::Engine;
+    let image_data = base64::engine::general_purpose::STANDARD
+        .decode(base64_content)
+        .map_err(|e| format!("Failed to decode base64: {}", e))?;
+
+    // Generate unique filename
+    let timestamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_millis();
+    let filename = format!("session_{}_image_{}.{}", session_id, timestamp, extension);
+    let image_path = images_dir.join(&filename);
+
+    // Write image file
+    fs::write(&image_path, image_data)
+        .map_err(|e| format!("Failed to write image file: {}", e))?;
+
+    log::info!("Saved image: {:?}", image_path);
+
+    // Return relative path for use in prompts
+    let relative_path = format!("./images/{}", filename);
+    Ok(relative_path)
 }

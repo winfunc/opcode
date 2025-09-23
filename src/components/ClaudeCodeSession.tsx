@@ -28,7 +28,7 @@ import { SplitPane } from "@/components/ui/split-pane";
 import { WebviewPreview } from "./WebviewPreview";
 import type { ClaudeStreamMessage } from "./AgentExecution";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useTrackEvent, useComponentMetrics, useWorkflowTracking } from "@/hooks";
+import { useTrackEvent, useComponentMetrics, useWorkflowTracking, useAutoScroll } from "@/hooks";
 import { SessionPersistenceService } from "@/services/sessionPersistence";
 
 interface ClaudeCodeSessionProps {
@@ -75,6 +75,12 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   onStreamingChange,
   onProjectPathChange,
 }) => {
+  console.log('[ClaudeCodeSession] Component initialized/remounted with:', {
+    session: session?.id,
+    initialProjectPath,
+    hasSession: !!session
+  });
+
   const [projectPath] = useState(initialProjectPath || session?.project_path || "");
   const [messages, setMessages] = useState<ClaudeStreamMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -105,7 +111,10 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   
   // Add collapsed state for queued prompts
   const [queuedPromptsCollapsed, setQueuedPromptsCollapsed] = useState(false);
-  
+
+  // Auto-scroll hook
+  const { autoScrollEnabled } = useAutoScroll();
+
   const parentRef = useRef<HTMLDivElement>(null);
   const unlistenRefs = useRef<UnlistenFn[]>([]);
   const hasActiveSessionRef = useRef(false);
@@ -250,10 +259,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   // Load session history if resuming
   useEffect(() => {
     if (session) {
-      // Set the claudeSessionId immediately when we have a session
-      setClaudeSessionId(session.id);
-      
-      // Load session history first, then check for active session
+      // Load session history first, which will set up extractedSessionInfo and claudeSessionId properly
       const initializeSession = async () => {
         await loadSessionHistory();
         // After loading history, check if the session is still active
@@ -261,7 +267,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
           await checkForActiveSession();
         }
       };
-      
+
       initializeSession();
     }
   }, [session]); // Remove hasLoadedSession dependency to ensure it runs on mount
@@ -273,10 +279,12 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
+    if (!autoScrollEnabled) return;
+
     if (displayableMessages.length > 0) {
       rowVirtualizer.scrollToIndex(displayableMessages.length - 1, { align: 'end', behavior: 'smooth' });
     }
-  }, [displayableMessages.length, rowVirtualizer]);
+  }, [displayableMessages.length, rowVirtualizer, autoScrollEnabled]);
 
   // Calculate total tokens from messages
   useEffect(() => {
@@ -294,35 +302,60 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
 
   const loadSessionHistory = async () => {
     if (!session) return;
-    
+
     try {
       setIsLoading(true);
       setError(null);
-      
+
       const history = await api.loadSessionHistory(session.id, session.project_id);
-      
-      // Save session data for restoration
+
+      // Check persistence data to understand session relationships
+      const persistenceData = SessionPersistenceService.loadSession(session.id);
+
+      // Set up extracted session info for conversation continuation
+      const projectId = session.project_id;
+      if (persistenceData?.primaryConversationId && !persistenceData.isConversationRoot) {
+        // This is a child session - use the primary conversation ID
+        console.log('[ClaudeCodeSession] Loading child session, primary conversation ID:', persistenceData.primaryConversationId);
+        setExtractedSessionInfo({
+          sessionId: persistenceData.primaryConversationId,
+          projectId
+        });
+        setClaudeSessionId(persistenceData.primaryConversationId);
+      } else {
+        // This is a primary session or session without persistence data
+        console.log('[ClaudeCodeSession] Loading primary session:', session.id);
+        setExtractedSessionInfo({
+          sessionId: session.id,
+          projectId
+        });
+        setClaudeSessionId(session.id);
+      }
+
+      // Save session data for restoration, preserving existing relationships
       if (history && history.length > 0) {
         SessionPersistenceService.saveSession(
           session.id,
           session.project_id,
           session.project_path,
-          history.length
+          history.length,
+          undefined, // scrollPosition
+          persistenceData?.primaryConversationId // preserve existing primaryConversationId
         );
       }
-      
+
       // Convert history to messages format
       const loadedMessages: ClaudeStreamMessage[] = history.map(entry => ({
         ...entry,
         type: entry.type || "assistant"
       }));
-      
+
       setMessages(loadedMessages);
       setRawJsonlOutput(history.map(h => JSON.stringify(h)));
-      
+
       // After loading history, we're continuing a conversation
       setIsFirstPrompt(false);
-      
+
       // Scroll to bottom after loading history
       setTimeout(() => {
         if (loadedMessages.length > 0) {
@@ -432,6 +465,12 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
 
   const handleSendPrompt = async (prompt: string, model: "sonnet" | "opus") => {
     console.log('[ClaudeCodeSession] handleSendPrompt called with:', { prompt, model, projectPath, claudeSessionId, effectiveSession });
+    console.log('[ClaudeCodeSession] Current state:', {
+      extractedSessionInfo,
+      isFirstPrompt,
+      session,
+      hasExtractedInfo: !!extractedSessionInfo
+    });
     
     if (!projectPath) {
       setError("Please select a project directory first");
@@ -519,13 +558,14 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
               if (!currentSessionId || currentSessionId !== msg.session_id) {
                 console.log('[ClaudeCodeSession] Detected new session_id from generic listener:', msg.session_id);
                 currentSessionId = msg.session_id;
-                setClaudeSessionId(msg.session_id);
 
-                // If we haven't extracted session info before, do it now
+                // If we haven't extracted session info before, do it now (first session only)
                 if (!extractedSessionInfo) {
                   const projectId = projectPath.replace(/[^a-zA-Z0-9]/g, '-');
+                  console.log('[ClaudeCodeSession] Setting primary conversation ID:', msg.session_id);
+                  setClaudeSessionId(msg.session_id); // Only update UI session ID for the first session
                   setExtractedSessionInfo({ sessionId: msg.session_id, projectId });
-                  
+
                   // Save session data for restoration
                   SessionPersistenceService.saveSession(
                     msg.session_id,
@@ -533,6 +573,21 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                     projectPath,
                     messages.length
                   );
+                } else {
+                  console.log('[ClaudeCodeSession] Continuing conversation, new execution ID:', msg.session_id, 'primary conversation ID:', extractedSessionInfo.sessionId);
+                  console.log('[ClaudeCodeSession] UI will continue showing primary conversation ID:', extractedSessionInfo.sessionId);
+
+                  // Save this new session but link it to the primary conversation
+                  const projectId = projectPath.replace(/[^a-zA-Z0-9]/g, '-');
+                  SessionPersistenceService.saveSession(
+                    msg.session_id,
+                    projectId,
+                    projectPath,
+                    messages.length,
+                    undefined, // scrollPosition
+                    extractedSessionInfo.sessionId // primaryConversationId
+                  );
+                  // Note: We do NOT call setClaudeSessionId() here, so UI keeps showing the primary conversation ID
                 }
 
                 // Switch to session-specific listeners
@@ -621,7 +676,23 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
             if (message.type === 'system' && (message.subtype === 'error' || message.error)) {
               sessionMetrics.current.errorsEncountered += 1;
             }
-            
+
+            // Fix UI session ID display: Store original and replace with primary conversation ID
+            if (message.type === 'system' && message.subtype === 'init') {
+              const originalSessionId = message.session_id;
+
+              if (extractedSessionInfo && message.session_id !== extractedSessionInfo.sessionId) {
+                console.log('[ClaudeCodeSession] Replacing UI session ID:', message.session_id, '→', extractedSessionInfo.sessionId);
+                message.original_session_id = originalSessionId; // Store child ID
+                message.session_id = extractedSessionInfo.sessionId; // Use primary ID
+                message.session_timestamp = new Date().toISOString();
+              } else if (!extractedSessionInfo) {
+                // First session - mark as both primary and child initially
+                message.original_session_id = originalSessionId;
+                message.session_timestamp = new Date().toISOString();
+              }
+            }
+
             setMessages((prev) => [...prev, message]);
           } catch (err) {
             console.error('Failed to parse message:', err, payload);
@@ -800,10 +871,19 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
 
         // Execute the appropriate command
         if (effectiveSession && !isFirstPrompt) {
-          console.log('[ClaudeCodeSession] Resuming session:', effectiveSession.id);
-          trackEvent.sessionResumed(effectiveSession.id);
-          trackEvent.modelSelected(model);
-          await api.resumeClaudeCode(projectPath, effectiveSession.id, prompt, model);
+          // Check if this is resuming an old session (session prop passed) or continuing current session
+          if (session) {
+            // Resuming an old session that was explicitly selected
+            console.log('[ClaudeCodeSession] Resuming old session:', effectiveSession.id);
+            trackEvent.sessionResumed(effectiveSession.id);
+            trackEvent.modelSelected(model);
+            await api.resumeClaudeCode(projectPath, effectiveSession.id, prompt, model);
+          } else {
+            // Continuing the current active session
+            console.log('[ClaudeCodeSession] Continuing current session:', effectiveSession.id);
+            trackEvent.modelSelected(model);
+            await api.continueClaudeCode(projectPath, prompt, model);
+          }
         } else {
           console.log('[ClaudeCodeSession] Starting new session');
           setIsFirstPrompt(false);
@@ -1442,6 +1522,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
               isLoading={isLoading}
               disabled={!projectPath}
               projectPath={projectPath}
+              projectId={effectiveSession?.project_id}
               extraMenuItems={
                 <>
                   {effectiveSession && (

@@ -32,7 +32,7 @@ import { ExecutionControlBar } from "./ExecutionControlBar";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { HooksEditor } from "./HooksEditor";
-import { useTrackEvent, useComponentMetrics, useFeatureAdoptionTracking } from "@/hooks";
+import { useTrackEvent, useComponentMetrics, useFeatureAdoptionTracking, useAutoScroll } from "@/hooks";
 import { useTabState } from "@/hooks/useTabState";
 
 interface AgentExecutionProps {
@@ -115,7 +115,8 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
   const [elapsedTime, setElapsedTime] = useState(0);
   const [hasUserScrolled, setHasUserScrolled] = useState(false);
   const [isFullscreenModalOpen, setIsFullscreenModalOpen] = useState(false);
-  
+  const { autoScrollEnabled } = useAutoScroll();
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -232,7 +233,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
     if (displayableMessages.length === 0) return;
 
     // Auto-scroll only if the user has not manually scrolled OR they are still at the bottom
-    const shouldAutoScroll = !hasUserScrolled || isAtBottom();
+    const shouldAutoScroll = autoScrollEnabled && (!hasUserScrolled || isAtBottom());
 
     if (shouldAutoScroll) {
       if (isFullscreenModalOpen) {
@@ -241,7 +242,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
         rowVirtualizer.scrollToIndex(displayableMessages.length - 1, { align: "end", behavior: "smooth" });
       }
     }
-  }, [displayableMessages.length, hasUserScrolled, isFullscreenModalOpen, rowVirtualizer, fullscreenRowVirtualizer]);
+  }, [displayableMessages.length, hasUserScrolled, isFullscreenModalOpen, rowVirtualizer, fullscreenRowVirtualizer, autoScrollEnabled]);
 
   // Update elapsed time while running
   useEffect(() => {
@@ -753,11 +754,13 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
               ref={scrollContainerRef}
               className="h-full overflow-y-auto p-6 space-y-8"
               onScroll={() => {
+                if (!autoScrollEnabled) return;
+
                 // Mark that user has scrolled manually
                 if (!hasUserScrolled) {
                   setHasUserScrolled(true);
                 }
-                
+
                 // If user scrolls back to bottom, re-enable auto-scroll
                 if (isAtBottom()) {
                   setHasUserScrolled(false);
@@ -895,11 +898,13 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
               ref={fullscreenScrollRef}
               className="h-full overflow-y-auto space-y-8"
               onScroll={() => {
+                if (!autoScrollEnabled) return;
+
                 // Mark that user has scrolled manually
                 if (!hasUserScrolled) {
                   setHasUserScrolled(true);
                 }
-                
+
                 // If user scrolls back to bottom, re-enable auto-scroll
                 if (isAtBottom()) {
                   setHasUserScrolled(false);
