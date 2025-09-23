@@ -1,80 +1,80 @@
-import { ThemeMode } from '@/contexts/ThemeContext';
+import { ThemeMode } from "@/contexts/ThemeContext";
 
 /**
  * Claude-themed syntax highlighting theme factory
  * Returns different syntax themes based on the current theme mode
- * 
+ *
  * @param theme - The current theme mode
  * @returns Prism syntax highlighting theme object
  */
 export const getClaudeSyntaxTheme = (theme: ThemeMode): any => {
   const themes = {
     dark: {
-      base: '#e3e8f0',
-      background: 'transparent',
-      comment: '#6b7280',
-      punctuation: '#9ca3af',
-      property: '#f59e0b', // Amber/Orange
-      tag: '#8b5cf6', // Violet
-      string: '#10b981', // Emerald Green
-      function: '#818cf8', // Indigo
-      keyword: '#c084fc', // Light Violet
-      variable: '#a78bfa', // Light Purple
-      operator: '#9ca3af',
+      base: "#e3e8f0",
+      background: "transparent",
+      comment: "#6b7280",
+      punctuation: "#9ca3af",
+      property: "#f59e0b", // Amber/Orange
+      tag: "#8b5cf6", // Violet
+      string: "#10b981", // Emerald Green
+      function: "#818cf8", // Indigo
+      keyword: "#c084fc", // Light Violet
+      variable: "#a78bfa", // Light Purple
+      operator: "#9ca3af",
     },
     gray: {
-      base: '#e3e8f0',
-      background: 'transparent',
-      comment: '#71717a',
-      punctuation: '#a1a1aa',
-      property: '#fbbf24', // Yellow
-      tag: '#a78bfa', // Light Purple
-      string: '#34d399', // Green
-      function: '#93bbfc', // Light Blue
-      keyword: '#d8b4fe', // Light Purple
-      variable: '#c084fc', // Purple
-      operator: '#a1a1aa',
+      base: "#e3e8f0",
+      background: "transparent",
+      comment: "#71717a",
+      punctuation: "#a1a1aa",
+      property: "#fbbf24", // Yellow
+      tag: "#a78bfa", // Light Purple
+      string: "#34d399", // Green
+      function: "#93bbfc", // Light Blue
+      keyword: "#d8b4fe", // Light Purple
+      variable: "#c084fc", // Purple
+      operator: "#a1a1aa",
     },
     light: {
-      base: '#1f2937',
-      background: 'transparent',
-      comment: '#9ca3af',
-      punctuation: '#6b7280',
-      property: '#dc2626', // Red
-      tag: '#7c3aed', // Purple
-      string: '#059669', // Green
-      function: '#2563eb', // Blue
-      keyword: '#9333ea', // Purple
-      variable: '#8b5cf6', // Violet
-      operator: '#6b7280',
+      base: "#1f2937",
+      background: "transparent",
+      comment: "#9ca3af",
+      punctuation: "#6b7280",
+      property: "#dc2626", // Red
+      tag: "#7c3aed", // Purple
+      string: "#059669", // Green
+      function: "#2563eb", // Blue
+      keyword: "#9333ea", // Purple
+      variable: "#8b5cf6", // Violet
+      operator: "#6b7280",
     },
     white: {
-      base: '#000000',
-      background: 'transparent',
-      comment: '#6b7280',
-      punctuation: '#374151',
-      property: '#dc2626', // Red
-      tag: '#5b21b6', // Deep Purple
-      string: '#047857', // Dark Green
-      function: '#1e40af', // Dark Blue
-      keyword: '#6b21a8', // Dark Purple
-      variable: '#6d28d9', // Dark Violet
-      operator: '#374151',
+      base: "#000000",
+      background: "transparent",
+      comment: "#6b7280",
+      punctuation: "#374151",
+      property: "#dc2626", // Red
+      tag: "#5b21b6", // Deep Purple
+      string: "#047857", // Dark Green
+      function: "#1e40af", // Dark Blue
+      keyword: "#6b21a8", // Dark Purple
+      variable: "#6d28d9", // Dark Violet
+      operator: "#374151",
     },
     custom: {
       // Default to dark theme colors for custom
-      base: '#e3e8f0',
-      background: 'transparent',
-      comment: '#6b7280',
-      punctuation: '#9ca3af',
-      property: '#f59e0b',
-      tag: '#8b5cf6',
-      string: '#10b981',
-      function: '#818cf8',
-      keyword: '#c084fc',
-      variable: '#a78bfa',
-      operator: '#9ca3af',
-    }
+      base: "#e3e8f0",
+      background: "transparent",
+      comment: "#6b7280",
+      punctuation: "#9ca3af",
+      property: "#f59e0b",
+      tag: "#8b5cf6",
+      string: "#10b981",
+      function: "#818cf8",
+      keyword: "#c084fc",
+      variable: "#a78bfa",
+      operator: "#9ca3af",
+    },
   };
 
   const colors = themes[theme] || themes.dark;
@@ -83,176 +83,177 @@ export const getClaudeSyntaxTheme = (theme: ThemeMode): any => {
     'code[class*="language-"]': {
       color: colors.base,
       background: colors.background,
-      textShadow: 'none',
-      fontFamily: 'var(--font-mono)',
-      fontSize: '0.875em',
-      textAlign: 'left',
-      whiteSpace: 'pre',
-      wordSpacing: 'normal',
-      wordBreak: 'normal',
-      wordWrap: 'normal',
-      lineHeight: '1.5',
-      MozTabSize: '4',
-      OTabSize: '4',
-      tabSize: '4',
-      WebkitHyphens: 'none',
-      MozHyphens: 'none',
-      msHyphens: 'none',
-      hyphens: 'none',
+      textShadow: "none",
+      fontFamily: "var(--font-mono)",
+      fontSize: "0.875em",
+      textAlign: "left",
+      whiteSpace: "pre",
+      wordSpacing: "normal",
+      wordBreak: "normal",
+      wordWrap: "normal",
+      lineHeight: "1.5",
+      MozTabSize: "4",
+      OTabSize: "4",
+      tabSize: "4",
+      WebkitHyphens: "none",
+      MozHyphens: "none",
+      msHyphens: "none",
+      hyphens: "none",
     },
     'pre[class*="language-"]': {
       color: colors.base,
       background: colors.background,
-      textShadow: 'none',
-      fontFamily: 'var(--font-mono)',
-      fontSize: '0.875em',
-      textAlign: 'left',
-      whiteSpace: 'pre',
-      wordSpacing: 'normal',
-      wordBreak: 'normal',
-      wordWrap: 'normal',
-      lineHeight: '1.5',
-      MozTabSize: '4',
-      OTabSize: '4',
-      tabSize: '4',
-      WebkitHyphens: 'none',
-      MozHyphens: 'none',
-      msHyphens: 'none',
-      hyphens: 'none',
-      padding: '1em',
-      margin: '0',
-      overflow: 'auto',
+      textShadow: "none",
+      fontFamily: "var(--font-mono)",
+      fontSize: "0.875em",
+      textAlign: "left",
+      whiteSpace: "pre",
+      wordSpacing: "normal",
+      wordBreak: "normal",
+      wordWrap: "normal",
+      lineHeight: "1.5",
+      MozTabSize: "4",
+      OTabSize: "4",
+      tabSize: "4",
+      WebkitHyphens: "none",
+      MozHyphens: "none",
+      msHyphens: "none",
+      hyphens: "none",
+      padding: "1em",
+      margin: "0",
+      overflow: "auto",
     },
     ':not(pre) > code[class*="language-"]': {
-      background: theme === 'light' 
-        ? 'rgba(139, 92, 246, 0.1)' 
-        : 'rgba(139, 92, 246, 0.1)',
-      padding: '0.1em 0.3em',
-      borderRadius: '0.3em',
-      whiteSpace: 'normal',
+      background:
+        theme === "light"
+          ? "rgba(139, 92, 246, 0.1)"
+          : "rgba(139, 92, 246, 0.1)",
+      padding: "0.1em 0.3em",
+      borderRadius: "0.3em",
+      whiteSpace: "normal",
     },
-    'comment': {
+    comment: {
       color: colors.comment,
-      fontStyle: 'italic',
+      fontStyle: "italic",
     },
-    'prolog': {
-      color: colors.comment,
-    },
-    'doctype': {
+    prolog: {
       color: colors.comment,
     },
-    'cdata': {
+    doctype: {
       color: colors.comment,
     },
-    'punctuation': {
+    cdata: {
+      color: colors.comment,
+    },
+    punctuation: {
       color: colors.punctuation,
     },
-    'namespace': {
-      opacity: '0.7',
+    namespace: {
+      opacity: "0.7",
     },
-    'property': {
+    property: {
       color: colors.property,
     },
-    'tag': {
+    tag: {
       color: colors.tag,
     },
-    'boolean': {
+    boolean: {
       color: colors.property,
     },
-    'number': {
+    number: {
       color: colors.property,
     },
-    'constant': {
+    constant: {
       color: colors.property,
     },
-    'symbol': {
+    symbol: {
       color: colors.property,
     },
-    'deleted': {
-      color: '#ef4444',
+    deleted: {
+      color: "#ef4444",
     },
-    'selector': {
+    selector: {
       color: colors.variable,
     },
-    'attr-name': {
+    "attr-name": {
       color: colors.variable,
     },
-    'string': {
+    string: {
       color: colors.string,
     },
-    'char': {
+    char: {
       color: colors.string,
     },
-    'builtin': {
+    builtin: {
       color: colors.tag,
     },
-    'url': {
+    url: {
       color: colors.string,
     },
-    'inserted': {
+    inserted: {
       color: colors.string,
     },
-    'entity': {
+    entity: {
       color: colors.variable,
-      cursor: 'help',
+      cursor: "help",
     },
-    'atrule': {
+    atrule: {
       color: colors.keyword,
     },
-    'attr-value': {
+    "attr-value": {
       color: colors.string,
     },
-    'keyword': {
+    keyword: {
       color: colors.keyword,
     },
-    'function': {
+    function: {
       color: colors.function,
     },
-    'class-name': {
+    "class-name": {
       color: colors.property,
     },
-    'regex': {
-      color: '#06b6d4', // Cyan
+    regex: {
+      color: "#06b6d4", // Cyan
     },
-    'important': {
+    important: {
       color: colors.property,
-      fontWeight: 'bold',
+      fontWeight: "bold",
     },
-    'variable': {
+    variable: {
       color: colors.variable,
     },
-    'bold': {
-      fontWeight: 'bold',
+    bold: {
+      fontWeight: "bold",
     },
-    'italic': {
-      fontStyle: 'italic',
+    italic: {
+      fontStyle: "italic",
     },
-    'operator': {
+    operator: {
       color: colors.operator,
     },
-    'script': {
+    script: {
       color: colors.base,
     },
-    'parameter': {
+    parameter: {
       color: colors.property,
     },
-    'method': {
+    method: {
       color: colors.function,
     },
-    'field': {
+    field: {
       color: colors.property,
     },
-    'annotation': {
+    annotation: {
       color: colors.comment,
     },
-    'type': {
+    type: {
       color: colors.variable,
     },
-    'module': {
+    module: {
       color: colors.tag,
     },
   };
 };
 
 // Export default dark theme for backward compatibility
-export const claudeSyntaxTheme = getClaudeSyntaxTheme('dark');
+export const claudeSyntaxTheme = getClaudeSyntaxTheme("dark");

@@ -39,7 +39,7 @@ interface TopbarProps {
 
 /**
  * Topbar component with status indicator and navigation buttons
- * 
+ *
  * @example
  * <Topbar
  *   onClaudeClick={() => setView('editor')}
@@ -52,24 +52,28 @@ export const Topbar: React.FC<TopbarProps> = ({
   onSettingsClick,
   className,
 }) => {
-  const [versionStatus, setVersionStatus] = useState<ClaudeVersionStatus | null>(null);
+  const [versionStatus, setVersionStatus] =
+    useState<ClaudeVersionStatus | null>(null);
   const [checking, setChecking] = useState(true);
-  
+
   // Check Claude version on mount
   useEffect(() => {
     checkVersion();
   }, []);
-  
+
   const checkVersion = async () => {
     try {
       setChecking(true);
       const status = await api.checkClaudeVersion();
       setVersionStatus(status);
-      
+
       // If Claude is not installed and the error indicates it wasn't found
-      if (!status.is_installed && status.output.includes("No such file or directory")) {
+      if (
+        !status.is_installed &&
+        status.output.includes("No such file or directory")
+      ) {
         // Emit an event that can be caught by the parent
-        window.dispatchEvent(new CustomEvent('claude-not-found'));
+        window.dispatchEvent(new CustomEvent("claude-not-found"));
       }
     } catch (err) {
       console.error("Failed to check Claude version:", err);
@@ -81,7 +85,7 @@ export const Topbar: React.FC<TopbarProps> = ({
       setChecking(false);
     }
   };
-  
+
   const StatusIndicator = () => {
     if (checking) {
       return (
@@ -91,9 +95,9 @@ export const Topbar: React.FC<TopbarProps> = ({
         </div>
       );
     }
-    
+
     if (!versionStatus) return null;
-    
+
     const statusContent = (
       <Button
         variant="ghost"
@@ -105,9 +109,9 @@ export const Topbar: React.FC<TopbarProps> = ({
           <Circle
             className={cn(
               "h-3 w-3",
-              versionStatus.is_installed 
-                ? "fill-green-500 text-green-500" 
-                : "fill-red-500 text-red-500"
+              versionStatus.is_installed
+                ? "fill-green-500 text-green-500"
+                : "fill-red-500 text-red-500",
             )}
           />
           <span>
@@ -118,7 +122,7 @@ export const Topbar: React.FC<TopbarProps> = ({
         </div>
       </Button>
     );
-    
+
     if (!versionStatus.is_installed) {
       return (
         <Popover
@@ -154,10 +158,10 @@ export const Topbar: React.FC<TopbarProps> = ({
         />
       );
     }
-    
+
     return statusContent;
   };
-  
+
   return (
     <motion.div
       initial={{ opacity: 0, y: -20 }}
@@ -165,14 +169,14 @@ export const Topbar: React.FC<TopbarProps> = ({
       transition={{ duration: 0.3 }}
       className={cn(
         "flex items-center justify-between px-4 py-3 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60",
-        className
+        className,
       )}
     >
       {/* Status Indicator */}
       <StatusIndicator />
-      
+
       {/* Spacer - Navigation moved to titlebar */}
       <div></div>
     </motion.div>
   );
-}; 
+};

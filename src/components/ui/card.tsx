@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * Card component - A container with consistent styling and sections
- * 
+ *
  * @example
  * <Card>
  *   <CardHeader>
@@ -24,14 +24,11 @@ const Card = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn(
-      "rounded-lg border shadow-xs",
-      className
-    )}
+    className={cn("rounded-lg border shadow-xs", className)}
     style={{
       borderColor: "var(--color-border)",
       backgroundColor: "var(--color-card)",
-      color: "var(--color-card-foreground)"
+      color: "var(--color-card-foreground)",
     }}
     {...props}
   />
@@ -109,4 +106,11 @@ const CardFooter = React.forwardRef<
 ));
 CardFooter.displayName = "CardFooter";
 
-export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent }; 
+export {
+  Card,
+  CardHeader,
+  CardFooter,
+  CardTitle,
+  CardDescription,
+  CardContent,
+};

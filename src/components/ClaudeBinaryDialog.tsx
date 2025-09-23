@@ -1,8 +1,21 @@
 import { useState, useEffect } from "react";
 import { api, type ClaudeInstallation } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ExternalLink, FileQuestion, Terminal, AlertCircle, Loader2 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  ExternalLink,
+  FileQuestion,
+  Terminal,
+  AlertCircle,
+  Loader2,
+} from "lucide-react";
 import { ClaudeVersionSelector } from "./ClaudeVersionSelector";
 
 interface ClaudeBinaryDialogProps {
@@ -12,8 +25,14 @@ interface ClaudeBinaryDialogProps {
   onError: (message: string) => void;
 }
 
-export function ClaudeBinaryDialog({ open, onOpenChange, onSuccess, onError }: ClaudeBinaryDialogProps) {
-  const [selectedInstallation, setSelectedInstallation] = useState<ClaudeInstallation | null>(null);
+export function ClaudeBinaryDialog({
+  open,
+  onOpenChange,
+  onSuccess,
+  onError,
+}: ClaudeBinaryDialogProps) {
+  const [selectedInstallation, setSelectedInstallation] =
+    useState<ClaudeInstallation | null>(null);
   const [isValidating, setIsValidating] = useState(false);
   const [hasInstallations, setHasInstallations] = useState(true);
   const [checkingInstallations, setCheckingInstallations] = useState(true);
@@ -50,7 +69,11 @@ export function ClaudeBinaryDialog({ open, onOpenChange, onSuccess, onError }: C
       onOpenChange(false);
     } catch (error) {
       console.error("Failed to save Claude binary path:", error);
-      onError(error instanceof Error ? error.message : "Failed to save Claude binary path");
+      onError(
+        error instanceof Error
+          ? error.message
+          : "Failed to save Claude binary path",
+      );
     } finally {
       setIsValidating(false);
     }
@@ -68,24 +91,27 @@ export function ClaudeBinaryDialog({ open, onOpenChange, onSuccess, onError }: C
             {checkingInstallations ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                <span className="ml-2 text-sm text-muted-foreground">Searching for Claude installations...</span>
+                <span className="ml-2 text-sm text-muted-foreground">
+                  Searching for Claude installations...
+                </span>
               </div>
             ) : hasInstallations ? (
               <p>
-                Multiple Claude Code installations were found on your system. 
+                Multiple Claude Code installations were found on your system.
                 Please select which one you'd like to use.
               </p>
             ) : (
               <>
                 <p>
-                  Claude Code was not found in any of the common installation locations. 
-                  Please install Claude Code to continue.
+                  Claude Code was not found in any of the common installation
+                  locations. Please install Claude Code to continue.
                 </p>
                 <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
                   <AlertCircle className="w-4 h-4 text-muted-foreground" />
                   <p className="text-sm text-muted-foreground">
-                    <span className="font-medium">Searched locations:</span> PATH, /usr/local/bin, 
-                    /opt/homebrew/bin, ~/.nvm/versions/node/*/bin, ~/.claude/local, ~/.local/bin
+                    <span className="font-medium">Searched locations:</span>{" "}
+                    PATH, /usr/local/bin, /opt/homebrew/bin,
+                    ~/.nvm/versions/node/*/bin, ~/.claude/local, ~/.local/bin
                   </p>
                 </div>
               </>
@@ -94,8 +120,11 @@ export function ClaudeBinaryDialog({ open, onOpenChange, onSuccess, onError }: C
               <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
                 <Terminal className="w-4 h-4 text-muted-foreground" />
                 <p className="text-sm text-muted-foreground">
-                  <span className="font-medium">Tip:</span> You can install Claude Code using{" "}
-                  <code className="px-1 py-0.5 bg-black/10 dark:bg-white/10 rounded">npm install -g @claude</code>
+                  <span className="font-medium">Tip:</span> You can install
+                  Claude Code using{" "}
+                  <code className="px-1 py-0.5 bg-black/10 dark:bg-white/10 rounded">
+                    npm install -g @claude
+                  </code>
                 </p>
               </div>
             )}
@@ -114,7 +143,12 @@ export function ClaudeBinaryDialog({ open, onOpenChange, onSuccess, onError }: C
         <DialogFooter className="gap-3">
           <Button
             variant="outline"
-            onClick={() => window.open("https://docs.claude.ai/claude/how-to-install", "_blank")}
+            onClick={() =>
+              window.open(
+                "https://docs.claude.ai/claude/how-to-install",
+                "_blank",
+              )
+            }
             className="mr-auto"
           >
             <ExternalLink className="w-4 h-4 mr-2" />
@@ -127,14 +161,20 @@ export function ClaudeBinaryDialog({ open, onOpenChange, onSuccess, onError }: C
           >
             Cancel
           </Button>
-          <Button 
-            onClick={handleSave} 
-            disabled={isValidating || !selectedInstallation || !hasInstallations}
+          <Button
+            onClick={handleSave}
+            disabled={
+              isValidating || !selectedInstallation || !hasInstallations
+            }
           >
-            {isValidating ? "Validating..." : hasInstallations ? "Save Selection" : "No Installations Found"}
+            {isValidating
+              ? "Validating..."
+              : hasInstallations
+                ? "Save Selection"
+                : "No Installations Found"}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
-} 
+}

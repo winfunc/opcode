@@ -28,7 +28,7 @@ const SessionCard = React.memo<{
 }>(({ session, projectPath, onClick, onEditClaudeFile }) => {
   const formatTime = useCallback((timestamp: string | number | undefined) => {
     if (!timestamp) return "Unknown time";
-    
+
     if (typeof timestamp === "string") {
       return formatISOTimestamp(timestamp);
     } else {
@@ -44,11 +44,11 @@ const SessionCard = React.memo<{
       whileHover={{ scale: 1.01 }}
       whileTap={{ scale: 0.99 }}
     >
-      <Card 
+      <Card
         className={cn(
           "cursor-pointer transition-all",
           "hover:shadow-lg hover:border-primary/20",
-          "bg-card/50 backdrop-blur-sm"
+          "bg-card/50 backdrop-blur-sm",
         )}
         onClick={onClick}
       >
@@ -99,111 +99,114 @@ const SessionCard = React.memo<{
   );
 });
 
-SessionCard.displayName = 'SessionCard';
+SessionCard.displayName = "SessionCard";
 
-export const SessionList: React.FC<SessionListProps> = React.memo(({
-  sessions,
-  projectPath,
-  onBack,
-  onSessionClick,
-  onEditClaudeFile,
-  className
-}) => {
-  // Sort sessions by created_at in descending order
-  const sortedSessions = useMemo(() => {
-    return [...sessions].sort((a, b) => {
-      const timeA = a.created_at || 0;
-      const timeB = b.created_at || 0;
-      return timeB > timeA ? 1 : -1;
+export const SessionList: React.FC<SessionListProps> = React.memo(
+  ({
+    sessions,
+    projectPath,
+    onBack,
+    onSessionClick,
+    onEditClaudeFile,
+    className,
+  }) => {
+    // Sort sessions by created_at in descending order
+    const sortedSessions = useMemo(() => {
+      return [...sessions].sort((a, b) => {
+        const timeA = a.created_at || 0;
+        const timeB = b.created_at || 0;
+        return timeB > timeA ? 1 : -1;
+      });
+    }, [sessions]);
+
+    // Use custom pagination hook
+    const {
+      currentPage,
+      totalPages,
+      paginatedData,
+      goToPage,
+      canGoNext: _canGoNext,
+      canGoPrevious: _canGoPrevious,
+    } = usePagination(sortedSessions, {
+      initialPage: 1,
+      initialPageSize: 5,
     });
-  }, [sessions]);
 
-  // Use custom pagination hook
-  const {
-    currentPage,
-    totalPages,
-    paginatedData,
-    goToPage,
-    canGoNext: _canGoNext,
-    canGoPrevious: _canGoPrevious
-  } = usePagination(sortedSessions, {
-    initialPage: 1,
-    initialPageSize: 5
-  });
+    const handleSessionClick = useCallback(
+      (session: Session) => {
+        onSessionClick?.(session);
+      },
+      [onSessionClick],
+    );
 
-  const handleSessionClick = useCallback((session: Session) => {
-    onSessionClick?.(session);
-  }, [onSessionClick]);
-
-  return (
-    <div className={cn("space-y-6", className)}>
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onBack}
-            className="h-8 w-8"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h2 className="text-2xl font-bold">Sessions</h2>
-            <p className="text-sm text-muted-foreground">
-              {projectPath}
-            </p>
+    return (
+      <div className={cn("space-y-6", className)}>
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onBack}
+              className="h-8 w-8"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div>
+              <h2 className="text-2xl font-bold">Sessions</h2>
+              <p className="text-sm text-muted-foreground">{projectPath}</p>
+            </div>
+          </div>
+          <div className="text-sm text-muted-foreground">
+            {sessions.length} {sessions.length === 1 ? "session" : "sessions"}
           </div>
         </div>
-        <div className="text-sm text-muted-foreground">
-          {sessions.length} {sessions.length === 1 ? 'session' : 'sessions'}
-        </div>
-      </div>
 
-      {/* Sessions list */}
-      {sessions.length === 0 ? (
-        <Card className="bg-muted/20">
-          <CardContent className="p-12 text-center">
-            <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground">
-              No sessions found for this project
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <>
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentPage}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              className="space-y-4"
-            >
-              {paginatedData.map((session) => (
-                <SessionCard
-                  key={session.id}
-                  session={session}
-                  projectPath={projectPath}
-                  onClick={() => handleSessionClick(session)}
-                  onEditClaudeFile={onEditClaudeFile}
+        {/* Sessions list */}
+        {sessions.length === 0 ? (
+          <Card className="bg-muted/20">
+            <CardContent className="p-12 text-center">
+              <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground">
+                No sessions found for this project
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentPage}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                className="space-y-4"
+              >
+                {paginatedData.map((session) => (
+                  <SessionCard
+                    key={session.id}
+                    session={session}
+                    projectPath={projectPath}
+                    onClick={() => handleSessionClick(session)}
+                    onEditClaudeFile={onEditClaudeFile}
+                  />
+                ))}
+              </motion.div>
+            </AnimatePresence>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex justify-center">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={goToPage}
                 />
-              ))}
-            </motion.div>
-          </AnimatePresence>
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex justify-center">
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={goToPage}
-              />
-            </div>
-          )}
-        </>
-      )}
-    </div>
-  );
-});
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    );
+  },
+);

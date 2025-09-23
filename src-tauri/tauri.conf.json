@@ -28,17 +28,13 @@
       "csp": "default-src 'self'; img-src 'self' asset: https://asset.localhost blob: data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-eval' https://app.posthog.com https://*.posthog.com https://*.i.posthog.com https://*.assets.i.posthog.com; connect-src 'self' ipc: https://ipc.localhost https://app.posthog.com https://*.posthog.com https://*.i.posthog.com",
       "assetProtocol": {
         "enable": true,
-        "scope": [
-          "**"
-        ]
+        "scope": ["**"]
       }
     }
   },
   "plugins": {
     "fs": {
-      "scope": [
-        "$HOME/**"
-      ],
+      "scope": ["$HOME/**"],
       "allow": [
         "readFile",
         "writeFile",
@@ -57,13 +53,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": [
-      "deb",
-      "rpm",
-      "appimage",
-      "app",
-      "dmg"
-    ],
+    "targets": ["deb", "rpm", "appimage", "app", "dmg"],
     "icon": [
       "icons/32x32.png",
       "icons/64x64.png",

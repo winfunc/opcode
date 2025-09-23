@@ -1,0 +1,74 @@
+{
+  "name": "claudia-server",
+  "version": "1.0.0",
+  "description": "Standalone TypeScript server for Claude Code integration",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "cli": "node dist/cli.js",
+    "prepare": "npm run build",
+    "test": "jest",
+    "lint": "eslint src --ext .ts",
+    "format": "prettier --write src/**/*.ts",
+    "clean": "rm -rf dist"
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "cli": "node dist/cli.js",
+    "test": "jest",
+    "lint": "eslint src --ext .ts",
+    "format": "prettier --write src/**/*.ts",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "ai",
+    "api",
+    "server",
+    "typescript"
+  ],
+  "author": "Claudia Project",
+  "license": "AGPL-3.0",
+  "dependencies": {
+    "chokidar": "^3.5.3",
+    "commander": "^11.1.0",
+    "compression": "^1.7.4",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "helmet": "^7.1.0",
+    "joi": "^17.11.0",
+    "morgan": "^1.10.0",
+    "node-cron": "^3.0.3",
+    "sqlite3": "^5.1.6",
+    "uuid": "^9.0.1",
+    "ws": "^8.14.2"
+  },
+  "devDependencies": {
+    "@types/compression": "^1.7.5",
+    "@types/cors": "^2.8.16",
+    "@types/express": "^4.17.21",
+    "@types/jest": "^29.5.7",
+    "@types/morgan": "^1.9.9",
+    "@types/node": "^20.8.0",
+    "@types/node-cron": "^3.0.11",
+    "@types/sqlite3": "^3.1.11",
+    "@types/uuid": "^9.0.7",
+    "@types/ws": "^8.5.8",
+    "@typescript-eslint/eslint-plugin": "^6.9.0",
+    "@typescript-eslint/parser": "^6.9.0",
+    "eslint": "^8.52.0",
+    "jest": "^29.7.0",
+    "prettier": "^3.0.3",
+    "ts-jest": "^29.1.1",
+    "tsx": "^3.14.0",
+    "typescript": "^5.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

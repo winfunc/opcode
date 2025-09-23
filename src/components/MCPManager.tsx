@@ -31,8 +31,10 @@ export const MCPManager: React.FC<MCPManagerProps> = ({
   const [servers, setServers] = useState<MCPServer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
-  
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error";
+  } | null>(null);
 
   // Load servers on mount
   useEffect(() => {
@@ -53,7 +55,9 @@ export const MCPManager: React.FC<MCPManagerProps> = ({
       setServers(serverList);
     } catch (err) {
       console.error("MCPManager: Failed to load MCP servers:", err);
-      setError("Failed to load MCP servers. Make sure Claude Code is installed.");
+      setError(
+        "Failed to load MCP servers. Make sure Claude Code is installed.",
+      );
     } finally {
       setLoading(false);
     }
@@ -72,8 +76,11 @@ export const MCPManager: React.FC<MCPManagerProps> = ({
    * Handles server removed event
    */
   const handleServerRemoved = (name: string) => {
-    setServers(prev => prev.filter(s => s.name !== name));
-    setToast({ message: `Server "${name}" removed successfully!`, type: "success" });
+    setServers((prev) => prev.filter((s) => s.name !== name));
+    setToast({
+      message: `Server "${name}" removed successfully!`,
+      type: "success",
+    });
   };
 
   /**
@@ -82,14 +89,14 @@ export const MCPManager: React.FC<MCPManagerProps> = ({
   const handleImportCompleted = (imported: number, failed: number) => {
     loadServers();
     if (failed === 0) {
-      setToast({ 
-        message: `Successfully imported ${imported} server${imported > 1 ? 's' : ''}!`, 
-        type: "success" 
+      setToast({
+        message: `Successfully imported ${imported} server${imported > 1 ? "s" : ""}!`,
+        type: "success",
       });
     } else {
-      setToast({ 
-        message: `Imported ${imported} server${imported > 1 ? 's' : ''}, ${failed} failed`, 
-        type: "error" 
+      setToast({
+        message: `Imported ${imported} server${imported > 1 ? "s" : ""}, ${failed} failed`,
+        type: "error",
       });
     }
   };
@@ -131,7 +138,11 @@ export const MCPManager: React.FC<MCPManagerProps> = ({
           </div>
         ) : (
           <div className="flex-1 overflow-y-auto p-6">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <Tabs
+              value={activeTab}
+              onValueChange={setActiveTab}
+              className="w-full"
+            >
               <TabsList className="grid grid-cols-3 w-full max-w-md mb-6 h-auto p-1">
                 <TabsTrigger value="servers" className="py-2.5 px-3">
                   Servers
@@ -161,7 +172,9 @@ export const MCPManager: React.FC<MCPManagerProps> = ({
                 <Card>
                   <MCPAddServer
                     onServerAdded={handleServerAdded}
-                    onError={(message: string) => setToast({ message, type: "error" })}
+                    onError={(message: string) =>
+                      setToast({ message, type: "error" })
+                    }
                   />
                 </Card>
               </TabsContent>
@@ -171,7 +184,9 @@ export const MCPManager: React.FC<MCPManagerProps> = ({
                 <Card className="overflow-hidden">
                   <MCPImportExport
                     onImportCompleted={handleImportCompleted}
-                    onError={(message: string) => setToast({ message, type: "error" })}
+                    onError={(message: string) =>
+                      setToast({ message, type: "error" })
+                    }
                   />
                 </Card>
               </TabsContent>
@@ -192,4 +207,4 @@ export const MCPManager: React.FC<MCPManagerProps> = ({
       </ToastContainer>
     </div>
   );
-}; 
+};

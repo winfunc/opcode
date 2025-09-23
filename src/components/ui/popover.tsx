@@ -35,7 +35,7 @@ interface PopoverProps {
 
 /**
  * Popover component for displaying floating content
- * 
+ *
  * @example
  * <Popover
  *   trigger={<Button>Click me</Button>}
@@ -55,14 +55,14 @@ export const Popover: React.FC<PopoverProps> = ({
   const [internalOpen, setInternalOpen] = React.useState(false);
   const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
   const setOpen = onOpenChange || setInternalOpen;
-  
+
   const triggerRef = React.useRef<HTMLDivElement>(null);
   const contentRef = React.useRef<HTMLDivElement>(null);
-  
+
   // Close on click outside
   React.useEffect(() => {
     if (!open) return;
-    
+
     const handleClickOutside = (event: MouseEvent) => {
       if (
         triggerRef.current &&
@@ -73,43 +73,41 @@ export const Popover: React.FC<PopoverProps> = ({
         setOpen(false);
       }
     };
-    
+
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [open, setOpen]);
-  
+
   // Close on escape
   React.useEffect(() => {
     if (!open) return;
-    
+
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setOpen(false);
       }
     };
-    
+
     document.addEventListener("keydown", handleEscape);
     return () => document.removeEventListener("keydown", handleEscape);
   }, [open, setOpen]);
-  
+
   const alignClass = {
     start: "left-0",
     center: "left-1/2 -translate-x-1/2",
     end: "right-0",
   }[align];
-  
+
   const sideClass = side === "top" ? "bottom-full mb-2" : "top-full mt-2";
-  const animationY = side === "top" ? { initial: 10, exit: 10 } : { initial: -10, exit: -10 };
-  
+  const animationY =
+    side === "top" ? { initial: 10, exit: 10 } : { initial: -10, exit: -10 };
+
   return (
     <div className="relative inline-block">
-      <div
-        ref={triggerRef}
-        onClick={() => setOpen(!open)}
-      >
+      <div ref={triggerRef} onClick={() => setOpen(!open)}>
         {trigger}
       </div>
-      
+
       <AnimatePresence>
         {open && (
           <motion.div
@@ -122,7 +120,7 @@ export const Popover: React.FC<PopoverProps> = ({
               "absolute z-50 min-w-[200px] rounded-md border border-border bg-popover p-4 text-popover-foreground shadow-md",
               sideClass,
               alignClass,
-              className
+              className,
             )}
           >
             {content}
@@ -131,4 +129,4 @@ export const Popover: React.FC<PopoverProps> = ({
       </AnimatePresence>
     </div>
   );
-}; 
+};

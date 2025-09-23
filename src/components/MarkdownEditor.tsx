@@ -20,7 +20,7 @@ interface MarkdownEditorProps {
 
 /**
  * MarkdownEditor component for editing the CLAUDE.md system prompt
- * 
+ *
  * @example
  * <MarkdownEditor onBack={() => setView('main')} />
  */
@@ -32,15 +32,18 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
-  
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error";
+  } | null>(null);
+
   const hasChanges = content !== originalContent;
-  
+
   // Load the system prompt on mount
   useEffect(() => {
     loadSystemPrompt();
   }, []);
-  
+
   const loadSystemPrompt = async () => {
     try {
       setLoading(true);
@@ -55,7 +58,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
       setLoading(false);
     }
   };
-  
+
   const handleSave = async () => {
     try {
       setSaving(true);
@@ -72,8 +75,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
       setSaving(false);
     }
   };
-  
-  
+
   return (
     <div className={cn("h-full overflow-y-auto", className)}>
       <div className="max-w-6xl mx-auto flex flex-col h-full">
@@ -105,7 +107,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
             </Button>
           </div>
         </div>
-        
+
         {/* Error display */}
         {error && (
           <motion.div
@@ -117,7 +119,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
             {error}
           </motion.div>
         )}
-        
+
         {/* Content */}
         <div className="flex-1 overflow-hidden p-6">
           {loading ? (
@@ -125,7 +127,10 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
           ) : (
-            <div className="h-full rounded-lg border border-border overflow-hidden shadow-sm" data-color-mode="dark">
+            <div
+              className="h-full rounded-lg border border-border overflow-hidden shadow-sm"
+              data-color-mode="dark"
+            >
               <MDEditor
                 value={content}
                 onChange={(val) => setContent(val || "")}
@@ -137,7 +142,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
           )}
         </div>
       </div>
-      
+
       {/* Toast Notification */}
       <ToastContainer>
         {toast && (
@@ -150,4 +155,4 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
       </ToastContainer>
     </div>
   );
-}; 
+};

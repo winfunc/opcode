@@ -13,40 +13,45 @@ export const AgentExecutionDemo: React.FC = () => {
       type: "user",
       isMeta: true,
       message: { content: [] },
-      timestamp: "2025-06-11T14:08:53.771Z"
+      timestamp: "2025-06-11T14:08:53.771Z",
     },
-    
+
     // Summary message
     {
       leafUuid: "3c5ecb4f-c1f0-40c2-a357-ab7642ad28b8",
       summary: "JSONL Viewer Model Configuration and Setup",
-      type: "summary" as any
+      type: "summary" as any,
     },
-    
+
     // Assistant with Edit tool
     {
       type: "assistant",
       message: {
-        content: [{
-          type: "tool_use",
-          name: "Edit",
-          input: {
-            file_path: "/Users/mufeedvh/dev/jsonl-viewer/script.js",
-            new_string: "reader.onerror = () => reject(new Error('Failed to read file'));",
-            old_string: "reader.onerror = e => reject(new Error('Failed to read file'));"
-          }
-        }],
-        usage: { input_tokens: 4, output_tokens: 158 }
-      }
+        content: [
+          {
+            type: "tool_use",
+            name: "Edit",
+            input: {
+              file_path: "/Users/mufeedvh/dev/jsonl-viewer/script.js",
+              new_string:
+                "reader.onerror = () => reject(new Error('Failed to read file'));",
+              old_string:
+                "reader.onerror = e => reject(new Error('Failed to read file'));",
+            },
+          },
+        ],
+        usage: { input_tokens: 4, output_tokens: 158 },
+      },
     },
-    
+
     // User with Edit tool result
     {
       type: "user",
       message: {
-        content: [{
-          type: "tool_result",
-          content: `The file /Users/mufeedvh/dev/jsonl-viewer/script.js has been updated. Here's the result of running \`cat -n\` on a snippet of the edited file:
+        content: [
+          {
+            type: "tool_result",
+            content: `The file /Users/mufeedvh/dev/jsonl-viewer/script.js has been updated. Here's the result of running \`cat -n\` on a snippet of the edited file:
    220       readFileAsText(file) {
    221         return new Promise((resolve, reject) => {
    222           const reader = new FileReader();
@@ -55,45 +60,52 @@ export const AgentExecutionDemo: React.FC = () => {
    225           reader.readAsText(file);
    226         });
    227       }
-   228`
-        }]
-      }
+   228`,
+          },
+        ],
+      },
     },
-    
+
     // Assistant with MCP tool
     {
       type: "assistant",
       message: {
-        content: [{
-          type: "tool_use",
-          name: "mcp__ide__getDiagnostics",
-          input: {}
-        }],
-        usage: { input_tokens: 4, output_tokens: 37 }
-      }
+        content: [
+          {
+            type: "tool_use",
+            name: "mcp__ide__getDiagnostics",
+            input: {},
+          },
+        ],
+        usage: { input_tokens: 4, output_tokens: 37 },
+      },
     },
-    
+
     // User with empty tool result
     {
       type: "user",
       message: {
-        content: [{
-          type: "tool_result",
-          content: ""
-        }]
-      }
+        content: [
+          {
+            type: "tool_result",
+            content: "",
+          },
+        ],
+      },
     },
-    
+
     // Assistant with Write tool (large content)
     {
       type: "assistant",
       message: {
-        content: [{
-          type: "tool_use",
-          name: "Write",
-          input: {
-            file_path: "/Users/mufeedvh/dev/jsonl-viewer/styles.css",
-            content: `/* Reset and Base Styles */
+        content: [
+          {
+            type: "tool_use",
+            name: "Write",
+            input: {
+              file_path: "/Users/mufeedvh/dev/jsonl-viewer/styles.css",
+              content:
+                `/* Reset and Base Styles */
 * {
     margin: 0;
     padding: 0;
@@ -162,20 +174,23 @@ body {
 
 /* ... many more lines of CSS ... */
 /* This content is over 1000 characters so it should show the maximize button */
-` + '\n'.repeat(100) + '/* End of very long CSS file */'
-          }
-        }]
-      }
-    }
+` +
+                "\n".repeat(100) +
+                "/* End of very long CSS file */",
+            },
+          },
+        ],
+      },
+    },
   ];
 
   return (
     <div className="max-w-4xl mx-auto p-8 space-y-4">
       <h1 className="text-2xl font-bold mb-6">Agent Execution Demo</h1>
-      
+
       {messages.map((message, idx) => (
         <StreamMessage key={idx} message={message} streamMessages={messages} />
       ))}
     </div>
   );
-}; 
+};

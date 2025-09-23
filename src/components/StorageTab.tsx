@@ -91,15 +91,22 @@ export const StorageTab: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   // Dialog states
-  const [editingRow, setEditingRow] = useState<Record<string, any> | null>(null);
+  const [editingRow, setEditingRow] = useState<Record<string, any> | null>(
+    null,
+  );
   const [newRow, setNewRow] = useState<Record<string, any> | null>(null);
-  const [deletingRow, setDeletingRow] = useState<Record<string, any> | null>(null);
+  const [deletingRow, setDeletingRow] = useState<Record<string, any> | null>(
+    null,
+  );
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showSqlEditor, setShowSqlEditor] = useState(false);
   const [sqlQuery, setSqlQuery] = useState("");
   const [sqlResult, setSqlResult] = useState<QueryResult | null>(null);
   const [sqlError, setSqlError] = useState<string | null>(null);
-  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error";
+  } | null>(null);
 
   /**
    * Load all tables on mount
@@ -150,7 +157,7 @@ export const StorageTab: React.FC = () => {
         selectedTable,
         page,
         pageSize,
-        search || searchQuery || undefined
+        search || searchQuery || undefined,
       );
       setTableData(result);
       setCurrentPage(page);
@@ -170,22 +177,24 @@ export const StorageTab: React.FC = () => {
       setSearchQuery(value);
       loadTableData(1, value);
     },
-    [selectedTable]
+    [selectedTable],
   );
 
   /**
    * Get primary key values for a row
    */
-  const getPrimaryKeyValues = (row: Record<string, any>): Record<string, any> => {
+  const getPrimaryKeyValues = (
+    row: Record<string, any>,
+  ): Record<string, any> => {
     if (!tableData) return {};
-    
-    const pkColumns = tableData.columns.filter(col => col.pk);
+
+    const pkColumns = tableData.columns.filter((col) => col.pk);
     const pkValues: Record<string, any> = {};
-    
-    pkColumns.forEach(col => {
+
+    pkColumns.forEach((col) => {
       pkValues[col.name] = row[col.name];
     });
-    
+
     return pkValues;
   };
 
@@ -257,7 +266,7 @@ export const StorageTab: React.FC = () => {
       setSqlError(null);
       const result = await api.storageExecuteSql(sqlQuery);
       setSqlResult(result);
-      
+
       // Refresh tables and data if it was a non-SELECT query
       if (result.rows_affected !== undefined) {
         await loadTables();
@@ -285,14 +294,16 @@ export const StorageTab: React.FC = () => {
       setTableData(null);
       setShowResetConfirm(false);
       setToast({
-        message: "Database Reset Complete: The database has been restored to its default state with empty tables (agents, agent_runs, app_settings).",
+        message:
+          "Database Reset Complete: The database has been restored to its default state with empty tables (agents, agent_runs, app_settings).",
         type: "success",
       });
     } catch (err) {
       console.error("Failed to reset database:", err);
       setError("Failed to reset database");
       setToast({
-        message: "Reset Failed: Failed to reset the database. Please try again.",
+        message:
+          "Reset Failed: Failed to reset the database. Please try again.",
         type: "error",
       });
     } finally {
@@ -308,7 +319,7 @@ export const StorageTab: React.FC = () => {
     if (value === undefined) return "";
     if (typeof value === "boolean") return value ? "true" : "false";
     if (typeof value === "object") return JSON.stringify(value);
-    
+
     const stringValue = String(value);
     if (stringValue.length > maxLength) {
       return stringValue.substring(0, maxLength) + "...";
@@ -322,7 +333,12 @@ export const StorageTab: React.FC = () => {
   const getInputType = (column: ColumnInfo): string => {
     const type = column.type_name.toUpperCase();
     if (type.includes("INT")) return "number";
-    if (type.includes("REAL") || type.includes("FLOAT") || type.includes("DOUBLE")) return "number";
+    if (
+      type.includes("REAL") ||
+      type.includes("FLOAT") ||
+      type.includes("DOUBLE")
+    )
+      return "number";
     if (type.includes("BOOL")) return "checkbox";
     return "text";
   };
@@ -374,7 +390,11 @@ export const StorageTab: React.FC = () => {
               </SelectTrigger>
               <SelectContent>
                 {tables.map((table) => (
-                  <SelectItem key={table.name} value={table.name} className="text-xs">
+                  <SelectItem
+                    key={table.name}
+                    value={table.name}
+                    className="text-xs"
+                  >
                     <div className="flex items-center justify-between w-full">
                       <span>{table.name}</span>
                       <span className="text-[10px] text-muted-foreground ml-2">
@@ -452,12 +472,16 @@ export const StorageTab: React.FC = () => {
                       {tableData.columns.map((column) => {
                         const value = row[column.name];
                         const formattedValue = formatCellValue(value, 50);
-                        const fullValue = value === null ? "NULL" : 
-                                        value === undefined ? "" : 
-                                        typeof value === "object" ? JSON.stringify(value, null, 2) : 
-                                        String(value);
+                        const fullValue =
+                          value === null
+                            ? "NULL"
+                            : value === undefined
+                              ? ""
+                              : typeof value === "object"
+                                ? JSON.stringify(value, null, 2)
+                                : String(value);
                         const isTruncated = fullValue.length > 50;
-                        
+
                         return (
                           <td
                             key={column.name}
@@ -471,11 +495,13 @@ export const StorageTab: React.FC = () => {
                                       {formattedValue}
                                     </span>
                                   </TooltipTrigger>
-                                  <TooltipContent 
-                                    side="bottom" 
+                                  <TooltipContent
+                                    side="bottom"
                                     className="max-w-[500px] max-h-[300px] overflow-auto"
                                   >
-                                    <pre className="text-xs whitespace-pre-wrap">{fullValue}</pre>
+                                    <pre className="text-xs whitespace-pre-wrap">
+                                      {fullValue}
+                                    </pre>
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
@@ -706,10 +732,7 @@ export const StorageTab: React.FC = () => {
             <Button variant="outline" onClick={() => setNewRow(null)}>
               Cancel
             </Button>
-            <Button
-              onClick={() => handleInsertRow(newRow!)}
-              disabled={loading}
-            >
+            <Button onClick={() => handleInsertRow(newRow!)} disabled={loading}>
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
@@ -739,11 +762,11 @@ export const StorageTab: React.FC = () => {
                       key,
                       typeof value === "string" && value.length > 100
                         ? value.substring(0, 100) + "..."
-                        : value
-                    ])
+                        : value,
+                    ]),
                   ),
                   null,
-                  2
+                  2,
                 )}
               </pre>
             </div>
@@ -773,10 +796,10 @@ export const StorageTab: React.FC = () => {
           <DialogHeader>
             <DialogTitle>Reset Database</DialogTitle>
             <DialogDescription>
-              This will delete all data and recreate the database with its default structure 
-              (empty tables for agents, agent_runs, and app_settings). The database will be 
-              restored to the same state as when you first installed the app. This action 
-              cannot be undone.
+              This will delete all data and recreate the database with its
+              default structure (empty tables for agents, agent_runs, and
+              app_settings). The database will be restored to the same state as
+              when you first installed the app. This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <div className="flex items-center gap-3 p-4 rounded-md bg-destructive/10 text-destructive">
@@ -843,8 +866,10 @@ export const StorageTab: React.FC = () => {
                   <div className="p-3 rounded-md bg-green-500/10 text-green-600 dark:text-green-400 text-sm">
                     <div className="flex items-center gap-2">
                       <Check className="h-4 w-4" />
-                      Query executed successfully. {sqlResult.rows_affected} rows
-                      affected.
+                      Query executed successfully. {
+                        sqlResult.rows_affected
+                      }{" "}
+                      rows affected.
                       {sqlResult.last_insert_rowid && (
                         <span>
                           Last insert ID: {sqlResult.last_insert_rowid}
@@ -872,13 +897,20 @@ export const StorageTab: React.FC = () => {
                           {sqlResult.rows.map((row, i) => (
                             <tr key={i} className="border-b">
                               {row.map((cell, j) => {
-                                const formattedValue = formatCellValue(cell, 50);
-                                const fullValue = cell === null ? "NULL" : 
-                                                cell === undefined ? "" : 
-                                                typeof cell === "object" ? JSON.stringify(cell, null, 2) : 
-                                                String(cell);
+                                const formattedValue = formatCellValue(
+                                  cell,
+                                  50,
+                                );
+                                const fullValue =
+                                  cell === null
+                                    ? "NULL"
+                                    : cell === undefined
+                                      ? ""
+                                      : typeof cell === "object"
+                                        ? JSON.stringify(cell, null, 2)
+                                        : String(cell);
                                 const isTruncated = fullValue.length > 50;
-                                
+
                                 return (
                                   <td key={j} className="px-2 py-1 font-mono">
                                     {isTruncated ? (
@@ -889,11 +921,13 @@ export const StorageTab: React.FC = () => {
                                               {formattedValue}
                                             </span>
                                           </TooltipTrigger>
-                                          <TooltipContent 
-                                            side="bottom" 
+                                          <TooltipContent
+                                            side="bottom"
                                             className="max-w-[500px] max-h-[300px] overflow-auto"
                                           >
-                                            <pre className="text-xs whitespace-pre-wrap">{fullValue}</pre>
+                                            <pre className="text-xs whitespace-pre-wrap">
+                                              {fullValue}
+                                            </pre>
                                           </TooltipContent>
                                         </Tooltip>
                                       </TooltipProvider>
@@ -953,4 +987,4 @@ export const StorageTab: React.FC = () => {
       </ToastContainer>
     </div>
   );
-}; 
+};
