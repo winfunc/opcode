@@ -1,0 +1,27 @@
+Feature: Add session deletion functionality
+
+Implements session deletion feature with delete button on hover for each session card.
+
+Addresses issue #305 where users requested the ability to delete unnecessary sessions.
+
+## Changes:
+- **Backend**: Added `delete_session` Rust command to remove .jsonl files and associated todo data
+- **Frontend**: Added `deleteSession` API method with proper error handling
+- **UI**: Added Trash2 icon delete button that appears on session card hover
+- **UX**: Added confirmation dialog before deletion to prevent accidents
+- **State**: Updated local state management to remove sessions immediately after deletion
+
+## Features:
+- Hover-to-reveal delete button for clean UI
+- Confirmation dialog with session details
+- Deletes both session file and associated todo data
+- Proper error handling and user feedback
+- Follows project coding standards and documentation guidelines
+
+## Testing:
+- ✅ Code compiles without errors
+- ✅ Follows project linting standards (cargo fmt, cargo clippy)
+- ✅ Comprehensive documentation added
+- ✅ UI integration tested
+
+Fixes #305
