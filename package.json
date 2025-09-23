@@ -1,7 +1,7 @@
 {
-  "name": "claudia",
+  "name": "opcode",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.1",
   "license": "AGPL-3.0",
   "type": "module",
   "scripts": {
@@ -9,6 +9,7 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
+    "build:dmg": "tauri build --bundles dmg",
     "check": "tsc --noEmit && cd src-tauri && cargo check"
   },
   "dependencies": {

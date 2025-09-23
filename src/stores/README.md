@@ -1,6 +1,6 @@
 # Store Implementation Notes
 
-The store files (`sessionStore.ts` and `agentStore.ts`) provide examples of how to implement global state management with Zustand for the Claudia application.
+The store files (`sessionStore.ts` and `agentStore.ts`) provide examples of how to implement global state management with Zustand for the opcode application.
 
 ## Key Benefits:
 

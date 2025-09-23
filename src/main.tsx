@@ -7,6 +7,7 @@ import { analytics, resourceMonitor } from "./lib/analytics";
 import { PostHogProvider } from "posthog-js/react";
 import "./assets/shimmer.css";
 import "./styles.css";
+import AppIcon from "./assets/nfo/asterisk-logo.png";
 
 // Initialize analytics before rendering
 analytics.initialize();
@@ -23,6 +24,22 @@ resourceMonitor.startMonitoring(120000);
       navigator.userAgent?.toLowerCase().includes("mac os x"));
   if (isMacLike) {
     document.documentElement.classList.add("is-macos");
+  }
+})();
+
+// Set favicon to the new app icon (avoids needing /public)
+(() => {
+  try {
+    const existing = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+    const link = existing ?? document.createElement("link");
+    link.rel = "icon";
+    link.type = "image/png";
+    link.href = AppIcon;
+    if (!existing) {
+      document.head.appendChild(link);
+    }
+  } catch (_) {
+    // Non-fatal if document/head is not available
   }
 })();
 

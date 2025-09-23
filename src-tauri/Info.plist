@@ -7,23 +7,23 @@
   <key>LSMinimumSystemVersion</key>
   <string>10.15</string>
   <key>CFBundleShortVersionString</key>
-  <string>0.1.0</string>
+  <string>0.2.1</string>
   <key>CFBundleName</key>
-  <string>Claudia</string>
+  <string>opcode</string>
   <key>CFBundleDisplayName</key>
-  <string>Claudia</string>
+  <string>opcode</string>
   <key>CFBundleIdentifier</key>
-  <string>claudia.asterisk.so</string>
+  <string>opcode.asterisk.so</string>
   <key>CFBundleDocumentTypes</key>
   <array>
     <dict>
       <key>CFBundleTypeName</key>
-      <string>Claudia Agent</string>
+      <string>opcode Agent</string>
       <key>CFBundleTypeRole</key>
       <string>Editor</string>
       <key>CFBundleTypeExtensions</key>
       <array>
-        <string>claudia.json</string>
+        <string>opcode.json</string>
       </array>
       <key>CFBundleTypeIconFile</key>
       <string>icon.icns</string>
@@ -32,12 +32,12 @@
     </dict>
   </array>
   <key>NSAppleEventsUsageDescription</key>
-  <string>Claudia needs to send Apple Events to other applications.</string>
+  <string>opcode needs to send Apple Events to other applications.</string>
   <key>NSAppleScriptEnabled</key>
   <true/>
   <key>NSCameraUsageDescription</key>
-  <string>Claudia needs camera access for capturing images for AI processing.</string>
+  <string>opcode needs camera access for capturing images for AI processing.</string>
   <key>NSMicrophoneUsageDescription</key>
-  <string>Claudia needs microphone access for voice input features.</string>
+  <string>opcode needs microphone access for voice input features.</string>
 </dict>
 </plist>

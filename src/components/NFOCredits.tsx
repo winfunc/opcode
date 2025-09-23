@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import asteriskLogo from "@/assets/nfo/asterisk-logo.png";
-import keygennMusic from "@/assets/nfo/claudia-nfo.ogg";
+import keygennMusic from "@/assets/nfo/opcode-nfo.ogg";
 
 interface NFOCreditsProps {
   /**
@@ -17,7 +17,7 @@ interface NFOCreditsProps {
 /**
  * NFO Credits component - Displays a keygen/crack style credits window
  * with auto-scrolling text, retro fonts, and background music
- *
+ * 
  * @example
  * <NFOCredits onClose={() => setShowNFO(false)} />
  */
@@ -26,7 +26,7 @@ export const NFOCredits: React.FC<NFOCreditsProps> = ({ onClose }) => {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [scrollPosition, setScrollPosition] = useState(0);
-
+  
   // Initialize and autoplay audio muted then unmute
   useEffect(() => {
     const audio = new Audio(keygennMusic);
@@ -36,24 +36,21 @@ export const NFOCredits: React.FC<NFOCreditsProps> = ({ onClose }) => {
     audio.muted = true;
     audioRef.current = audio;
     // Attempt to play
-    audio
-      .play()
-      .then(() => {
-        // Unmute after autoplay
-        audio.muted = false;
-      })
-      .catch((err) => {
-        console.error("Audio autoplay failed:", err);
-      });
+    audio.play().then(() => {
+      // Unmute after autoplay
+      audio.muted = false;
+    }).catch(err => {
+      console.error("Audio autoplay failed:", err);
+    });
     return () => {
       if (audioRef.current) {
         audioRef.current.pause();
-        audioRef.current.src = "";
+        audioRef.current.src = '';
         audioRef.current = null;
       }
     };
   }, []);
-
+  
   // Handle mute toggle
   const toggleMute = () => {
     if (audioRef.current) {
@@ -61,21 +58,20 @@ export const NFOCredits: React.FC<NFOCreditsProps> = ({ onClose }) => {
       setIsMuted(!isMuted);
     }
   };
-
+  
   // Start auto-scrolling
   useEffect(() => {
     const scrollInterval = setInterval(() => {
-      setScrollPosition((prev) => prev + 1);
+      setScrollPosition(prev => prev + 1);
     }, 30); // Smooth scrolling speed
-
+    
     return () => clearInterval(scrollInterval);
   }, []);
-
+  
   // Apply scroll position
   useEffect(() => {
     if (scrollRef.current) {
-      const maxScroll =
-        scrollRef.current.scrollHeight - scrollRef.current.clientHeight;
+      const maxScroll = scrollRef.current.scrollHeight - scrollRef.current.clientHeight;
       if (scrollPosition >= maxScroll) {
         // Reset to beginning when reaching the end
         setScrollPosition(0);
@@ -85,19 +81,15 @@ export const NFOCredits: React.FC<NFOCreditsProps> = ({ onClose }) => {
       }
     }
   }, [scrollPosition]);
-
+  
   // Credits content
   const creditsContent = [
-    { type: "header", text: "CLAUDIA v0.1.0" },
+    { type: "header", text: "opcode v0.2.1" },
     { type: "subheader", text: "[ A STRATEGIC PROJECT BY ASTERISK ]" },
     { type: "spacer" },
     { type: "section", title: "━━━ CREDITS ━━━" },
     { type: "credit", role: "POWERED BY", name: "Anthropic Claude 4" },
-    {
-      type: "credit",
-      role: "CLAUDE CODE",
-      name: "The Ultimate Coding Assistant",
-    },
+    { type: "credit", role: "CLAUDE CODE", name: "The Ultimate Coding Assistant" },
     { type: "credit", role: "MCP PROTOCOL", name: "Model Context Protocol" },
     { type: "spacer" },
     { type: "section", title: "━━━ DEPENDENCIES ━━━" },
@@ -113,16 +105,13 @@ export const NFOCredits: React.FC<NFOCreditsProps> = ({ onClose }) => {
     { type: "text", content: "To all the beta testers" },
     { type: "text", content: "To everyone who believed in this project" },
     { type: "spacer" },
-    {
-      type: "ascii",
-      content: `
+    { type: "ascii", content: `
      ▄▄▄· .▄▄ · ▄▄▄▄▄▄▄▄ .▄▄▄  ▪  .▄▄ · ▄ •▄ 
     ▐█ ▀█ ▐█ ▀. •██  ▀▄.▀·▀▄ █·██ ▐█ ▀. █▌▄▌▪
     ▄█▀▀█ ▄▀▀▀█▄ ▐█.▪▐▀▀▪▄▐▀▀▄ ▐█·▄▀▀▀█▄▐▀▀▄·
     ▐█ ▪▐▌▐█▄▪▐█ ▐█▌·▐█▄▄▌▐█•█▌▐█▌▐█▄▪▐█▐█.█▌
      ▀  ▀  ▀▀▀▀  ▀▀▀  ▀▀▀ .▀  ▀▀▀▀ ▀▀▀▀ ·▀  ▀
-    `,
-    },
+    ` },
     { type: "spacer" },
     { type: "text", content: "Remember: Sharing is caring!" },
     { type: "text", content: "Support the developers!" },
@@ -130,7 +119,7 @@ export const NFOCredits: React.FC<NFOCreditsProps> = ({ onClose }) => {
     { type: "spacer" },
     { type: "spacer" },
   ];
-
+  
   return (
     <AnimatePresence>
       <motion.div
@@ -140,11 +129,11 @@ export const NFOCredits: React.FC<NFOCreditsProps> = ({ onClose }) => {
         className="fixed inset-0 z-50 flex items-center justify-center"
       >
         {/* Backdrop with blur */}
-        <div
+        <div 
           className="absolute inset-0 bg-black/80 backdrop-blur-md"
           onClick={onClose}
         />
-
+        
         {/* NFO Window */}
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
@@ -158,7 +147,7 @@ export const NFOCredits: React.FC<NFOCreditsProps> = ({ onClose }) => {
             <div className="flex items-center justify-between px-4 py-2 bg-card border-b border-border">
               <div className="flex items-center space-x-2">
                 <div className="text-sm font-bold tracking-wider font-mono text-foreground">
-                  CLAUDIA.NFO
+                  opcode.NFO
                 </div>
               </div>
               <div className="flex items-center space-x-2">
@@ -167,9 +156,7 @@ export const NFOCredits: React.FC<NFOCreditsProps> = ({ onClose }) => {
                   size="sm"
                   onClick={async (e) => {
                     e.stopPropagation();
-                    await openUrl(
-                      "https://github.com/getAsterisk/claudia/issues/new",
-                    );
+                    await openUrl("https://github.com/getAsterisk/opcode/issues/new");
                   }}
                   className="flex items-center gap-1 h-auto px-2 py-1"
                   title="File a bug"
@@ -186,11 +173,7 @@ export const NFOCredits: React.FC<NFOCreditsProps> = ({ onClose }) => {
                   }}
                   className="h-6 w-6 p-0"
                 >
-                  {isMuted ? (
-                    <VolumeX className="h-4 w-4" />
-                  ) : (
-                    <Volume2 className="h-4 w-4" />
-                  )}
+                  {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
                 </Button>
                 <Button
                   variant="ghost"
@@ -205,7 +188,7 @@ export const NFOCredits: React.FC<NFOCreditsProps> = ({ onClose }) => {
                 </Button>
               </div>
             </div>
-
+            
             {/* NFO Content */}
             <div className="relative h-[calc(100%-40px)] bg-background overflow-hidden">
               {/* Asterisk Logo Section (Fixed at top) */}
@@ -217,9 +200,9 @@ export const NFOCredits: React.FC<NFOCreditsProps> = ({ onClose }) => {
                     await openUrl("https://asterisk.so");
                   }}
                 >
-                  <img
-                    src={asteriskLogo}
-                    alt="Asterisk"
+                  <img 
+                    src={asteriskLogo} 
+                    alt="Asterisk" 
                     className="h-20 w-auto mx-auto filter brightness-0 invert opacity-90"
                   />
                 </button>
@@ -227,9 +210,9 @@ export const NFOCredits: React.FC<NFOCreditsProps> = ({ onClose }) => {
                   A strategic project by Asterisk
                 </div>
               </div>
-
+              
               {/* Scrolling Credits */}
-              <div
+              <div 
                 ref={scrollRef}
                 className="absolute inset-0 top-32 overflow-hidden"
                 style={{ fontFamily: "'Courier New', monospace" }}
@@ -239,8 +222,8 @@ export const NFOCredits: React.FC<NFOCreditsProps> = ({ onClose }) => {
                     switch (item.type) {
                       case "header":
                         return (
-                          <div
-                            key={index}
+                          <div 
+                            key={index} 
                             className="text-foreground text-3xl font-bold text-center mb-2 tracking-widest"
                           >
                             {item.text}
@@ -248,8 +231,8 @@ export const NFOCredits: React.FC<NFOCreditsProps> = ({ onClose }) => {
                         );
                       case "subheader":
                         return (
-                          <div
-                            key={index}
+                          <div 
+                            key={index} 
                             className="text-muted-foreground text-lg text-center mb-8 tracking-wide"
                           >
                             {item.text}
@@ -257,8 +240,8 @@ export const NFOCredits: React.FC<NFOCreditsProps> = ({ onClose }) => {
                         );
                       case "section":
                         return (
-                          <div
-                            key={index}
+                          <div 
+                            key={index} 
                             className="text-foreground text-xl font-bold text-center my-6 tracking-wider"
                           >
                             {item.title}
@@ -266,22 +249,18 @@ export const NFOCredits: React.FC<NFOCreditsProps> = ({ onClose }) => {
                         );
                       case "credit":
                         return (
-                          <div
-                            key={index}
+                          <div 
+                            key={index} 
                             className="flex justify-between items-center mb-2 text-foreground"
                           >
-                            <span className="text-sm text-muted-foreground">
-                              {item.role}:
-                            </span>
-                            <span className="text-base tracking-wide">
-                              {item.name}
-                            </span>
+                            <span className="text-sm text-muted-foreground">{item.role}:</span>
+                            <span className="text-base tracking-wide">{item.name}</span>
                           </div>
                         );
                       case "text":
                         return (
-                          <div
-                            key={index}
+                          <div 
+                            key={index} 
                             className="text-muted-foreground text-center text-sm mb-2"
                           >
                             {item.content}
@@ -289,8 +268,8 @@ export const NFOCredits: React.FC<NFOCreditsProps> = ({ onClose }) => {
                         );
                       case "ascii":
                         return (
-                          <pre
-                            key={index}
+                          <pre 
+                            key={index} 
                             className="text-foreground text-xs text-center my-6 leading-tight opacity-80"
                           >
                             {item.content}
@@ -304,7 +283,7 @@ export const NFOCredits: React.FC<NFOCreditsProps> = ({ onClose }) => {
                   })}
                 </div>
               </div>
-
+              
               {/* Subtle Scanlines Effect */}
               <div className="absolute inset-0 pointer-events-none">
                 <div className="absolute inset-0 bg-gradient-to-b from-transparent via-foreground/[0.02] to-transparent animate-scanlines" />
@@ -315,4 +294,4 @@ export const NFOCredits: React.FC<NFOCreditsProps> = ({ onClose }) => {
       </motion.div>
     </AnimatePresence>
   );
-};
+}; 
