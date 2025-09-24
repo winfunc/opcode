@@ -165,6 +165,7 @@ fn discover_system_installations() -> Vec<ClaudeInstallation> {
 }
 
 /// Try using the 'which' command to find Claude
+#[cfg(unix)]
 fn try_which_command() -> Option<ClaudeInstallation> {
     debug!("Trying 'which claude' to find binary...");
 
@@ -208,7 +209,49 @@ fn try_which_command() -> Option<ClaudeInstallation> {
     }
 }
 
+#[cfg(windows)]
+fn try_which_command() -> Option<ClaudeInstallation> {
+    debug!("Trying 'where claude' to find binary...");
+
+    match Command::new("where").arg("claude").output() {
+        Ok(output) if output.status.success() => {
+            let output_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
+
+            if output_str.is_empty() {
+                return None;
+            }
+
+            // On Windows, `where` can return multiple paths, newline-separated. We take the first one.
+            let path = output_str.lines().next().unwrap_or("").trim().to_string();
+
+            if path.is_empty() {
+                return None;
+            }
+
+            debug!("'where' found claude at: {}", path);
+
+            // Verify the path exists
+            if !PathBuf::from(&path).exists() {
+                warn!("Path from 'where' does not exist: {}", path);
+                return None;
+            }
+
+            // Get version
+            let version = get_claude_version(&path).ok().flatten();
+
+            Some(ClaudeInstallation {
+                path,
+                version,
+                source: "where".to_string(),
+                installation_type: InstallationType::System,
+            })
+        }
+        _ => None,
+    }
+}
+
 /// Find Claude installations in NVM directories
+#[cfg(unix)]
 fn find_nvm_installations() -> Vec<ClaudeInstallation> {
     let mut installations = Vec::new();
 
@@ -249,7 +292,44 @@ fn find_nvm_installations() -> Vec<ClaudeInstallation> {
     installations
 }
 
+#[cfg(windows)]
+fn find_nvm_installations() -> Vec<ClaudeInstallation> {
+    let mut installations = Vec::new();
+
+    if let Ok(nvm_home) = std::env::var("NVM_HOME") {
+        debug!("Checking NVM_HOME directory: {:?}", nvm_home);
+
+        if let Ok(entries) = std::fs::read_dir(&nvm_home) {
+            for entry in entries.flatten() {
+                if entry.file_type().map(|t| t.is_dir()).unwrap_or(false) {
+                    let claude_path = entry.path().join("claude.exe");
+
+                    if claude_path.exists() && claude_path.is_file() {
+                        let path_str = claude_path.to_string_lossy().to_string();
+                        let node_version = entry.file_name().to_string_lossy().to_string();
+
+                        debug!("Found Claude in NVM node {}: {}", node_version, path_str);
+
+                        // Get Claude version
+                        let version = get_claude_version(&path_str).ok().flatten();
+
+                        installations.push(ClaudeInstallation {
+                            path: path_str,
+                            version,
+                            source: format!("nvm ({})", node_version),
+                            installation_type: InstallationType::System,
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    installations
+}
+
 /// Check standard installation paths
+#[cfg(unix)]
 fn find_standard_installations() -> Vec<ClaudeInstallation> {
     let mut installations = Vec::new();
 
@@ -329,6 +409,76 @@ fn find_standard_installations() -> Vec<ClaudeInstallation> {
 
     installations
 }
+
+#[cfg(windows)]
+fn find_standard_installations() -> Vec<ClaudeInstallation> {
+    let mut installations = Vec::new();
+
+    // Common installation paths for claude on Windows
+    let mut paths_to_check: Vec<(String, String)> = vec![];
+
+    // Check user-specific paths
+    if let Ok(user_profile) = std::env::var("USERPROFILE") {
+        paths_to_check.extend(vec![
+            (
+                format!("{}\\.claude\\local\\claude.exe", user_profile),
+                "claude-local".to_string(),
+            ),
+            (
+                format!("{}\\.local\\bin\\claude.exe", user_profile),
+                "local-bin".to_string(),
+            ),
+            (
+                format!("{}\\AppData\\Roaming\\npm\\claude.cmd", user_profile),
+                "npm-global".to_string(),
+            ),
+            (
+                format!("{}\\.yarn\\bin\\claude.cmd", user_profile),
+                "yarn".to_string(),
+            ),
+            (
+                format!("{}\\.bun\\bin\\claude.exe", user_profile),
+                "bun".to_string(),
+            ),
+        ]);
+    }
+
+    // Check each path
+    for (path, source) in paths_to_check {
+        let path_buf = PathBuf::from(&path);
+        if path_buf.exists() && path_buf.is_file() {
+            debug!("Found claude at standard path: {} ({})", path, source);
+
+            // Get version
+            let version = get_claude_version(&path).ok().flatten();
+
+            installations.push(ClaudeInstallation {
+                path,
+                version,
+                source,
+                installation_type: InstallationType::System,
+            });
+        }
+    }
+
+    // Also check if claude is available in PATH (without full path)
+    if let Ok(output) = Command::new("claude.exe").arg("--version").output() {
+        if output.status.success() {
+            debug!("claude.exe is available in PATH");
+            let version = extract_version_from_output(&output.stdout);
+
+            installations.push(ClaudeInstallation {
+                path: "claude.exe".to_string(),
+                version,
+                source: "PATH".to_string(),
+                installation_type: InstallationType::System,
+            });
+        }
+    }
+
+    installations
+}
+
 
 /// Get Claude version by running --version command
 fn get_claude_version(path: &str) -> Result<Option<String>, String> {
