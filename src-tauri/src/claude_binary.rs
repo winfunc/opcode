@@ -307,6 +307,11 @@ fn find_standard_installations() -> Vec<ClaudeInstallation> {
                 format!("{}/.config/yarn/global/node_modules/.bin/claude", home),
                 "yarn-global".to_string(),
             ),
+            // Add asdf shim path
+            (
+                format!("{}/.asdf/shims/claude", home),
+                "asdf-shim".to_string(),
+            ),
         ]);
     }
 
