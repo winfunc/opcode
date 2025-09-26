@@ -10,6 +10,8 @@ pub struct ProxySettings {
     pub https_proxy: Option<String>,
     pub no_proxy: Option<String>,
     pub all_proxy: Option<String>,
+    pub proxy_username: Option<String>,
+    pub proxy_password: Option<String>,
     pub enabled: bool,
 }
 
@@ -20,6 +22,8 @@ impl Default for ProxySettings {
             https_proxy: None,
             no_proxy: None,
             all_proxy: None,
+            proxy_username: None,
+            proxy_password: None,
             enabled: false,
         }
     }
@@ -39,6 +43,8 @@ pub async fn get_proxy_settings(db: State<'_, AgentDb>) -> Result<ProxySettings,
         ("proxy_https", "https_proxy"),
         ("proxy_no", "no_proxy"),
         ("proxy_all", "all_proxy"),
+        ("proxy_username", "proxy_username"),
+        ("proxy_password", "proxy_password"),
     ];
     
     for (db_key, field) in keys {
@@ -53,6 +59,8 @@ pub async fn get_proxy_settings(db: State<'_, AgentDb>) -> Result<ProxySettings,
                 "https_proxy" => settings.https_proxy = Some(value).filter(|s| !s.is_empty()),
                 "no_proxy" => settings.no_proxy = Some(value).filter(|s| !s.is_empty()),
                 "all_proxy" => settings.all_proxy = Some(value).filter(|s| !s.is_empty()),
+                "proxy_username" => settings.proxy_username = Some(value).filter(|s| !s.is_empty()),
+                "proxy_password" => settings.proxy_password = Some(value).filter(|s| !s.is_empty()),
                 _ => {}
             }
         }
@@ -76,6 +84,8 @@ pub async fn save_proxy_settings(
         ("proxy_https", settings.https_proxy.clone().unwrap_or_default()),
         ("proxy_no", settings.no_proxy.clone().unwrap_or_default()),
         ("proxy_all", settings.all_proxy.clone().unwrap_or_default()),
+        ("proxy_username", settings.proxy_username.clone().unwrap_or_default()),
+        ("proxy_password", settings.proxy_password.clone().unwrap_or_default()),
     ];
     
     for (key, value) in values {
@@ -93,6 +103,29 @@ pub async fn save_proxy_settings(
 
 /// Apply proxy settings as environment variables
 pub fn apply_proxy_settings(settings: &ProxySettings) {
+    // Helper function to add authentication to proxy URL if username and password are available
+    fn add_auth_to_url(url: &str, username: Option<&str>, password: Option<&str>) -> String {
+        if username.is_none() || username.unwrap().is_empty() {
+            return url.to_string();
+        }
+        
+        if let Ok(mut parsed_url) = url::Url::parse(url) {
+            // Set username
+            let _ = parsed_url.set_username(username.unwrap());
+            
+            // Set password if available
+            if let Some(pwd) = password {
+                if !pwd.is_empty() {
+                    let _ = parsed_url.set_password(Some(pwd));
+                }
+            }
+            
+            return parsed_url.to_string();
+        }
+        
+        // Return original URL if parsing fails
+        url.to_string()
+    }
     log::info!("Applying proxy settings: enabled={}", settings.enabled);
     
     if !settings.enabled {
@@ -122,15 +155,35 @@ pub fn apply_proxy_settings(settings: &ProxySettings) {
     // Set proxy environment variables (uppercase is standard)
     if let Some(http_proxy) = &settings.http_proxy {
         if !http_proxy.is_empty() {
-            log::info!("Setting HTTP_PROXY={}", http_proxy);
-            std::env::set_var("HTTP_PROXY", http_proxy);
+            // Add authentication to URL if username/password are available
+            let auth_url = add_auth_to_url(
+                http_proxy,
+                settings.proxy_username.as_deref(),
+                settings.proxy_password.as_deref()
+            );
+            
+            // Log URL without credentials for security
+            log::info!("Setting HTTP_PROXY={}", 
+                if auth_url.contains('@') { "[authenticated proxy URL]" } else { &auth_url });
+            
+            std::env::set_var("HTTP_PROXY", auth_url);
         }
     }
     
     if let Some(https_proxy) = &settings.https_proxy {
         if !https_proxy.is_empty() {
-            log::info!("Setting HTTPS_PROXY={}", https_proxy);
-            std::env::set_var("HTTPS_PROXY", https_proxy);
+            // Add authentication to URL if username/password are available
+            let auth_url = add_auth_to_url(
+                https_proxy,
+                settings.proxy_username.as_deref(),
+                settings.proxy_password.as_deref()
+            );
+            
+            // Log URL without credentials for security
+            log::info!("Setting HTTPS_PROXY={}", 
+                if auth_url.contains('@') { "[authenticated proxy URL]" } else { &auth_url });
+                
+            std::env::set_var("HTTPS_PROXY", auth_url);
         }
     }
     
@@ -140,8 +193,18 @@ pub fn apply_proxy_settings(settings: &ProxySettings) {
     
     if let Some(all_proxy) = &settings.all_proxy {
         if !all_proxy.is_empty() {
-            log::info!("Setting ALL_PROXY={}", all_proxy);
-            std::env::set_var("ALL_PROXY", all_proxy);
+            // Add authentication to URL if username/password are available
+            let auth_url = add_auth_to_url(
+                all_proxy,
+                settings.proxy_username.as_deref(),
+                settings.proxy_password.as_deref()
+            );
+            
+            // Log URL without credentials for security
+            log::info!("Setting ALL_PROXY={}", 
+                if auth_url.contains('@') { "[authenticated proxy URL]" } else { &auth_url });
+                
+            std::env::set_var("ALL_PROXY", auth_url);
         }
     }
     

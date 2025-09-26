@@ -9,6 +9,8 @@ export interface ProxySettings {
   https_proxy: string | null;
   no_proxy: string | null;
   all_proxy: string | null;
+  proxy_username: string | null;
+  proxy_password: string | null;
   enabled: boolean;
 }
 
@@ -23,6 +25,8 @@ export function ProxySettings({ setToast, onChange }: ProxySettingsProps) {
     https_proxy: null,
     no_proxy: null,
     all_proxy: null,
+    proxy_username: null,
+    proxy_password: null,
     enabled: false,
   });
   const [originalSettings, setOriginalSettings] = useState<ProxySettings>({
@@ -30,6 +34,8 @@ export function ProxySettings({ setToast, onChange }: ProxySettingsProps) {
     https_proxy: null,
     no_proxy: null,
     all_proxy: null,
+    proxy_username: null,
+    proxy_password: null,
     enabled: false,
   });
 
@@ -111,6 +117,31 @@ export function ProxySettings({ setToast, onChange }: ProxySettingsProps) {
         </div>
 
         <div className="space-y-4" style={{ opacity: settings.enabled ? 1 : 0.5 }}>
+          <div className="space-y-2">
+            <Label htmlFor="proxy-username">Proxy Username</Label>
+            <Input
+              id="proxy-username"
+              placeholder="username"
+              value={settings.proxy_username || ''}
+              onChange={(e) => handleInputChange('proxy_username', e.target.value)}
+              disabled={!settings.enabled}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="proxy-password">Proxy Password</Label>
+            <Input
+              id="proxy-password"
+              type="password"
+              placeholder="password"
+              value={settings.proxy_password || ''}
+              onChange={(e) => handleInputChange('proxy_password', e.target.value)}
+              disabled={!settings.enabled}
+            />
+            <p className="text-xs text-muted-foreground">
+              Credentials will be used for all proxy connections
+            </p>
+          </div>
           <div className="space-y-2">
             <Label htmlFor="http-proxy">HTTP Proxy</Label>
             <Input
