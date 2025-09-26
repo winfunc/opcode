@@ -3,11 +3,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useTabState } from '@/hooks/useTabState';
 import { useScreenTracking } from '@/hooks/useAnalytics';
 import { Tab } from '@/contexts/TabContext';
-import { Loader2, Plus, ArrowLeft } from 'lucide-react';
-import { api, type Project, type Session, type ClaudeMdFile } from '@/lib/api';
+import { Loader2, Plus, ArrowLeft, FolderOpen, Star } from 'lucide-react';
+import { api, type Project, type Session, type ClaudeMdFile, type ClaudeProfile } from '@/lib/api';
 import { ProjectList } from '@/components/ProjectList';
 import { SessionList } from '@/components/SessionList';
 import { Button } from '@/components/ui/button';
+import { SplitDropdownButton } from '@/components/ui/split-dropdown-button';
 
 // Lazy load heavy components
 const ClaudeCodeSession = lazy(() => import('@/components/ClaudeCodeSession').then(m => ({ default: m.ClaudeCodeSession })));
@@ -34,7 +35,8 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
   const [selectedProject, setSelectedProject] = React.useState<Project | null>(null);
   const [sessions, setSessions] = React.useState<Session[]>([]);
   const [loading, setLoading] = React.useState(false);
-  
+  const [profiles, setProfiles] = React.useState<ClaudeProfile[]>([]);
+
   // Track screen when tab becomes active
   useScreenTracking(isActive ? tab.type : undefined, isActive ? tab.id : undefined);
   const [error, setError] = React.useState<string | null>(null);
@@ -43,6 +45,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
   useEffect(() => {
     if (isActive && tab.type === 'projects') {
       loadProjects();
+      loadProfiles();
     }
   }, [isActive, tab.type]);
   
@@ -57,6 +60,17 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
       setError("Failed to load projects. Please ensure ~/.claude directory exists.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadProfiles = async () => {
+    try {
+      const profileList = await api.listClaudeProfiles();
+      console.log("Loaded profiles:", profileList);
+      setProfiles(profileList);
+    } catch (err) {
+      console.error("Failed to load profiles:", err);
+      // Don't set error here as profiles are optional
     }
   };
   
@@ -107,24 +121,26 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
     }
   };
   
-  const handleNewSession = () => {
+  const handleNewSession = (profile?: ClaudeProfile) => {
     // Update current tab to show new chat session instead of creating a new tab
     if (selectedProject) {
       const projectName = selectedProject.path.split('/').pop() || 'Session';
       updateTab(tab.id, {
         type: 'chat',
-        title: projectName,
+        title: profile ? `${projectName} (${profile.name})` : projectName,
         sessionId: undefined,
         sessionData: undefined,
-        initialProjectPath: selectedProject.path
+        initialProjectPath: selectedProject.path,
+        selectedProfile: profile
       });
     } else {
       updateTab(tab.id, {
         type: 'chat',
-        title: 'New Session',
+        title: profile ? `New Session (${profile.name})` : 'New Session',
         sessionId: undefined,
         sessionData: undefined,
-        initialProjectPath: undefined
+        initialProjectPath: undefined,
+        selectedProfile: profile
       });
     }
   };
@@ -178,13 +194,19 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
                           whileTap={{ scale: 0.97 }}
                           transition={{ duration: 0.15 }}
                         >
-                          <Button
-                            onClick={handleNewSession}
+                          <SplitDropdownButton
+                            onClick={() => handleNewSession()}
                             size="default"
+                            dropdownItems={(profiles || []).map(profile => ({
+                              label: profile.name,
+                              description: profile.config_directory,
+                              icon: profile.is_default ? <Star className="w-4 h-4" /> : <FolderOpen className="w-4 h-4" />,
+                              onClick: () => handleNewSession(profile)
+                            }))}
                           >
                             <Plus className="mr-2 h-4 w-4" />
                             New session
-                          </Button>
+                          </SplitDropdownButton>
                         </motion.div>
                       </div>
                     </div>
@@ -251,6 +273,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
             <ClaudeCodeSession
               session={tab.sessionData} // Pass the full session object if available
               initialProjectPath={tab.initialProjectPath || tab.sessionId}
+              selectedProfile={tab.selectedProfile}
               onBack={() => {
                 // Go back to projects view in the same tab
                 updateTab(tab.id, {

@@ -6,9 +6,10 @@ use std::path::PathBuf;
 use std::process::Stdio;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Emitter, Manager, State};
 use tokio::process::{Child, Command};
 use tokio::sync::Mutex;
+use crate::commands::agents::{AgentDb, ClaudeProfile};
 
 
 /// Global state to track current Claude process
@@ -133,6 +134,11 @@ pub struct FileEntry {
 /// This is necessary because macOS apps have a limited PATH environment
 fn find_claude_binary(app_handle: &AppHandle) -> Result<String, String> {
     crate::claude_binary::find_claude_binary(app_handle)
+}
+
+/// Creates a tokio Command with proper environment variables and profile config directory
+fn create_command_with_env_and_profile(program: &str, config_directory: &str) -> Command {
+    crate::claude_binary::create_command_with_env_and_profile(program, config_directory)
 }
 
 /// Gets the path to the ~/.claude directory
@@ -2155,4 +2161,169 @@ pub async fn validate_hook_command(command: String) -> Result<serde_json::Value,
         }
         Err(e) => Err(format!("Failed to validate command: {}", e))
     }
+}
+
+// ============================================================================
+// Profile-Aware Session Creation Functions
+// ============================================================================
+
+/// Execute a new Claude Code session with a specific profile
+#[tauri::command]
+pub async fn execute_claude_code_with_profile(
+    app: AppHandle,
+    db: State<'_, AgentDb>,
+    profile_id: i64,
+    project_path: String,
+    prompt: String,
+    model: String,
+) -> Result<(), String> {
+    // Get the profile information
+    let profile = get_profile_by_id(db, profile_id).await?;
+
+    log::info!(
+        "Starting new Claude Code session with profile '{}' ({}) in: {} with model: {}",
+        profile.name,
+        profile.config_directory,
+        project_path,
+        model
+    );
+
+    let claude_path = find_claude_binary(&app)?;
+
+    let args = vec![
+        "-p".to_string(),
+        prompt.clone(),
+        "--model".to_string(),
+        model.clone(),
+        "--output-format".to_string(),
+        "stream-json".to_string(),
+        "--verbose".to_string(),
+        "--dangerously-skip-permissions".to_string(),
+    ];
+    let cmd = create_system_command_with_profile(&claude_path, args, &project_path, &profile.config_directory);
+    spawn_claude_process(app, cmd, prompt, model, project_path).await
+}
+
+/// Continue an existing Claude Code conversation with a specific profile
+#[tauri::command]
+pub async fn continue_claude_code_with_profile(
+    app: AppHandle,
+    db: State<'_, AgentDb>,
+    profile_id: i64,
+    project_path: String,
+    prompt: String,
+    model: String,
+) -> Result<(), String> {
+    // Get the profile information
+    let profile = get_profile_by_id(db, profile_id).await?;
+
+    log::info!(
+        "Continuing Claude Code conversation with profile '{}' ({}) in: {} with model: {}",
+        profile.name,
+        profile.config_directory,
+        project_path,
+        model
+    );
+
+    let claude_path = find_claude_binary(&app)?;
+
+    let args = vec![
+        "-c".to_string(),
+        prompt.clone(),
+        "--model".to_string(),
+        model.clone(),
+        "--output-format".to_string(),
+        "stream-json".to_string(),
+        "--verbose".to_string(),
+        "--dangerously-skip-permissions".to_string(),
+    ];
+    let cmd = create_system_command_with_profile(&claude_path, args, &project_path, &profile.config_directory);
+    spawn_claude_process(app, cmd, prompt, model, project_path).await
+}
+
+/// Resume an existing Claude Code session by ID with a specific profile
+#[tauri::command]
+pub async fn resume_claude_code_with_profile(
+    app: AppHandle,
+    db: State<'_, AgentDb>,
+    profile_id: i64,
+    project_path: String,
+    session_id: String,
+    prompt: String,
+    model: String,
+) -> Result<(), String> {
+    // Get the profile information
+    let profile = get_profile_by_id(db, profile_id).await?;
+
+    log::info!(
+        "Resuming Claude Code session: {} with profile '{}' ({}) in: {} with model: {}",
+        session_id,
+        profile.name,
+        profile.config_directory,
+        project_path,
+        model
+    );
+
+    let claude_path = find_claude_binary(&app)?;
+
+    let args = vec![
+        "--session-id".to_string(),
+        session_id.clone(),
+        "-c".to_string(),
+        prompt.clone(),
+        "--model".to_string(),
+        model.clone(),
+        "--output-format".to_string(),
+        "stream-json".to_string(),
+        "--verbose".to_string(),
+        "--dangerously-skip-permissions".to_string(),
+    ];
+    let cmd = create_system_command_with_profile(&claude_path, args, &project_path, &profile.config_directory);
+    spawn_claude_process(app, cmd, prompt, model, project_path).await
+}
+
+/// Helper function to get a profile by ID
+async fn get_profile_by_id(db: State<'_, AgentDb>, profile_id: i64) -> Result<ClaudeProfile, String> {
+    let conn = db.0.lock().map_err(|e| e.to_string())?;
+
+    let mut stmt = conn
+        .prepare("SELECT id, name, config_directory, description, is_default, created_at, updated_at FROM claude_profiles WHERE id = ?1")
+        .map_err(|e| e.to_string())?;
+
+    stmt.query_row([profile_id], |row| {
+        Ok(ClaudeProfile {
+            id: Some(row.get(0)?),
+            name: row.get(1)?,
+            config_directory: row.get(2)?,
+            description: row.get(3)?,
+            is_default: row.get(4)?,
+            created_at: row.get(5)?,
+            updated_at: row.get(6)?,
+        })
+    })
+    .map_err(|e| match e {
+        rusqlite::Error::QueryReturnedNoRows => "Profile not found".to_string(),
+        _ => e.to_string(),
+    })
+}
+
+/// Creates a system binary command with the given arguments and profile config directory
+fn create_system_command_with_profile(
+    claude_path: &str,
+    args: Vec<String>,
+    project_path: &str,
+    config_directory: &str,
+) -> Command {
+    let mut cmd = create_command_with_env_and_profile(claude_path, config_directory);
+
+    // Add all arguments
+    for arg in args {
+        cmd.arg(arg);
+    }
+
+    cmd.current_dir(project_path)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+
+    cmd
 }

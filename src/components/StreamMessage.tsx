@@ -46,12 +46,14 @@ interface StreamMessageProps {
   className?: string;
   streamMessages: ClaudeStreamMessage[];
   onLinkDetected?: (url: string) => void;
+  profileName?: string;
+  profileConfigDir?: string;
 }
 
 /**
  * Component to render a single Claude Code stream message
  */
-const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, className, streamMessages, onLinkDetected }) => {
+const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, className, streamMessages, onLinkDetected, profileName, profileConfigDir }) => {
   // State to track tool results mapped by tool call ID
   const [toolResults, setToolResults] = useState<Map<string, any>>(new Map());
   
@@ -102,6 +104,8 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
           model={message.model}
           cwd={message.cwd}
           tools={message.tools}
+          profileName={profileName}
+          profileConfigDir={profileConfigDir}
         />
       );
     }
