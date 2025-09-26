@@ -480,6 +480,51 @@ pub async fn storage_reset_database(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+/// Get application settings
+pub async fn get_settings(app: &AppHandle) -> Result<std::collections::HashMap<String, serde_json::Value>, String> {
+    let data_dir = app.path().app_data_dir()
+        .map_err(|e| format!("Failed to get app data directory: {}", e))?;
+    
+    std::fs::create_dir_all(&data_dir)
+        .map_err(|e| format!("Failed to create app data directory: {}", e))?;
+    
+    let settings_path = data_dir.join("settings.json");
+    
+    if !settings_path.exists() {
+        return Ok(std::collections::HashMap::new());
+    }
+    
+    let content = std::fs::read_to_string(&settings_path)
+        .map_err(|e| format!("Failed to read settings file: {}", e))?;
+    
+    let settings: std::collections::HashMap<String, serde_json::Value> = serde_json::from_str(&content)
+        .map_err(|e| format!("Failed to parse settings JSON: {}", e))?;
+    
+    Ok(settings)
+}
+
+/// Save application settings
+pub async fn save_settings(
+    app: &AppHandle, 
+    settings: std::collections::HashMap<String, serde_json::Value>
+) -> Result<(), String> {
+    let data_dir = app.path().app_data_dir()
+        .map_err(|e| format!("Failed to get app data directory: {}", e))?;
+    
+    std::fs::create_dir_all(&data_dir)
+        .map_err(|e| format!("Failed to create app data directory: {}", e))?;
+    
+    let settings_path = data_dir.join("settings.json");
+    
+    let content = serde_json::to_string_pretty(&settings)
+        .map_err(|e| format!("Failed to serialize settings: {}", e))?;
+    
+    std::fs::write(&settings_path, content)
+        .map_err(|e| format!("Failed to write settings file: {}", e))?;
+    
+    Ok(())
+}
+
 /// Helper function to validate table name exists
 fn is_valid_table_name(conn: &Connection, table_name: &str) -> Result<bool, String> {
     let count: i64 = conn

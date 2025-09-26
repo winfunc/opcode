@@ -26,6 +26,21 @@ import { open as openDialog, save } from '@tauri-apps/plugin-dialog';
 import { invoke } from '@tauri-apps/api/core';
 import { GitHubAgentBrowser } from '@/components/GitHubAgentBrowser';
 
+/**
+ * Get display name for a model
+ */
+const getModelDisplayName = (modelId: string): string => {
+  switch (modelId) {
+    case 'sonnet':
+      return 'Claude 4 Sonnet';
+    case 'opus':
+      return 'Claude 4 Opus';
+    default:
+      // For custom models, return the model ID as-is, but capitalize first letter
+      return modelId.charAt(0).toUpperCase() + modelId.slice(1);
+  }
+};
+
 interface AgentsModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -378,7 +393,7 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
                               <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
                                 <span>Started: {formatISOTimestamp(run.created_at)}</span>
                                 <Badge variant="outline" className="text-xs">
-                                  {run.model === 'opus' ? 'Claude 4 Opus' : 'Claude 4 Sonnet'}
+                                  {getModelDisplayName(run.model)}
                                 </Badge>
                               </div>
                             </div>

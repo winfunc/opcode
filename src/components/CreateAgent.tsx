@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Save, Loader2, ChevronDown, Zap, AlertCircle } from "lucide-react";
+import { ArrowLeft, Save, Loader2, ChevronDown, Zap, AlertCircle, Brain, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,6 +12,39 @@ import MDEditor from "@uiw/react-md-editor";
 import { type AgentIconName } from "./CCAgents";
 import { IconPicker, ICON_MAP } from "./IconPicker";
 
+/**
+ * Model type definition
+ */
+interface Model {
+  id: string;
+  name: string;
+  description: string;
+  icon: React.ReactNode;
+  group: "default" | "custom" | "env";
+  shortName: string;
+  color: string;
+}
+
+const DEFAULT_MODELS: Model[] = [
+  {
+    id: "sonnet",
+    name: "Claude 4 Sonnet",
+    description: "Faster, efficient for most tasks",
+    icon: <Zap className="h-3.5 w-3.5" />,
+    group: "default",
+    shortName: "S",
+    color: "text-primary"
+  },
+  {
+    id: "opus", 
+    name: "Claude 4 Opus",
+    description: "More capable, better for complex tasks",
+    icon: <Sparkles className="h-3.5 w-3.5" />,
+    group: "default",
+    shortName: "O",
+    color: "text-primary"
+  }
+];
 
 interface CreateAgentProps {
   /**
@@ -49,12 +82,56 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
   const [systemPrompt, setSystemPrompt] = useState(agent?.system_prompt || "");
   const [defaultTask, setDefaultTask] = useState(agent?.default_task || "");
   const [model, setModel] = useState(agent?.model || "sonnet");
+  const [availableModels, setAvailableModels] = useState<Model[]>(DEFAULT_MODELS);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [showIconPicker, setShowIconPicker] = useState(false);
 
   const isEditMode = !!agent;
+
+  // Load available models on component mount
+  useEffect(() => {
+    const loadModels = async () => {
+      try {
+        const modelConfig = await api.getAvailableModels();
+        const models: Model[] = [...DEFAULT_MODELS];
+        
+        // Add custom models
+        modelConfig.custom_models.forEach(customModel => {
+          models.push({
+            id: customModel.identifier,
+            name: customModel.name,
+            description: customModel.description || "Custom model",
+            icon: <Brain className="h-3.5 w-3.5" />,
+            group: "custom",
+            shortName: customModel.name.charAt(0).toUpperCase(),
+            color: "text-primary"
+          });
+        });
+        
+        // Add environment model if available
+        if (modelConfig.env_model) {
+          models.push({
+            id: modelConfig.env_model,
+            name: `${modelConfig.env_model}`,
+            description: "Model from ANTHROPIC_MODEL environment variable",
+            icon: <Brain className="h-3.5 w-3.5" />,
+            group: "env",
+            shortName: "E",
+            color: "text-primary"
+          });
+        }
+        
+        setAvailableModels(models);
+      } catch (error) {
+        console.error("Failed to load models:", error);
+        // Keep default models on error
+      }
+    };
+    
+    loadModels();
+  }, []);
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -238,54 +315,116 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
               {/* Model Selection */}
               <div className="space-y-2 mt-4">
                 <Label className="text-caption text-muted-foreground">Model</Label>
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <motion.button
-                    type="button"
-                    onClick={() => setModel("sonnet")}
-                    whileTap={{ scale: 0.97 }}
-                    transition={{ duration: 0.15 }}
-                    className={cn(
-                      "flex-1 px-4 py-3 rounded-md border transition-all",
-                      model === "sonnet" 
-                        ? "border-primary bg-primary/10 text-primary" 
-                        : "border-border hover:border-primary/50 hover:bg-accent"
-                    )}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Zap className={cn(
-                        "h-4 w-4",
-                        model === "sonnet" ? "text-primary" : "text-muted-foreground"
-                      )} />
-                      <div className="text-left">
-                        <div className="text-body-small font-medium">Claude 4 Sonnet</div>
-                        <div className="text-caption text-muted-foreground">Faster, efficient for most tasks</div>
+                <div className="space-y-3">
+                  {/* Default Models */}
+                  {availableModels.filter(m => m.group === "default").length > 0 && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {availableModels.filter(m => m.group === "default").map((availableModel) => (
+                        <motion.button
+                          key={availableModel.id}
+                          type="button"
+                          onClick={() => setModel(availableModel.id)}
+                          whileTap={{ scale: 0.97 }}
+                          transition={{ duration: 0.15 }}
+                          className={cn(
+                            "px-4 py-3 rounded-md border transition-all text-left",
+                            model === availableModel.id 
+                              ? "border-primary bg-primary/10 text-primary" 
+                              : "border-border hover:border-primary/50 hover:bg-accent"
+                          )}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={cn(
+                              "flex-shrink-0",
+                              model === availableModel.id ? "text-primary" : "text-muted-foreground"
+                            )}>
+                              {availableModel.icon}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="text-body-small font-medium truncate">{availableModel.name}</div>
+                              <div className="text-caption text-muted-foreground truncate">{availableModel.description}</div>
+                            </div>
+                          </div>
+                        </motion.button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Custom Models */}
+                  {availableModels.filter(m => m.group === "custom").length > 0 && (
+                    <div className="space-y-2">
+                      <div className="text-xs text-muted-foreground px-1">Custom Models</div>
+                      <div className="grid grid-cols-1 gap-2">
+                        {availableModels.filter(m => m.group === "custom").map((availableModel) => (
+                          <motion.button
+                            key={availableModel.id}
+                            type="button"
+                            onClick={() => setModel(availableModel.id)}
+                            whileTap={{ scale: 0.97 }}
+                            transition={{ duration: 0.15 }}
+                            className={cn(
+                              "px-4 py-3 rounded-md border transition-all text-left",
+                              model === availableModel.id 
+                                ? "border-primary bg-primary/10 text-primary" 
+                                : "border-border hover:border-primary/50 hover:bg-accent"
+                            )}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className={cn(
+                                "flex-shrink-0",
+                                model === availableModel.id ? "text-primary" : "text-muted-foreground"
+                              )}>
+                                {availableModel.icon}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="text-body-small font-medium truncate">{availableModel.name}</div>
+                                <div className="text-caption text-muted-foreground truncate">{availableModel.description}</div>
+                                <div className="text-xs text-primary mt-0.5">Custom</div>
+                              </div>
+                            </div>
+                          </motion.button>
+                        ))}
                       </div>
                     </div>
-                  </motion.button>
-                  
-                  <motion.button
-                    type="button"
-                    onClick={() => setModel("opus")}
-                    whileTap={{ scale: 0.97 }}
-                    transition={{ duration: 0.15 }}
-                    className={cn(
-                      "flex-1 px-4 py-3 rounded-md border transition-all",
-                      model === "opus" 
-                        ? "border-primary bg-primary/10 text-primary" 
-                        : "border-border hover:border-primary/50 hover:bg-accent"
-                    )}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Zap className={cn(
-                        "h-4 w-4",
-                        model === "opus" ? "text-primary" : "text-muted-foreground"
-                      )} />
-                      <div className="text-left">
-                        <div className="text-body-small font-medium">Claude 4 Opus</div>
-                        <div className="text-caption text-muted-foreground">More capable, better for complex tasks</div>
+                  )}
+
+                  {/* Environment Models */}
+                  {availableModels.filter(m => m.group === "env").length > 0 && (
+                    <div className="space-y-2">
+                      <div className="text-xs text-muted-foreground px-1">Environment Model</div>
+                      <div className="grid grid-cols-1 gap-2">
+                        {availableModels.filter(m => m.group === "env").map((availableModel) => (
+                          <motion.button
+                            key={availableModel.id}
+                            type="button"
+                            onClick={() => setModel(availableModel.id)}
+                            whileTap={{ scale: 0.97 }}
+                            transition={{ duration: 0.15 }}
+                            className={cn(
+                              "px-4 py-3 rounded-md border transition-all text-left",
+                              model === availableModel.id 
+                                ? "border-primary bg-primary/10 text-primary" 
+                                : "border-border hover:border-primary/50 hover:bg-accent"
+                            )}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className={cn(
+                                "flex-shrink-0",
+                                model === availableModel.id ? "text-primary" : "text-muted-foreground"
+                              )}>
+                                {availableModel.icon}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="text-body-small font-medium truncate">{availableModel.name}</div>
+                                <div className="text-caption text-muted-foreground truncate">{availableModel.description}</div>
+                                <div className="text-xs text-primary mt-0.5">Environment</div>
+                              </div>
+                            </div>
+                          </motion.button>
+                        ))}
                       </div>
                     </div>
-                  </motion.button>
+                  )}
                 </div>
               </div>
             </Card>

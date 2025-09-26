@@ -42,6 +42,9 @@ use commands::storage::{
     storage_list_tables, storage_read_table, storage_update_row, storage_delete_row,
     storage_insert_row, storage_execute_sql, storage_reset_database,
 };
+use commands::models::{
+    get_available_models, save_custom_models, add_custom_model, remove_custom_model, get_official_models,
+};
 use commands::proxy::{get_proxy_settings, save_proxy_settings, apply_proxy_settings};
 use process::ProcessRegistryState;
 use std::sync::Mutex;
@@ -280,6 +283,13 @@ fn main() {
             commands::slash_commands::slash_command_get,
             commands::slash_commands::slash_command_save,
             commands::slash_commands::slash_command_delete,
+            
+            // Model Management
+            get_available_models,
+            save_custom_models,
+            add_custom_model,
+            remove_custom_model,
+            get_official_models,
             
             // Proxy Settings
             get_proxy_settings,

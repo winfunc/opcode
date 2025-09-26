@@ -22,6 +22,21 @@ import { AGENT_ICONS } from "./CCAgents";
 import type { ClaudeStreamMessage } from "./AgentExecution";
 import { ErrorBoundary } from "./ErrorBoundary";
 
+/**
+ * Get display name for a model
+ */
+const getModelDisplayName = (modelId: string): string => {
+  switch (modelId) {
+    case 'sonnet':
+      return 'Claude 4 Sonnet';
+    case 'opus':
+      return 'Claude 4 Opus';
+    default:
+      // For custom models, return the model ID as-is, but capitalize first letter
+      return modelId.charAt(0).toUpperCase() + modelId.slice(1);
+  }
+};
+
 interface AgentRunViewProps {
   /**
    * The run ID to view
@@ -327,7 +342,7 @@ export const AgentRunView: React.FC<AgentRunViewProps> = ({
                 <h3 className="text-sm font-medium">Task:</h3>
                 <p className="text-sm text-muted-foreground flex-1">{run.task}</p>
                 <Badge variant="outline" className="text-xs">
-                  {run.model === 'opus' ? 'Claude 4 Opus' : 'Claude 4 Sonnet'}
+                  {getModelDisplayName(run.model)}
                 </Badge>
               </div>
               

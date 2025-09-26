@@ -6,6 +6,10 @@ import {
   Save, 
   AlertCircle,
   Loader2,
+  RefreshCw,
+  ChevronDown,
+  ChevronUp,
+  BarChart3,
   Shield,
   Check,
 } from "lucide-react";
@@ -18,7 +22,9 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { 
   api, 
   type ClaudeSettings,
-  type ClaudeInstallation
+  type ClaudeInstallation,
+  type CustomModel,
+  type ModelConfig
 } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { Toast, ToastContainer } from "@/components/ui/toast";
@@ -76,6 +82,16 @@ export const Settings: React.FC<SettingsProps> = ({
   
   // Environment variables state
   const [envVars, setEnvVars] = useState<EnvironmentVariable[]>([]);
+  
+  // Custom models state
+  const [customModels, setCustomModels] = useState<CustomModel[]>([]);
+  const [modelConfig, setModelConfig] = useState<ModelConfig | null>(null);
+  const [modelsChanged, setModelsChanged] = useState(false);
+  
+  // Official models state
+  const [officialModels, setOfficialModels] = useState<CustomModel[]>([]);
+  const [loadingOfficialModels, setLoadingOfficialModels] = useState(false);
+  const [officialModelsExpanded, setOfficialModelsExpanded] = useState(false);
   
   // Hooks state
   const [userHooksChanged, setUserHooksChanged] = useState(false);
@@ -181,12 +197,43 @@ export const Settings: React.FC<SettingsProps> = ({
           }))
         );
       }
+
+      // Load model configuration
+      try {
+        const modelConfig = await api.getAvailableModels();
+        setModelConfig(modelConfig);
+        setCustomModels(modelConfig.custom_models);
+      } catch (err) {
+        console.error("Failed to load model configuration:", err);
+        setModelConfig({ custom_models: [], env_model: undefined });
+        setCustomModels([]);
+      }
     } catch (err) {
       console.error("Failed to load settings:", err);
       setError("Failed to load settings. Please ensure ~/.claude directory exists.");
       setSettings({});
     } finally {
       setLoading(false);
+    }
+  };
+
+  /**
+   * Loads official Anthropic models
+   */
+  const loadOfficialModels = async () => {
+    try {
+      setLoadingOfficialModels(true);
+      const models = await api.getOfficialModels();
+      setOfficialModels(models);
+      // Auto-expand when models are loaded for the first time
+      if (models.length > 0 && !officialModelsExpanded) {
+        setOfficialModelsExpanded(true);
+      }
+    } catch (err) {
+      console.error("Failed to load official models:", err);
+      setToast({ message: "Failed to load official models", type: "error" });
+    } finally {
+      setLoadingOfficialModels(false);
     }
   };
 
@@ -332,6 +379,70 @@ export const Settings: React.FC<SettingsProps> = ({
     setBinaryPathChanged(installation.path !== currentBinaryPath);
   };
 
+  /**
+   * Adds a new custom model
+   */
+  const addCustomModel = () => {
+    const newModel: CustomModel = {
+      name: "",
+      identifier: "",
+      description: "",
+    };
+    setCustomModels(prev => [...prev, newModel]);
+    setModelsChanged(true);
+  };
+
+  /**
+   * Adds an official model to custom models list
+   */
+  const addOfficialModelToCustom = (officialModel: CustomModel) => {
+    // Check if model already exists in custom models
+    const exists = customModels.some(model => model.identifier === officialModel.identifier);
+    if (exists) {
+      setToast({ message: "Model already exists in custom models", type: "error" });
+      return;
+    }
+    
+    setCustomModels(prev => [...prev, officialModel]);
+    setModelsChanged(true);
+    setToast({ message: `Added ${officialModel.name} to custom models`, type: "success" });
+  };
+
+  /**
+   * Updates a custom model
+   */
+  const updateCustomModel = (index: number, field: keyof CustomModel, value: string) => {
+    setCustomModels(prev => prev.map((model, i) => 
+      i === index ? { ...model, [field]: value } : model
+    ));
+    setModelsChanged(true);
+  };
+
+  /**
+   * Removes a custom model
+   */
+  const removeCustomModel = (index: number) => {
+    setCustomModels(prev => prev.filter((_, i) => i !== index));
+    setModelsChanged(true);
+  };
+
+  /**
+   * Saves custom models
+   */
+  const saveCustomModels = async () => {
+    try {
+      setSaving(true);
+      await api.saveCustomModels(customModels);
+      setModelsChanged(false);
+      setToast({ message: "Custom models saved successfully!", type: "success" });
+    } catch (err) {
+      console.error("Failed to save custom models:", err);
+      setToast({ message: "Failed to save custom models", type: "error" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className={cn("h-full overflow-y-auto", className)}>
       <div className="max-w-6xl mx-auto flex flex-col h-full">
@@ -393,10 +504,11 @@ export const Settings: React.FC<SettingsProps> = ({
       ) : (
         <div className="flex-1 overflow-y-auto p-6">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-8 w-full mb-6 h-auto p-1">
+            <TabsList className="grid grid-cols-9 w-full mb-6 h-auto p-1">
               <TabsTrigger value="general" className="py-2.5 px-3">General</TabsTrigger>
               <TabsTrigger value="permissions" className="py-2.5 px-3">Permissions</TabsTrigger>
               <TabsTrigger value="environment" className="py-2.5 px-3">Environment</TabsTrigger>
+              <TabsTrigger value="models" className="py-2.5 px-3">Models</TabsTrigger>
               <TabsTrigger value="advanced" className="py-2.5 px-3">Advanced</TabsTrigger>
               <TabsTrigger value="hooks" className="py-2.5 px-3">Hooks</TabsTrigger>
               <TabsTrigger value="commands" className="py-2.5 px-3">Commands</TabsTrigger>
@@ -969,6 +1081,270 @@ export const Settings: React.FC<SettingsProps> = ({
                 </div>
               </Card>
             </TabsContent>
+            
+            {/* Models */}
+            <TabsContent value="models" className="space-y-6">
+              {/* Official Models */}
+              <Card className="p-6">
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-base font-semibold">Official Models</h3>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Browse and select from Anthropic's official Claude models
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setOfficialModelsExpanded(!officialModelsExpanded)}
+                        className="gap-1"
+                      >
+                        {officialModelsExpanded ? (
+                          <>
+                            <ChevronUp className="h-4 w-4" />
+                            Hide
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown className="h-4 w-4" />
+                            Show {officialModels.length > 0 ? `(${officialModels.length})` : ''}
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={loadOfficialModels}
+                        className="gap-2"
+                        disabled={loadingOfficialModels}
+                      >
+                        {loadingOfficialModels ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <RefreshCw className="h-3 w-3" />
+                        )}
+                        {loadingOfficialModels ? "Loading..." : "Refresh"}
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <AnimatePresence>
+                    {officialModelsExpanded && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="space-y-4 overflow-hidden"
+                      >
+                        <div className="space-y-4">
+                          {loadingOfficialModels ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="h-6 w-6 animate-spin" />
+                        <span className="ml-2 text-sm text-muted-foreground">Loading official models...</span>
+                      </div>
+                    ) : officialModels.length === 0 ? (
+                      <p className="text-xs text-muted-foreground py-2">
+                        No official models available. Click Refresh to load.
+                      </p>
+                    ) : (
+                      officialModels.map((model, index) => (
+                        <motion.div
+                          key={index}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          className="border rounded-lg p-4 space-y-3"
+                        >
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-medium text-sm">{model.name}</h4>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => addOfficialModelToCustom(model)}
+                              className="gap-2"
+                            >
+                              <Plus className="h-3 w-3" />
+                              Add
+                            </Button>
+                          </div>
+                          <div className="space-y-2">
+                            <div className="text-xs text-muted-foreground">
+                              <strong>Model ID:</strong> <code className="bg-muted px-1 rounded">{model.identifier}</code>
+                            </div>
+                            {model.description && (
+                              <div className="text-xs text-muted-foreground">
+                                <strong>Description:</strong> {model.description}
+                              </div>
+                            )}
+                          </div>
+                        </motion.div>
+                      ))
+                    )}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                  
+                  <div className="pt-2 space-y-2">
+                    <p className="text-xs text-muted-foreground">
+                      <strong>Notes:</strong>
+                    </p>
+                    <ul className="text-xs text-muted-foreground space-y-1 ml-4">
+                      <li>• Click "Add" to add official models to your custom models list</li>
+                      <li>• Official models are curated by Anthropic and regularly updated</li>
+                      <li>• Added models will appear in the model selection dropdown</li>
+                    </ul>
+                  </div>
+                </div>
+              </Card>
+
+              {/* Custom Models */}
+              <Card className="p-6">
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-base font-semibold">Custom Models</h3>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Add custom Claude models that will appear in the model selection dropdown
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={addCustomModel}
+                      className="gap-2"
+                    >
+                      <Plus className="h-3 w-3" />
+                      Add Model
+                    </Button>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    {customModels.length === 0 ? (
+                      <p className="text-xs text-muted-foreground py-2">
+                        No custom models configured.
+                      </p>
+                    ) : (
+                      customModels.map((model, index) => (
+                        <motion.div
+                          key={index}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          className="border rounded-lg p-4 space-y-3"
+                        >
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-medium text-sm">Model {index + 1}</h4>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeCustomModel(index)}
+                              className="h-8 w-8 hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-2">
+                              <Label htmlFor={`model-name-${index}`} className="text-xs">
+                                Display Name
+                              </Label>
+                              <Input
+                                id={`model-name-${index}`}
+                                placeholder="e.g., Custom Claude"
+                                value={model.name}
+                                onChange={(e) => updateCustomModel(index, "name", e.target.value)}
+                                className="text-sm"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor={`model-identifier-${index}`} className="text-xs">
+                                Model Identifier
+                              </Label>
+                              <Input
+                                id={`model-identifier-${index}`}
+                                placeholder="e.g., claude-sonnet-4@20250514"
+                                value={model.identifier}
+                                onChange={(e) => updateCustomModel(index, "identifier", e.target.value)}
+                                className="text-sm font-mono"
+                              />
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor={`model-description-${index}`} className="text-xs">
+                              Description (Optional)
+                            </Label>
+                            <Input
+                              id={`model-description-${index}`}
+                              placeholder="e.g., Custom model for specific tasks"
+                              value={model.description || ""}
+                              onChange={(e) => updateCustomModel(index, "description", e.target.value)}
+                              className="text-sm"
+                            />
+                          </div>
+                        </motion.div>
+                      ))
+                    )}
+                  </div>
+                  
+                  {modelsChanged && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg"
+                    >
+                      <AlertCircle className="h-4 w-4 text-amber-600" />
+                      <p className="text-sm text-amber-700 dark:text-amber-300 flex-1">
+                        You have unsaved changes to your custom models.
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={saveCustomModels}
+                        disabled={saving}
+                        className="gap-2"
+                      >
+                        {saving ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="h-4 w-4" />
+                            Save Models
+                          </>
+                        )}
+                      </Button>
+                    </motion.div>
+                  )}
+                  
+                  {modelConfig?.env_model && (
+                    <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                      <h4 className="font-medium text-sm text-blue-900 dark:text-blue-100 mb-2">
+                        Environment Model Detected
+                      </h4>
+                      <p className="text-sm text-blue-700 dark:text-blue-300">
+                        <strong>ANTHROPIC_MODEL:</strong> {modelConfig.env_model}
+                      </p>
+                    </div>
+                  )}
+                  
+                  <div className="pt-2 space-y-2">
+                    <p className="text-xs text-muted-foreground">
+                      <strong>Notes:</strong>
+                    </p>
+                    <ul className="text-xs text-muted-foreground space-y-1 ml-4">
+                      <li>• Custom models will appear in a separate group in the model selection dropdown</li>
+                      <li>• The model identifier should match exactly what Claude CLI expects</li>
+                      <li>• Changes require saving and may need a restart to take full effect</li>
+                    </ul>
+                  </div>
+                </div>
+              </Card>
+            </TabsContent>
+            
             {/* Advanced Settings */}
             <TabsContent value="advanced" className="space-y-6">
               <Card className="p-6">
@@ -1000,9 +1376,7 @@ export const Settings: React.FC<SettingsProps> = ({
                     <div className="p-3 rounded-md bg-muted font-mono text-xs overflow-x-auto whitespace-pre-wrap">
                       <pre>{JSON.stringify(settings, null, 2)}</pre>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      This shows the raw JSON that will be saved to ~/.claude/settings.json
-                    </p>
+
                   </div>
                 </div>
               </Card>
