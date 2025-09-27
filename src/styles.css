@@ -726,7 +726,7 @@ html.is-macos body {
 }
 
 .prose.dark\:prose-invert pre {
-  background-color: rgb(13, 17, 23);
+  /*background-color: rgb(13, 17, 23);*/
   border: 1px solid var(--color-border);
 }
 

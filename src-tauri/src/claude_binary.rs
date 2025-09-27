@@ -129,16 +129,17 @@ fn source_preference(installation: &ClaudeInstallation) -> u8 {
         "which" => 1,
         "homebrew" => 2,
         "system" => 3,
-        source if source.starts_with("nvm") => 4,
-        "local-bin" => 5,
-        "claude-local" => 6,
-        "npm-global" => 7,
-        "yarn" | "yarn-global" => 8,
-        "bun" => 9,
-        "node-modules" => 10,
-        "home-bin" => 11,
-        "PATH" => 12,
-        _ => 13,
+        "nvm-active" => 4,
+        source if source.starts_with("nvm") => 5,
+        "local-bin" => 6,
+        "claude-local" => 7,
+        "npm-global" => 8,
+        "yarn" | "yarn-global" => 9,
+        "bun" => 10,
+        "node-modules" => 11,
+        "home-bin" => 12,
+        "PATH" => 13,
+        _ => 14,
     }
 }
 
@@ -151,7 +152,7 @@ fn discover_system_installations() -> Vec<ClaudeInstallation> {
         installations.push(installation);
     }
 
-    // 2. Check NVM paths
+    // 2. Check NVM paths (includes current active NVM)
     installations.extend(find_nvm_installations());
 
     // 3. Check standard paths
@@ -212,6 +213,21 @@ fn try_which_command() -> Option<ClaudeInstallation> {
 fn find_nvm_installations() -> Vec<ClaudeInstallation> {
     let mut installations = Vec::new();
 
+    // First check NVM_BIN environment variable (current active NVM)
+    if let Ok(nvm_bin) = std::env::var("NVM_BIN") {
+        let claude_path = PathBuf::from(&nvm_bin).join("claude");
+        if claude_path.exists() && claude_path.is_file() {
+            debug!("Found Claude via NVM_BIN: {:?}", claude_path);
+            let version = get_claude_version(&claude_path.to_string_lossy()).ok().flatten();
+            installations.push(ClaudeInstallation {
+                path: claude_path.to_string_lossy().to_string(),
+                version,
+                source: "nvm-active".to_string(),
+            });
+        }
+    }
+
+    // Then check all NVM directories
     if let Ok(home) = std::env::var("HOME") {
         let nvm_dir = PathBuf::from(&home)
             .join(".nvm")
