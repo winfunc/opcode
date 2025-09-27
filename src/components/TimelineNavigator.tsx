@@ -67,9 +67,12 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [diff, setDiff] = useState<CheckpointDiff | null>(null);
   const [compareCheckpoint, setCompareCheckpoint] = useState<Checkpoint | null>(null);
-  
+
   // Analytics tracking
   const trackEvent = useTrackEvent();
+
+  // IME composition state
+  const isIMEComposingRef = React.useRef(false);
 
   // Load timeline on mount and whenever refreshVersion bumps
   useEffect(() => {
@@ -191,6 +194,16 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
 
   const handleFork = async (checkpoint: Checkpoint) => {
     onFork(checkpoint.id);
+  };
+
+  const handleCompositionStart = () => {
+    isIMEComposingRef.current = true;
+  };
+
+  const handleCompositionEnd = () => {
+    setTimeout(() => {
+      isIMEComposingRef.current = false;
+    }, 0);
   };
 
   const handleCompare = async (checkpoint: Checkpoint) => {
@@ -481,11 +494,16 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
                 placeholder="e.g., Before major refactoring"
                 value={checkpointDescription}
                 onChange={(e) => setCheckpointDescription(e.target.value)}
-                onKeyPress={(e) => {
+                onKeyDown={(e) => {
                   if (e.key === "Enter" && !isLoading) {
+                    if (e.nativeEvent.isComposing || isIMEComposingRef.current) {
+                      return;
+                    }
                     handleCreateCheckpoint();
                   }
                 }}
+                onCompositionStart={handleCompositionStart}
+                onCompositionEnd={handleCompositionEnd}
               />
             </div>
           </div>

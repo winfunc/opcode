@@ -115,6 +115,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   // Auto-scroll hook
   const { autoScrollEnabled } = useAutoScroll();
 
+
   const parentRef = useRef<HTMLDivElement>(null);
   const unlistenRefs = useRef<UnlistenFn[]>([]);
   const hasActiveSessionRef = useRef(false);
@@ -123,6 +124,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   const isMountedRef = useRef(true);
   const isListeningRef = useRef(false);
   const sessionStartTime = useRef<number>(Date.now());
+  const isIMEComposingRef = useRef(false);
   
   // Session metrics state for enhanced analytics
   const sessionMetrics = useRef({
@@ -282,7 +284,22 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     if (!autoScrollEnabled) return;
 
     if (displayableMessages.length > 0) {
-      rowVirtualizer.scrollToIndex(displayableMessages.length - 1, { align: 'end', behavior: 'smooth' });
+      // Use a more precise scrolling method to ensure content is fully visible
+      setTimeout(() => {
+        const scrollElement = parentRef.current;
+        if (scrollElement) {
+          // First, scroll using virtualizer to get close to the bottom
+          rowVirtualizer.scrollToIndex(displayableMessages.length - 1, { align: 'end', behavior: 'auto' });
+
+          // Then use direct scroll to ensure we reach the absolute bottom
+          requestAnimationFrame(() => {
+            scrollElement.scrollTo({
+              top: scrollElement.scrollHeight,
+              behavior: 'smooth'
+            });
+          });
+        }
+      }, 50);
     }
   }, [displayableMessages.length, rowVirtualizer, autoScrollEnabled]);
 
@@ -359,7 +376,17 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       // Scroll to bottom after loading history
       setTimeout(() => {
         if (loadedMessages.length > 0) {
-          rowVirtualizer.scrollToIndex(loadedMessages.length - 1, { align: 'end', behavior: 'auto' });
+          const scrollElement = parentRef.current;
+          if (scrollElement) {
+            // Use the same improved scrolling method
+            rowVirtualizer.scrollToIndex(loadedMessages.length - 1, { align: 'end', behavior: 'auto' });
+            requestAnimationFrame(() => {
+              scrollElement.scrollTo({
+                top: scrollElement.scrollHeight,
+                behavior: 'auto'
+              });
+            });
+          }
         }
       }, 100);
     } catch (err) {
@@ -1106,6 +1133,16 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     setShowForkDialog(true);
   };
 
+  const handleCompositionStart = () => {
+    isIMEComposingRef.current = true;
+  };
+
+  const handleCompositionEnd = () => {
+    setTimeout(() => {
+      isIMEComposingRef.current = false;
+    }, 0);
+  };
+
   const handleConfirmFork = async () => {
     if (!forkCheckpointId || !forkSessionName.trim() || !effectiveSession) return;
     
@@ -1221,7 +1258,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   const messagesList = (
     <div
       ref={parentRef}
-      className="flex-1 overflow-y-auto relative pb-40"
+      className="flex-1 overflow-y-auto relative pb-20"
       style={{
         contain: 'strict',
       }}
@@ -1267,7 +1304,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.15 }}
-          className="flex items-center justify-center py-4 mb-40"
+          className="flex items-center justify-center py-4 mb-20"
         >
           <div className="rotating-symbol text-primary" />
         </motion.div>
@@ -1279,7 +1316,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.15 }}
-          className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive mb-40 w-full max-w-6xl mx-auto"
+          className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive mb-20 w-full max-w-6xl mx-auto"
         >
           {error}
         </motion.div>
@@ -1489,18 +1526,23 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                       variant="ghost"
                       size="sm"
                       onClick={() => {
-                      // Use virtualizer to scroll to the last item
-                      if (displayableMessages.length > 0) {
-                        // Scroll to bottom of the container
-                        const scrollElement = parentRef.current;
-                        if (scrollElement) {
-                          scrollElement.scrollTo({
-                            top: scrollElement.scrollHeight,
-                            behavior: 'smooth'
-                          });
+                        // Use the improved scrolling method for manual scroll to bottom
+                        if (displayableMessages.length > 0) {
+                          const scrollElement = parentRef.current;
+                          if (scrollElement) {
+                            // First, scroll using virtualizer to get close to the bottom
+                            rowVirtualizer.scrollToIndex(displayableMessages.length - 1, { align: 'end', behavior: 'auto' });
+
+                            // Then use direct scroll to ensure we reach the absolute bottom
+                            requestAnimationFrame(() => {
+                              scrollElement.scrollTo({
+                                top: scrollElement.scrollHeight,
+                                behavior: 'smooth'
+                              });
+                            });
+                          }
                         }
-                      }
-                    }}
+                      }}
                       className="px-3 py-2 hover:bg-accent rounded-none"
                     >
                       <ChevronDown className="h-4 w-4" />
@@ -1690,11 +1732,16 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                 placeholder="e.g., Alternative approach"
                 value={forkSessionName}
                 onChange={(e) => setForkSessionName(e.target.value)}
-                onKeyPress={(e) => {
+                onKeyDown={(e) => {
                   if (e.key === "Enter" && !isLoading) {
+                    if (e.nativeEvent.isComposing || isIMEComposingRef.current) {
+                      return;
+                    }
                     handleConfirmFork();
                   }
                 }}
+                onCompositionStart={handleCompositionStart}
+                onCompositionEnd={handleCompositionEnd}
               />
             </div>
           </div>
