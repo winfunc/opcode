@@ -4,6 +4,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { StreamMessage } from '../StreamMessage';
 import { Terminal } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAutoScroll } from '@/hooks';
 import type { ClaudeStreamMessage } from '../AgentExecution';
 
 interface MessageListProps {
@@ -24,6 +25,7 @@ export const MessageList: React.FC<MessageListProps> = React.memo(({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const shouldAutoScrollRef = useRef(true);
   const userHasScrolledRef = useRef(false);
+  const { autoScrollEnabled } = useAutoScroll();
 
   // Virtual scrolling setup
   const virtualizer = useVirtualizer({
@@ -35,20 +37,23 @@ export const MessageList: React.FC<MessageListProps> = React.memo(({
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
+    // Only scroll if auto-scroll is enabled AND we should auto-scroll
+    if (!autoScrollEnabled) return;
+
     if (shouldAutoScrollRef.current && scrollContainerRef.current) {
       const scrollElement = scrollContainerRef.current;
       scrollElement.scrollTop = scrollElement.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, autoScrollEnabled]);
 
   // Handle scroll events to detect user scrolling
   const handleScroll = () => {
-    if (!scrollContainerRef.current) return;
-    
+    if (!autoScrollEnabled || !scrollContainerRef.current) return;
+
     const scrollElement = scrollContainerRef.current;
-    const isAtBottom = 
+    const isAtBottom =
       Math.abs(scrollElement.scrollHeight - scrollElement.scrollTop - scrollElement.clientHeight) < 50;
-    
+
     if (!isAtBottom) {
       userHasScrolledRef.current = true;
       shouldAutoScrollRef.current = false;
@@ -60,11 +65,11 @@ export const MessageList: React.FC<MessageListProps> = React.memo(({
 
   // Reset auto-scroll when streaming stops
   useEffect(() => {
-    if (!isStreaming) {
+    if (!isStreaming && autoScrollEnabled) {
       shouldAutoScrollRef.current = true;
       userHasScrolledRef.current = false;
     }
-  }, [isStreaming]);
+  }, [isStreaming, autoScrollEnabled]);
 
   if (messages.length === 0) {
     return (

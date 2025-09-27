@@ -15,13 +15,16 @@ export interface SessionRestoreData {
   lastMessageCount?: number;
   scrollPosition?: number;
   timestamp: number;
+  // Conversation tracking
+  primaryConversationId?: string; // The first session ID in this conversation
+  isConversationRoot?: boolean; // True for the first session in a conversation
 }
 
 export class SessionPersistenceService {
   /**
    * Save session data for later restoration
    */
-  static saveSession(sessionId: string, projectId: string, projectPath: string, messageCount?: number, scrollPosition?: number): void {
+  static saveSession(sessionId: string, projectId: string, projectPath: string, messageCount?: number, scrollPosition?: number, primaryConversationId?: string): void {
     try {
       const sessionData: SessionRestoreData = {
         sessionId,
@@ -29,7 +32,9 @@ export class SessionPersistenceService {
         projectPath,
         lastMessageCount: messageCount,
         scrollPosition,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        primaryConversationId: primaryConversationId || sessionId, // Use this sessionId as primary if none provided
+        isConversationRoot: !primaryConversationId // True if no primary provided (this is the first session)
       };
 
       // Save individual session data
@@ -170,5 +175,54 @@ export class SessionPersistenceService {
       created_at: data.timestamp / 1000, // Convert to seconds
       first_message: "Restored session"
     };
+  }
+
+  /**
+   * Get only the primary conversation sessions (filter out continuation sessions)
+   */
+  static getPrimaryConversationSessions(): string[] {
+    try {
+      const index = this.getSessionIndex();
+      const primarySessions: string[] = [];
+
+      index.forEach(sessionId => {
+        const data = this.loadSession(sessionId);
+        if (data && data.isConversationRoot) {
+          primarySessions.push(sessionId);
+        }
+      });
+
+      return primarySessions;
+    } catch (error) {
+      console.error('Failed to get primary conversation sessions:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get all sessions that belong to a specific conversation
+   */
+  static getConversationSessions(primaryConversationId: string): string[] {
+    try {
+      const index = this.getSessionIndex();
+      const conversationSessions: string[] = [];
+
+      index.forEach(sessionId => {
+        const data = this.loadSession(sessionId);
+        if (data && data.primaryConversationId === primaryConversationId) {
+          conversationSessions.push(sessionId);
+        }
+      });
+
+      return conversationSessions.sort((a, b) => {
+        const dataA = this.loadSession(a);
+        const dataB = this.loadSession(b);
+        if (!dataA || !dataB) return 0;
+        return dataA.timestamp - dataB.timestamp; // Sort by timestamp
+      });
+    } catch (error) {
+      console.error('Failed to get conversation sessions:', error);
+      return [];
+    }
   }
 }

@@ -503,6 +503,52 @@ export const api = {
   },
 
   /**
+   * Deletes a session and its associated data
+   * @param sessionId - The ID of the session to delete
+   * @param projectId - The ID of the project the session belongs to
+   * @returns Promise resolving when the session is deleted
+   */
+  async deleteSession(sessionId: string, projectId: string): Promise<string> {
+    try {
+      return await invoke<string>('delete_session', { sessionId, projectId });
+    } catch (error) {
+      console.error("Failed to delete session:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Deletes multiple sessions and their associated data
+   * @param sessionIds - Array of session IDs to delete
+   * @param projectId - The ID of the project the sessions belong to
+   * @returns Promise resolving with deletion results
+   */
+  async deleteSessionsBulk(sessionIds: string[], projectId: string): Promise<string> {
+    try {
+      return await invoke<string>('delete_sessions_bulk', { sessionIds, projectId });
+    } catch (error) {
+      console.error("Failed to bulk delete sessions:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Saves a pasted image to a file and returns the relative path
+   * @param projectId - The ID of the project to save the image in
+   * @param sessionId - The ID of the current session
+   * @param base64Data - The base64 data URL of the image
+   * @returns Promise resolving to the relative path of the saved image
+   */
+  async savePastedImage(projectId: string, sessionId: string, base64Data: string): Promise<string> {
+    try {
+      return await invoke<string>('save_pasted_image', { projectId, sessionId, base64Data });
+    } catch (error) {
+      console.error("Failed to save pasted image:", error);
+      throw error;
+    }
+  },
+
+  /**
    * Fetch list of agents from GitHub repository
    * @returns Promise resolving to list of available agents on GitHub
    */

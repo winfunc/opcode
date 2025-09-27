@@ -27,6 +27,7 @@ import { formatISOTimestamp } from '@/lib/date-utils';
 import { AGENT_ICONS } from './CCAgents';
 import type { ClaudeStreamMessage } from './AgentExecution';
 import { useTabState } from '@/hooks/useTabState';
+import { useAutoScroll } from '@/hooks';
 
 interface AgentRunOutputViewerProps {
   /**
@@ -67,7 +68,8 @@ export function AgentRunOutputViewer({
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [copyPopoverOpen, setCopyPopoverOpen] = useState(false);
   const [hasUserScrolled, setHasUserScrolled] = useState(false);
-  
+  const { autoScrollEnabled } = useAutoScroll();
+
   // Track whether we're in the initial load phase
   const isInitialLoadRef = useRef(true);
   const hasSetupListenersRef = useRef(false);
@@ -91,7 +93,7 @@ export function AgentRunOutputViewer({
   };
 
   const scrollToBottom = () => {
-    if (!hasUserScrolled) {
+    if (autoScrollEnabled && !hasUserScrolled) {
       const endRef = isFullscreen ? fullscreenMessagesEndRef.current : outputEndRef.current;
       if (endRef) {
         endRef.scrollIntoView({ behavior: 'smooth' });
@@ -132,11 +134,11 @@ export function AgentRunOutputViewer({
 
   // Auto-scroll when messages change
   useEffect(() => {
-    const shouldAutoScroll = !hasUserScrolled || isAtBottom();
+    const shouldAutoScroll = autoScrollEnabled && (!hasUserScrolled || isAtBottom());
     if (shouldAutoScroll) {
       scrollToBottom();
     }
-  }, [messages, hasUserScrolled, isFullscreen]);
+  }, [messages, hasUserScrolled, isFullscreen, autoScrollEnabled]);
 
   const loadOutput = async (skipCache = false) => {
     if (!run?.id) return;
@@ -442,6 +444,8 @@ export function AgentRunOutputViewer({
   };
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    if (!autoScrollEnabled) return;
+
     const target = e.currentTarget;
     const { scrollTop, scrollHeight, clientHeight } = target;
     const distanceFromBottom = scrollHeight - scrollTop - clientHeight;

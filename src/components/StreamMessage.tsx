@@ -49,6 +49,24 @@ interface StreamMessageProps {
 }
 
 /**
+ * Utility function to convert image file paths back to clean placeholders for display
+ */
+const cleanImagePaths = (text: string): string => {
+  if (!text || typeof text !== 'string') return text;
+
+  // Pattern to match image paths: @"./images/session_temp_..." or @"data:image/..."
+  const imagePathRegex = /@"([^"]*(?:images\/session_temp_[^"]*|data:image\/[^"]*))[^"]*"/g;
+
+  let imageCounter = 0;
+  const cleanedText = text.replace(imagePathRegex, () => {
+    imageCounter++;
+    return imageCounter === 1 ? '[image]' : `[image #${imageCounter}]`;
+  });
+
+  return cleanedText;
+};
+
+/**
  * Component to render a single Claude Code stream message
  */
 const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, className, streamMessages, onLinkDetected }) => {
@@ -99,6 +117,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
       return (
         <SystemInitializedWidget
           sessionId={message.session_id}
+          childSessionId={message.original_session_id || message.session_id}
           model={message.model}
           cwd={message.cwd}
           tools={message.tools}
@@ -122,10 +141,13 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                   // Text content - render as markdown
                   if (content.type === "text") {
                     // Ensure we have a string to render
-                    const textContent = typeof content.text === 'string' 
-                      ? content.text 
+                    const rawTextContent = typeof content.text === 'string'
+                      ? content.text
                       : (content.text?.text || JSON.stringify(content.text || content));
-                    
+
+                    // Clean image paths for display
+                    const textContent = cleanImagePaths(rawTextContent);
+
                     renderedSomething = true;
                     return (
                       <div key={idx} className="prose prose-sm dark:prose-invert max-w-none">
@@ -358,10 +380,11 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                       return <CommandOutputWidget output={output} onLinkDetected={onLinkDetected} />;
                     }
                     
-                    // Otherwise render as plain text
+                    // Otherwise render as plain text with cleaned image paths
+                    const cleanedContent = cleanImagePaths(contentStr);
                     return (
                       <div className="text-sm">
-                        {contentStr}
+                        {cleanedContent}
                       </div>
                     );
                   })()
@@ -612,10 +635,13 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                   // Text content
                   if (content.type === "text") {
                     // Handle both string and object formats
-                    const textContent = typeof content.text === 'string' 
-                      ? content.text 
+                    const rawTextContent = typeof content.text === 'string'
+                      ? content.text
                       : (content.text?.text || JSON.stringify(content.text));
-                    
+
+                    // Clean image paths for display
+                    const textContent = cleanImagePaths(rawTextContent);
+
                     renderedSomething = true;
                     return (
                       <div key={idx} className="text-sm">
