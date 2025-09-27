@@ -223,6 +223,7 @@ fn find_nvm_installations() -> Vec<ClaudeInstallation> {
                 path: claude_path.to_string_lossy().to_string(),
                 version,
                 source: "nvm-active".to_string(),
+                installation_type: InstallationType::System,
             });
         }
     }
