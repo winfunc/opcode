@@ -141,7 +141,8 @@ export const TabManager: React.FC<TabManagerProps> = ({ className }) => {
     createProjectsTab,
     closeTab,
     switchToTab,
-    canAddTab
+    canAddTab,
+    createNewSessionWithCurrentProject
   } = useTabState();
 
   // Access reorderTabs from context
@@ -173,6 +174,11 @@ export const TabManager: React.FC<TabManagerProps> = ({ className }) => {
     const handleCreateTab = () => {
       createProjectsTab();
       trackEvent.tabCreated('projects');
+    };
+
+    const handleCreateNewSession = () => {
+      createNewSessionWithCurrentProject();
+      trackEvent.tabCreated('chat');
     };
 
     const handleCloseTab = async () => {
@@ -209,6 +215,7 @@ export const TabManager: React.FC<TabManagerProps> = ({ className }) => {
     };
 
     window.addEventListener('create-chat-tab', handleCreateTab);
+    window.addEventListener('create-new-session', handleCreateNewSession);
     window.addEventListener('close-current-tab', handleCloseTab);
     window.addEventListener('switch-to-next-tab', handleNextTab);
     window.addEventListener('switch-to-previous-tab', handlePreviousTab);
@@ -216,12 +223,13 @@ export const TabManager: React.FC<TabManagerProps> = ({ className }) => {
 
     return () => {
       window.removeEventListener('create-chat-tab', handleCreateTab);
+      window.removeEventListener('create-new-session', handleCreateNewSession);
       window.removeEventListener('close-current-tab', handleCloseTab);
       window.removeEventListener('switch-to-next-tab', handleNextTab);
       window.removeEventListener('switch-to-previous-tab', handlePreviousTab);
       window.removeEventListener('switch-to-tab-by-index', handleTabByIndex as EventListener);
     };
-  }, [tabs, activeTabId, createChatTab, closeTab, switchToTab]);
+  }, [tabs, activeTabId, createChatTab, createNewSessionWithCurrentProject, closeTab, switchToTab]);
 
   // Check scroll buttons visibility
   const checkScrollButtons = () => {

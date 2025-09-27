@@ -38,6 +38,8 @@ interface UseTabStateReturn {
   findTabByAgentRunId: (agentRunId: string) => Tab | undefined;
   findTabByType: (type: Tab['type']) => Tab | undefined;
   canAddTab: () => boolean;
+  getCurrentProjectPath: () => string | undefined;
+  createNewSessionWithCurrentProject: () => string;
 }
 
 export const useTabState = (): UseTabStateReturn => {
@@ -322,6 +324,38 @@ export const useTabState = (): UseTabStateReturn => {
     return tabs.length < 20; // MAX_TABS from context
   }, [tabs.length]);
 
+  const getCurrentProjectPath = useCallback((): string | undefined => {
+    if (!activeTab) return undefined;
+
+    // If current tab is a chat tab, get its project path
+    if (activeTab.type === 'chat') {
+      return activeTab.initialProjectPath || activeTab.projectPath;
+    }
+
+    // If current tab is projects tab, check if it has a selected project
+    // This would need to be stored in tab state or retrieved from component state
+
+    // For now, try to find the most recent chat tab with a project
+    const recentChatTab = tabs
+      .filter(tab => tab.type === 'chat' && (tab.initialProjectPath || tab.projectPath))
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())[0];
+
+    return recentChatTab?.initialProjectPath || recentChatTab?.projectPath;
+  }, [activeTab, tabs]);
+
+  const createNewSessionWithCurrentProject = useCallback((): string => {
+    const projectPath = getCurrentProjectPath();
+
+    if (projectPath) {
+      // Extract project name from path
+      const projectName = projectPath.split('/').pop() || 'Session';
+      return createChatTab(undefined, projectName, projectPath);
+    } else {
+      // Create a generic new session
+      return createChatTab();
+    }
+  }, [getCurrentProjectPath, createChatTab]);
+
   return {
     // State
     tabs,
@@ -357,6 +391,8 @@ export const useTabState = (): UseTabStateReturn => {
     findTabBySessionId,
     findTabByAgentRunId,
     findTabByType,
-    canAddTab
+    canAddTab,
+    getCurrentProjectPath,
+    createNewSessionWithCurrentProject
   };
 };

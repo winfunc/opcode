@@ -106,6 +106,10 @@ function AppContent() {
             e.preventDefault();
             window.dispatchEvent(new CustomEvent('create-chat-tab'));
             break;
+          case 'n':
+            e.preventDefault();
+            window.dispatchEvent(new CustomEvent('create-new-session'));
+            break;
           case 'w':
             e.preventDefault();
             window.dispatchEvent(new CustomEvent('close-current-tab'));
