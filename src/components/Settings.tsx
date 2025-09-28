@@ -443,8 +443,8 @@ export const Settings: React.FC<SettingsProps> = ({
                           onClick={() => setTheme('gray')}
                           className={cn(
                             "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all",
-                            theme === 'gray' 
-                              ? "bg-background shadow-sm" 
+                            theme === 'gray'
+                              ? "bg-background shadow-sm"
                               : "hover:bg-background/50"
                           )}
                         >
@@ -452,11 +452,23 @@ export const Settings: React.FC<SettingsProps> = ({
                           Gray
                         </button>
                         <button
+                          onClick={() => setTheme('zinc')}
+                          className={cn(
+                            "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all",
+                            theme === 'zinc'
+                              ? "bg-background shadow-sm"
+                              : "hover:bg-background/50"
+                          )}
+                        >
+                          {theme === 'zinc' && <Check className="h-3 w-3" />}
+                          Zinc
+                        </button>
+                        <button
                           onClick={() => setTheme('light')}
                           className={cn(
                             "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all",
-                            theme === 'light' 
-                              ? "bg-background shadow-sm" 
+                            theme === 'light'
+                              ? "bg-background shadow-sm"
                               : "hover:bg-background/50"
                           )}
                         >

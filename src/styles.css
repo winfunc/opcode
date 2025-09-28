@@ -217,8 +217,50 @@ html {
   --color-border: oklch(0.32 0.01 240);
   --color-input: oklch(0.32 0.01 240);
   --color-ring: oklch(0.55 0.015 240);
-  
+
   /* Additional colors for status messages */
+  --color-green-500: oklch(0.72 0.20 142);
+  --color-green-600: oklch(0.64 0.22 142);
+}
+
+/* Zinc Theme - Dark black-gray with no tint */
+.theme-zinc {
+  /* Core backgrounds - pure neutral dark gray */
+  --color-background: oklch(0.13 0 0);            /* Pure dark gray, almost black */
+  --color-foreground: oklch(0.98 0 0);            /* Pure white */
+
+  /* Card and surfaces - neutral grays */
+  --color-card: oklch(0.17 0 0);                  /* Slightly lighter dark gray */
+  --color-card-foreground: oklch(0.96 0 0);       /* Off-white */
+  --color-popover: oklch(0.15 0 0);               /* Between background and card */
+  --color-popover-foreground: oklch(0.96 0 0);
+
+  /* Primary - pure white for contrast */
+  --color-primary: oklch(0.98 0 0);               /* Pure white */
+  --color-primary-foreground: oklch(0.13 0 0);
+
+  /* Secondary elements - mid neutral gray */
+  --color-secondary: oklch(0.21 0 0);             /* Mid-dark gray */
+  --color-secondary-foreground: oklch(0.85 0 0);  /* Light gray */
+
+  /* Muted areas - pure neutral */
+  --color-muted: oklch(0.15 0 0);                 /* Very dark gray */
+  --color-muted-foreground: oklch(0.50 0 0);      /* Medium gray */
+
+  /* Accent - neutral gray highlight */
+  --color-accent: oklch(0.21 0 0);                /* Mid-dark gray */
+  --color-accent-foreground: oklch(0.96 0 0);
+
+  /* System colors */
+  --color-destructive: oklch(0.6 0.2 25);
+  --color-destructive-foreground: oklch(0.98 0 0);
+
+  /* Borders and inputs - pure neutral grays */
+  --color-border: oklch(0.25 0 0);                /* Medium-dark gray */
+  --color-input: oklch(0.15 0 0);                 /* Very dark gray */
+  --color-ring: oklch(0.50 0 0);                  /* Medium gray */
+
+  /* Status colors */
   --color-green-500: oklch(0.72 0.20 142);
   --color-green-600: oklch(0.64 0.22 142);
 }
