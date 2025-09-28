@@ -52,6 +52,16 @@ use tauri::Manager;
 use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial};
 
 fn main() {
+    // Fix PATH environment for macOS DMG apps
+    #[cfg(target_os = "macos")]
+    {
+        if let Err(e) = fix_path_env::fix() {
+            eprintln!("Failed to fix PATH environment: {}", e);
+        } else {
+            println!("✅ Successfully fixed PATH environment for macOS DMG app");
+        }
+    }
+
     // Initialize logger
     env_logger::init();
 
