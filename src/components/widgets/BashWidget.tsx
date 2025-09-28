@@ -31,8 +31,8 @@ export const BashWidget: React.FC<BashWidgetProps> = ({ command, description, re
   }
   
   return (
-    <div className="rounded-lg border bg-zinc-950 overflow-hidden">
-      <div className="px-4 py-2 bg-zinc-900/50 flex items-center gap-2 border-b">
+    <div className="rounded-lg border bg-background overflow-hidden">
+      <div className="px-4 py-2 bg-muted/50 flex items-center gap-2 border-b">
         <Terminal className="h-3.5 w-3.5 text-green-500" />
         <span className="text-xs font-mono text-muted-foreground">Terminal</span>
         {description && (
@@ -59,8 +59,8 @@ export const BashWidget: React.FC<BashWidgetProps> = ({ command, description, re
           <div className={cn(
             "mt-3 p-3 rounded-md border text-xs font-mono whitespace-pre-wrap overflow-x-auto",
             isError 
-              ? "border-red-500/20 bg-red-500/5 text-red-400" 
-              : "border-green-500/20 bg-green-500/5 text-green-300"
+              ? "border-[color:var(--color-destructive)]/20 bg-[color:var(--color-destructive)]/5 text-[color:var(--color-destructive)]" 
+              : "border-[color:var(--color-green-500)]/20 bg-[color:var(--color-green-500)]/5 text-[color:var(--color-green-500)]"
           )}>
             {resultContent || (isError ? "Command failed" : "Command completed")}
           </div>
