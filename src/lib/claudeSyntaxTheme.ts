@@ -35,6 +35,19 @@ export const getClaudeSyntaxTheme = (theme: ThemeMode): any => {
       variable: '#c084fc', // Purple
       operator: '#a1a1aa',
     },
+    zinc: {
+      base: '#f4f4f5', // zinc-100 - crisp white text
+      background: 'transparent',
+      comment: '#71717a', // zinc-500 - muted gray
+      punctuation: '#a1a1aa', // zinc-400 - medium gray
+      property: '#e4e4e7', // zinc-200 - light gray
+      tag: '#d4d4d8', // zinc-300 - subtle gray
+      string: '#d4d4d8', // zinc-300 - neutral strings
+      function: '#f4f4f5', // zinc-100 - white functions
+      keyword: '#e4e4e7', // zinc-200 - light keywords
+      variable: '#a1a1aa', // zinc-400 - gray variables
+      operator: '#a1a1aa', // zinc-400 - gray operators
+    },
     light: {
       base: '#1f2937',
       background: 'transparent',

@@ -1,0 +1,2405 @@
+From 5321793fdc0db91119a5b202abeb51208626bf3f Mon Sep 17 00:00:00 2001
+From: iflytwice <spencerjeanlouis18@gmail.com>
+Date: Mon, 22 Sep 2025 18:30:17 -0400
+Subject: [PATCH] Feature: Add session deletion functionality
+
+Implements session deletion feature with delete button on hover for each session card.
+
+Addresses issue #305 where users requested the ability to delete unnecessary sessions.
+
+## Changes:
+- **Backend**: Added  Rust command to remove .jsonl files and associated todo data
+- **Frontend**: Added  API method with proper error handling
+- **UI**: Added Trash2 icon delete button that appears on session card hover
+- **UX**: Added confirmation dialog before deletion to prevent accidents
+- **State**: Updated local state management to remove sessions immediately after deletion
+
+## Features:
+- Hover-to-reveal delete button for clean UI
+- Confirmation dialog with session details
+- Deletes both session file and associated todo data
+- Proper error handling and user feedback
+- Follows project coding standards and documentation guidelines
+
+Fixes #305
+---
+ src-tauri/src/claude_binary.rs           |  28 ++-
+ src-tauri/src/commands/agents.rs         |  95 +++++---
+ src-tauri/src/commands/claude.rs         | 268 +++++++++++++++--------
+ src-tauri/src/commands/mod.rs            |   6 +-
+ src-tauri/src/commands/proxy.rs          |  47 ++--
+ src-tauri/src/commands/slash_commands.rs | 131 +++++------
+ src-tauri/src/commands/storage.rs        | 196 +++++++++--------
+ src-tauri/src/main.rs                    |  86 ++++----
+ src-tauri/src/process/registry.rs        |  69 +++---
+ 9 files changed, 536 insertions(+), 390 deletions(-)
+
+diff --git a/src-tauri/src/claude_binary.rs b/src-tauri/src/claude_binary.rs
+index 2d1c7e3..9ff0311 100644
+--- a/src-tauri/src/claude_binary.rs
++++ b/src-tauri/src/claude_binary.rs
+@@ -47,7 +47,7 @@ pub fn find_claude_binary(app_handle: &tauri::AppHandle) -> Result<String, Strin
+                     |row| row.get::<_, String>(0),
+                 ) {
+                     info!("Found stored claude path in database: {}", stored_path);
+-                    
++
+                     // Check if the path still exists
+                     let path_buf = PathBuf::from(&stored_path);
+                     if path_buf.exists() && path_buf.is_file() {
+@@ -56,14 +56,14 @@ pub fn find_claude_binary(app_handle: &tauri::AppHandle) -> Result<String, Strin
+                         warn!("Stored claude path no longer exists: {}", stored_path);
+                     }
+                 }
+-                
++
+                 // Check user preference
+                 let preference = conn.query_row(
+                     "SELECT value FROM app_settings WHERE key = 'claude_installation_preference'",
+                     [],
+                     |row| row.get::<_, String>(0),
+                 ).unwrap_or_else(|_| "system".to_string());
+-                
++
+                 info!("User preference for Claude installation: {}", preference);
+             }
+         }
+@@ -350,10 +350,10 @@ fn get_claude_version(path: &str) -> Result<Option<String>, String> {
+ /// Extract version string from command output
+ fn extract_version_from_output(stdout: &[u8]) -> Option<String> {
+     let output_str = String::from_utf8_lossy(stdout);
+-    
++
+     // Debug log the raw output
+     debug!("Raw version output: {:?}", output_str);
+-    
++
+     // Use regex to directly extract version pattern (e.g., "1.0.41")
+     // This pattern matches:
+     // - One or more digits, followed by
+@@ -362,8 +362,9 @@ fn extract_version_from_output(stdout: &[u8]) -> Option<String> {
+     // - A dot, followed by
+     // - One or more digits
+     // - Optionally followed by pre-release/build metadata
+-    let version_regex = regex::Regex::new(r"(\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?(?:\+[a-zA-Z0-9.-]+)?)").ok()?;
+-    
++    let version_regex =
++        regex::Regex::new(r"(\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?(?:\+[a-zA-Z0-9.-]+)?)").ok()?;
++
+     if let Some(captures) = version_regex.captures(&output_str) {
+         if let Some(version_match) = captures.get(1) {
+             let version = version_match.as_str().to_string();
+@@ -371,7 +372,7 @@ fn extract_version_from_output(stdout: &[u8]) -> Option<String> {
+             return Some(version);
+         }
+     }
+-    
++
+     debug!("No version found in output");
+     None
+ }
+@@ -451,7 +452,7 @@ fn compare_versions(a: &str, b: &str) -> Ordering {
+ /// This ensures commands like Claude can find Node.js and other dependencies
+ pub fn create_command_with_env(program: &str) -> Command {
+     let mut cmd = Command::new(program);
+-    
++
+     info!("Creating command for: {}", program);
+ 
+     // Inherit essential environment variables from parent process
+@@ -479,7 +480,7 @@ pub fn create_command_with_env(program: &str) -> Command {
+             cmd.env(&key, &value);
+         }
+     }
+-    
++
+     // Log proxy-related environment variables for debugging
+     info!("Command will use proxy settings:");
+     if let Ok(http_proxy) = std::env::var("HTTP_PROXY") {
+@@ -502,7 +503,7 @@ pub fn create_command_with_env(program: &str) -> Command {
+             }
+         }
+     }
+-    
++
+     // Add Homebrew support if the program is in a Homebrew directory
+     if program.contains("/homebrew/") || program.contains("/opt/homebrew/") {
+         if let Some(program_dir) = std::path::Path::new(program).parent() {
+@@ -511,7 +512,10 @@ pub fn create_command_with_env(program: &str) -> Command {
+             let homebrew_bin_str = program_dir.to_string_lossy();
+             if !current_path.contains(&homebrew_bin_str.as_ref()) {
+                 let new_path = format!("{}:{}", homebrew_bin_str, current_path);
+-                debug!("Adding Homebrew bin directory to PATH: {}", homebrew_bin_str);
++                debug!(
++                    "Adding Homebrew bin directory to PATH: {}",
++                    homebrew_bin_str
++                );
+                 cmd.env("PATH", new_path);
+             }
+         }
+diff --git a/src-tauri/src/commands/agents.rs b/src-tauri/src/commands/agents.rs
+index b988ce7..36513a7 100644
+--- a/src-tauri/src/commands/agents.rs
++++ b/src-tauri/src/commands/agents.rs
+@@ -179,7 +179,10 @@ pub async fn read_session_jsonl(session_id: &str, project_path: &str) -> Result<
+     let session_file = project_dir.join(format!("{}.jsonl", session_id));
+ 
+     if !session_file.exists() {
+-        return Err(format!("Session file not found: {}", session_file.display()));
++        return Err(format!(
++            "Session file not found: {}",
++            session_file.display()
++        ));
+     }
+ 
+     match tokio::fs::read_to_string(&session_file).await {
+@@ -317,7 +320,6 @@ pub fn init_database(app: &AppHandle) -> SqliteResult<Connection> {
+         [],
+     )?;
+ 
+-
+     // Create settings table for app-wide settings
+     conn.execute(
+         "CREATE TABLE IF NOT EXISTS app_settings (
+@@ -690,38 +692,41 @@ pub async fn execute_agent(
+     // Get the agent from database
+     let agent = get_agent(db.clone(), agent_id).await?;
+     let execution_model = model.unwrap_or(agent.model.clone());
+-    
++
+     // Create .claude/settings.json with agent hooks if it doesn't exist
+     if let Some(hooks_json) = &agent.hooks {
+         let claude_dir = std::path::Path::new(&project_path).join(".claude");
+         let settings_path = claude_dir.join("settings.json");
+-        
++
+         // Create .claude directory if it doesn't exist
+         if !claude_dir.exists() {
+             std::fs::create_dir_all(&claude_dir)
+                 .map_err(|e| format!("Failed to create .claude directory: {}", e))?;
+             info!("Created .claude directory at: {:?}", claude_dir);
+         }
+-        
++
+         // Check if settings.json already exists
+         if !settings_path.exists() {
+             // Parse the hooks JSON
+             let hooks: serde_json::Value = serde_json::from_str(hooks_json)
+                 .map_err(|e| format!("Failed to parse agent hooks: {}", e))?;
+-            
++
+             // Create a settings object with just the hooks
+             let settings = serde_json::json!({
+                 "hooks": hooks
+             });
+-            
++
+             // Write the settings file
+             let settings_content = serde_json::to_string_pretty(&settings)
+                 .map_err(|e| format!("Failed to serialize settings: {}", e))?;
+-            
++
+             std::fs::write(&settings_path, settings_content)
+                 .map_err(|e| format!("Failed to write settings.json: {}", e))?;
+-            
+-            info!("Created settings.json with agent hooks at: {:?}", settings_path);
++
++            info!(
++                "Created settings.json with agent hooks at: {:?}",
++                settings_path
++            );
+         } else {
+             info!("settings.json already exists at: {:?}", settings_path);
+         }
+@@ -775,7 +780,8 @@ pub async fn execute_agent(
+         execution_model,
+         db,
+         registry,
+-    ).await
++    )
++    .await
+ }
+ 
+ /// Creates a system binary command for agent execution
+@@ -785,17 +791,17 @@ fn create_agent_system_command(
+     project_path: &str,
+ ) -> Command {
+     let mut cmd = create_command_with_env(claude_path);
+-    
++
+     // Add all arguments
+     for arg in args {
+         cmd.arg(arg);
+     }
+-    
++
+     cmd.current_dir(project_path)
+         .stdin(Stdio::null())
+         .stdout(Stdio::piped())
+         .stderr(Stdio::piped());
+-    
++
+     cmd
+ }
+ 
+@@ -905,14 +911,15 @@ async fn spawn_agent_system(
+             // Extract session ID from JSONL output
+             if let Ok(json) = serde_json::from_str::<JsonValue>(&line) {
+                 // Claude Code uses "session_id" (underscore), not "sessionId"
+-                if json.get("type").and_then(|t| t.as_str()) == Some("system") &&
+-                   json.get("subtype").and_then(|s| s.as_str()) == Some("init") {
++                if json.get("type").and_then(|t| t.as_str()) == Some("system")
++                    && json.get("subtype").and_then(|s| s.as_str()) == Some("init")
++                {
+                     if let Some(sid) = json.get("session_id").and_then(|s| s.as_str()) {
+                         if let Ok(mut current_session_id) = session_id_clone.lock() {
+                             if current_session_id.is_empty() {
+                                 *current_session_id = sid.to_string();
+                                 info!("🔑 Extracted session ID: {}", sid);
+-                                
++
+                                 // Update database immediately with session ID
+                                 if let Ok(conn) = Connection::open(&db_path_for_stdout) {
+                                     match conn.execute(
+@@ -925,7 +932,10 @@ async fn spawn_agent_system(
+                                             }
+                                         }
+                                         Err(e) => {
+-                                            error!("❌ Failed to update session ID immediately: {}", e);
++                                            error!(
++                                                "❌ Failed to update session ID immediately: {}",
++                                                e
++                                            );
+                                         }
+                                     }
+                                 }
+@@ -1085,7 +1095,10 @@ async fn spawn_agent_system(
+ 
+         // Update the run record with session ID and mark as completed - open a new connection
+         if let Ok(conn) = Connection::open(&db_path_for_monitor) {
+-            info!("🔄 Updating database with extracted session ID: {}", extracted_session_id);
++            info!(
++                "🔄 Updating database with extracted session ID: {}",
++                extracted_session_id
++            );
+             match conn.execute(
+                 "UPDATE agent_runs SET session_id = ?1, status = 'completed', completed_at = CURRENT_TIMESTAMP WHERE id = ?2",
+                 params![extracted_session_id, run_id],
+@@ -1102,7 +1115,10 @@ async fn spawn_agent_system(
+                 }
+             }
+         } else {
+-            error!("❌ Failed to open database to update session ID for run {}", run_id);
++            error!(
++                "❌ Failed to open database to update session ID for run {}",
++                run_id
++            );
+         }
+ 
+         // Cleanup will be handled by the cleanup_finished_processes function
+@@ -1162,10 +1178,8 @@ pub async fn list_running_sessions(
+     // Cross-check with the process registry to ensure accuracy
+     // Get actually running processes from the registry
+     let registry_processes = registry.0.get_running_agent_processes()?;
+-    let registry_run_ids: std::collections::HashSet<i64> = registry_processes
+-        .iter()
+-        .map(|p| p.run_id)
+-        .collect();
++    let registry_run_ids: std::collections::HashSet<i64> =
++        registry_processes.iter().map(|p| p.run_id).collect();
+ 
+     // Filter out any database entries that aren't actually running in the registry
+     // This handles cases where processes crashed without updating the database
+@@ -1358,7 +1372,7 @@ pub async fn get_session_output(
+ 
+     // Find the correct project directory by searching for the session file
+     let projects_dir = claude_dir.join("projects");
+-    
++
+     // Check if projects directory exists
+     if !projects_dir.exists() {
+         log::error!("Projects directory not found at: {:?}", projects_dir);
+@@ -1367,15 +1381,18 @@ pub async fn get_session_output(
+ 
+     // Search for the session file in all project directories
+     let mut session_file_path = None;
+-    log::info!("Searching for session file {} in all project directories", run.session_id);
+-    
++    log::info!(
++        "Searching for session file {} in all project directories",
++        run.session_id
++    );
++
+     if let Ok(entries) = std::fs::read_dir(&projects_dir) {
+         for entry in entries.filter_map(Result::ok) {
+             let path = entry.path();
+             if path.is_dir() {
+                 let dir_name = path.file_name().unwrap_or_default().to_string_lossy();
+                 log::debug!("Checking project directory: {}", dir_name);
+-                
++
+                 let potential_session_file = path.join(format!("{}.jsonl", run.session_id));
+                 if potential_session_file.exists() {
+                     log::info!("Found session file at: {:?}", potential_session_file);
+@@ -1395,7 +1412,11 @@ pub async fn get_session_output(
+         match tokio::fs::read_to_string(&session_path).await {
+             Ok(content) => Ok(content),
+             Err(e) => {
+-                log::error!("Failed to read session file {}: {}", session_path.display(), e);
++                log::error!(
++                    "Failed to read session file {}: {}",
++                    session_path.display(),
++                    e
++                );
+                 // Fallback to live output if file read fails
+                 let live_output = registry.0.get_live_output(run_id)?;
+                 Ok(live_output)
+@@ -1403,7 +1424,10 @@ pub async fn get_session_output(
+         }
+     } else {
+         // If session file not found, try the old method as fallback
+-        log::warn!("Session file not found for {}, trying legacy method", run.session_id);
++        log::warn!(
++            "Session file not found for {}, trying legacy method",
++            run.session_id
++        );
+         match read_session_jsonl(&run.session_id, &run.project_path).await {
+             Ok(content) => Ok(content),
+             Err(_) => {
+@@ -1916,7 +1940,7 @@ pub async fn load_agent_session_history(
+         .join(".claude");
+ 
+     let projects_dir = claude_dir.join("projects");
+-    
++
+     if !projects_dir.exists() {
+         log::error!("Projects directory not found at: {:?}", projects_dir);
+         return Err("Projects directory not found".to_string());
+@@ -1924,15 +1948,18 @@ pub async fn load_agent_session_history(
+ 
+     // Search for the session file in all project directories
+     let mut session_file_path = None;
+-    log::info!("Searching for session file {} in all project directories", session_id);
+-    
++    log::info!(
++        "Searching for session file {} in all project directories",
++        session_id
++    );
++
+     if let Ok(entries) = std::fs::read_dir(&projects_dir) {
+         for entry in entries.filter_map(Result::ok) {
+             let path = entry.path();
+             if path.is_dir() {
+                 let dir_name = path.file_name().unwrap_or_default().to_string_lossy();
+                 log::debug!("Checking project directory: {}", dir_name);
+-                
++
+                 let potential_session_file = path.join(format!("{}.jsonl", session_id));
+                 if potential_session_file.exists() {
+                     log::info!("Found session file at: {:?}", potential_session_file);
+diff --git a/src-tauri/src/commands/claude.rs b/src-tauri/src/commands/claude.rs
+index 94ad3c5..c8787e2 100644
+--- a/src-tauri/src/commands/claude.rs
++++ b/src-tauri/src/commands/claude.rs
+@@ -10,7 +10,6 @@ use tauri::{AppHandle, Emitter, Manager};
+ use tokio::process::{Child, Command};
+ use tokio::sync::Mutex;
+ 
+-
+ /// Global state to track current Claude process
+ pub struct ClaudeProcessState {
+     pub current_process: Arc<Mutex<Option<Child>>>,
+@@ -262,7 +261,7 @@ fn create_command_with_env(program: &str) -> Command {
+             }
+         }
+     }
+-    
++
+     // Add Homebrew support if the program is in a Homebrew directory
+     if program.contains("/homebrew/") || program.contains("/opt/homebrew/") {
+         if let Some(program_dir) = std::path::Path::new(program).parent() {
+@@ -270,7 +269,10 @@ fn create_command_with_env(program: &str) -> Command {
+             let homebrew_bin_str = program_dir.to_string_lossy();
+             if !current_path.contains(&homebrew_bin_str.as_ref()) {
+                 let new_path = format!("{}:{}", homebrew_bin_str, current_path);
+-                log::debug!("Adding Homebrew bin directory to PATH: {}", homebrew_bin_str);
++                log::debug!(
++                    "Adding Homebrew bin directory to PATH: {}",
++                    homebrew_bin_str
++                );
+                 tokio_cmd.env("PATH", new_path);
+             }
+         }
+@@ -280,22 +282,18 @@ fn create_command_with_env(program: &str) -> Command {
+ }
+ 
+ /// Creates a system binary command with the given arguments
+-fn create_system_command(
+-    claude_path: &str,
+-    args: Vec<String>,
+-    project_path: &str,
+-) -> Command {
++fn create_system_command(claude_path: &str, args: Vec<String>, project_path: &str) -> Command {
+     let mut cmd = create_command_with_env(claude_path);
+-    
++
+     // Add all arguments
+     for arg in args {
+         cmd.arg(arg);
+     }
+-    
++
+     cmd.current_dir(project_path)
+         .stdout(Stdio::piped())
+         .stderr(Stdio::piped());
+-    
++
+     cmd
+ }
+ 
+@@ -307,7 +305,6 @@ pub async fn get_home_directory() -> Result<String, String> {
+         .ok_or_else(|| "Could not determine home directory".to_string())
+ }
+ 
+-
+ /// Lists all projects in the ~/.claude/projects directory
+ #[tauri::command]
+ pub async fn list_projects() -> Result<Vec<Project>, String> {
+@@ -361,7 +358,7 @@ pub async fn list_projects() -> Result<Vec<Project>, String> {
+             // List all JSONL files (sessions) in this project directory
+             let mut sessions = Vec::new();
+             let mut most_recent_session: Option<u64> = None;
+-            
++
+             if let Ok(session_entries) = fs::read_dir(&path) {
+                 for session_entry in session_entries.flatten() {
+                     let session_path = session_entry.path();
+@@ -371,7 +368,7 @@ pub async fn list_projects() -> Result<Vec<Project>, String> {
+                         if let Some(session_id) = session_path.file_stem().and_then(|s| s.to_str())
+                         {
+                             sessions.push(session_id.to_string());
+-                            
++
+                             // Track the most recent session timestamp
+                             if let Ok(metadata) = fs::metadata(&session_path) {
+                                 let modified = metadata
+@@ -380,7 +377,7 @@ pub async fn list_projects() -> Result<Vec<Project>, String> {
+                                     .duration_since(UNIX_EPOCH)
+                                     .unwrap_or_default()
+                                     .as_secs();
+-                                
++
+                                 most_recent_session = Some(match most_recent_session {
+                                     Some(current) => current.max(modified),
+                                     None => modified,
+@@ -420,31 +417,31 @@ pub async fn list_projects() -> Result<Vec<Project>, String> {
+ #[tauri::command]
+ pub async fn create_project(path: String) -> Result<Project, String> {
+     log::info!("Creating project for path: {}", path);
+-    
++
+     // Encode the path to create a project ID
+     let project_id = path.replace('/', "-");
+-    
++
+     // Get claude directory
+     let claude_dir = get_claude_dir().map_err(|e| e.to_string())?;
+     let projects_dir = claude_dir.join("projects");
+-    
++
+     // Create projects directory if it doesn't exist
+     if !projects_dir.exists() {
+         fs::create_dir_all(&projects_dir)
+             .map_err(|e| format!("Failed to create projects directory: {}", e))?;
+     }
+-    
++
+     // Create project directory if it doesn't exist
+     let project_dir = projects_dir.join(&project_id);
+     if !project_dir.exists() {
+         fs::create_dir_all(&project_dir)
+             .map_err(|e| format!("Failed to create project directory: {}", e))?;
+     }
+-    
++
+     // Get creation time
+     let metadata = fs::metadata(&project_dir)
+         .map_err(|e| format!("Failed to read directory metadata: {}", e))?;
+-    
++
+     let created_at = metadata
+         .created()
+         .or_else(|_| metadata.modified())
+@@ -452,7 +449,7 @@ pub async fn create_project(path: String) -> Result<Project, String> {
+         .duration_since(UNIX_EPOCH)
+         .unwrap_or_default()
+         .as_secs();
+-    
++
+     // Return the created project
+     Ok(Project {
+         id: project_id,
+@@ -648,7 +645,8 @@ pub async fn check_claude_version(app: AppHandle) -> Result<ClaudeVersionStatus,
+         }
+     };
+ 
+-    use log::debug;debug!("Claude path: {}", claude_path);
++    use log::debug;
++    debug!("Claude path: {}", claude_path);
+ 
+     // In production builds, we can't check the version directly
+     #[cfg(not(debug_assertions))]
+@@ -680,18 +678,21 @@ pub async fn check_claude_version(app: AppHandle) -> Result<ClaudeVersionStatus,
+             Ok(output) => {
+                 let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+                 let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+-                
++
+                 // Use regex to directly extract version pattern (e.g., "1.0.41")
+-                let version_regex = regex::Regex::new(r"(\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?(?:\+[a-zA-Z0-9.-]+)?)").ok();
+-                
++                let version_regex =
++                    regex::Regex::new(r"(\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?(?:\+[a-zA-Z0-9.-]+)?)")
++                        .ok();
++
+                 let version = if let Some(regex) = version_regex {
+-                    regex.captures(&stdout)
++                    regex
++                        .captures(&stdout)
+                         .and_then(|captures| captures.get(1))
+                         .map(|m| m.as_str().to_string())
+                 } else {
+                     None
+                 };
+-                
++
+                 let full_output = if stderr.is_empty() {
+                     stdout.clone()
+                 } else {
+@@ -907,8 +908,6 @@ pub async fn load_session_history(
+     Ok(messages)
+ }
+ 
+-
+-
+ /// Execute a new interactive Claude Code session with streaming output
+ #[tauri::command]
+ pub async fn execute_claude_code(
+@@ -924,7 +923,7 @@ pub async fn execute_claude_code(
+     );
+ 
+     let claude_path = find_claude_binary(&app)?;
+-    
++
+     let args = vec![
+         "-p".to_string(),
+         prompt.clone(),
+@@ -955,7 +954,7 @@ pub async fn continue_claude_code(
+     );
+ 
+     let claude_path = find_claude_binary(&app)?;
+-    
++
+     let args = vec![
+         "-c".to_string(), // Continue flag
+         "-p".to_string(),
+@@ -989,7 +988,7 @@ pub async fn resume_claude_code(
+     );
+ 
+     let claude_path = find_claude_binary(&app)?;
+-    
++
+     let args = vec![
+         "--resume".to_string(),
+         session_id.clone(),
+@@ -1026,8 +1025,12 @@ pub async fn cancel_claude_execution(
+         let registry = app.state::<crate::process::ProcessRegistryState>();
+         match registry.0.get_claude_session_by_id(sid) {
+             Ok(Some(process_info)) => {
+-                log::info!("Found process in registry for session {}: run_id={}, PID={}", 
+-                    sid, process_info.run_id, process_info.pid);
++                log::info!(
++                    "Found process in registry for session {}: run_id={}, PID={}",
++                    sid,
++                    process_info.run_id,
++                    process_info.pid
++                );
+                 match registry.0.kill_process(process_info.run_id).await {
+                     Ok(success) => {
+                         if success {
+@@ -1060,7 +1063,10 @@ pub async fn cancel_claude_execution(
+         if let Some(mut child) = current_process.take() {
+             // Try to get the PID before killing
+             let pid = child.id();
+-            log::info!("Attempting to kill Claude process via ClaudeProcessState with PID: {:?}", pid);
++            log::info!(
++                "Attempting to kill Claude process via ClaudeProcessState with PID: {:?}",
++                pid
++            );
+ 
+             // Kill the process
+             match child.kill().await {
+@@ -1069,8 +1075,11 @@ pub async fn cancel_claude_execution(
+                     killed = true;
+                 }
+                 Err(e) => {
+-                    log::error!("Failed to kill Claude process via ClaudeProcessState: {}", e);
+-                    
++                    log::error!(
++                        "Failed to kill Claude process via ClaudeProcessState: {}",
++                        e
++                    );
++
+                     // Method 3: If we have a PID, try system kill as last resort
+                     if let Some(pid) = pid {
+                         log::info!("Attempting system kill as last resort for PID: {}", pid);
+@@ -1083,7 +1092,7 @@ pub async fn cancel_claude_execution(
+                                 .args(["-KILL", &pid.to_string()])
+                                 .output()
+                         };
+-                        
++
+                         match kill_result {
+                             Ok(output) if output.status.success() => {
+                                 log::info!("Successfully killed process via system command");
+@@ -1116,18 +1125,18 @@ pub async fn cancel_claude_execution(
+         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+         let _ = app.emit(&format!("claude-complete:{}", sid), false);
+     }
+-    
++
+     // Also emit generic events for backward compatibility
+     let _ = app.emit("claude-cancelled", true);
+     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+     let _ = app.emit("claude-complete", false);
+-    
++
+     if killed {
+         log::info!("Claude process cancellation completed successfully");
+     } else if !attempted_methods.is_empty() {
+         log::warn!("Claude process cancellation attempted but process may have already exited. Attempted methods: {:?}", attempted_methods);
+     }
+-    
++
+     Ok(())
+ }
+ 
+@@ -1154,9 +1163,15 @@ pub async fn get_claude_session_output(
+ }
+ 
+ /// Helper function to spawn Claude process and handle streaming
+-async fn spawn_claude_process(app: AppHandle, mut cmd: Command, prompt: String, model: String, project_path: String) -> Result<(), String> {
+-    use tokio::io::{AsyncBufReadExt, BufReader};
++async fn spawn_claude_process(
++    app: AppHandle,
++    mut cmd: Command,
++    prompt: String,
++    model: String,
++    project_path: String,
++) -> Result<(), String> {
+     use std::sync::Mutex;
++    use tokio::io::{AsyncBufReadExt, BufReader};
+ 
+     // Spawn the process
+     let mut child = cmd
+@@ -1169,10 +1184,7 @@ async fn spawn_claude_process(app: AppHandle, mut cmd: Command, prompt: String,
+ 
+     // Get the child PID for logging
+     let pid = child.id().unwrap_or(0);
+-    log::info!(
+-        "Spawned Claude process with PID: {:?}",
+-        pid
+-    );
++    log::info!("Spawned Claude process with PID: {:?}", pid);
+ 
+     // Create readers first (before moving child)
+     let stdout_reader = BufReader::new(stdout);
+@@ -1207,7 +1219,7 @@ async fn spawn_claude_process(app: AppHandle, mut cmd: Command, prompt: String,
+         let mut lines = stdout_reader.lines();
+         while let Ok(Some(line)) = lines.next_line().await {
+             log::debug!("Claude stdout: {}", line);
+-            
++
+             // Parse the line to check for init message with session ID
+             if let Ok(msg) = serde_json::from_str::<serde_json::Value>(&line) {
+                 if msg["type"] == "system" && msg["subtype"] == "init" {
+@@ -1216,7 +1228,7 @@ async fn spawn_claude_process(app: AppHandle, mut cmd: Command, prompt: String,
+                         if session_id_guard.is_none() {
+                             *session_id_guard = Some(claude_session_id.to_string());
+                             log::info!("Extracted Claude session ID: {}", claude_session_id);
+-                            
++
+                             // Now register with ProcessRegistry using Claude's session ID
+                             match registry_clone.register_claude_session(
+                                 claude_session_id.to_string(),
+@@ -1238,12 +1250,12 @@ async fn spawn_claude_process(app: AppHandle, mut cmd: Command, prompt: String,
+                     }
+                 }
+             }
+-            
++
+             // Store live output in registry if we have a run_id
+             if let Some(run_id) = *run_id_holder_clone.lock().unwrap() {
+                 let _ = registry_clone.append_live_output(run_id, &line);
+             }
+-            
++
+             // Emit the line to the frontend with session isolation if we have session ID
+             if let Some(ref session_id) = *session_id_holder_clone.lock().unwrap() {
+                 let _ = app_handle.emit(&format!("claude-output:{}", session_id), &line);
+@@ -1287,10 +1299,8 @@ async fn spawn_claude_process(app: AppHandle, mut cmd: Command, prompt: String,
+                     // Add a small delay to ensure all messages are processed
+                     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+                     if let Some(ref session_id) = *session_id_holder_clone3.lock().unwrap() {
+-                        let _ = app_handle_wait.emit(
+-                            &format!("claude-complete:{}", session_id),
+-                            status.success(),
+-                        );
++                        let _ = app_handle_wait
++                            .emit(&format!("claude-complete:{}", session_id), status.success());
+                     }
+                     // Also emit to the generic event for backward compatibility
+                     let _ = app_handle_wait.emit("claude-complete", status.success());
+@@ -1300,8 +1310,8 @@ async fn spawn_claude_process(app: AppHandle, mut cmd: Command, prompt: String,
+                     // Add a small delay to ensure all messages are processed
+                     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+                     if let Some(ref session_id) = *session_id_holder_clone3.lock().unwrap() {
+-                        let _ = app_handle_wait
+-                            .emit(&format!("claude-complete:{}", session_id), false);
++                        let _ =
++                            app_handle_wait.emit(&format!("claude-complete:{}", session_id), false);
+                     }
+                     // Also emit to the generic event for backward compatibility
+                     let _ = app_handle_wait.emit("claude-complete", false);
+@@ -1321,7 +1331,6 @@ async fn spawn_claude_process(app: AppHandle, mut cmd: Command, prompt: String,
+     Ok(())
+ }
+ 
+-
+ /// Lists files and directories in a given path
+ #[tauri::command]
+ pub async fn list_directory_contents(directory_path: String) -> Result<Vec<FileEntry>, String> {
+@@ -2038,78 +2047,92 @@ pub async fn track_session_messages(
+ 
+ /// Gets hooks configuration from settings at specified scope
+ #[tauri::command]
+-pub async fn get_hooks_config(scope: String, project_path: Option<String>) -> Result<serde_json::Value, String> {
+-    log::info!("Getting hooks config for scope: {}, project: {:?}", scope, project_path);
++pub async fn get_hooks_config(
++    scope: String,
++    project_path: Option<String>,
++) -> Result<serde_json::Value, String> {
++    log::info!(
++        "Getting hooks config for scope: {}, project: {:?}",
++        scope,
++        project_path
++    );
+ 
+     let settings_path = match scope.as_str() {
+-        "user" => {
+-            get_claude_dir()
+-                .map_err(|e| e.to_string())?
+-                .join("settings.json")
+-        },
++        "user" => get_claude_dir()
++            .map_err(|e| e.to_string())?
++            .join("settings.json"),
+         "project" => {
+             let path = project_path.ok_or("Project path required for project scope")?;
+             PathBuf::from(path).join(".claude").join("settings.json")
+-        },
++        }
+         "local" => {
+             let path = project_path.ok_or("Project path required for local scope")?;
+-            PathBuf::from(path).join(".claude").join("settings.local.json")
+-        },
+-        _ => return Err("Invalid scope".to_string())
++            PathBuf::from(path)
++                .join(".claude")
++                .join("settings.local.json")
++        }
++        _ => return Err("Invalid scope".to_string()),
+     };
+ 
+     if !settings_path.exists() {
+-        log::info!("Settings file does not exist at {:?}, returning empty hooks", settings_path);
++        log::info!(
++            "Settings file does not exist at {:?}, returning empty hooks",
++            settings_path
++        );
+         return Ok(serde_json::json!({}));
+     }
+ 
+     let content = fs::read_to_string(&settings_path)
+         .map_err(|e| format!("Failed to read settings: {}", e))?;
+-    
+-    let settings: serde_json::Value = serde_json::from_str(&content)
+-        .map_err(|e| format!("Failed to parse settings: {}", e))?;
+-    
+-    Ok(settings.get("hooks").cloned().unwrap_or(serde_json::json!({})))
++
++    let settings: serde_json::Value =
++        serde_json::from_str(&content).map_err(|e| format!("Failed to parse settings: {}", e))?;
++
++    Ok(settings
++        .get("hooks")
++        .cloned()
++        .unwrap_or(serde_json::json!({})))
+ }
+ 
+ /// Updates hooks configuration in settings at specified scope
+ #[tauri::command]
+ pub async fn update_hooks_config(
+-    scope: String, 
++    scope: String,
+     hooks: serde_json::Value,
+-    project_path: Option<String>
++    project_path: Option<String>,
+ ) -> Result<String, String> {
+-    log::info!("Updating hooks config for scope: {}, project: {:?}", scope, project_path);
++    log::info!(
++        "Updating hooks config for scope: {}, project: {:?}",
++        scope,
++        project_path
++    );
+ 
+     let settings_path = match scope.as_str() {
+-        "user" => {
+-            get_claude_dir()
+-                .map_err(|e| e.to_string())?
+-                .join("settings.json")
+-        },
++        "user" => get_claude_dir()
++            .map_err(|e| e.to_string())?
++            .join("settings.json"),
+         "project" => {
+             let path = project_path.ok_or("Project path required for project scope")?;
+             let claude_dir = PathBuf::from(path).join(".claude");
+             fs::create_dir_all(&claude_dir)
+                 .map_err(|e| format!("Failed to create .claude directory: {}", e))?;
+             claude_dir.join("settings.json")
+-        },
++        }
+         "local" => {
+             let path = project_path.ok_or("Project path required for local scope")?;
+             let claude_dir = PathBuf::from(path).join(".claude");
+             fs::create_dir_all(&claude_dir)
+                 .map_err(|e| format!("Failed to create .claude directory: {}", e))?;
+             claude_dir.join("settings.local.json")
+-        },
+-        _ => return Err("Invalid scope".to_string())
++        }
++        _ => return Err("Invalid scope".to_string()),
+     };
+ 
+     // Read existing settings or create new
+     let mut settings = if settings_path.exists() {
+         let content = fs::read_to_string(&settings_path)
+             .map_err(|e| format!("Failed to read settings: {}", e))?;
+-        serde_json::from_str(&content)
+-            .map_err(|e| format!("Failed to parse settings: {}", e))?
++        serde_json::from_str(&content).map_err(|e| format!("Failed to parse settings: {}", e))?
+     } else {
+         serde_json::json!({})
+     };
+@@ -2120,7 +2143,7 @@ pub async fn update_hooks_config(
+     // Write back with pretty formatting
+     let json_string = serde_json::to_string_pretty(&settings)
+         .map_err(|e| format!("Failed to serialize settings: {}", e))?;
+-    
++
+     fs::write(&settings_path, json_string)
+         .map_err(|e| format!("Failed to write settings: {}", e))?;
+ 
+@@ -2135,9 +2158,9 @@ pub async fn validate_hook_command(command: String) -> Result<serde_json::Value,
+     // Validate syntax without executing
+     let mut cmd = std::process::Command::new("bash");
+     cmd.arg("-n") // Syntax check only
+-       .arg("-c")
+-       .arg(&command);
+-    
++        .arg("-c")
++        .arg(&command);
++
+     match cmd.output() {
+         Ok(output) => {
+             if output.status.success() {
+@@ -2153,6 +2176,63 @@ pub async fn validate_hook_command(command: String) -> Result<serde_json::Value,
+                 }))
+             }
+         }
+-        Err(e) => Err(format!("Failed to validate command: {}", e))
++        Err(e) => Err(format!("Failed to validate command: {}", e)),
++    }
++}
++
++/// Deletes a session file and its associated data
++///
++/// This function removes a session's JSONL file from the project directory
++/// and also cleans up any associated todo data if it exists.
++///
++/// # Arguments
++/// * `session_id` - The UUID of the session to delete
++/// * `project_id` - The ID of the project containing the session
++///
++/// # Returns
++/// * `Ok(String)` - Success message with session ID
++/// * `Err(String)` - Error message if deletion fails
++///
++/// # Errors
++/// * Project directory not found
++/// * Permission denied when deleting files
++/// * File system errors during deletion
++#[tauri::command]
++pub async fn delete_session(session_id: String, project_id: String) -> Result<String, String> {
++    log::info!(
++        "Deleting session: {} from project: {}",
++        session_id,
++        project_id
++    );
++
++    let claude_dir = get_claude_dir().map_err(|e| e.to_string())?;
++    let project_dir = claude_dir.join("projects").join(&project_id);
++
++    // Check if project directory exists
++    if !project_dir.exists() {
++        return Err(format!("Project directory not found: {}", project_id));
++    }
++
++    // Delete the session JSONL file
++    let session_file = project_dir.join(format!("{}.jsonl", session_id));
++    if session_file.exists() {
++        fs::remove_file(&session_file)
++            .map_err(|e| format!("Failed to delete session file: {}", e))?;
++        log::info!("Deleted session file: {:?}", session_file);
++    } else {
++        log::warn!("Session file not found: {:?}", session_file);
++    }
++
++    // Delete associated todo data if it exists
++    let todos_dir = project_dir.join("todos");
++    if todos_dir.exists() {
++        let todo_file = todos_dir.join(format!("{}.json", session_id));
++        if todo_file.exists() {
++            fs::remove_file(&todo_file)
++                .map_err(|e| format!("Failed to delete todo file: {}", e))?;
++            log::info!("Deleted todo file: {:?}", todo_file);
++        }
+     }
++
++    Ok(format!("Session {} deleted successfully", session_id))
+ }
+diff --git a/src-tauri/src/commands/mod.rs b/src-tauri/src/commands/mod.rs
+index a0fa7e8..f4c3552 100644
+--- a/src-tauri/src/commands/mod.rs
++++ b/src-tauri/src/commands/mod.rs
+@@ -1,7 +1,7 @@
+ pub mod agents;
+ pub mod claude;
+ pub mod mcp;
+-pub mod usage;
+-pub mod storage;
+-pub mod slash_commands;
+ pub mod proxy;
++pub mod slash_commands;
++pub mod storage;
++pub mod usage;
+diff --git a/src-tauri/src/commands/proxy.rs b/src-tauri/src/commands/proxy.rs
+index e2454ec..2192e0e 100644
+--- a/src-tauri/src/commands/proxy.rs
++++ b/src-tauri/src/commands/proxy.rs
+@@ -1,6 +1,6 @@
++use rusqlite::params;
+ use serde::{Deserialize, Serialize};
+ use tauri::State;
+-use rusqlite::params;
+ 
+ use crate::commands::agents::AgentDb;
+ 
+@@ -29,9 +29,9 @@ impl Default for ProxySettings {
+ #[tauri::command]
+ pub async fn get_proxy_settings(db: State<'_, AgentDb>) -> Result<ProxySettings, String> {
+     let conn = db.0.lock().map_err(|e| e.to_string())?;
+-    
++
+     let mut settings = ProxySettings::default();
+-    
++
+     // Query each proxy setting
+     let keys = vec![
+         ("proxy_enabled", "enabled"),
+@@ -40,7 +40,7 @@ pub async fn get_proxy_settings(db: State<'_, AgentDb>) -> Result<ProxySettings,
+         ("proxy_no", "no_proxy"),
+         ("proxy_all", "all_proxy"),
+     ];
+-    
++
+     for (db_key, field) in keys {
+         if let Ok(value) = conn.query_row(
+             "SELECT value FROM app_settings WHERE key = ?1",
+@@ -57,7 +57,7 @@ pub async fn get_proxy_settings(db: State<'_, AgentDb>) -> Result<ProxySettings,
+             }
+         }
+     }
+-    
++
+     Ok(settings)
+ }
+ 
+@@ -68,33 +68,40 @@ pub async fn save_proxy_settings(
+     settings: ProxySettings,
+ ) -> Result<(), String> {
+     let conn = db.0.lock().map_err(|e| e.to_string())?;
+-    
++
+     // Save each setting
+     let values = vec![
+         ("proxy_enabled", settings.enabled.to_string()),
+-        ("proxy_http", settings.http_proxy.clone().unwrap_or_default()),
+-        ("proxy_https", settings.https_proxy.clone().unwrap_or_default()),
++        (
++            "proxy_http",
++            settings.http_proxy.clone().unwrap_or_default(),
++        ),
++        (
++            "proxy_https",
++            settings.https_proxy.clone().unwrap_or_default(),
++        ),
+         ("proxy_no", settings.no_proxy.clone().unwrap_or_default()),
+         ("proxy_all", settings.all_proxy.clone().unwrap_or_default()),
+     ];
+-    
++
+     for (key, value) in values {
+         conn.execute(
+             "INSERT OR REPLACE INTO app_settings (key, value) VALUES (?1, ?2)",
+             params![key, value],
+-        ).map_err(|e| format!("Failed to save {}: {}", key, e))?;
++        )
++        .map_err(|e| format!("Failed to save {}: {}", key, e))?;
+     }
+-    
++
+     // Apply the proxy settings immediately to the current process
+     apply_proxy_settings(&settings);
+-    
++
+     Ok(())
+ }
+ 
+ /// Apply proxy settings as environment variables
+ pub fn apply_proxy_settings(settings: &ProxySettings) {
+     log::info!("Applying proxy settings: enabled={}", settings.enabled);
+-    
++
+     if !settings.enabled {
+         // Clear proxy environment variables if disabled
+         log::info!("Clearing proxy environment variables");
+@@ -109,7 +116,7 @@ pub fn apply_proxy_settings(settings: &ProxySettings) {
+         std::env::remove_var("all_proxy");
+         return;
+     }
+-    
++
+     // Ensure NO_PROXY includes localhost by default
+     let mut no_proxy_list = vec!["localhost", "127.0.0.1", "::1", "0.0.0.0"];
+     if let Some(user_no_proxy) = &settings.no_proxy {
+@@ -118,7 +125,7 @@ pub fn apply_proxy_settings(settings: &ProxySettings) {
+         }
+     }
+     let no_proxy_value = no_proxy_list.join(",");
+-    
++
+     // Set proxy environment variables (uppercase is standard)
+     if let Some(http_proxy) = &settings.http_proxy {
+         if !http_proxy.is_empty() {
+@@ -126,25 +133,25 @@ pub fn apply_proxy_settings(settings: &ProxySettings) {
+             std::env::set_var("HTTP_PROXY", http_proxy);
+         }
+     }
+-    
++
+     if let Some(https_proxy) = &settings.https_proxy {
+         if !https_proxy.is_empty() {
+             log::info!("Setting HTTPS_PROXY={}", https_proxy);
+             std::env::set_var("HTTPS_PROXY", https_proxy);
+         }
+     }
+-    
++
+     // Always set NO_PROXY to include localhost
+     log::info!("Setting NO_PROXY={}", no_proxy_value);
+     std::env::set_var("NO_PROXY", &no_proxy_value);
+-    
++
+     if let Some(all_proxy) = &settings.all_proxy {
+         if !all_proxy.is_empty() {
+             log::info!("Setting ALL_PROXY={}", all_proxy);
+             std::env::set_var("ALL_PROXY", all_proxy);
+         }
+     }
+-    
++
+     // Log current proxy environment variables for debugging
+     log::info!("Current proxy environment variables:");
+     for (key, value) in std::env::vars() {
+@@ -152,4 +159,4 @@ pub fn apply_proxy_settings(settings: &ProxySettings) {
+             log::info!("  {}={}", key, value);
+         }
+     }
+-}
+\ No newline at end of file
++}
+diff --git a/src-tauri/src/commands/slash_commands.rs b/src-tauri/src/commands/slash_commands.rs
+index dbf12e6..6f77309 100644
+--- a/src-tauri/src/commands/slash_commands.rs
++++ b/src-tauri/src/commands/slash_commands.rs
+@@ -45,13 +45,13 @@ struct CommandFrontmatter {
+ /// Parse a markdown file with optional YAML frontmatter
+ fn parse_markdown_with_frontmatter(content: &str) -> Result<(Option<CommandFrontmatter>, String)> {
+     let lines: Vec<&str> = content.lines().collect();
+-    
++
+     // Check if the file starts with YAML frontmatter
+     if lines.is_empty() || lines[0] != "---" {
+         // No frontmatter
+         return Ok((None, content.to_string()));
+     }
+-    
++
+     // Find the end of frontmatter
+     let mut frontmatter_end = None;
+     for (i, line) in lines.iter().enumerate().skip(1) {
+@@ -60,12 +60,12 @@ fn parse_markdown_with_frontmatter(content: &str) -> Result<(Option<CommandFront
+             break;
+         }
+     }
+-    
++
+     if let Some(end) = frontmatter_end {
+         // Extract frontmatter
+         let frontmatter_content = lines[1..end].join("\n");
+         let body_content = lines[(end + 1)..].join("\n");
+-        
++
+         // Parse YAML
+         match serde_yaml::from_str::<CommandFrontmatter>(&frontmatter_content) {
+             Ok(frontmatter) => Ok((Some(frontmatter), body_content)),
+@@ -86,20 +86,20 @@ fn extract_command_info(file_path: &Path, base_path: &Path) -> Result<(String, O
+     let relative_path = file_path
+         .strip_prefix(base_path)
+         .context("Failed to get relative path")?;
+-    
++
+     // Remove .md extension
+     let path_without_ext = relative_path
+         .with_extension("")
+         .to_string_lossy()
+         .to_string();
+-    
++
+     // Split into components
+     let components: Vec<&str> = path_without_ext.split('/').collect();
+-    
++
+     if components.is_empty() {
+         return Err(anyhow::anyhow!("Invalid command path"));
+     }
+-    
++
+     if components.len() == 1 {
+         // No namespace
+         Ok((components[0].to_string(), None))
+@@ -112,44 +112,43 @@ fn extract_command_info(file_path: &Path, base_path: &Path) -> Result<(String, O
+ }
+ 
+ /// Load a single command from a markdown file
+-fn load_command_from_file(
+-    file_path: &Path,
+-    base_path: &Path,
+-    scope: &str,
+-) -> Result<SlashCommand> {
++fn load_command_from_file(file_path: &Path, base_path: &Path, scope: &str) -> Result<SlashCommand> {
+     debug!("Loading command from: {:?}", file_path);
+-    
++
+     // Read file content
+-    let content = fs::read_to_string(file_path)
+-        .context("Failed to read command file")?;
+-    
++    let content = fs::read_to_string(file_path).context("Failed to read command file")?;
++
+     // Parse frontmatter
+     let (frontmatter, body) = parse_markdown_with_frontmatter(&content)?;
+-    
++
+     // Extract command info
+     let (name, namespace) = extract_command_info(file_path, base_path)?;
+-    
++
+     // Build full command (no scope prefix, just /command or /namespace:command)
+     let full_command = match &namespace {
+         Some(ns) => format!("/{ns}:{name}"),
+         None => format!("/{name}"),
+     };
+-    
++
+     // Generate unique ID
+-    let id = format!("{}-{}", scope, file_path.to_string_lossy().replace('/', "-"));
+-    
++    let id = format!(
++        "{}-{}",
++        scope,
++        file_path.to_string_lossy().replace('/', "-")
++    );
++
+     // Check for special content
+     let has_bash_commands = body.contains("!`");
+     let has_file_references = body.contains('@');
+     let accepts_arguments = body.contains("$ARGUMENTS");
+-    
++
+     // Extract metadata from frontmatter
+     let (description, allowed_tools) = if let Some(fm) = frontmatter {
+         (fm.description, fm.allowed_tools.unwrap_or_default())
+     } else {
+         (None, Vec::new())
+     };
+-    
++
+     Ok(SlashCommand {
+         id,
+         name,
+@@ -171,18 +170,18 @@ fn find_markdown_files(dir: &Path, files: &mut Vec<PathBuf>) -> Result<()> {
+     if !dir.exists() {
+         return Ok(());
+     }
+-    
++
+     for entry in fs::read_dir(dir)? {
+         let entry = entry?;
+         let path = entry.path();
+-        
++
+         // Skip hidden files/directories
+         if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+             if name.starts_with('.') {
+                 continue;
+             }
+         }
+-        
++
+         if path.is_dir() {
+             find_markdown_files(&path, files)?;
+         } else if path.is_file() {
+@@ -193,7 +192,7 @@ fn find_markdown_files(dir: &Path, files: &mut Vec<PathBuf>) -> Result<()> {
+             }
+         }
+     }
+-    
++
+     Ok(())
+ }
+ 
+@@ -252,16 +251,16 @@ pub async fn slash_commands_list(
+ ) -> Result<Vec<SlashCommand>, String> {
+     info!("Discovering slash commands");
+     let mut commands = Vec::new();
+-    
++
+     // Add default commands
+     commands.extend(create_default_commands());
+-    
++
+     // Load project commands if project path is provided
+     if let Some(proj_path) = project_path {
+         let project_commands_dir = PathBuf::from(&proj_path).join(".claude").join("commands");
+         if project_commands_dir.exists() {
+             debug!("Scanning project commands at: {:?}", project_commands_dir);
+-            
++
+             let mut md_files = Vec::new();
+             if let Err(e) = find_markdown_files(&project_commands_dir, &mut md_files) {
+                 error!("Failed to find project command files: {}", e);
+@@ -280,13 +279,13 @@ pub async fn slash_commands_list(
+             }
+         }
+     }
+-    
++
+     // Load user commands
+     if let Some(home_dir) = dirs::home_dir() {
+         let user_commands_dir = home_dir.join(".claude").join("commands");
+         if user_commands_dir.exists() {
+             debug!("Scanning user commands at: {:?}", user_commands_dir);
+-            
++
+             let mut md_files = Vec::new();
+             if let Err(e) = find_markdown_files(&user_commands_dir, &mut md_files) {
+                 error!("Failed to find user command files: {}", e);
+@@ -305,7 +304,7 @@ pub async fn slash_commands_list(
+             }
+         }
+     }
+-    
++
+     info!("Found {} slash commands", commands.len());
+     Ok(commands)
+ }
+@@ -314,17 +313,17 @@ pub async fn slash_commands_list(
+ #[tauri::command]
+ pub async fn slash_command_get(command_id: String) -> Result<SlashCommand, String> {
+     debug!("Getting slash command: {}", command_id);
+-    
++
+     // Parse the ID to determine scope and reconstruct file path
+     let parts: Vec<&str> = command_id.split('-').collect();
+     if parts.len() < 2 {
+         return Err("Invalid command ID".to_string());
+     }
+-    
++
+     // The actual implementation would need to reconstruct the path and reload the command
+     // For now, we'll list all commands and find the matching one
+     let commands = slash_commands_list(None).await?;
+-    
++
+     commands
+         .into_iter()
+         .find(|cmd| cmd.id == command_id)
+@@ -343,16 +342,16 @@ pub async fn slash_command_save(
+     project_path: Option<String>,
+ ) -> Result<SlashCommand, String> {
+     info!("Saving slash command: {} in scope: {}", name, scope);
+-    
++
+     // Validate inputs
+     if name.is_empty() {
+         return Err("Command name cannot be empty".to_string());
+     }
+-    
++
+     if !["project", "user"].contains(&scope.as_str()) {
+         return Err("Invalid scope. Must be 'project' or 'user'".to_string());
+     }
+-    
++
+     // Determine base directory
+     let base_dir = if scope == "project" {
+         if let Some(proj_path) = project_path {
+@@ -366,7 +365,7 @@ pub async fn slash_command_save(
+             .join(".claude")
+             .join("commands")
+     };
+-    
++
+     // Build file path
+     let mut file_path = base_dir.clone();
+     if let Some(ns) = &namespace {
+@@ -374,41 +373,40 @@ pub async fn slash_command_save(
+             file_path = file_path.join(component);
+         }
+     }
+-    
++
+     // Create directories if needed
+-    fs::create_dir_all(&file_path)
+-        .map_err(|e| format!("Failed to create directories: {}", e))?;
+-    
++    fs::create_dir_all(&file_path).map_err(|e| format!("Failed to create directories: {}", e))?;
++
+     // Add filename
+     file_path = file_path.join(format!("{}.md", name));
+-    
++
+     // Build content with frontmatter
+     let mut full_content = String::new();
+-    
++
+     // Add frontmatter if we have metadata
+     if description.is_some() || !allowed_tools.is_empty() {
+         full_content.push_str("---\n");
+-        
++
+         if let Some(desc) = &description {
+             full_content.push_str(&format!("description: {}\n", desc));
+         }
+-        
++
+         if !allowed_tools.is_empty() {
+             full_content.push_str("allowed-tools:\n");
+             for tool in &allowed_tools {
+                 full_content.push_str(&format!("  - {}\n", tool));
+             }
+         }
+-        
++
+         full_content.push_str("---\n\n");
+     }
+-    
++
+     full_content.push_str(&content);
+-    
++
+     // Write file
+     fs::write(&file_path, &full_content)
+         .map_err(|e| format!("Failed to write command file: {}", e))?;
+-    
++
+     // Load and return the saved command
+     load_command_from_file(&file_path, &base_dir, &scope)
+         .map_err(|e| format!("Failed to load saved command: {}", e))
+@@ -416,35 +414,38 @@ pub async fn slash_command_save(
+ 
+ /// Delete a slash command
+ #[tauri::command]
+-pub async fn slash_command_delete(command_id: String, project_path: Option<String>) -> Result<String, String> {
++pub async fn slash_command_delete(
++    command_id: String,
++    project_path: Option<String>,
++) -> Result<String, String> {
+     info!("Deleting slash command: {}", command_id);
+-    
++
+     // First, we need to determine if this is a project command by parsing the ID
+     let is_project_command = command_id.starts_with("project-");
+-    
++
+     // If it's a project command and we don't have a project path, error out
+     if is_project_command && project_path.is_none() {
+         return Err("Project path required to delete project commands".to_string());
+     }
+-    
++
+     // List all commands (including project commands if applicable)
+     let commands = slash_commands_list(project_path).await?;
+-    
++
+     // Find the command by ID
+     let command = commands
+         .into_iter()
+         .find(|cmd| cmd.id == command_id)
+         .ok_or_else(|| format!("Command not found: {}", command_id))?;
+-    
++
+     // Delete the file
+     fs::remove_file(&command.file_path)
+         .map_err(|e| format!("Failed to delete command file: {}", e))?;
+-    
++
+     // Clean up empty directories
+     if let Some(parent) = Path::new(&command.file_path).parent() {
+         let _ = remove_empty_dirs(parent);
+     }
+-    
++
+     Ok(format!("Deleted command: {}", command.full_command))
+ }
+ 
+@@ -453,18 +454,18 @@ fn remove_empty_dirs(dir: &Path) -> Result<()> {
+     if !dir.exists() {
+         return Ok(());
+     }
+-    
++
+     // Check if directory is empty
+     let is_empty = fs::read_dir(dir)?.next().is_none();
+-    
++
+     if is_empty {
+         fs::remove_dir(dir)?;
+-        
++
+         // Try to remove parent if it's also empty
+         if let Some(parent) = dir.parent() {
+             let _ = remove_empty_dirs(parent);
+         }
+     }
+-    
++
+     Ok(())
+ }
+diff --git a/src-tauri/src/commands/storage.rs b/src-tauri/src/commands/storage.rs
+index 1bcdb1b..02c5529 100644
+--- a/src-tauri/src/commands/storage.rs
++++ b/src-tauri/src/commands/storage.rs
+@@ -1,10 +1,10 @@
++use super::agents::AgentDb;
+ use anyhow::Result;
+-use rusqlite::{params, Connection, Result as SqliteResult, types::ValueRef};
++use rusqlite::{params, types::ValueRef, Connection, Result as SqliteResult};
+ use serde::{Deserialize, Serialize};
+ use serde_json::{Map, Value as JsonValue};
+ use std::collections::HashMap;
+ use tauri::{AppHandle, Manager, State};
+-use super::agents::AgentDb;
+ 
+ /// Represents metadata about a database table
+ #[derive(Debug, Serialize, Deserialize, Clone)]
+@@ -50,37 +50,35 @@ pub struct QueryResult {
+ #[tauri::command]
+ pub async fn storage_list_tables(db: State<'_, AgentDb>) -> Result<Vec<TableInfo>, String> {
+     let conn = db.0.lock().map_err(|e| e.to_string())?;
+-    
++
+     // Query for all tables
+     let mut stmt = conn
+         .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name")
+         .map_err(|e| e.to_string())?;
+-    
++
+     let table_names: Vec<String> = stmt
+         .query_map([], |row| row.get(0))
+         .map_err(|e| e.to_string())?
+         .collect::<SqliteResult<Vec<_>>>()
+         .map_err(|e| e.to_string())?;
+-    
++
+     drop(stmt);
+-    
++
+     let mut tables = Vec::new();
+-    
++
+     for table_name in table_names {
+         // Get row count
+         let row_count: i64 = conn
+-            .query_row(
+-                &format!("SELECT COUNT(*) FROM {}", table_name),
+-                [],
+-                |row| row.get(0),
+-            )
++            .query_row(&format!("SELECT COUNT(*) FROM {}", table_name), [], |row| {
++                row.get(0)
++            })
+             .unwrap_or(0);
+-        
++
+         // Get column information
+         let mut pragma_stmt = conn
+             .prepare(&format!("PRAGMA table_info({})", table_name))
+             .map_err(|e| e.to_string())?;
+-        
++
+         let columns: Vec<ColumnInfo> = pragma_stmt
+             .query_map([], |row| {
+                 Ok(ColumnInfo {
+@@ -95,14 +93,14 @@ pub async fn storage_list_tables(db: State<'_, AgentDb>) -> Result<Vec<TableInfo
+             .map_err(|e| e.to_string())?
+             .collect::<SqliteResult<Vec<_>>>()
+             .map_err(|e| e.to_string())?;
+-        
++
+         tables.push(TableInfo {
+             name: table_name,
+             row_count,
+             columns,
+         });
+     }
+-    
++
+     Ok(tables)
+ }
+ 
+@@ -117,17 +115,17 @@ pub async fn storage_read_table(
+     searchQuery: Option<String>,
+ ) -> Result<TableData, String> {
+     let conn = db.0.lock().map_err(|e| e.to_string())?;
+-    
++
+     // Validate table name to prevent SQL injection
+     if !is_valid_table_name(&conn, &tableName)? {
+         return Err("Invalid table name".to_string());
+     }
+-    
++
+     // Get column information
+     let mut pragma_stmt = conn
+         .prepare(&format!("PRAGMA table_info({})", tableName))
+         .map_err(|e| e.to_string())?;
+-    
++
+     let columns: Vec<ColumnInfo> = pragma_stmt
+         .query_map([], |row| {
+             Ok(ColumnInfo {
+@@ -142,9 +140,9 @@ pub async fn storage_read_table(
+         .map_err(|e| e.to_string())?
+         .collect::<SqliteResult<Vec<_>>>()
+         .map_err(|e| e.to_string())?;
+-    
++
+     drop(pragma_stmt);
+-    
++
+     // Build query with optional search
+     let (query, count_query) = if let Some(search) = &searchQuery {
+         // Create search conditions for all text columns
+@@ -153,7 +151,7 @@ pub async fn storage_read_table(
+             .filter(|col| col.type_name.contains("TEXT") || col.type_name.contains("VARCHAR"))
+             .map(|col| format!("{} LIKE '%{}%'", col.name, search.replace("'", "''")))
+             .collect();
+-        
++
+         if search_conditions.is_empty() {
+             (
+                 format!("SELECT * FROM {} LIMIT ? OFFSET ?", tableName),
+@@ -162,7 +160,10 @@ pub async fn storage_read_table(
+         } else {
+             let where_clause = search_conditions.join(" OR ");
+             (
+-                format!("SELECT * FROM {} WHERE {} LIMIT ? OFFSET ?", tableName, where_clause),
++                format!(
++                    "SELECT * FROM {} WHERE {} LIMIT ? OFFSET ?",
++                    tableName, where_clause
++                ),
+                 format!("SELECT COUNT(*) FROM {} WHERE {}", tableName, where_clause),
+             )
+         }
+@@ -172,25 +173,23 @@ pub async fn storage_read_table(
+             format!("SELECT COUNT(*) FROM {}", tableName),
+         )
+     };
+-    
++
+     // Get total row count
+     let total_rows: i64 = conn
+         .query_row(&count_query, [], |row| row.get(0))
+         .unwrap_or(0);
+-    
++
+     // Calculate pagination
+     let offset = (page - 1) * pageSize;
+     let total_pages = (total_rows as f64 / pageSize as f64).ceil() as i64;
+-    
++
+     // Query data
+-    let mut data_stmt = conn
+-        .prepare(&query)
+-        .map_err(|e| e.to_string())?;
+-    
++    let mut data_stmt = conn.prepare(&query).map_err(|e| e.to_string())?;
++
+     let rows: Vec<Map<String, JsonValue>> = data_stmt
+         .query_map(params![pageSize, offset], |row| {
+             let mut row_map = Map::new();
+-            
++
+             for (idx, col) in columns.iter().enumerate() {
+                 let value = match row.get_ref(idx)? {
+                     ValueRef::Null => JsonValue::Null,
+@@ -203,17 +202,20 @@ pub async fn storage_read_table(
+                         }
+                     }
+                     ValueRef::Text(s) => JsonValue::String(String::from_utf8_lossy(s).to_string()),
+-                    ValueRef::Blob(b) => JsonValue::String(base64::Engine::encode(&base64::engine::general_purpose::STANDARD, b)),
++                    ValueRef::Blob(b) => JsonValue::String(base64::Engine::encode(
++                        &base64::engine::general_purpose::STANDARD,
++                        b,
++                    )),
+                 };
+                 row_map.insert(col.name.clone(), value);
+             }
+-            
++
+             Ok(row_map)
+         })
+         .map_err(|e| e.to_string())?
+         .collect::<SqliteResult<Vec<_>>>()
+         .map_err(|e| e.to_string())?;
+-    
++
+     Ok(TableData {
+         table_name: tableName,
+         columns,
+@@ -235,49 +237,52 @@ pub async fn storage_update_row(
+     updates: HashMap<String, JsonValue>,
+ ) -> Result<(), String> {
+     let conn = db.0.lock().map_err(|e| e.to_string())?;
+-    
++
+     // Validate table name
+     if !is_valid_table_name(&conn, &tableName)? {
+         return Err("Invalid table name".to_string());
+     }
+-    
++
+     // Build UPDATE query
+     let set_clauses: Vec<String> = updates
+         .keys()
+         .enumerate()
+         .map(|(idx, key)| format!("{} = ?{}", key, idx + 1))
+         .collect();
+-    
++
+     let where_clauses: Vec<String> = primaryKeyValues
+         .keys()
+         .enumerate()
+         .map(|(idx, key)| format!("{} = ?{}", key, idx + updates.len() + 1))
+         .collect();
+-    
++
+     let query = format!(
+         "UPDATE {} SET {} WHERE {}",
+         tableName,
+         set_clauses.join(", "),
+         where_clauses.join(" AND ")
+     );
+-    
++
+     // Prepare parameters
+     let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
+-    
++
+     // Add update values
+     for value in updates.values() {
+         params.push(json_to_sql_value(value)?);
+     }
+-    
++
+     // Add where clause values
+     for value in primaryKeyValues.values() {
+         params.push(json_to_sql_value(value)?);
+     }
+-    
++
+     // Execute update
+-    conn.execute(&query, rusqlite::params_from_iter(params.iter().map(|p| p.as_ref())))
+-        .map_err(|e| format!("Failed to update row: {}", e))?;
+-    
++    conn.execute(
++        &query,
++        rusqlite::params_from_iter(params.iter().map(|p| p.as_ref())),
++    )
++    .map_err(|e| format!("Failed to update row: {}", e))?;
++
+     Ok(())
+ }
+ 
+@@ -290,35 +295,38 @@ pub async fn storage_delete_row(
+     primaryKeyValues: HashMap<String, JsonValue>,
+ ) -> Result<(), String> {
+     let conn = db.0.lock().map_err(|e| e.to_string())?;
+-    
++
+     // Validate table name
+     if !is_valid_table_name(&conn, &tableName)? {
+         return Err("Invalid table name".to_string());
+     }
+-    
++
+     // Build DELETE query
+     let where_clauses: Vec<String> = primaryKeyValues
+         .keys()
+         .enumerate()
+         .map(|(idx, key)| format!("{} = ?{}", key, idx + 1))
+         .collect();
+-    
++
+     let query = format!(
+         "DELETE FROM {} WHERE {}",
+         tableName,
+         where_clauses.join(" AND ")
+     );
+-    
++
+     // Prepare parameters
+     let params: Vec<Box<dyn rusqlite::ToSql>> = primaryKeyValues
+         .values()
+         .map(json_to_sql_value)
+         .collect::<Result<Vec<_>, _>>()?;
+-    
++
+     // Execute delete
+-    conn.execute(&query, rusqlite::params_from_iter(params.iter().map(|p| p.as_ref())))
+-        .map_err(|e| format!("Failed to delete row: {}", e))?;
+-    
++    conn.execute(
++        &query,
++        rusqlite::params_from_iter(params.iter().map(|p| p.as_ref())),
++    )
++    .map_err(|e| format!("Failed to delete row: {}", e))?;
++
+     Ok(())
+ }
+ 
+@@ -331,35 +339,40 @@ pub async fn storage_insert_row(
+     values: HashMap<String, JsonValue>,
+ ) -> Result<i64, String> {
+     let conn = db.0.lock().map_err(|e| e.to_string())?;
+-    
++
+     // Validate table name
+     if !is_valid_table_name(&conn, &tableName)? {
+         return Err("Invalid table name".to_string());
+     }
+-    
++
+     // Build INSERT query
+     let columns: Vec<&String> = values.keys().collect();
+-    let placeholders: Vec<String> = (1..=columns.len())
+-        .map(|i| format!("?{}", i))
+-        .collect();
+-    
++    let placeholders: Vec<String> = (1..=columns.len()).map(|i| format!("?{}", i)).collect();
++
+     let query = format!(
+         "INSERT INTO {} ({}) VALUES ({})",
+         tableName,
+-        columns.iter().map(|c| c.as_str()).collect::<Vec<_>>().join(", "),
++        columns
++            .iter()
++            .map(|c| c.as_str())
++            .collect::<Vec<_>>()
++            .join(", "),
+         placeholders.join(", ")
+     );
+-    
++
+     // Prepare parameters
+     let params: Vec<Box<dyn rusqlite::ToSql>> = values
+         .values()
+         .map(json_to_sql_value)
+         .collect::<Result<Vec<_>, _>>()?;
+-    
++
+     // Execute insert
+-    conn.execute(&query, rusqlite::params_from_iter(params.iter().map(|p| p.as_ref())))
+-        .map_err(|e| format!("Failed to insert row: {}", e))?;
+-    
++    conn.execute(
++        &query,
++        rusqlite::params_from_iter(params.iter().map(|p| p.as_ref())),
++    )
++    .map_err(|e| format!("Failed to insert row: {}", e))?;
++
+     Ok(conn.last_insert_rowid())
+ }
+ 
+@@ -370,20 +383,20 @@ pub async fn storage_execute_sql(
+     query: String,
+ ) -> Result<QueryResult, String> {
+     let conn = db.0.lock().map_err(|e| e.to_string())?;
+-    
++
+     // Check if it's a SELECT query
+     let is_select = query.trim().to_uppercase().starts_with("SELECT");
+-    
++
+     if is_select {
+         // Handle SELECT queries
+         let mut stmt = conn.prepare(&query).map_err(|e| e.to_string())?;
+         let column_count = stmt.column_count();
+-        
++
+         // Get column names
+         let columns: Vec<String> = (0..column_count)
+             .map(|i| stmt.column_name(i).unwrap_or("").to_string())
+             .collect();
+-        
++
+         // Execute query and collect results
+         let rows: Vec<Vec<JsonValue>> = stmt
+             .query_map([], |row| {
+@@ -399,8 +412,13 @@ pub async fn storage_execute_sql(
+                                 JsonValue::String(f.to_string())
+                             }
+                         }
+-                        ValueRef::Text(s) => JsonValue::String(String::from_utf8_lossy(s).to_string()),
+-                        ValueRef::Blob(b) => JsonValue::String(base64::Engine::encode(&base64::engine::general_purpose::STANDARD, b)),
++                        ValueRef::Text(s) => {
++                            JsonValue::String(String::from_utf8_lossy(s).to_string())
++                        }
++                        ValueRef::Blob(b) => JsonValue::String(base64::Engine::encode(
++                            &base64::engine::general_purpose::STANDARD,
++                            b,
++                        )),
+                     };
+                     row_values.push(value);
+                 }
+@@ -409,7 +427,7 @@ pub async fn storage_execute_sql(
+             .map_err(|e| e.to_string())?
+             .collect::<SqliteResult<Vec<_>>>()
+             .map_err(|e| e.to_string())?;
+-        
++
+         Ok(QueryResult {
+             columns,
+             rows,
+@@ -419,7 +437,7 @@ pub async fn storage_execute_sql(
+     } else {
+         // Handle non-SELECT queries (INSERT, UPDATE, DELETE, etc.)
+         let rows_affected = conn.execute(&query, []).map_err(|e| e.to_string())?;
+-        
++
+         Ok(QueryResult {
+             columns: vec![],
+             rows: vec![],
+@@ -435,13 +453,12 @@ pub async fn storage_reset_database(app: AppHandle) -> Result<(), String> {
+     {
+         // Drop all existing tables within a scoped block
+         let db_state = app.state::<AgentDb>();
+-        let conn = db_state.0.lock()
+-            .map_err(|e| e.to_string())?;
+-        
++        let conn = db_state.0.lock().map_err(|e| e.to_string())?;
++
+         // Disable foreign key constraints temporarily to allow dropping tables
+         conn.execute("PRAGMA foreign_keys = OFF", [])
+             .map_err(|e| format!("Failed to disable foreign keys: {}", e))?;
+-        
++
+         // Drop tables - order doesn't matter with foreign keys disabled
+         conn.execute("DROP TABLE IF EXISTS agent_runs", [])
+             .map_err(|e| format!("Failed to drop agent_runs table: {}", e))?;
+@@ -449,34 +466,31 @@ pub async fn storage_reset_database(app: AppHandle) -> Result<(), String> {
+             .map_err(|e| format!("Failed to drop agents table: {}", e))?;
+         conn.execute("DROP TABLE IF EXISTS app_settings", [])
+             .map_err(|e| format!("Failed to drop app_settings table: {}", e))?;
+-        
++
+         // Re-enable foreign key constraints
+         conn.execute("PRAGMA foreign_keys = ON", [])
+             .map_err(|e| format!("Failed to re-enable foreign keys: {}", e))?;
+-        
++
+         // Connection is automatically dropped at end of scope
+     }
+-    
++
+     // Re-initialize the database which will recreate all tables empty
+     let new_conn = init_database(&app).map_err(|e| format!("Failed to reset database: {}", e))?;
+-    
++
+     // Update the managed state with the new connection
+     {
+         let db_state = app.state::<AgentDb>();
+-        let mut conn_guard = db_state.0.lock()
+-            .map_err(|e| e.to_string())?;
++        let mut conn_guard = db_state.0.lock().map_err(|e| e.to_string())?;
+         *conn_guard = new_conn;
+     }
+-    
++
+     // Run VACUUM to optimize the database
+     {
+         let db_state = app.state::<AgentDb>();
+-        let conn = db_state.0.lock()
+-            .map_err(|e| e.to_string())?;
+-        conn.execute("VACUUM", [])
+-            .map_err(|e| e.to_string())?;
++        let conn = db_state.0.lock().map_err(|e| e.to_string())?;
++        conn.execute("VACUUM", []).map_err(|e| e.to_string())?;
+     }
+-    
++
+     Ok(())
+ }
+ 
+@@ -489,7 +503,7 @@ fn is_valid_table_name(conn: &Connection, table_name: &str) -> Result<bool, Stri
+             |row| row.get(0),
+         )
+         .map_err(|e| e.to_string())?;
+-    
++
+     Ok(count > 0)
+ }
+ 
+@@ -513,4 +527,4 @@ fn json_to_sql_value(value: &JsonValue) -> Result<Box<dyn rusqlite::ToSql>, Stri
+ }
+ 
+ /// Initialize the agents database (re-exported from agents module)
+-use super::agents::init_database; 
+\ No newline at end of file
++use super::agents::init_database;
+diff --git a/src-tauri/src/main.rs b/src-tauri/src/main.rs
+index ffc0212..3164fe3 100644
+--- a/src-tauri/src/main.rs
++++ b/src-tauri/src/main.rs
+@@ -14,20 +14,21 @@ use commands::agents::{
+     get_live_session_output, get_session_output, get_session_status, import_agent,
+     import_agent_from_file, import_agent_from_github, init_database, kill_agent_session,
+     list_agent_runs, list_agent_runs_with_metrics, list_agents, list_claude_installations,
+-    list_running_sessions, load_agent_session_history, set_claude_binary_path, stream_session_output, update_agent, AgentDb,
++    list_running_sessions, load_agent_session_history, set_claude_binary_path,
++    stream_session_output, update_agent, AgentDb,
+ };
+ use commands::claude::{
+     cancel_claude_execution, check_auto_checkpoint, check_claude_version, cleanup_old_checkpoints,
+-    clear_checkpoint_manager, continue_claude_code, create_checkpoint, create_project, execute_claude_code,
+-    find_claude_md_files, fork_from_checkpoint, get_checkpoint_diff, get_checkpoint_settings,
+-    get_checkpoint_state_stats, get_claude_session_output, get_claude_settings, get_home_directory, get_project_sessions,
+-    get_recently_modified_files, get_session_timeline, get_system_prompt, list_checkpoints,
+-    list_directory_contents, list_projects, list_running_claude_sessions, load_session_history,
+-    open_new_session, read_claude_md_file, restore_checkpoint, resume_claude_code,
+-    save_claude_md_file, save_claude_settings, save_system_prompt, search_files,
+-    track_checkpoint_message, track_session_messages, update_checkpoint_settings,
+-    get_hooks_config, update_hooks_config, validate_hook_command,
+-    ClaudeProcessState,
++    clear_checkpoint_manager, continue_claude_code, create_checkpoint, create_project,
++    delete_session, execute_claude_code, find_claude_md_files, fork_from_checkpoint,
++    get_checkpoint_diff, get_checkpoint_settings, get_checkpoint_state_stats,
++    get_claude_session_output, get_claude_settings, get_home_directory, get_hooks_config,
++    get_project_sessions, get_recently_modified_files, get_session_timeline, get_system_prompt,
++    list_checkpoints, list_directory_contents, list_projects, list_running_claude_sessions,
++    load_session_history, open_new_session, read_claude_md_file, restore_checkpoint,
++    resume_claude_code, save_claude_md_file, save_claude_settings, save_system_prompt,
++    search_files, track_checkpoint_message, track_session_messages, update_checkpoint_settings,
++    update_hooks_config, validate_hook_command, ClaudeProcessState,
+ };
+ use commands::mcp::{
+     mcp_add, mcp_add_from_claude_desktop, mcp_add_json, mcp_get, mcp_get_server_status, mcp_list,
+@@ -35,14 +36,14 @@ use commands::mcp::{
+     mcp_serve, mcp_test_connection,
+ };
+ 
++use commands::proxy::{apply_proxy_settings, get_proxy_settings, save_proxy_settings};
++use commands::storage::{
++    storage_delete_row, storage_execute_sql, storage_insert_row, storage_list_tables,
++    storage_read_table, storage_reset_database, storage_update_row,
++};
+ use commands::usage::{
+     get_session_stats, get_usage_by_date_range, get_usage_details, get_usage_stats,
+ };
+-use commands::storage::{
+-    storage_list_tables, storage_read_table, storage_update_row, storage_delete_row,
+-    storage_insert_row, storage_execute_sql, storage_reset_database,
+-};
+-use commands::proxy::{get_proxy_settings, save_proxy_settings, apply_proxy_settings};
+ use process::ProcessRegistryState;
+ use std::sync::Mutex;
+ use tauri::Manager;
+@@ -50,19 +51,17 @@ use tauri::Manager;
+ #[cfg(target_os = "macos")]
+ use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial};
+ 
+-
+ fn main() {
+     // Initialize logger
+     env_logger::init();
+ 
+-
+     tauri::Builder::default()
+         .plugin(tauri_plugin_dialog::init())
+         .plugin(tauri_plugin_shell::init())
+         .setup(|app| {
+             // Initialize agents database
+             let conn = init_database(&app.handle()).expect("Failed to initialize agents database");
+-            
++
+             // Load and apply proxy settings from the database
+             {
+                 let db = AgentDb(Mutex::new(conn));
+@@ -70,7 +69,7 @@ fn main() {
+                     Ok(conn) => {
+                         // Directly query proxy settings from the database
+                         let mut settings = commands::proxy::ProxySettings::default();
+-                        
++
+                         let keys = vec![
+                             ("proxy_enabled", "enabled"),
+                             ("proxy_http", "http_proxy"),
+@@ -78,7 +77,7 @@ fn main() {
+                             ("proxy_no", "no_proxy"),
+                             ("proxy_all", "all_proxy"),
+                         ];
+-                        
++
+                         for (db_key, field) in keys {
+                             if let Ok(value) = conn.query_row(
+                                 "SELECT value FROM app_settings WHERE key = ?1",
+@@ -87,15 +86,23 @@ fn main() {
+                             ) {
+                                 match field {
+                                     "enabled" => settings.enabled = value == "true",
+-                                    "http_proxy" => settings.http_proxy = Some(value).filter(|s| !s.is_empty()),
+-                                    "https_proxy" => settings.https_proxy = Some(value).filter(|s| !s.is_empty()),
+-                                    "no_proxy" => settings.no_proxy = Some(value).filter(|s| !s.is_empty()),
+-                                    "all_proxy" => settings.all_proxy = Some(value).filter(|s| !s.is_empty()),
++                                    "http_proxy" => {
++                                        settings.http_proxy = Some(value).filter(|s| !s.is_empty())
++                                    }
++                                    "https_proxy" => {
++                                        settings.https_proxy = Some(value).filter(|s| !s.is_empty())
++                                    }
++                                    "no_proxy" => {
++                                        settings.no_proxy = Some(value).filter(|s| !s.is_empty())
++                                    }
++                                    "all_proxy" => {
++                                        settings.all_proxy = Some(value).filter(|s| !s.is_empty())
++                                    }
+                                     _ => {}
+                                 }
+                             }
+                         }
+-                        
++
+                         log::info!("Loaded proxy settings: enabled={}", settings.enabled);
+                         settings
+                     }
+@@ -104,11 +111,11 @@ fn main() {
+                         commands::proxy::ProxySettings::default()
+                     }
+                 };
+-                
++
+                 // Apply the proxy settings
+                 apply_proxy_settings(&proxy_settings);
+             }
+-            
++
+             // Re-open the connection for the app to manage
+             let conn = init_database(&app.handle()).expect("Failed to initialize agents database");
+             app.manage(AgentDb(Mutex::new(conn)));
+@@ -144,7 +151,7 @@ fn main() {
+             #[cfg(target_os = "macos")]
+             {
+                 let window = app.get_webview_window("main").unwrap();
+-                
++
+                 // Try different vibrancy materials that support rounded corners
+                 let materials = [
+                     NSVisualEffectMaterial::UnderWindowBackground,
+@@ -153,7 +160,7 @@ fn main() {
+                     NSVisualEffectMaterial::Menu,
+                     NSVisualEffectMaterial::Sidebar,
+                 ];
+-                
++
+                 let mut applied = false;
+                 for material in materials.iter() {
+                     if apply_vibrancy(&window, *material, None, Some(12.0)).is_ok() {
+@@ -161,11 +168,16 @@ fn main() {
+                         break;
+                     }
+                 }
+-                
++
+                 if !applied {
+                     // Fallback without rounded corners
+-                    apply_vibrancy(&window, NSVisualEffectMaterial::WindowBackground, None, None)
+-                        .expect("Failed to apply any window vibrancy");
++                    apply_vibrancy(
++                        &window,
++                        NSVisualEffectMaterial::WindowBackground,
++                        None,
++                        None,
++                    )
++                    .expect("Failed to apply any window vibrancy");
+                 }
+             }
+ 
+@@ -176,6 +188,7 @@ fn main() {
+             list_projects,
+             create_project,
+             get_project_sessions,
++            delete_session,
+             get_home_directory,
+             get_claude_settings,
+             open_new_session,
+@@ -199,7 +212,6 @@ fn main() {
+             get_hooks_config,
+             update_hooks_config,
+             validate_hook_command,
+-            
+             // Checkpoint Management
+             create_checkpoint,
+             restore_checkpoint,
+@@ -215,7 +227,6 @@ fn main() {
+             get_checkpoint_settings,
+             clear_checkpoint_manager,
+             get_checkpoint_state_stats,
+-            
+             // Agent Management
+             list_agents,
+             create_agent,
+@@ -245,13 +256,11 @@ fn main() {
+             fetch_github_agents,
+             fetch_github_agent_content,
+             import_agent_from_github,
+-            
+             // Usage & Analytics
+             get_usage_stats,
+             get_usage_by_date_range,
+             get_usage_details,
+             get_session_stats,
+-            
+             // MCP (Model Context Protocol)
+             mcp_add,
+             mcp_list,
+@@ -265,7 +274,6 @@ fn main() {
+             mcp_get_server_status,
+             mcp_read_project_config,
+             mcp_save_project_config,
+-            
+             // Storage Management
+             storage_list_tables,
+             storage_read_table,
+@@ -274,13 +282,11 @@ fn main() {
+             storage_insert_row,
+             storage_execute_sql,
+             storage_reset_database,
+-            
+             // Slash Commands
+             commands::slash_commands::slash_commands_list,
+             commands::slash_commands::slash_command_get,
+             commands::slash_commands::slash_command_save,
+             commands::slash_commands::slash_command_delete,
+-            
+             // Proxy Settings
+             get_proxy_settings,
+             save_proxy_settings,
+diff --git a/src-tauri/src/process/registry.rs b/src-tauri/src/process/registry.rs
+index 30c8e94..f4f33b5 100644
+--- a/src-tauri/src/process/registry.rs
++++ b/src-tauri/src/process/registry.rs
+@@ -7,13 +7,8 @@ use tokio::process::Child;
+ /// Type of process being tracked
+ #[derive(Debug, Clone, Serialize, Deserialize)]
+ pub enum ProcessType {
+-    AgentRun {
+-        agent_id: i64,
+-        agent_name: String,
+-    },
+-    ClaudeSession {
+-        session_id: String,
+-    },
++    AgentRun { agent_id: i64, agent_name: String },
++    ClaudeSession { session_id: String },
+ }
+ 
+ /// Information about a running agent process
+@@ -72,7 +67,10 @@ impl ProcessRegistry {
+     ) -> Result<(), String> {
+         let process_info = ProcessInfo {
+             run_id,
+-            process_type: ProcessType::AgentRun { agent_id, agent_name },
++            process_type: ProcessType::AgentRun {
++                agent_id,
++                agent_name,
++            },
+             pid,
+             started_at: Utc::now(),
+             project_path,
+@@ -96,7 +94,10 @@ impl ProcessRegistry {
+     ) -> Result<(), String> {
+         let process_info = ProcessInfo {
+             run_id,
+-            process_type: ProcessType::AgentRun { agent_id, agent_name },
++            process_type: ProcessType::AgentRun {
++                agent_id,
++                agent_name,
++            },
+             pid,
+             started_at: Utc::now(),
+             project_path,
+@@ -106,7 +107,7 @@ impl ProcessRegistry {
+ 
+         // For sidecar processes, we register without the child handle since it's managed differently
+         let mut processes = self.processes.lock().map_err(|e| e.to_string())?;
+-        
++
+         let process_handle = ProcessHandle {
+             info: process_info,
+             child: Arc::new(Mutex::new(None)), // No tokio::process::Child handle for sidecar
+@@ -127,7 +128,7 @@ impl ProcessRegistry {
+         model: String,
+     ) -> Result<i64, String> {
+         let run_id = self.generate_id()?;
+-        
++
+         let process_info = ProcessInfo {
+             run_id,
+             process_type: ProcessType::ClaudeSession { session_id },
+@@ -140,7 +141,7 @@ impl ProcessRegistry {
+ 
+         // Register without child - Claude sessions use ClaudeProcessState for process management
+         let mut processes = self.processes.lock().map_err(|e| e.to_string())?;
+-        
++
+         let process_handle = ProcessHandle {
+             info: process_info,
+             child: Arc::new(Mutex::new(None)), // No child handle for Claude sessions
+@@ -175,25 +176,24 @@ impl ProcessRegistry {
+         let processes = self.processes.lock().map_err(|e| e.to_string())?;
+         Ok(processes
+             .values()
+-            .filter_map(|handle| {
+-                match &handle.info.process_type {
+-                    ProcessType::ClaudeSession { .. } => Some(handle.info.clone()),
+-                    _ => None,
+-                }
++            .filter_map(|handle| match &handle.info.process_type {
++                ProcessType::ClaudeSession { .. } => Some(handle.info.clone()),
++                _ => None,
+             })
+             .collect())
+     }
+ 
+     /// Get a specific Claude session by session ID
+-    pub fn get_claude_session_by_id(&self, session_id: &str) -> Result<Option<ProcessInfo>, String> {
++    pub fn get_claude_session_by_id(
++        &self,
++        session_id: &str,
++    ) -> Result<Option<ProcessInfo>, String> {
+         let processes = self.processes.lock().map_err(|e| e.to_string())?;
+         Ok(processes
+             .values()
+-            .find(|handle| {
+-                match &handle.info.process_type {
+-                    ProcessType::ClaudeSession { session_id: sid } => sid == session_id,
+-                    _ => false,
+-                }
++            .find(|handle| match &handle.info.process_type {
++                ProcessType::ClaudeSession { session_id: sid } => sid == session_id,
++                _ => false,
+             })
+             .map(|handle| handle.info.clone()))
+     }
+@@ -221,11 +221,9 @@ impl ProcessRegistry {
+         let processes = self.processes.lock().map_err(|e| e.to_string())?;
+         Ok(processes
+             .values()
+-            .filter_map(|handle| {
+-                match &handle.info.process_type {
+-                    ProcessType::AgentRun { .. } => Some(handle.info.clone()),
+-                    _ => None,
+-                }
++            .filter_map(|handle| match &handle.info.process_type {
++                ProcessType::AgentRun { .. } => Some(handle.info.clone()),
++                _ => None,
+             })
+             .collect())
+     }
+@@ -273,17 +271,26 @@ impl ProcessRegistry {
+                     }
+                 }
+             } else {
+-                warn!("No child handle available for process {} (PID: {}), attempting system kill", run_id, pid);
++                warn!(
++                    "No child handle available for process {} (PID: {}), attempting system kill",
++                    run_id, pid
++                );
+                 false // Process handle not available, try fallback
+             }
+         };
+ 
+         // If direct kill didn't work, try system command as fallback
+         if !kill_sent {
+-            info!("Attempting fallback kill for process {} (PID: {})", run_id, pid);
++            info!(
++                "Attempting fallback kill for process {} (PID: {})",
++                run_id, pid
++            );
+             match self.kill_process_by_pid(run_id, pid) {
+                 Ok(true) => return Ok(true),
+-                Ok(false) => warn!("Fallback kill also failed for process {} (PID: {})", run_id, pid),
++                Ok(false) => warn!(
++                    "Fallback kill also failed for process {} (PID: {})",
++                    run_id, pid
++                ),
+                 Err(e) => error!("Error during fallback kill: {}", e),
+             }
+             // Continue with the rest of the cleanup even if fallback failed
+-- 
+2.50.1 (Apple Git-155)
+

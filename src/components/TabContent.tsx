@@ -223,10 +223,16 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
                             initialProjectPath: session.project_path
                           });
                         }}
+                        onSessionDelete={(sessionId: string) => {
+                          // Remove the deleted session from the local state
+                          setSessions(prevSessions =>
+                            prevSessions.filter(s => s.id !== sessionId)
+                          );
+                        }}
                         onEditClaudeFile={(file: ClaudeMdFile) => {
                           // Open CLAUDE.md file in a new tab
-                          window.dispatchEvent(new CustomEvent('open-claude-file', { 
-                            detail: { file } 
+                          window.dispatchEvent(new CustomEvent('open-claude-file', {
+                            detail: { file }
                           }));
                         }}
                       />

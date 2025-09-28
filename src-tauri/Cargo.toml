@@ -20,7 +20,7 @@ crate-type = ["lib", "cdylib", "staticlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = [ "macos-private-api", "protocol-asset", "tray-icon", "image-png"] }
+tauri = { version = "2", features = [ "macos-private-api", "protocol-asset", "tray-icon", "image-png", "devtools"] }
 tauri-plugin-shell = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
@@ -53,6 +53,7 @@ zstd = "0.13"
 uuid = { version = "1.6", features = ["v4", "serde"] }
 walkdir = "2"
 serde_yaml = "0.9"
+fix-path-env = { git = "https://github.com/tauri-apps/fix-path-env-rs" }
 
 
 [target.'cfg(target_os = "macos")'.dependencies]

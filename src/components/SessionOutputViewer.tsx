@@ -8,6 +8,7 @@ import { Toast, ToastContainer } from '@/components/ui/toast';
 import { Popover } from '@/components/ui/popover';
 import { api } from '@/lib/api';
 import { useOutputCache } from '@/lib/outputCache';
+import { useAutoScroll } from '@/hooks';
 import type { AgentRun } from '@/lib/api';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { StreamMessage } from './StreamMessage';
@@ -46,7 +47,8 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [copyPopoverOpen, setCopyPopoverOpen] = useState(false);
   const [hasUserScrolled, setHasUserScrolled] = useState(false);
-  
+  const { autoScrollEnabled } = useAutoScroll();
+
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const outputEndRef = useRef<HTMLDivElement>(null);
   const fullscreenScrollRef = useRef<HTMLDivElement>(null);
@@ -66,7 +68,7 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
   };
 
   const scrollToBottom = () => {
-    if (!hasUserScrolled) {
+    if (autoScrollEnabled && !hasUserScrolled) {
       const endRef = isFullscreen ? fullscreenMessagesEndRef.current : outputEndRef.current;
       if (endRef) {
         endRef.scrollIntoView({ behavior: 'smooth' });
@@ -83,11 +85,11 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
 
   // Auto-scroll when messages change
   useEffect(() => {
-    const shouldAutoScroll = !hasUserScrolled || isAtBottom();
+    const shouldAutoScroll = autoScrollEnabled && (!hasUserScrolled || isAtBottom());
     if (shouldAutoScroll) {
       scrollToBottom();
     }
-  }, [messages, hasUserScrolled, isFullscreen]);
+  }, [messages, hasUserScrolled, isFullscreen, autoScrollEnabled]);
 
 
   const loadOutput = async (skipCache = false) => {
@@ -480,11 +482,13 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
                 className="h-full overflow-y-auto p-6 space-y-3" 
                 ref={scrollAreaRef}
                 onScroll={() => {
+                  if (!autoScrollEnabled) return;
+
                   // Mark that user has scrolled manually
                   if (!hasUserScrolled) {
                     setHasUserScrolled(true);
                   }
-                  
+
                   // If user scrolls back to bottom, re-enable auto-scroll
                   if (isAtBottom()) {
                     setHasUserScrolled(false);
@@ -614,11 +618,13 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
               ref={fullscreenScrollRef}
               className="h-full overflow-y-auto space-y-3"
               onScroll={() => {
+                if (!autoScrollEnabled) return;
+
                 // Mark that user has scrolled manually
                 if (!hasUserScrolled) {
                   setHasUserScrolled(true);
                 }
-                
+
                 // If user scrolls back to bottom, re-enable auto-scroll
                 if (isAtBottom()) {
                   setHasUserScrolled(false);

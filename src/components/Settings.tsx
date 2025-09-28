@@ -96,6 +96,8 @@ export const Settings: React.FC<SettingsProps> = ({
   const [tabPersistenceEnabled, setTabPersistenceEnabled] = useState(true);
   // Startup intro preference
   const [startupIntroEnabled, setStartupIntroEnabled] = useState(true);
+  // Auto-scroll preference
+  const [autoScrollEnabled, setAutoScrollEnabled] = useState(true);
   
   // Load settings on mount
   useEffect(() => {
@@ -108,6 +110,11 @@ export const Settings: React.FC<SettingsProps> = ({
     (async () => {
       const pref = await api.getSetting('startup_intro_enabled');
       setStartupIntroEnabled(pref === null ? true : pref === 'true');
+    })();
+    // Load auto-scroll setting (default to true if not set)
+    (async () => {
+      const pref = await api.getSetting('auto_scroll_enabled');
+      setAutoScrollEnabled(pref === null ? true : pref === 'true');
     })();
   }, []);
 
@@ -436,8 +443,8 @@ export const Settings: React.FC<SettingsProps> = ({
                           onClick={() => setTheme('gray')}
                           className={cn(
                             "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all",
-                            theme === 'gray' 
-                              ? "bg-background shadow-sm" 
+                            theme === 'gray'
+                              ? "bg-background shadow-sm"
                               : "hover:bg-background/50"
                           )}
                         >
@@ -445,11 +452,23 @@ export const Settings: React.FC<SettingsProps> = ({
                           Gray
                         </button>
                         <button
+                          onClick={() => setTheme('zinc')}
+                          className={cn(
+                            "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all",
+                            theme === 'zinc'
+                              ? "bg-background shadow-sm"
+                              : "hover:bg-background/50"
+                          )}
+                        >
+                          {theme === 'zinc' && <Check className="h-3 w-3" />}
+                          Zinc
+                        </button>
+                        <button
                           onClick={() => setTheme('light')}
                           className={cn(
                             "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all",
-                            theme === 'light' 
-                              ? "bg-background shadow-sm" 
+                            theme === 'light'
+                              ? "bg-background shadow-sm"
                               : "hover:bg-background/50"
                           )}
                         >
@@ -760,6 +779,35 @@ export const Settings: React.FC<SettingsProps> = ({
                                 ? 'Welcome intro enabled' 
                                 : 'Welcome intro disabled', 
                               type: 'success' 
+                            });
+                          } catch (e) {
+                            setToast({ message: 'Failed to update preference', type: 'error' });
+                          }
+                        }}
+                      />
+                    </div>
+
+                    {/* Auto-scroll Setting */}
+                    <div className="flex items-center justify-between py-3 border-b border-border/50 last:border-b-0">
+                      <div className="space-y-1">
+                        <Label htmlFor="auto-scroll">Enable Auto-scroll in Conversations</Label>
+                        <p className="text-caption text-muted-foreground">
+                          Automatically scroll to the bottom when new messages arrive during conversations
+                        </p>
+                      </div>
+                      <Switch
+                        id="auto-scroll"
+                        checked={autoScrollEnabled}
+                        onCheckedChange={async (checked) => {
+                          setAutoScrollEnabled(checked);
+                          try {
+                            await api.saveSetting('auto_scroll_enabled', checked ? 'true' : 'false');
+                            trackEvent.settingsChanged('auto_scroll_enabled', checked);
+                            setToast({
+                              message: checked
+                                ? 'Auto-scroll enabled'
+                                : 'Auto-scroll disabled',
+                              type: 'success'
                             });
                           } catch (e) {
                             setToast({ message: 'Failed to update preference', type: 'error' });
