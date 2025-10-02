@@ -246,8 +246,8 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
                     transition={{ duration: 0.15 }}
                     className={cn(
                       "flex-1 px-4 py-3 rounded-md border transition-all",
-                      model === "sonnet" 
-                        ? "border-primary bg-primary/10 text-primary" 
+                      model === "sonnet"
+                        ? "border-primary bg-primary/10 text-primary"
                         : "border-border hover:border-primary/50 hover:bg-accent"
                     )}
                   >
@@ -257,12 +257,12 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
                         model === "sonnet" ? "text-primary" : "text-muted-foreground"
                       )} />
                       <div className="text-left">
-                        <div className="text-body-small font-medium">Claude 4 Sonnet</div>
-                        <div className="text-caption text-muted-foreground">Faster, efficient for most tasks</div>
+                        <div className="text-body-small font-medium">Sonnet</div>
+                        <div className="text-caption text-muted-foreground">Uses latest Sonnet model</div>
                       </div>
                     </div>
                   </motion.button>
-                  
+
                   <motion.button
                     type="button"
                     onClick={() => setModel("opus")}
@@ -270,8 +270,8 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
                     transition={{ duration: 0.15 }}
                     className={cn(
                       "flex-1 px-4 py-3 rounded-md border transition-all",
-                      model === "opus" 
-                        ? "border-primary bg-primary/10 text-primary" 
+                      model === "opus"
+                        ? "border-primary bg-primary/10 text-primary"
                         : "border-border hover:border-primary/50 hover:bg-accent"
                     )}
                   >
@@ -281,8 +281,8 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
                         model === "opus" ? "text-primary" : "text-muted-foreground"
                       )} />
                       <div className="text-left">
-                        <div className="text-body-small font-medium">Claude 4 Opus</div>
-                        <div className="text-caption text-muted-foreground">More capable, better for complex tasks</div>
+                        <div className="text-body-small font-medium">Opus</div>
+                        <div className="text-caption text-muted-foreground">Uses latest Opus model</div>
                       </div>
                     </div>
                   </motion.button>

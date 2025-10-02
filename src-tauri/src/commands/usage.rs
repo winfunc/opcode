@@ -107,26 +107,35 @@ fn calculate_cost(model: &str, usage: &UsageData) -> f64 {
     let cache_creation_tokens = usage.cache_creation_input_tokens.unwrap_or(0) as f64;
     let cache_read_tokens = usage.cache_read_input_tokens.unwrap_or(0) as f64;
 
-    // Calculate cost based on model
-    let (input_price, output_price, cache_write_price, cache_read_price) =
-        if model.contains("opus-4") || model.contains("claude-opus-4") {
-            (
-                OPUS_4_INPUT_PRICE,
-                OPUS_4_OUTPUT_PRICE,
-                OPUS_4_CACHE_WRITE_PRICE,
-                OPUS_4_CACHE_READ_PRICE,
-            )
-        } else if model.contains("sonnet-4") || model.contains("claude-sonnet-4") {
-            (
-                SONNET_4_INPUT_PRICE,
-                SONNET_4_OUTPUT_PRICE,
-                SONNET_4_CACHE_WRITE_PRICE,
-                SONNET_4_CACHE_READ_PRICE,
-            )
-        } else {
-            // Return 0 for unknown models to avoid incorrect cost estimations.
-            (0.0, 0.0, 0.0, 0.0)
-        };
+    // Normalize model name to lowercase for matching
+    let model_lower = model.to_lowercase();
+
+    // Calculate cost based on model - check for both aliases and full model names
+    let (input_price, output_price, cache_write_price, cache_read_price) = if model_lower
+        .contains("opus-4")
+        || model_lower.contains("claude-opus-4")
+        || model_lower == "opus"
+    {
+        (
+            OPUS_4_INPUT_PRICE,
+            OPUS_4_OUTPUT_PRICE,
+            OPUS_4_CACHE_WRITE_PRICE,
+            OPUS_4_CACHE_READ_PRICE,
+        )
+    } else if model_lower.contains("sonnet-4")
+        || model_lower.contains("claude-sonnet-4")
+        || model_lower == "sonnet"
+    {
+        (
+            SONNET_4_INPUT_PRICE,
+            SONNET_4_OUTPUT_PRICE,
+            SONNET_4_CACHE_WRITE_PRICE,
+            SONNET_4_CACHE_READ_PRICE,
+        )
+    } else {
+        // Return 0 for unknown models to avoid incorrect cost estimations.
+        (0.0, 0.0, 0.0, 0.0)
+    };
 
     // Calculate cost (prices are per million tokens)
     let cost = (input_tokens * input_price / 1_000_000.0)
@@ -711,4 +720,79 @@ pub fn get_session_stats(
     }
 
     Ok(by_session)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Test that calculate_cost correctly recognizes model aliases
+    #[test]
+    fn test_calculate_cost_with_aliases() {
+        let test_usage = UsageData {
+            input_tokens: Some(1_000_000), // 1M tokens
+            output_tokens: Some(1_000_000), // 1M tokens
+            cache_creation_input_tokens: Some(1_000_000), // 1M tokens
+            cache_read_input_tokens: Some(1_000_000), // 1M tokens
+        };
+
+        // Test "opus" alias
+        let opus_cost = calculate_cost("opus", &test_usage);
+        let expected_opus = 15.0 + 75.0 + 18.75 + 1.50; // Input + Output + Cache Write + Cache Read
+        assert_eq!(
+            opus_cost, expected_opus,
+            "Opus alias should use Opus 4 pricing"
+        );
+
+        // Test "sonnet" alias
+        let sonnet_cost = calculate_cost("sonnet", &test_usage);
+        let expected_sonnet = 3.0 + 15.0 + 3.75 + 0.30;
+        assert_eq!(
+            sonnet_cost, expected_sonnet,
+            "Sonnet alias should use Sonnet 4 pricing"
+        );
+
+        // Test full model names still work
+        let opus_full = calculate_cost("claude-opus-4-20250514", &test_usage);
+        assert_eq!(
+            opus_full, expected_opus,
+            "Full Opus model name should work"
+        );
+
+        let sonnet_full = calculate_cost("claude-sonnet-4-5-20250929", &test_usage);
+        assert_eq!(
+            sonnet_full, expected_sonnet,
+            "Full Sonnet model name should work"
+        );
+
+        // Test case insensitivity
+        let opus_upper = calculate_cost("OPUS", &test_usage);
+        assert_eq!(
+            opus_upper, expected_opus,
+            "Model names should be case insensitive"
+        );
+
+        // Test unknown model returns 0
+        let unknown_cost = calculate_cost("gpt-4", &test_usage);
+        assert_eq!(unknown_cost, 0.0, "Unknown models should return 0 cost");
+    }
+
+    /// Test calculate_cost with partial token usage
+    #[test]
+    fn test_calculate_cost_partial_tokens() {
+        let test_usage = UsageData {
+            input_tokens: Some(100_000), // 100K tokens
+            output_tokens: Some(50_000),  // 50K tokens
+            cache_creation_input_tokens: None,
+            cache_read_input_tokens: None,
+        };
+
+        let opus_cost = calculate_cost("opus", &test_usage);
+        // 100K * 15.0 / 1M + 50K * 75.0 / 1M = 1.5 + 3.75 = 5.25
+        assert_eq!(opus_cost, 5.25, "Should handle partial token usage");
+
+        let sonnet_cost = calculate_cost("sonnet", &test_usage);
+        // 100K * 3.0 / 1M + 50K * 15.0 / 1M = 0.3 + 0.75 = 1.05
+        assert_eq!(sonnet_cost, 1.05, "Should handle partial token usage");
+    }
 }
