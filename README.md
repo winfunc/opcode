@@ -278,6 +278,11 @@ brew install pkg-config
    ```bash
    bun run tauri build --target universal-apple-darwin
    ```
+   
+   **Apple Silicon Only (M1/M2/M3 Macs)**
+   ```bash
+   bun run tauri build --target aarch64-apple-darwin
+   ```
 
 ### Troubleshooting
 
