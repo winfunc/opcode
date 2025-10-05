@@ -454,7 +454,7 @@ export const api = {
    */
   async getHomeDirectory(): Promise<string> {
     try {
-      return await invoke<string>("get_home_directory");
+      return await apiCall<string>("get_home_directory");
     } catch (error) {
       console.error("Failed to get home directory:", error);
       return "/";
@@ -481,7 +481,7 @@ export const api = {
    */
   async createProject(path: string): Promise<Project> {
     try {
-      return await invoke<Project>('create_project', { path });
+      return await apiCall<Project>('create_project', { path });
     } catch (error) {
       console.error("Failed to create project:", error);
       throw error;
@@ -871,7 +871,7 @@ export const api = {
    */
   async listAgentRunsWithMetrics(agentId?: number): Promise<AgentRunWithMetrics[]> {
     try {
-      return await invoke<AgentRunWithMetrics[]>('list_agent_runs_with_metrics', { agentId });
+      return await apiCall<AgentRunWithMetrics[]>('list_agent_runs_with_metrics', { agentId });
     } catch (error) {
       console.error("Failed to list agent runs with metrics:", error);
       // Return empty array instead of throwing to prevent UI crashes

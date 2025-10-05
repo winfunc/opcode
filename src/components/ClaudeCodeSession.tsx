@@ -17,13 +17,11 @@ import { api, type Session } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 // Conditional imports for Tauri APIs
-let tauriOpen: any;
 let tauriListen: any;
 type UnlistenFn = () => void;
 
 try {
   if (typeof window !== 'undefined' && window.__TAURI__) {
-    tauriOpen = require("@tauri-apps/plugin-dialog").open;
     tauriListen = require("@tauri-apps/api/event").listen;
   }
 } catch (e) {
@@ -49,7 +47,6 @@ const listen = tauriListen || ((eventName: string, callback: (event: any) => voi
     window.removeEventListener(eventName, domEventHandler);
   });
 });
-const open = tauriOpen || (() => Promise.resolve([]));
 import { StreamMessage } from "./StreamMessage";
 import { FloatingPromptInput, type FloatingPromptInputRef } from "./FloatingPromptInput";
 import { ErrorBoundary } from "./ErrorBoundary";
