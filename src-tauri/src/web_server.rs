@@ -151,6 +151,17 @@ async fn check_claude_version() -> Json<ApiResponse<serde_json::Value>> {
     Json(ApiResponse::success(version_status))
 }
 
+/// List all available Claude installations on the system
+async fn list_claude_installations() -> Json<ApiResponse<Vec<crate::claude_binary::ClaudeInstallation>>> {
+    let installations = crate::claude_binary::discover_claude_installations();
+
+    if installations.is_empty() {
+        Json(ApiResponse::error("No Claude Code installations found on the system".to_string()))
+    } else {
+        Json(ApiResponse::success(installations))
+    }
+}
+
 /// Get system prompt - return default for web mode
 async fn get_system_prompt() -> Json<ApiResponse<String>> {
     let default_prompt = "You are Claude, an AI assistant created by Anthropic. You are running in web server mode.".to_string();
@@ -646,6 +657,7 @@ pub async fn create_web_server(port: u16) -> Result<(), Box<dyn std::error::Erro
         // Settings and configuration
         .route("/api/settings/claude", get(get_claude_settings))
         .route("/api/settings/claude/version", get(check_claude_version))
+        .route("/api/settings/claude/installations", get(list_claude_installations))
         .route("/api/settings/system-prompt", get(get_system_prompt))
         
         // Session management
