@@ -17,11 +17,7 @@ name = "opcode_lib"
 crate-type = ["lib", "cdylib", "staticlib"]
 
 [[bin]]
-name = "claudia"
-path = "src/main.rs"
-
-[[bin]]
-name = "claudia-web"
+name = "opcode-web"
 path = "src/web_main.rs"
 
 [build-dependencies]

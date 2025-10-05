@@ -1,4 +1,4 @@
-# Claudia - NixOS Build & Development Commands
+# Opcode - NixOS Build & Development Commands
 
 # Show available commands
 default:
@@ -65,11 +65,11 @@ rebuild: clean build run
 
 # Run web server mode for phone access
 web: build-frontend
-    cd src-tauri && cargo run --bin claudia-web
+    cd src-tauri && cargo run --bin opcode-web
 
 # Run web server on custom port
 web-port PORT: build-frontend
-    cd src-tauri && cargo run --bin claudia-web -- --port {{PORT}}
+    cd src-tauri && cargo run --bin opcode-web -- --port {{PORT}}
 
 # Get local IP for phone access
 ip:
@@ -80,7 +80,7 @@ ip:
 
 # Show build information
 info:
-    @echo "🚀 Claudia - Claude Code GUI Application"
+    @echo "🚀 Opcode - Claude Code GUI Application"
     @echo "Built for NixOS without Docker"
     @echo ""
     @echo "📦 Frontend: React + TypeScript + Vite"
