@@ -5,11 +5,11 @@ pkgs.mkShell {
     # Core development tools
     just
     git
-    
+
     # Node.js/Bun toolchain
     bun
     nodejs
-    
+
     # Rust toolchain
     rustc
     cargo
