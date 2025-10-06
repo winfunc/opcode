@@ -144,7 +144,7 @@ fn get_claude_dir() -> Result<PathBuf> {
         .context("Could not find ~/.claude directory")
 }
 
-/// Gets the actual project path by reading the cwd from the first JSONL entry
+/// Gets the actual project path by reading the cwd from the JSONL entries
 fn get_project_path_from_sessions(project_dir: &PathBuf) -> Result<String, String> {
     // Try to read any JSONL file in the directory
     let entries = fs::read_dir(project_dir)
@@ -154,14 +154,20 @@ fn get_project_path_from_sessions(project_dir: &PathBuf) -> Result<String, Strin
         if let Ok(entry) = entry {
             let path = entry.path();
             if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("jsonl") {
-                // Read the first line of the JSONL file
+                // Read the JSONL file and find the first line with a valid cwd
                 if let Ok(file) = fs::File::open(&path) {
                     let reader = BufReader::new(file);
-                    if let Some(Ok(first_line)) = reader.lines().next() {
-                        // Parse the JSON and extract cwd
-                        if let Ok(json) = serde_json::from_str::<serde_json::Value>(&first_line) {
-                            if let Some(cwd) = json.get("cwd").and_then(|v| v.as_str()) {
-                                return Ok(cwd.to_string());
+                    // Check first few lines instead of just the first line
+                    // Some session files may have null cwd in the first line
+                    for line in reader.lines().take(10) {
+                        if let Ok(line_content) = line {
+                            // Parse the JSON and extract cwd
+                            if let Ok(json) = serde_json::from_str::<serde_json::Value>(&line_content) {
+                                if let Some(cwd) = json.get("cwd").and_then(|v| v.as_str()) {
+                                    if !cwd.is_empty() {
+                                        return Ok(cwd.to_string());
+                                    }
+                                }
                             }
                         }
                     }
@@ -2154,5 +2160,143 @@ pub async fn validate_hook_command(command: String) -> Result<serde_json::Value,
             }
         }
         Err(e) => Err(format!("Failed to validate command: {}", e))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Write;
+    use tempfile::TempDir;
+
+    /// Helper function to create a test session file
+    fn create_test_session_file(dir: &PathBuf, filename: &str, content: &str) -> Result<(), std::io::Error> {
+        let file_path = dir.join(filename);
+        let mut file = fs::File::create(file_path)?;
+        file.write_all(content.as_bytes())?;
+        Ok(())
+    }
+
+    #[test]
+    fn test_get_project_path_from_sessions_normal_case() {
+        let temp_dir = TempDir::new().unwrap();
+        let project_dir = temp_dir.path().to_path_buf();
+
+        // Create a session file with cwd on the first line
+        let content = r#"{"type":"system","cwd":"/Users/test/my-project"}"#;
+        create_test_session_file(&project_dir, "session1.jsonl", content).unwrap();
+
+        let result = get_project_path_from_sessions(&project_dir);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "/Users/test/my-project");
+    }
+
+    #[test]
+    fn test_get_project_path_from_sessions_with_hyphen() {
+        let temp_dir = TempDir::new().unwrap();
+        let project_dir = temp_dir.path().to_path_buf();
+
+        // This is the bug scenario - project path contains hyphens
+        let content = r#"{"type":"system","cwd":"/Users/test/data-discovery"}"#;
+        create_test_session_file(&project_dir, "session1.jsonl", content).unwrap();
+
+        let result = get_project_path_from_sessions(&project_dir);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "/Users/test/data-discovery");
+    }
+
+    #[test]
+    fn test_get_project_path_from_sessions_null_cwd_first_line() {
+        let temp_dir = TempDir::new().unwrap();
+        let project_dir = temp_dir.path().to_path_buf();
+
+        // First line has null cwd, second line has valid path
+        let content = format!(
+            "{}\n{}",
+            r#"{"type":"system","cwd":null}"#,
+            r#"{"type":"system","cwd":"/Users/test/valid-path"}"#
+        );
+        create_test_session_file(&project_dir, "session1.jsonl", &content).unwrap();
+
+        let result = get_project_path_from_sessions(&project_dir);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "/Users/test/valid-path");
+    }
+
+    #[test]
+    fn test_get_project_path_from_sessions_multiple_lines() {
+        let temp_dir = TempDir::new().unwrap();
+        let project_dir = temp_dir.path().to_path_buf();
+
+        // Multiple lines with cwd appearing on line 5
+        let content = format!(
+            "{}\n{}\n{}\n{}\n{}",
+            r#"{"type":"other"}"#,
+            r#"{"type":"system","cwd":null}"#,
+            r#"{"type":"message"}"#,
+            r#"{"type":"system"}"#,
+            r#"{"type":"system","cwd":"/Users/test/project"}"#
+        );
+        create_test_session_file(&project_dir, "session1.jsonl", &content).unwrap();
+
+        let result = get_project_path_from_sessions(&project_dir);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "/Users/test/project");
+    }
+
+    #[test]
+    fn test_get_project_path_from_sessions_empty_dir() {
+        let temp_dir = TempDir::new().unwrap();
+        let project_dir = temp_dir.path().to_path_buf();
+
+        let result = get_project_path_from_sessions(&project_dir);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "Could not determine project path from session files");
+    }
+
+    #[test]
+    fn test_get_project_path_from_sessions_no_jsonl_files() {
+        let temp_dir = TempDir::new().unwrap();
+        let project_dir = temp_dir.path().to_path_buf();
+
+        // Create a non-JSONL file
+        create_test_session_file(&project_dir, "readme.txt", "Some text").unwrap();
+
+        let result = get_project_path_from_sessions(&project_dir);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_get_project_path_from_sessions_no_cwd() {
+        let temp_dir = TempDir::new().unwrap();
+        let project_dir = temp_dir.path().to_path_buf();
+
+        // JSONL file without any cwd field
+        let content = format!(
+            "{}\n{}\n{}",
+            r#"{"type":"system"}"#,
+            r#"{"type":"message"}"#,
+            r#"{"type":"other"}"#
+        );
+        create_test_session_file(&project_dir, "session1.jsonl", &content).unwrap();
+
+        let result = get_project_path_from_sessions(&project_dir);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_get_project_path_from_sessions_multiple_sessions() {
+        let temp_dir = TempDir::new().unwrap();
+        let project_dir = temp_dir.path().to_path_buf();
+
+        // Create multiple session files - should return from first valid one
+        create_test_session_file(&project_dir, "session1.jsonl", r#"{"type":"system","cwd":"/path1"}"#).unwrap();
+        create_test_session_file(&project_dir, "session2.jsonl", r#"{"type":"system","cwd":"/path2"}"#).unwrap();
+
+        let result = get_project_path_from_sessions(&project_dir);
+        assert!(result.is_ok());
+        // Should get one of the paths (implementation checks first file it finds)
+        let path = result.unwrap();
+        assert!(path == "/path1" || path == "/path2");
     }
 }
