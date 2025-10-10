@@ -14,20 +14,21 @@ use commands::agents::{
     get_live_session_output, get_session_output, get_session_status, import_agent,
     import_agent_from_file, import_agent_from_github, init_database, kill_agent_session,
     list_agent_runs, list_agent_runs_with_metrics, list_agents, list_claude_installations,
-    list_running_sessions, load_agent_session_history, set_claude_binary_path, stream_session_output, update_agent, AgentDb,
+    list_running_sessions, load_agent_session_history, set_claude_binary_path,
+    stream_session_output, update_agent, AgentDb,
 };
 use commands::claude::{
     cancel_claude_execution, check_auto_checkpoint, check_claude_version, cleanup_old_checkpoints,
-    clear_checkpoint_manager, continue_claude_code, create_checkpoint, create_project, execute_claude_code,
-    find_claude_md_files, fork_from_checkpoint, get_checkpoint_diff, get_checkpoint_settings,
-    get_checkpoint_state_stats, get_claude_session_output, get_claude_settings, get_home_directory, get_project_sessions,
+    clear_checkpoint_manager, continue_claude_code, create_checkpoint, create_project,
+    execute_claude_code, find_claude_md_files, fork_from_checkpoint, get_checkpoint_diff,
+    get_checkpoint_settings, get_checkpoint_state_stats, get_claude_session_output,
+    get_claude_settings, get_home_directory, get_hooks_config, get_project_sessions,
     get_recently_modified_files, get_session_timeline, get_system_prompt, list_checkpoints,
     list_directory_contents, list_projects, list_running_claude_sessions, load_session_history,
     open_new_session, read_claude_md_file, restore_checkpoint, resume_claude_code,
     save_claude_md_file, save_claude_settings, save_system_prompt, search_files,
     track_checkpoint_message, track_session_messages, update_checkpoint_settings,
-    get_hooks_config, update_hooks_config, validate_hook_command,
-    ClaudeProcessState,
+    update_hooks_config, validate_hook_command, ClaudeProcessState,
 };
 use commands::mcp::{
     mcp_add, mcp_add_from_claude_desktop, mcp_add_json, mcp_get, mcp_get_server_status, mcp_list,
@@ -35,14 +36,14 @@ use commands::mcp::{
     mcp_serve, mcp_test_connection,
 };
 
+use commands::proxy::{apply_proxy_settings, get_proxy_settings, save_proxy_settings};
+use commands::storage::{
+    storage_delete_row, storage_execute_sql, storage_insert_row, storage_list_tables,
+    storage_read_table, storage_reset_database, storage_update_row,
+};
 use commands::usage::{
     get_session_stats, get_usage_by_date_range, get_usage_details, get_usage_stats,
 };
-use commands::storage::{
-    storage_list_tables, storage_read_table, storage_update_row, storage_delete_row,
-    storage_insert_row, storage_execute_sql, storage_reset_database,
-};
-use commands::proxy::{get_proxy_settings, save_proxy_settings, apply_proxy_settings};
 use process::ProcessRegistryState;
 use std::sync::Mutex;
 use tauri::Manager;
@@ -50,11 +51,9 @@ use tauri::Manager;
 #[cfg(target_os = "macos")]
 use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial};
 
-
 fn main() {
     // Initialize logger
     env_logger::init();
-
 
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
@@ -62,7 +61,7 @@ fn main() {
         .setup(|app| {
             // Initialize agents database
             let conn = init_database(&app.handle()).expect("Failed to initialize agents database");
-            
+
             // Load and apply proxy settings from the database
             {
                 let db = AgentDb(Mutex::new(conn));
@@ -70,7 +69,7 @@ fn main() {
                     Ok(conn) => {
                         // Directly query proxy settings from the database
                         let mut settings = commands::proxy::ProxySettings::default();
-                        
+
                         let keys = vec![
                             ("proxy_enabled", "enabled"),
                             ("proxy_http", "http_proxy"),
@@ -78,7 +77,7 @@ fn main() {
                             ("proxy_no", "no_proxy"),
                             ("proxy_all", "all_proxy"),
                         ];
-                        
+
                         for (db_key, field) in keys {
                             if let Ok(value) = conn.query_row(
                                 "SELECT value FROM app_settings WHERE key = ?1",
@@ -87,15 +86,23 @@ fn main() {
                             ) {
                                 match field {
                                     "enabled" => settings.enabled = value == "true",
-                                    "http_proxy" => settings.http_proxy = Some(value).filter(|s| !s.is_empty()),
-                                    "https_proxy" => settings.https_proxy = Some(value).filter(|s| !s.is_empty()),
-                                    "no_proxy" => settings.no_proxy = Some(value).filter(|s| !s.is_empty()),
-                                    "all_proxy" => settings.all_proxy = Some(value).filter(|s| !s.is_empty()),
+                                    "http_proxy" => {
+                                        settings.http_proxy = Some(value).filter(|s| !s.is_empty())
+                                    }
+                                    "https_proxy" => {
+                                        settings.https_proxy = Some(value).filter(|s| !s.is_empty())
+                                    }
+                                    "no_proxy" => {
+                                        settings.no_proxy = Some(value).filter(|s| !s.is_empty())
+                                    }
+                                    "all_proxy" => {
+                                        settings.all_proxy = Some(value).filter(|s| !s.is_empty())
+                                    }
                                     _ => {}
                                 }
                             }
                         }
-                        
+
                         log::info!("Loaded proxy settings: enabled={}", settings.enabled);
                         settings
                     }
@@ -104,11 +111,11 @@ fn main() {
                         commands::proxy::ProxySettings::default()
                     }
                 };
-                
+
                 // Apply the proxy settings
                 apply_proxy_settings(&proxy_settings);
             }
-            
+
             // Re-open the connection for the app to manage
             let conn = init_database(&app.handle()).expect("Failed to initialize agents database");
             app.manage(AgentDb(Mutex::new(conn)));
@@ -144,7 +151,7 @@ fn main() {
             #[cfg(target_os = "macos")]
             {
                 let window = app.get_webview_window("main").unwrap();
-                
+
                 // Try different vibrancy materials that support rounded corners
                 let materials = [
                     NSVisualEffectMaterial::UnderWindowBackground,
@@ -153,7 +160,7 @@ fn main() {
                     NSVisualEffectMaterial::Menu,
                     NSVisualEffectMaterial::Sidebar,
                 ];
-                
+
                 let mut applied = false;
                 for material in materials.iter() {
                     if apply_vibrancy(&window, *material, None, Some(12.0)).is_ok() {
@@ -161,11 +168,16 @@ fn main() {
                         break;
                     }
                 }
-                
+
                 if !applied {
                     // Fallback without rounded corners
-                    apply_vibrancy(&window, NSVisualEffectMaterial::WindowBackground, None, None)
-                        .expect("Failed to apply any window vibrancy");
+                    apply_vibrancy(
+                        &window,
+                        NSVisualEffectMaterial::WindowBackground,
+                        None,
+                        None,
+                    )
+                    .expect("Failed to apply any window vibrancy");
                 }
             }
 
@@ -199,7 +211,6 @@ fn main() {
             get_hooks_config,
             update_hooks_config,
             validate_hook_command,
-            
             // Checkpoint Management
             create_checkpoint,
             restore_checkpoint,
@@ -215,7 +226,6 @@ fn main() {
             get_checkpoint_settings,
             clear_checkpoint_manager,
             get_checkpoint_state_stats,
-            
             // Agent Management
             list_agents,
             create_agent,
@@ -245,13 +255,11 @@ fn main() {
             fetch_github_agents,
             fetch_github_agent_content,
             import_agent_from_github,
-            
             // Usage & Analytics
             get_usage_stats,
             get_usage_by_date_range,
             get_usage_details,
             get_session_stats,
-            
             // MCP (Model Context Protocol)
             mcp_add,
             mcp_list,
@@ -265,7 +273,6 @@ fn main() {
             mcp_get_server_status,
             mcp_read_project_config,
             mcp_save_project_config,
-            
             // Storage Management
             storage_list_tables,
             storage_read_table,
@@ -274,13 +281,11 @@ fn main() {
             storage_insert_row,
             storage_execute_sql,
             storage_reset_database,
-            
             // Slash Commands
             commands::slash_commands::slash_commands_list,
             commands::slash_commands::slash_command_get,
             commands::slash_commands::slash_command_save,
             commands::slash_commands::slash_command_delete,
-            
             // Proxy Settings
             get_proxy_settings,
             save_proxy_settings,

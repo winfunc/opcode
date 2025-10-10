@@ -47,7 +47,7 @@ pub fn find_claude_binary(app_handle: &tauri::AppHandle) -> Result<String, Strin
                     |row| row.get::<_, String>(0),
                 ) {
                     info!("Found stored claude path in database: {}", stored_path);
-                    
+
                     // Check if the path still exists
                     let path_buf = PathBuf::from(&stored_path);
                     if path_buf.exists() && path_buf.is_file() {
@@ -56,14 +56,14 @@ pub fn find_claude_binary(app_handle: &tauri::AppHandle) -> Result<String, Strin
                         warn!("Stored claude path no longer exists: {}", stored_path);
                     }
                 }
-                
+
                 // Check user preference
                 let preference = conn.query_row(
                     "SELECT value FROM app_settings WHERE key = 'claude_installation_preference'",
                     [],
                     |row| row.get::<_, String>(0),
                 ).unwrap_or_else(|_| "system".to_string());
-                
+
                 info!("User preference for Claude installation: {}", preference);
             }
         }
@@ -218,7 +218,9 @@ fn find_nvm_installations() -> Vec<ClaudeInstallation> {
         let claude_path = PathBuf::from(&nvm_bin).join("claude");
         if claude_path.exists() && claude_path.is_file() {
             debug!("Found Claude via NVM_BIN: {:?}", claude_path);
-            let version = get_claude_version(&claude_path.to_string_lossy()).ok().flatten();
+            let version = get_claude_version(&claude_path.to_string_lossy())
+                .ok()
+                .flatten();
             installations.push(ClaudeInstallation {
                 path: claude_path.to_string_lossy().to_string(),
                 version,
@@ -367,10 +369,10 @@ fn get_claude_version(path: &str) -> Result<Option<String>, String> {
 /// Extract version string from command output
 fn extract_version_from_output(stdout: &[u8]) -> Option<String> {
     let output_str = String::from_utf8_lossy(stdout);
-    
+
     // Debug log the raw output
     debug!("Raw version output: {:?}", output_str);
-    
+
     // Use regex to directly extract version pattern (e.g., "1.0.41")
     // This pattern matches:
     // - One or more digits, followed by
@@ -379,8 +381,9 @@ fn extract_version_from_output(stdout: &[u8]) -> Option<String> {
     // - A dot, followed by
     // - One or more digits
     // - Optionally followed by pre-release/build metadata
-    let version_regex = regex::Regex::new(r"(\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?(?:\+[a-zA-Z0-9.-]+)?)").ok()?;
-    
+    let version_regex =
+        regex::Regex::new(r"(\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?(?:\+[a-zA-Z0-9.-]+)?)").ok()?;
+
     if let Some(captures) = version_regex.captures(&output_str) {
         if let Some(version_match) = captures.get(1) {
             let version = version_match.as_str().to_string();
@@ -388,7 +391,7 @@ fn extract_version_from_output(stdout: &[u8]) -> Option<String> {
             return Some(version);
         }
     }
-    
+
     debug!("No version found in output");
     None
 }
@@ -468,7 +471,7 @@ fn compare_versions(a: &str, b: &str) -> Ordering {
 /// This ensures commands like Claude can find Node.js and other dependencies
 pub fn create_command_with_env(program: &str) -> Command {
     let mut cmd = Command::new(program);
-    
+
     info!("Creating command for: {}", program);
 
     // Inherit essential environment variables from parent process
@@ -496,7 +499,7 @@ pub fn create_command_with_env(program: &str) -> Command {
             cmd.env(&key, &value);
         }
     }
-    
+
     // Log proxy-related environment variables for debugging
     info!("Command will use proxy settings:");
     if let Ok(http_proxy) = std::env::var("HTTP_PROXY") {
@@ -519,7 +522,7 @@ pub fn create_command_with_env(program: &str) -> Command {
             }
         }
     }
-    
+
     // Add Homebrew support if the program is in a Homebrew directory
     if program.contains("/homebrew/") || program.contains("/opt/homebrew/") {
         if let Some(program_dir) = std::path::Path::new(program).parent() {
@@ -528,7 +531,10 @@ pub fn create_command_with_env(program: &str) -> Command {
             let homebrew_bin_str = program_dir.to_string_lossy();
             if !current_path.contains(&homebrew_bin_str.as_ref()) {
                 let new_path = format!("{}:{}", homebrew_bin_str, current_path);
-                debug!("Adding Homebrew bin directory to PATH: {}", homebrew_bin_str);
+                debug!(
+                    "Adding Homebrew bin directory to PATH: {}",
+                    homebrew_bin_str
+                );
                 cmd.env("PATH", new_path);
             }
         }

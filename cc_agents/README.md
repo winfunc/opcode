@@ -16,11 +16,11 @@
 
 ## 📦 Available Agents
 
-| Agent | Model | Description | Default Task |
+| Agent | Model Alias | Description | Default Task |
 |-------|-------|-------------|--------------|
-| **🎯 Git Commit Bot**<br/>🤖 `bot` | <img src="https://img.shields.io/badge/Sonnet-blue?style=flat-square" alt="Sonnet"> | **Automate your Git workflow with intelligent commit messages**<br/><br/>Analyzes Git repository changes, generates detailed commit messages following Conventional Commits specification, and pushes changes to remote repository. | "Push all changes." |
-| **🛡️ Security Scanner**<br/>🛡️ `shield` | <img src="https://img.shields.io/badge/Opus-purple?style=flat-square" alt="Opus"> | **Advanced AI-powered Static Application Security Testing (SAST)**<br/><br/>Performs comprehensive security audits by spawning specialized sub-agents for: codebase intelligence gathering, threat modeling (STRIDE), vulnerability scanning (OWASP Top 10, CWE), exploit validation, remediation design, and professional report generation. | "Review the codebase for security issues." |
-| **🧪 Unit Tests Bot**<br/>💻 `code` | <img src="https://img.shields.io/badge/Opus-purple?style=flat-square" alt="Opus"> | **Automated comprehensive unit test generation for any codebase**<br/><br/>Analyzes codebase and generates comprehensive unit tests by: analyzing code structure, creating test plans, writing tests matching your style, verifying execution, optimizing coverage (>80% overall, 100% critical paths), and generating documentation. | "Generate unit tests for this codebase." |
+| **🎯 Git Commit Bot**<br/>🤖 `bot` | <img src="https://img.shields.io/badge/sonnet-blue?style=flat-square" alt="Sonnet"> | **Automate your Git workflow with intelligent commit messages**<br/><br/>Analyzes Git repository changes, generates detailed commit messages following Conventional Commits specification, and pushes changes to remote repository. Uses the `sonnet` alias to automatically use the latest Sonnet model. | "Push all changes." |
+| **🛡️ Security Scanner**<br/>🛡️ `shield` | <img src="https://img.shields.io/badge/opus-purple?style=flat-square" alt="Opus"> | **Advanced AI-powered Static Application Security Testing (SAST)**<br/><br/>Performs comprehensive security audits by spawning specialized sub-agents for: codebase intelligence gathering, threat modeling (STRIDE), vulnerability scanning (OWASP Top 10, CWE), exploit validation, remediation design, and professional report generation. Uses the `opus` alias to automatically use the latest Opus model. | "Review the codebase for security issues." |
+| **🧪 Unit Tests Bot**<br/>💻 `code` | <img src="https://img.shields.io/badge/opus-purple?style=flat-square" alt="Opus"> | **Automated comprehensive unit test generation for any codebase**<br/><br/>Analyzes codebase and generates comprehensive unit tests by: analyzing code structure, creating test plans, writing tests matching your style, verifying execution, optimizing coverage (>80% overall, 100% critical paths), and generating documentation. Uses the `opus` alias to automatically use the latest Opus model. | "Generate unit tests for this codebase." |
 
 ### Available Icons
 
@@ -74,7 +74,7 @@ All agents are stored in `.opcode.json` format with the following structure:
   "agent": {
     "name": "Your Agent Name",
     "icon": "bot",
-    "model": "opus|sonnet|haiku",
+    "model": "sonnet|opus",
     "system_prompt": "Your agent's instructions...",
     "default_task": "Default task description"
   }
@@ -128,7 +128,7 @@ Export your agent to a `.opcode.json` file with a descriptive name.
 
 - **Single Purpose**: Each agent should excel at one specific task
 - **Clear Documentation**: Write comprehensive system prompts
-- **Model Choice**: Use Haiku for simple tasks, Sonnet for general purpose, Opus for complex reasoning
+- **Model Aliases**: Use `sonnet` for general purpose tasks (fast and efficient), `opus` for complex reasoning and advanced capabilities. Model aliases automatically use the latest version of each model family.
 - **Naming**: Use descriptive names that clearly indicate the agent's function
 
 ## 📜 License
