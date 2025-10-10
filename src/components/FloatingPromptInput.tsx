@@ -867,6 +867,7 @@ const FloatingPromptInputInner = (
                       size="icon"
                       onClick={() => setIsExpanded(false)}
                       className="h-8 w-8"
+                      aria-label="Minimize prompt editor"
                     >
                       <Minimize2 className="h-4 w-4" />
                     </Button>
@@ -910,6 +911,9 @@ const FloatingPromptInputInner = (
                           size="sm"
                           onClick={() => setModelPickerOpen(!modelPickerOpen)}
                           className="gap-2"
+                          aria-label={`Select model, currently ${selectedModelData.name}`}
+                          aria-expanded={modelPickerOpen}
+                          aria-haspopup="listbox"
                         >
                           <span className={selectedModelData.color}>
                             {selectedModelData.icon}
@@ -931,6 +935,9 @@ const FloatingPromptInputInner = (
                                 "hover:bg-accent",
                                 selectedModel === model.id && "bg-accent"
                               )}
+                              role="option"
+                              aria-selected={selectedModel === model.id}
+                              aria-label={`Select ${model.name} model`}
                             >
                               <div className="mt-0.5">
                                 <span className={model.color}>
@@ -965,6 +972,9 @@ const FloatingPromptInputInner = (
                                 size="sm"
                                 onClick={() => setThinkingModePickerOpen(!thinkingModePickerOpen)}
                                 className="gap-2"
+                                aria-label={`Select thinking mode: ${THINKING_MODES.find(m => m.id === selectedThinkingMode)?.name} - ${THINKING_MODES.find(m => m.id === selectedThinkingMode)?.description}`}
+                                aria-expanded={!thinkingModePickerOpen}
+                                aria-haspopup="listbox"
                               >
                                 <span className={THINKING_MODES.find(m => m.id === selectedThinkingMode)?.color}>
                                   {THINKING_MODES.find(m => m.id === selectedThinkingMode)?.icon}
@@ -1029,6 +1039,7 @@ const FloatingPromptInputInner = (
                       disabled={!prompt.trim() || disabled}
                       size="default"
                       className="min-w-[60px]"
+                      aria-label={isLoading ? "Cancel current request" : "Send message"}
                     >
                       {isLoading ? (
                         <div className="rotating-symbol text-primary-foreground" />
@@ -1083,6 +1094,8 @@ const FloatingPromptInputInner = (
                               size="sm"
                               disabled={disabled}
                               className="h-9 px-2 hover:bg-accent/50 gap-1"
+                              aria-label={`Select model: ${selectedModelData.name} - ${selectedModelData.description}`}
+                              aria-haspopup="menu"
                             >
                               <span className={selectedModelData.color}>
                                 {selectedModelData.icon}
@@ -1114,6 +1127,7 @@ const FloatingPromptInputInner = (
                           "hover:bg-accent",
                           selectedModel === model.id && "bg-accent"
                         )}
+                        aria-label={`Select ${model.name} model: ${model.description}`}
                       >
                         <div className="mt-0.5">
                           <span className={model.color}>
@@ -1149,6 +1163,8 @@ const FloatingPromptInputInner = (
                               size="sm"
                               disabled={disabled}
                               className="h-9 px-2 hover:bg-accent/50 gap-1"
+                              aria-label={`Select thinking mode: ${THINKING_MODES.find(m => m.id === selectedThinkingMode)?.name} - ${THINKING_MODES.find(m => m.id === selectedThinkingMode)?.description}`}
+                              aria-haspopup="menu"
                             >
                               <span className={THINKING_MODES.find(m => m.id === selectedThinkingMode)?.color}>
                                 {THINKING_MODES.find(m => m.id === selectedThinkingMode)?.icon}
@@ -1180,6 +1196,7 @@ const FloatingPromptInputInner = (
                           "hover:bg-accent",
                           selectedThinkingMode === mode.id && "bg-accent"
                         )}
+                        aria-label={`Select ${mode.name} thinking mode: ${mode.description}`}
                       >
                         <span className={cn("mt-0.5", mode.color)}>
                           {mode.icon}
@@ -1245,6 +1262,7 @@ const FloatingPromptInputInner = (
                         onClick={() => setIsExpanded(true)}
                         disabled={disabled}
                         className="h-8 w-8 hover:bg-accent/50 transition-colors"
+                        aria-label="Expand prompt editor"
                       >
                         <Maximize2 className="h-3.5 w-3.5" />
                       </Button>
@@ -1265,6 +1283,7 @@ const FloatingPromptInputInner = (
                           "h-8 w-8 transition-all",
                           prompt.trim() && !isLoading && "shadow-sm"
                         )}
+                        aria-label={isLoading ? "Stop generation" : "Send message"}
                       >
                         {isLoading ? (
                           <Square className="h-4 w-4" />

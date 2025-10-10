@@ -28,7 +28,7 @@ import { SplitPane } from "@/components/ui/split-pane";
 import { WebviewPreview } from "./WebviewPreview";
 import type { ClaudeStreamMessage } from "./AgentExecution";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useTrackEvent, useComponentMetrics, useWorkflowTracking } from "@/hooks";
+import { useTrackEvent, useComponentMetrics, useWorkflowTracking, useScreenReaderAnnouncements } from "@/hooks";
 import { SessionPersistenceService } from "@/services/sessionPersistence";
 
 interface ClaudeCodeSessionProps {
@@ -139,6 +139,15 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   useComponentMetrics('ClaudeCodeSession');
   // const aiTracking = useAIInteractionTracking('sonnet'); // Default model
   const workflowTracking = useWorkflowTracking('claude_session');
+  
+  // Screen reader announcements
+  const {
+    announceClaudeStarted,
+    announceClaudeFinished,
+    announceAssistantMessage,
+    announceToolExecution,
+    announceToolCompleted
+  } = useScreenReaderAnnouncements();
   
   // Call onProjectPathChange when component mounts with initial path
   useEffect(() => {
@@ -480,6 +489,8 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       setError(null);
       hasActiveSessionRef.current = true;
       
+      // Don't announce "Claude says" here - wait for actual content to arrive
+      
       // For resuming sessions, ensure we have the session ID
       if (effectiveSession && !claudeSessionId) {
         setClaudeSessionId(effectiveSession.id);
@@ -570,6 +581,60 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
           }
         });
 
+        // Helper to find tool name by tool use ID from previous messages
+        function findToolNameById(toolUseId: string): string | null {
+          // Search backwards through messages for the tool use
+          for (let i = messages.length - 1; i >= 0; i--) {
+            const msg = messages[i];
+            if (msg.type === 'assistant' && msg.message?.content) {
+              const toolUse = msg.message.content.find((c: any) => 
+                c.type === 'tool_use' && c.id === toolUseId
+              );
+              if (toolUse?.name) {
+                return toolUse.name;
+              }
+            }
+          }
+          return null;
+        }
+
+        // Helper to announce incoming messages to screen readers
+        function announceIncomingMessage(message: ClaudeStreamMessage) {
+          if (message.type === 'assistant' && message.message?.content) {
+            // Announce tool execution
+            const toolUses = message.message.content.filter((c: any) => c.type === 'tool_use');
+            toolUses.forEach((toolUse: any) => {
+              const toolName = toolUse.name || 'unknown tool';
+              const description = toolUse.input?.description || 
+                                toolUse.input?.command || 
+                                toolUse.input?.file_path ||
+                                toolUse.input?.pattern ||
+                                toolUse.input?.prompt?.substring(0, 50);
+              announceToolExecution(toolName, description);
+            });
+            
+            // Announce text content
+            const textContent = message.message.content
+              .filter((c: any) => c.type === 'text')
+              .map((c: any) => typeof c.text === 'string' ? c.text : (c.text?.text || ''))
+              .join(' ')
+              .trim();
+              
+            if (textContent) {
+              announceAssistantMessage(textContent);
+            }
+          } else if (message.type === 'system') {
+            // Announce system messages if they have meaningful content
+            if (message.subtype === 'init') {
+              // Don't announce init messages as they're just setup
+              return;
+            } else if (message.result || message.error) {
+              const content = message.result || message.error || 'System message received';
+              announceAssistantMessage(content);
+            }
+          }
+        }
+
         // Helper to process any JSONL stream message string
         function handleStreamMessage(payload: string) {
           try {
@@ -580,6 +645,9 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
             setRawJsonlOutput((prev) => [...prev, payload]);
 
             const message = JSON.parse(payload) as ClaudeStreamMessage;
+            
+            // Announce incoming messages to screen readers
+            announceIncomingMessage(message);
             
             // Track enhanced tool execution
             if (message.type === 'assistant' && message.message?.content) {
@@ -609,6 +677,14 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
               const toolResults = message.message.content.filter((c: any) => c.type === 'tool_result');
               toolResults.forEach((result: any) => {
                 const isError = result.is_error || false;
+                
+                // Announce tool completion
+                if (result.tool_use_id) {
+                  // Try to find the tool name from previous messages
+                  const toolName = findToolNameById(result.tool_use_id) || 'Tool';
+                  // announceToolCompleted(toolName, !isError); // Disabled to prevent interrupting other announcements
+                }
+                
                 // Note: We don't have execution time here, but we can track success/failure
                 if (isError) {
                   sessionMetrics.current.toolsFailed += 1;
@@ -659,6 +735,9 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
           setIsLoading(false);
           hasActiveSessionRef.current = false;
           isListeningRef.current = false; // Reset listening state
+          
+          // Announce that Claude has finished
+          announceClaudeFinished();
           
           // Track enhanced session stopped metrics when session completes
           if (effectiveSession && claudeSessionId) {
@@ -1333,10 +1412,13 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 20 }}
                 className="fixed bottom-24 left-1/2 -translate-x-1/2 z-30 w-full max-w-3xl px-4"
+                role="region"
+                aria-label="Prompt queue"
+                aria-live="polite"
               >
                 <div className="bg-background/95 backdrop-blur-md border rounded-lg shadow-lg p-3 space-y-2">
                   <div className="flex items-center justify-between">
-                    <div className="text-xs font-medium text-muted-foreground mb-1">
+                    <div id="queue-header" className="text-xs font-medium text-muted-foreground mb-1">
                       Queued Prompts ({queuedPrompts.length})
                     </div>
                     <TooltipSimple content={queuedPromptsCollapsed ? "Expand queue" : "Collapse queue"} side="top">
@@ -1344,21 +1426,28 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                         whileTap={{ scale: 0.97 }}
                         transition={{ duration: 0.15 }}
                       >
-                        <Button variant="ghost" size="icon" onClick={() => setQueuedPromptsCollapsed(prev => !prev)}>
-                          {queuedPromptsCollapsed ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => setQueuedPromptsCollapsed(prev => !prev)}
+                          aria-label={queuedPromptsCollapsed ? "Expand queued prompts" : "Collapse queued prompts"}
+                        >
+                          {queuedPromptsCollapsed ? <ChevronUp className="h-3 w-3" aria-hidden="true" /> : <ChevronDown className="h-3 w-3" aria-hidden="true" />}
                         </Button>
                       </motion.div>
                     </TooltipSimple>
                   </div>
-                  {!queuedPromptsCollapsed && queuedPrompts.map((queuedPrompt, index) => (
-                    <motion.div
-                      key={queuedPrompt.id}
-                      initial={{ opacity: 0, y: 4 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -4 }}
-                      transition={{ duration: 0.15, delay: index * 0.02 }}
-                      className="flex items-start gap-2 bg-muted/50 rounded-md p-2"
-                    >
+                  {!queuedPromptsCollapsed && (
+                    <ul role="list" aria-labelledby="queue-header" className="space-y-2">
+                      {queuedPrompts.map((queuedPrompt, index) => (
+                        <motion.li
+                          key={queuedPrompt.id}
+                          initial={{ opacity: 0, y: 4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -4 }}
+                          transition={{ duration: 0.15, delay: index * 0.02 }}
+                          className="flex items-start gap-2 bg-muted/50 rounded-md p-2"
+                        >
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-xs font-medium text-muted-foreground">#{index + 1}</span>
@@ -1377,12 +1466,15 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                           size="icon"
                           className="h-6 w-6 flex-shrink-0"
                           onClick={() => setQueuedPrompts(prev => prev.filter(p => p.id !== queuedPrompt.id))}
+                          aria-label={`Remove queued prompt: ${queuedPrompt.prompt.slice(0, 50)}${queuedPrompt.prompt.length > 50 ? '...' : ''}`}
                         >
                           <X className="h-3 w-3" />
                         </Button>
                       </motion.div>
-                    </motion.div>
-                  ))}
+                        </motion.li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               </motion.div>
             )}
@@ -1431,7 +1523,8 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                     }}
                       className="px-3 py-2 hover:bg-accent rounded-none"
                     >
-                      <ChevronUp className="h-4 w-4" />
+                      <ChevronUp className="h-4 w-4"
+                      aria-label="Scroll to top" />
                     </Button>
                   </motion.div>
                 </TooltipSimple>
@@ -1464,7 +1557,8 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                       }}
                       className="px-3 py-2 hover:bg-accent rounded-none"
                     >
-                      <ChevronDown className="h-4 w-4" />
+                      <ChevronDown className="h-4 w-4"
+                      aria-label="Scroll to bottom" />
                     </Button>
                   </motion.div>
                 </TooltipSimple>
@@ -1496,6 +1590,9 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                           size="icon"
                           onClick={() => setShowTimeline(!showTimeline)}
                           className="h-9 w-9 text-muted-foreground hover:text-foreground"
+                          aria-label="Session timeline"
+                          aria-haspopup="dialog"
+                          aria-expanded={showTimeline}
                         >
                           <GitBranch className={cn("h-3.5 w-3.5", showTimeline && "text-primary")} />
                         </Button>
@@ -1514,6 +1611,8 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                               variant="ghost"
                               size="icon"
                               className="h-9 w-9 text-muted-foreground hover:text-foreground"
+                              aria-label="Copy Conversation"
+                              aria-haspopup="menu"
                             >
                               <Copy className="h-3.5 w-3.5" />
                             </Button>
@@ -1556,6 +1655,8 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                         size="icon"
                         onClick={() => setShowSettings(!showSettings)}
                         className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        aria-label="Checkpoint Settings"
+                        aria-haspopup="dialog"
                       >
                         <Wrench className={cn("h-3.5 w-3.5", showSettings && "text-primary")} />
                       </Button>

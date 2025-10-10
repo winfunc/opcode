@@ -105,6 +105,20 @@ export const SessionList: React.FC<SessionListProps> = ({
                   "p-3 hover:bg-accent/50 transition-all duration-200 cursor-pointer group h-full",
                   session.todo_data && "bg-primary/5"
                 )}
+                role="button"
+                tabIndex={0}
+                aria-label={`Open session from ${session.message_timestamp 
+                  ? new Date(session.message_timestamp).toLocaleDateString('en-US', { 
+                      month: 'short', 
+                      day: 'numeric',
+                      year: 'numeric'
+                    })
+                  : new Date(session.created_at * 1000).toLocaleDateString('en-US', { 
+                      month: 'short', 
+                      day: 'numeric',
+                      year: 'numeric'
+                    })
+                }${session.first_message ? `. First message: ${truncateText(getFirstLine(session.first_message), 60)}` : '. No messages yet'}${session.todo_data ? '. Contains todo items.' : ''}`}
                 onClick={() => {
                   // Emit a special event for Claude Code session navigation
                   const event = new CustomEvent('claude-session-selected', { 
@@ -112,6 +126,16 @@ export const SessionList: React.FC<SessionListProps> = ({
                   });
                   window.dispatchEvent(event);
                   onSessionClick?.(session);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    const event = new CustomEvent('claude-session-selected', { 
+                      detail: { session, projectPath } 
+                    });
+                    window.dispatchEvent(event);
+                    onSessionClick?.(session);
+                  }
                 }}
               >
                 <div className="flex flex-col h-full">

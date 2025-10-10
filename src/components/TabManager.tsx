@@ -75,6 +75,10 @@ const TabItem: React.FC<TabItemProps> = ({ tab, isActive, onClose, onClick, isDr
         isDragging && "bg-card border-primary/50 shadow-sm z-50",
         "min-w-[120px] max-w-[220px] h-8 px-3"
       )}
+      role="tab"
+      aria-selected={isActive}
+      aria-label={`${tab.title} ${tab.type} tab`}
+      tabIndex={isActive ? 0 : -1}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={() => onClick(tab.id)}
@@ -103,6 +107,7 @@ const TabItem: React.FC<TabItemProps> = ({ tab, isActive, onClose, onClick, isDr
           <span 
             className="w-1.5 h-1.5 bg-primary rounded-full"
             title="Unsaved changes"
+            aria-label="Unsaved changes indicator"
           />
         )}
       </div>
@@ -120,9 +125,10 @@ const TabItem: React.FC<TabItemProps> = ({ tab, isActive, onClose, onClick, isDr
           (isHovered || isActive) ? "opacity-100" : "opacity-0"
         )}
         title={`Close ${tab.title}`}
+        aria-label={`Close ${tab.title} tab`}
         tabIndex={-1}
       >
-        <X className="w-3 h-3" />
+        <X className="w-3 h-3" aria-hidden="true" />
       </button>
 
     </Reorder.Item>
@@ -321,6 +327,7 @@ export const TabManager: React.FC<TabManagerProps> = ({ className }) => {
               "bg-background/80 backdrop-blur-sm shadow-sm border border-border/50"
             )}
             title="Scroll tabs left"
+            aria-label="Scroll tabs to the left"
           >
             <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <path d="M15 18l-6-6 6-6" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
@@ -342,6 +349,8 @@ export const TabManager: React.FC<TabManagerProps> = ({ className }) => {
             onReorder={handleReorder}
             className="flex items-stretch"
             layoutScroll={false}
+            role="tablist"
+            aria-label="Application tabs"
           >
             {tabs.map((tab) => (
               <TabItem
@@ -370,8 +379,9 @@ export const TabManager: React.FC<TabManagerProps> = ({ className }) => {
                 : "opacity-50 cursor-not-allowed text-muted-foreground"
             )}
             title={canAddTab() ? "New project (Ctrl+T)" : "Maximum tabs reached"}
+            aria-label={canAddTab() ? "Create new project tab" : "Cannot add more tabs, maximum reached"}
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-4 h-4" aria-hidden="true" />
           </motion.button>
         </div>
       </div>
@@ -395,6 +405,7 @@ export const TabManager: React.FC<TabManagerProps> = ({ className }) => {
               "bg-background/80 backdrop-blur-sm shadow-sm border border-border/50"
             )}
             title="Scroll tabs right"
+            aria-label="Scroll tabs to the right"
           >
             <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <path d="M9 18l6-6-6-6" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />

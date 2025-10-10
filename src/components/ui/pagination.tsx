@@ -43,18 +43,19 @@ export const Pagination: React.FC<PaginationProps> = ({
   }
 
   return (
-    <div className={cn("flex items-center justify-center space-x-2", className)}>
+    <nav aria-label="Pagination navigation" className={cn("flex items-center justify-center space-x-2", className)}>
       <Button
         variant="outline"
         size="icon"
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage <= 1}
         className="h-8 w-8"
+        aria-label={`Go to previous page (page ${currentPage - 1} of ${totalPages})`}
       >
-        <ChevronLeft className="h-4 w-4" />
+        <ChevronLeft className="h-4 w-4" aria-hidden="true" />
       </Button>
       
-      <span className="text-sm text-muted-foreground">
+      <span className="text-sm text-muted-foreground" aria-current="page" aria-label={`Current page ${currentPage} of ${totalPages} total pages`}>
         Page {currentPage} of {totalPages}
       </span>
       
@@ -64,9 +65,10 @@ export const Pagination: React.FC<PaginationProps> = ({
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage >= totalPages}
         className="h-8 w-8"
+        aria-label={`Go to next page (page ${currentPage + 1} of ${totalPages})`}
       >
-        <ChevronRight className="h-4 w-4" />
+        <ChevronRight className="h-4 w-4" aria-hidden="true" />
       </Button>
-    </div>
+    </nav>
   );
 }; 
