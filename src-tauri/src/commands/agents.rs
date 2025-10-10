@@ -179,7 +179,10 @@ pub async fn read_session_jsonl(session_id: &str, project_path: &str) -> Result<
     let session_file = project_dir.join(format!("{}.jsonl", session_id));
 
     if !session_file.exists() {
-        return Err(format!("Session file not found: {}", session_file.display()));
+        return Err(format!(
+            "Session file not found: {}",
+            session_file.display()
+        ));
     }
 
     match tokio::fs::read_to_string(&session_file).await {
@@ -316,7 +319,6 @@ pub fn init_database(app: &AppHandle) -> SqliteResult<Connection> {
          END",
         [],
     )?;
-
 
     // Create settings table for app-wide settings
     conn.execute(
@@ -690,38 +692,41 @@ pub async fn execute_agent(
     // Get the agent from database
     let agent = get_agent(db.clone(), agent_id).await?;
     let execution_model = model.unwrap_or(agent.model.clone());
-    
+
     // Create .claude/settings.json with agent hooks if it doesn't exist
     if let Some(hooks_json) = &agent.hooks {
         let claude_dir = std::path::Path::new(&project_path).join(".claude");
         let settings_path = claude_dir.join("settings.json");
-        
+
         // Create .claude directory if it doesn't exist
         if !claude_dir.exists() {
             std::fs::create_dir_all(&claude_dir)
                 .map_err(|e| format!("Failed to create .claude directory: {}", e))?;
             info!("Created .claude directory at: {:?}", claude_dir);
         }
-        
+
         // Check if settings.json already exists
         if !settings_path.exists() {
             // Parse the hooks JSON
             let hooks: serde_json::Value = serde_json::from_str(hooks_json)
                 .map_err(|e| format!("Failed to parse agent hooks: {}", e))?;
-            
+
             // Create a settings object with just the hooks
             let settings = serde_json::json!({
                 "hooks": hooks
             });
-            
+
             // Write the settings file
             let settings_content = serde_json::to_string_pretty(&settings)
                 .map_err(|e| format!("Failed to serialize settings: {}", e))?;
-            
+
             std::fs::write(&settings_path, settings_content)
                 .map_err(|e| format!("Failed to write settings.json: {}", e))?;
-            
-            info!("Created settings.json with agent hooks at: {:?}", settings_path);
+
+            info!(
+                "Created settings.json with agent hooks at: {:?}",
+                settings_path
+            );
         } else {
             info!("settings.json already exists at: {:?}", settings_path);
         }
@@ -775,7 +780,8 @@ pub async fn execute_agent(
         execution_model,
         db,
         registry,
-    ).await
+    )
+    .await
 }
 
 /// Creates a system binary command for agent execution
@@ -785,17 +791,17 @@ fn create_agent_system_command(
     project_path: &str,
 ) -> Command {
     let mut cmd = create_command_with_env(claude_path);
-    
+
     // Add all arguments
     for arg in args {
         cmd.arg(arg);
     }
-    
+
     cmd.current_dir(project_path)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
-    
+
     cmd
 }
 
@@ -905,14 +911,15 @@ async fn spawn_agent_system(
             // Extract session ID from JSONL output
             if let Ok(json) = serde_json::from_str::<JsonValue>(&line) {
                 // Claude Code uses "session_id" (underscore), not "sessionId"
-                if json.get("type").and_then(|t| t.as_str()) == Some("system") &&
-                   json.get("subtype").and_then(|s| s.as_str()) == Some("init") {
+                if json.get("type").and_then(|t| t.as_str()) == Some("system")
+                    && json.get("subtype").and_then(|s| s.as_str()) == Some("init")
+                {
                     if let Some(sid) = json.get("session_id").and_then(|s| s.as_str()) {
                         if let Ok(mut current_session_id) = session_id_clone.lock() {
                             if current_session_id.is_empty() {
                                 *current_session_id = sid.to_string();
                                 info!("🔑 Extracted session ID: {}", sid);
-                                
+
                                 // Update database immediately with session ID
                                 if let Ok(conn) = Connection::open(&db_path_for_stdout) {
                                     match conn.execute(
@@ -925,7 +932,10 @@ async fn spawn_agent_system(
                                             }
                                         }
                                         Err(e) => {
-                                            error!("❌ Failed to update session ID immediately: {}", e);
+                                            error!(
+                                                "❌ Failed to update session ID immediately: {}",
+                                                e
+                                            );
                                         }
                                     }
                                 }
@@ -1085,7 +1095,10 @@ async fn spawn_agent_system(
 
         // Update the run record with session ID and mark as completed - open a new connection
         if let Ok(conn) = Connection::open(&db_path_for_monitor) {
-            info!("🔄 Updating database with extracted session ID: {}", extracted_session_id);
+            info!(
+                "🔄 Updating database with extracted session ID: {}",
+                extracted_session_id
+            );
             match conn.execute(
                 "UPDATE agent_runs SET session_id = ?1, status = 'completed', completed_at = CURRENT_TIMESTAMP WHERE id = ?2",
                 params![extracted_session_id, run_id],
@@ -1102,7 +1115,10 @@ async fn spawn_agent_system(
                 }
             }
         } else {
-            error!("❌ Failed to open database to update session ID for run {}", run_id);
+            error!(
+                "❌ Failed to open database to update session ID for run {}",
+                run_id
+            );
         }
 
         // Cleanup will be handled by the cleanup_finished_processes function
@@ -1162,10 +1178,8 @@ pub async fn list_running_sessions(
     // Cross-check with the process registry to ensure accuracy
     // Get actually running processes from the registry
     let registry_processes = registry.0.get_running_agent_processes()?;
-    let registry_run_ids: std::collections::HashSet<i64> = registry_processes
-        .iter()
-        .map(|p| p.run_id)
-        .collect();
+    let registry_run_ids: std::collections::HashSet<i64> =
+        registry_processes.iter().map(|p| p.run_id).collect();
 
     // Filter out any database entries that aren't actually running in the registry
     // This handles cases where processes crashed without updating the database
@@ -1358,7 +1372,7 @@ pub async fn get_session_output(
 
     // Find the correct project directory by searching for the session file
     let projects_dir = claude_dir.join("projects");
-    
+
     // Check if projects directory exists
     if !projects_dir.exists() {
         log::error!("Projects directory not found at: {:?}", projects_dir);
@@ -1367,15 +1381,18 @@ pub async fn get_session_output(
 
     // Search for the session file in all project directories
     let mut session_file_path = None;
-    log::info!("Searching for session file {} in all project directories", run.session_id);
-    
+    log::info!(
+        "Searching for session file {} in all project directories",
+        run.session_id
+    );
+
     if let Ok(entries) = std::fs::read_dir(&projects_dir) {
         for entry in entries.filter_map(Result::ok) {
             let path = entry.path();
             if path.is_dir() {
                 let dir_name = path.file_name().unwrap_or_default().to_string_lossy();
                 log::debug!("Checking project directory: {}", dir_name);
-                
+
                 let potential_session_file = path.join(format!("{}.jsonl", run.session_id));
                 if potential_session_file.exists() {
                     log::info!("Found session file at: {:?}", potential_session_file);
@@ -1395,7 +1412,11 @@ pub async fn get_session_output(
         match tokio::fs::read_to_string(&session_path).await {
             Ok(content) => Ok(content),
             Err(e) => {
-                log::error!("Failed to read session file {}: {}", session_path.display(), e);
+                log::error!(
+                    "Failed to read session file {}: {}",
+                    session_path.display(),
+                    e
+                );
                 // Fallback to live output if file read fails
                 let live_output = registry.0.get_live_output(run_id)?;
                 Ok(live_output)
@@ -1403,7 +1424,10 @@ pub async fn get_session_output(
         }
     } else {
         // If session file not found, try the old method as fallback
-        log::warn!("Session file not found for {}, trying legacy method", run.session_id);
+        log::warn!(
+            "Session file not found for {}, trying legacy method",
+            run.session_id
+        );
         match read_session_jsonl(&run.session_id, &run.project_path).await {
             Ok(content) => Ok(content),
             Err(_) => {
@@ -1916,7 +1940,7 @@ pub async fn load_agent_session_history(
         .join(".claude");
 
     let projects_dir = claude_dir.join("projects");
-    
+
     if !projects_dir.exists() {
         log::error!("Projects directory not found at: {:?}", projects_dir);
         return Err("Projects directory not found".to_string());
@@ -1924,15 +1948,18 @@ pub async fn load_agent_session_history(
 
     // Search for the session file in all project directories
     let mut session_file_path = None;
-    log::info!("Searching for session file {} in all project directories", session_id);
-    
+    log::info!(
+        "Searching for session file {} in all project directories",
+        session_id
+    );
+
     if let Ok(entries) = std::fs::read_dir(&projects_dir) {
         for entry in entries.filter_map(Result::ok) {
             let path = entry.path();
             if path.is_dir() {
                 let dir_name = path.file_name().unwrap_or_default().to_string_lossy();
                 log::debug!("Checking project directory: {}", dir_name);
-                
+
                 let potential_session_file = path.join(format!("{}.jsonl", session_id));
                 if potential_session_file.exists() {
                     log::info!("Found session file at: {:?}", potential_session_file);
