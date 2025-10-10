@@ -44,17 +44,41 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
   onAgentCreated,
   className,
 }) => {
-  const [name, setName] = useState(agent?.name || "");
-  const [selectedIcon, setSelectedIcon] = useState<AgentIconName>((agent?.icon as AgentIconName) || "bot");
-  const [systemPrompt, setSystemPrompt] = useState(agent?.system_prompt || "");
-  const [defaultTask, setDefaultTask] = useState(agent?.default_task || "");
-  const [model, setModel] = useState(agent?.model || "sonnet");
+  // Check for editing agent in localStorage
+  const [editingAgent, setEditingAgent] = useState<Agent | undefined>(() => {
+    if (agent) return agent;
+    const stored = window.localStorage.getItem('editingAgent');
+    if (stored) {
+      // Don't remove immediately - will clean up after component mounts
+      return JSON.parse(stored);
+    }
+    return undefined;
+  });
+
+  // Clean up localStorage after component mounts
+  React.useEffect(() => {
+    if (editingAgent && !agent) {
+      // Small delay to ensure state is set
+      const timer = setTimeout(() => {
+        window.localStorage.removeItem('editingAgent');
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [editingAgent, agent]);
+
+  const agentData = editingAgent || agent;
+  
+  const [name, setName] = useState(agentData?.name || "");
+  const [selectedIcon, setSelectedIcon] = useState<AgentIconName>((agentData?.icon as AgentIconName) || "bot");
+  const [systemPrompt, setSystemPrompt] = useState(agentData?.system_prompt || "");
+  const [defaultTask, setDefaultTask] = useState(agentData?.default_task || "");
+  const [model, setModel] = useState(agentData?.model || "sonnet");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [showIconPicker, setShowIconPicker] = useState(false);
 
-  const isEditMode = !!agent;
+  const isEditMode = !!agentData;
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -71,9 +95,9 @@ export const CreateAgent: React.FC<CreateAgentProps> = ({
       setSaving(true);
       setError(null);
       
-      if (isEditMode && agent.id) {
+      if (isEditMode && agentData.id) {
         await api.updateAgent(
-          agent.id, 
+          agentData.id, 
           name, 
           selectedIcon, 
           systemPrompt, 

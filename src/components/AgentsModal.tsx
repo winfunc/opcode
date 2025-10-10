@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bot, Plus, Loader2, Play, Clock, CheckCircle, XCircle, Trash2, Import, ChevronDown, FileJson, Globe, Download } from 'lucide-react';
+import { Bot, Plus, Loader2, Play, Clock, CheckCircle, XCircle, Trash2, Import, ChevronDown, FileJson, Globe, Download, Edit } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -17,7 +17,6 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Toast } from '@/components/ui/toast';
 import { api, type Agent, type AgentRunWithMetrics } from '@/lib/api';
 import { useTabState } from '@/hooks/useTabState';
@@ -154,6 +153,15 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
     createCreateAgentTab();
   };
 
+  const handleEditAgent = (agent: Agent) => {
+    // Close modal
+    onOpenChange(false);
+    // Dispatch custom event to open edit agent tab
+    window.dispatchEvent(new CustomEvent('open-edit-agent-tab', { 
+      detail: { agent }
+    }));
+  };
+
   const handleImportFromFile = async () => {
     try {
       const filePath = await openDialog({
@@ -216,7 +224,7 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[600px] flex flex-col p-0">
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0">
         <DialogHeader className="px-6 pt-6">
           <DialogTitle className="flex items-center gap-2">
             <Bot className="w-5 h-5" />
@@ -241,10 +249,10 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
           </TabsList>
 
           <div className="flex-1 overflow-hidden">
-            <TabsContent value="agents" className="h-full m-0">
-              <ScrollArea className="h-full px-6 pb-6">
+            <TabsContent value="agents" className="h-full m-0 p-0">
+              <div className="max-h-[400px] overflow-y-scroll px-6 pb-6 scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100">
                 {/* Action buttons at the top */}
-                <div className="flex gap-2 mb-4 pt-4">
+                <div className="flex gap-2 mb-4 pt-4 sticky top-0 bg-background z-10">
                   <Button onClick={handleCreateAgent} className="flex-1">
                     <Plus className="w-4 h-4 mr-2" />
                     Create Agent
@@ -313,6 +321,14 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
                             <Button
                               size="sm"
                               variant="ghost"
+                              onClick={() => handleEditAgent(agent)}
+                            >
+                              <Edit className="w-3 h-3 mr-1" />
+                              Edit
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
                               onClick={() => handleExportAgent(agent)}
                             >
                               <Download className="w-3 h-3 mr-1" />
@@ -340,11 +356,11 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
                     ))}
                   </div>
                 )}
-              </ScrollArea>
+              </div>
             </TabsContent>
 
             <TabsContent value="running" className="h-full m-0">
-              <ScrollArea className="h-full px-6 pb-6">
+              <div className="h-full overflow-y-auto px-6 pb-6">
                 {runningAgents.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-center">
                     <Clock className="w-12 h-12 text-muted-foreground mb-4" />
@@ -398,7 +414,7 @@ export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) 
                     </AnimatePresence>
                   </div>
                 )}
-              </ScrollArea>
+              </div>
             </TabsContent>
           </div>
         </Tabs>
