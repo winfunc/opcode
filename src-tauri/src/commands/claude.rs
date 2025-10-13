@@ -232,7 +232,7 @@ fn extract_first_user_message(jsonl_path: &PathBuf) -> (Option<String>, Option<S
 /// This ensures commands like Claude can find Node.js and other dependencies
 fn create_command_with_env(program: &str) -> Command {
     // Convert std::process::Command to tokio::process::Command
-    let _std_cmd = crate::claude_binary::create_command_with_env(program);
+    let std_cmd = crate::claude_binary::create_command_with_env(program);
 
     // Create a new tokio Command from the program path
     let mut tokio_cmd = Command::new(program);
@@ -278,6 +278,19 @@ fn create_command_with_env(program: &str) -> Command {
                 let new_path = format!("{}:{}", homebrew_bin_str, current_path);
                 log::debug!("Adding Homebrew bin directory to PATH: {}", homebrew_bin_str);
                 tokio_cmd.env("PATH", new_path);
+            }
+        }
+    }
+    
+    // Only use enhanced PATH if Claude is NOT in NVM but needs Node from NVM (our specific fix)
+    if !program.contains("/.nvm/versions/node/") {
+        if let Some(enhanced_path) = std_cmd.get_envs().find_map(|(k, v)| {
+            if k == "PATH" { v.and_then(|val| val.to_str().map(String::from)) } else { None }
+        }) {
+            // Only override if the enhanced PATH added NVM paths
+            if enhanced_path.contains("/.nvm/versions/node/") {
+                log::debug!("Claude not in NVM but needs Node - using enhanced PATH with NVM: {}", enhanced_path);
+                tokio_cmd.env("PATH", enhanced_path);
             }
         }
     }
