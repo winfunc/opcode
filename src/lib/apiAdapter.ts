@@ -284,7 +284,9 @@ export function getEnvironmentInfo() {
  */
 async function handleStreamingCommand<T>(command: string, params?: any): Promise<T> {
   return new Promise((resolve, reject) => {
-    const wsUrl = `ws://${window.location.host}/ws/claude`;
+    // Use wss:// for HTTPS connections (e.g., ngrok), ws:// for HTTP (localhost)
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${wsProtocol}//${window.location.host}/ws/claude`;
     console.log(`[TRACE] handleStreamingCommand called:`);
     console.log(`[TRACE]   command: ${command}`);
     console.log(`[TRACE]   params:`, params);
