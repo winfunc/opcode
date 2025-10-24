@@ -294,9 +294,11 @@ function AppContent() {
 
       case "cc-agents":
         return (
-          <CCAgents 
-            onBack={() => handleViewChange("welcome")} 
-          />
+          <div className="flex-1 overflow-y-auto" style={{ height: '100vh' }}>
+            <CCAgents 
+              onBack={() => handleViewChange("welcome")} 
+            />
+          </div>
         );
 
       case "editor":

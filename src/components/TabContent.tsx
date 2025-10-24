@@ -444,6 +444,18 @@ export const TabContent: React.FC = () => {
       createImportAgentTab();
     };
 
+    const handleOpenEditAgentTab = (event: CustomEvent) => {
+      const { agent } = event.detail;
+      // Store agent in localStorage temporarily
+      window.localStorage.setItem('editingAgent', JSON.stringify(agent));
+      // Create a new create-agent tab
+      const tabId = createCreateAgentTab();
+      // Update the tab title to show it's editing
+      setTimeout(() => {
+        updateTab(tabId, { title: `Edit: ${agent.name}` });
+      }, 100);
+    };
+
     const handleCloseTab = (event: CustomEvent) => {
       const { tabId } = event.detail;
       closeTab(tabId);
@@ -488,6 +500,7 @@ export const TabContent: React.FC = () => {
     window.addEventListener('open-agent-execution', handleOpenAgentExecution as EventListener);
     window.addEventListener('open-create-agent-tab', handleOpenCreateAgentTab);
     window.addEventListener('open-import-agent-tab', handleOpenImportAgentTab);
+    window.addEventListener('open-edit-agent-tab', handleOpenEditAgentTab as EventListener);
     window.addEventListener('close-tab', handleCloseTab as EventListener);
     window.addEventListener('claude-session-selected', handleClaudeSessionSelected as EventListener);
     return () => {
@@ -496,6 +509,7 @@ export const TabContent: React.FC = () => {
       window.removeEventListener('open-agent-execution', handleOpenAgentExecution as EventListener);
       window.removeEventListener('open-create-agent-tab', handleOpenCreateAgentTab);
       window.removeEventListener('open-import-agent-tab', handleOpenImportAgentTab);
+      window.removeEventListener('open-edit-agent-tab', handleOpenEditAgentTab as EventListener);
       window.removeEventListener('close-tab', handleCloseTab as EventListener);
       window.removeEventListener('claude-session-selected', handleClaudeSessionSelected as EventListener);
     };

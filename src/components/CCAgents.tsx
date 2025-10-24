@@ -79,7 +79,7 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
   const [agentToDelete, setAgentToDelete] = useState<Agent | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const AGENTS_PER_PAGE = 9; // 3x3 grid
+  const AGENTS_PER_PAGE = 12; // Show all agents at once since we have scrolling
 
   useEffect(() => {
     loadAgents();
@@ -288,8 +288,8 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
   // Removed viewRun case - now using modal preview in AgentRunsList
 
   return (
-    <div className={cn("flex flex-col h-full bg-background", className)}>
-      <div className="w-full max-w-6xl mx-auto flex flex-col h-full p-6">
+    <div className={cn("bg-background", className)}>
+      <div className="w-full max-w-6xl mx-auto p-6">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -361,7 +361,7 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
         )}
 
         {/* Main Content */}
-        <div className="flex-1 overflow-y-auto">
+        <div>
           <AnimatePresence mode="wait">
             <motion.div
               key="agents"
