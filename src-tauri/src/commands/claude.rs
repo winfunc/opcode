@@ -136,11 +136,24 @@ fn find_claude_binary(app_handle: &AppHandle) -> Result<String, String> {
 
 /// Gets the path to the ~/.claude directory
 fn get_claude_dir() -> Result<PathBuf> {
-    dirs::home_dir()
+    let claude_path = dirs::home_dir()
         .context("Could not find home directory")?
-        .join(".claude")
-        .canonicalize()
-        .context("Could not find ~/.claude directory")
+        .join(".claude");
+    
+    // First check if the directory exists
+    if !claude_path.exists() {
+        return Err(anyhow::anyhow!("~/.claude directory does not exist"));
+    }
+    
+    // Try to canonicalize, but fall back to the original path if it fails
+    match claude_path.canonicalize() {
+        Ok(canonical_path) => Ok(canonical_path),
+        Err(_) => {
+            // If canonicalize fails but the directory exists, use the original path
+            log::warn!("Could not canonicalize ~/.claude path, using original path");
+            Ok(claude_path)
+        }
+    }
 }
 
 /// Gets the actual project path by reading the cwd from the JSONL entries
