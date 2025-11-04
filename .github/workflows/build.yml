@@ -1,0 +1,180 @@
+name: Build Claudia
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+# Cancel in-progress workflows when a new commit is pushed
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  build:
+    name: Build (${{ matrix.platform.name }})
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - name: Linux
+            os: ubuntu-latest
+            rust-target: x86_64-unknown-linux-gnu
+          # Windows disabled due to known issues (see #83)
+          # - name: Windows
+          #   os: windows-latest
+          #   rust-target: x86_64-pc-windows-msvc
+          - name: macOS
+            os: macos-latest
+            rust-target: aarch64-apple-darwin
+    
+    runs-on: ${{ matrix.platform.os }}
+    
+    steps:
+      # Checkout the repository
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Install system dependencies for Linux
+      - name: Install Linux dependencies
+        if: matrix.platform.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libssl-dev \
+            libglib2.0-dev \
+            libjavascriptcoregtk-4.1-dev \
+            libsoup-3.0-dev \
+            libxdo-dev \
+            libxcb-shape0-dev \
+            libxcb-xfixes0-dev
+
+      # Setup Rust with caching
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform.rust-target }}
+
+      # Cache Rust dependencies
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+          key: ${{ matrix.platform.os }}-rust-${{ hashFiles('**/Cargo.lock') }}
+          
+      # Setup Bun
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      # Cache Bun dependencies
+      - name: Cache Bun dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.bun
+            node_modules
+          key: ${{ matrix.platform.os }}-bun-${{ hashFiles('bun.lockb', 'package.json') }}
+          restore-keys: |
+            ${{ matrix.platform.os }}-bun-
+      
+      # Install frontend dependencies
+      - name: Install frontend dependencies
+        run: bun install #--frozen-lockfile
+        # Temporarily removed --frozen-lockfile due to upstream changes
+
+      # Build frontend
+      - name: Build frontend
+        run: bun run build
+
+      # Build Tauri application with full bundles for release
+      - name: Build Tauri application
+        run: bun run tauri build --target ${{ matrix.platform.rust-target }}
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ""
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
+
+      # Upload release artifacts
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: claudia-${{ matrix.platform.name }}
+          path: |
+            src-tauri/target/${{ matrix.platform.rust-target }}/release/bundle/deb/*.deb
+            src-tauri/target/${{ matrix.platform.rust-target }}/release/bundle/appimage/*.AppImage
+            src-tauri/target/${{ matrix.platform.rust-target }}/release/bundle/dmg/*.dmg
+            src-tauri/target/${{ matrix.platform.rust-target }}/release/bundle/msi/*.msi
+            src-tauri/target/${{ matrix.platform.rust-target }}/release/bundle/nsis/*.exe
+          retention-days: 30
+          if-no-files-found: warn
+
+      # Upload build logs on failure
+      - name: Upload build logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs-${{ matrix.platform.name }}
+          path: |
+            src-tauri/target/${{ matrix.platform.rust-target }}/release/build/*/output
+            src-tauri/target/${{ matrix.platform.rust-target }}/release/build/*/stderr
+          retention-days: 3
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Get version
+      id: version
+      run: |
+        VERSION=$(grep '^version = ' src-tauri/Cargo.toml | head -1 | cut -d '"' -f 2)
+        if [[ "${{ github.ref }}" != "refs/heads/main" ]]; then
+          echo "tag=v$VERSION-test-${{ github.run_number }}" >> $GITHUB_OUTPUT
+        else
+          echo "tag=v$VERSION-build${{ github.run_number }}" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+    
+    - name: Create Release
+      uses: ncipollo/release-action@v1
+      with:
+        artifacts: "artifacts/**/*"
+        tag: "${{ steps.version.outputs.tag }}"
+        name: "Claudia ${{ steps.version.outputs.tag }}"
+        body: |
+          ${{ github.ref != 'refs/heads/main' && '🧪 **TEST RELEASE**' || 'Auto-generated release' }} from commit ${{ github.sha }}
+          
+          **Available downloads:**
+          - **Linux**: .deb package, .AppImage
+          - **macOS**: .dmg installer (Apple Silicon only)
+          
+          **Installation:**
+          - See [installation guide](https://github.com/getAsterisk/claudia?tab=readme-ov-file#-installation) for details
+          
+          **Not yet supported:**
+          - Windows installers (see #83)
+          - macOS Universal builds (missing Intel binary)
+        draft: ${{ github.ref != 'refs/heads/main' }}  # Test releases are drafts
+        prerelease: ${{ github.ref != 'refs/heads/main' }}
+        token: ${{ secrets.GITHUB_TOKEN }}
