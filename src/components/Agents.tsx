@@ -356,6 +356,7 @@ export const Agents: React.FC = () => {
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-8 w-8">
                               <ChevronDown className="w-4 h-4" />
+                              <span className="sr-only">Agent options</span>
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">

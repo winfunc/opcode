@@ -283,9 +283,15 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
               onClick={() => toggleNodeExpansion(node.checkpoint.id)}
             >
               {isExpanded ? (
-                <ChevronDown className="h-3 w-3" />
+                <>
+                  <ChevronDown className="h-3 w-3" />
+                  <span className="sr-only">Collapse</span>
+                </>
               ) : (
-                <ChevronRight className="h-3 w-3" />
+                <>
+                  <ChevronRight className="h-3 w-3" />
+                  <span className="sr-only">Expand</span>
+                </>
               )}
             </Button>
           )}
@@ -350,6 +356,7 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
                           }}
                         >
                           <RotateCcw className="h-3 w-3" />
+                          <span className="sr-only">Restore to this checkpoint</span>
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>Restore to this checkpoint</TooltipContent>
@@ -369,6 +376,7 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
                           }}
                         >
                           <GitFork className="h-3 w-3" />
+                          <span className="sr-only">Fork from this checkpoint</span>
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>Fork from this checkpoint</TooltipContent>
@@ -388,6 +396,7 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
                           }}
                         >
                           <Diff className="h-3 w-3" />
+                          <span className="sr-only">Compare with another checkpoint</span>
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>Compare with another checkpoint</TooltipContent>

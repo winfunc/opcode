@@ -824,6 +824,7 @@ export const Settings: React.FC<SettingsProps> = ({
                               className="h-8 w-8"
                             >
                               <Trash2 className="h-4 w-4" />
+                              <span className="sr-only">Remove rule</span>
                             </Button>
                           </motion.div>
                         ))
@@ -872,6 +873,7 @@ export const Settings: React.FC<SettingsProps> = ({
                               className="h-8 w-8"
                             >
                               <Trash2 className="h-4 w-4" />
+                              <span className="sr-only">Remove rule</span>
                             </Button>
                           </motion.div>
                         ))

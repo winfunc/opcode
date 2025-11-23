@@ -66,6 +66,7 @@ export const SessionHeader: React.FC<SessionHeaderProps> = React.memo(({
             className="h-8 w-8"
           >
             <ArrowLeft className="h-4 w-4" />
+            <span className="sr-only">Back to projects</span>
           </Button>
           
           <div className="flex items-center gap-2">
@@ -109,6 +110,7 @@ export const SessionHeader: React.FC<SessionHeaderProps> = React.memo(({
               trigger={
                 <Button variant="ghost" size="icon" className="h-8 w-8">
                   <Copy className="h-4 w-4" />
+                  <span className="sr-only">Copy conversation</span>
                 </Button>
               }
               content={
@@ -145,12 +147,14 @@ export const SessionHeader: React.FC<SessionHeaderProps> = React.memo(({
             )}
           >
             <GitBranch className="h-4 w-4" />
+            <span className="sr-only">Toggle timeline</span>
           </Button>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8">
                 <Settings className="h-4 w-4" />
+                <span className="sr-only">Session settings</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">

@@ -496,6 +496,7 @@ export const StorageTab: React.FC = () => {
                             className="h-6 w-6"
                           >
                             <Edit3 className="h-3 w-3" />
+                            <span className="sr-only">Edit row</span>
                           </Button>
                           <Button
                             variant="ghost"
@@ -504,6 +505,7 @@ export const StorageTab: React.FC = () => {
                             className="h-6 w-6 hover:text-destructive"
                           >
                             <Trash2 className="h-3 w-3" />
+                            <span className="sr-only">Delete row</span>
                           </Button>
                         </div>
                       </td>

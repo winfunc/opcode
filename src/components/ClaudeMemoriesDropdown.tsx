@@ -143,6 +143,7 @@ export const ClaudeMemoriesDropdown: React.FC<ClaudeMemoriesDropdownProps> = ({
                           }}
                         >
                           <Edit2 className="h-3 w-3" />
+                          <span className="sr-only">Edit file</span>
                         </Button>
                       </motion.div>
                     ))}

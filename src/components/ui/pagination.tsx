@@ -52,6 +52,7 @@ export const Pagination: React.FC<PaginationProps> = ({
         className="h-8 w-8"
       >
         <ChevronLeft className="h-4 w-4" />
+        <span className="sr-only">Previous page</span>
       </Button>
       
       <span className="text-sm text-muted-foreground">
@@ -66,6 +67,7 @@ export const Pagination: React.FC<PaginationProps> = ({
         className="h-8 w-8"
       >
         <ChevronRight className="h-4 w-4" />
+        <span className="sr-only">Next page</span>
       </Button>
     </div>
   );
