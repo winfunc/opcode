@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from "framer-motion";
 import { Play, Clock, Hash, Bot } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -41,7 +42,8 @@ export const AgentRunsList: React.FC<AgentRunsListProps> = ({
   onRunClick,
   className,
 }) => {
-  const [currentPage, setCurrentPage] = useState(1);
+  
+  const { t } = useTranslation();const [currentPage, setCurrentPage] = useState(1);
   const { createAgentTab } = useTabState();
   
   // Calculate pagination

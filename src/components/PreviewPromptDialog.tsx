@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from 'react-i18next';
 import { motion } from "framer-motion";
 import { Globe, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";

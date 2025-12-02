@@ -1,0 +1,377 @@
+{
+  "brand": {
+    "name": "opcode"
+  },
+  "common": {
+    "cancel": "Cancel",
+    "next": "Next",
+    "previous": "Previous",
+    "tryAgain": "Try Again",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "import": "Import",
+    "export": "Export",
+    "pageOfTotal": "Page {{current}} of {{total}}",
+    "showing": "Showing {{start}}-{{end}} of {{total}}",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success"
+  },
+  "titlebar": {
+    "close": "Close",
+    "minimize": "Minimize",
+    "maximize": "Maximize",
+    "agents": "Agents",
+    "usageDashboard": "Usage Dashboard",
+    "settings": "Settings",
+    "moreOptions": "More options",
+    "claudeMd": "CLAUDE.md",
+    "mcpServers": "MCP Servers",
+    "about": "About"
+  },
+  "projects": {
+    "title": "Projects",
+    "description": "Select a project to start working with Claude Code",
+    "openProject": "Open Project",
+    "recentProjects": "Recent Projects",
+    "viewAll": "View all ({{count}})",
+    "viewLess": "View less",
+    "noRecentTitle": "No recent projects",
+    "noRecentDescription": "Open a project to get started with Claude Code",
+    "openFirstProject": "Open Your First Project"
+  },
+  "sessions": {
+    "sessionOn": "Session on {{date}}",
+    "todoBadge": "Todo",
+    "noMessages": "No messages yet",
+    "sessionsCount": "{{count}} sessions"
+  },
+  "settings": {
+    "title": "Settings",
+    "description": "Configure Claude Code preferences",
+    "saving": "Saving...",
+    "saveSettings": "Save Settings",
+    "errorLoadSettings": "Failed to load settings. Please ensure ~/.claude directory exists.",
+    "successSaved": "Settings saved successfully!",
+    "errorSaved": "Failed to save settings",
+    "tabs": {
+      "general": "General",
+      "permissions": "Permissions",
+      "environment": "Environment",
+      "advanced": "Advanced",
+      "hooks": "Hooks",
+      "commands": "Commands",
+      "storage": "Storage",
+      "proxy": "Proxy"
+    },
+    "general": {
+      "heading": "General Settings",
+      "theme": {
+        "label": "Theme",
+        "description": "Choose your preferred color theme",
+        "dark": "Dark",
+        "gray": "Gray",
+        "light": "Light",
+        "custom": "Custom"
+      },
+      "customTheme": {
+        "heading": "Custom Theme Colors",
+        "background": "Background",
+        "foreground": "Foreground",
+        "primary": "Primary",
+        "card": "Card",
+        "accent": "Accent",
+        "destructive": "Destructive",
+        "description": "Use CSS color values (hex, rgb, oklch, etc.). Changes apply immediately."
+      },
+      "coauthored": {
+        "label": "Include \"Co-authored by Claude\"",
+        "description": "Add Claude attribution to git commits and pull requests"
+      },
+      "verbose": {
+        "label": "Verbose Output",
+        "description": "Show full bash and command outputs"
+      },
+      "cleanup": {
+        "label": "Chat Transcript Retention (days)",
+        "description": "How long to retain chat transcripts locally (default: 30 days)"
+      },
+      "changesPending": "Changes will be applied when you save settings.",
+      "analytics": {
+        "label": "Enable Analytics",
+        "description": "Help improve opcode by sharing anonymous usage data",
+        "enabled": "Analytics enabled",
+        "disabled": "Analytics disabled",
+        "privacyHeading": "Your privacy is protected",
+        "privacy1": "No personal information or file contents collected",
+        "privacy2": "All data is anonymous with random IDs",
+        "privacy3": "You can disable analytics at any time"
+      },
+      "tabPersistence": {
+        "label": "Remember Open Tabs",
+        "description": "Restore your tabs when you restart the app",
+        "enabled": "Tab persistence enabled - your tabs will be restored on restart",
+        "disabled": "Tab persistence disabled - tabs will not be saved"
+      },
+      "startupIntro": {
+        "label": "Show Welcome Intro on Startup",
+        "description": "Display a brief welcome animation when the app launches",
+        "enabled": "Welcome intro enabled",
+        "disabled": "Welcome intro disabled",
+        "error": "Failed to update preference"
+      },
+      "language": {
+        "label": "Language",
+        "description": "Choose your preferred language"
+      }
+    },
+    "permissions": {
+      "heading": "Permission Rules",
+      "description": "Control which tools Claude Code can use without manual approval",
+      "allowRules": "Allow Rules",
+      "addRule": "Add Rule",
+      "noAllowRules": "No allow rules configured. Claude will ask for approval for all tools.",
+      "denyRules": "Deny Rules",
+      "noDenyRules": "No deny rules configured.",
+      "examples": "Examples:",
+      "example1": "Bash - Allow all bash commands",
+      "example2": "Bash(npm run build) - Allow exact command",
+      "example3": "Bash(npm run test:*) - Allow commands with prefix",
+      "example4": "Read(~/.zshrc) - Allow reading specific file",
+      "example5": "Edit(docs/**) - Allow editing files in docs directory"
+    },
+    "environment": {
+      "heading": "Environment Variables",
+      "description": "Environment variables applied to every Claude Code session",
+      "addVariable": "Add Variable",
+      "noVariables": "No environment variables configured.",
+      "keyPlaceholder": "KEY",
+      "valuePlaceholder": "value",
+      "commonVariables": "Common variables:",
+      "example1": "CLAUDE_CODE_ENABLE_TELEMETRY - Enable/disable telemetry (0 or 1)",
+      "example2": "ANTHROPIC_MODEL - Custom model name",
+      "example3": "DISABLE_COST_WARNINGS - Disable cost warnings (1)"
+    },
+    "advanced": {
+      "heading": "Advanced Settings",
+      "description": "Additional configuration options for advanced users",
+      "apiKeyHelper": {
+        "label": "API Key Helper Script",
+        "description": "Custom script to generate auth values for API requests"
+      },
+      "rawJson": {
+        "label": "Raw Settings (JSON)",
+        "description": "This shows the raw JSON that will be saved to ~/.claude/settings.json"
+      }
+    },
+    "hooks": {
+      "heading": "User Hooks",
+      "description1": "Configure hooks that apply to all Claude Code sessions for your user account.",
+      "description2": "These are stored in"
+    }
+  },
+  "agents": {
+    "title": "CC Agents",
+    "description": "Manage your Claude Code agents",
+    "import": "Import",
+    "importFromFile": "From File",
+    "importFromGithub": "From GitHub",
+    "createAgent": "Create CC Agent",
+    "errorLoad": "Failed to load agents",
+    "noAgentsTitle": "No agents yet",
+    "noAgentsDescription": "Create your first CC Agent to get started",
+    "created": "Created: {{date}}",
+    "execute": "Execute",
+    "executeTitle": "Execute agent",
+    "edit": "Edit",
+    "editTitle": "Edit agent",
+    "export": "Export",
+    "exportTitle": "Export agent to .opcode.json",
+    "delete": "Delete",
+    "deleteTitle": "Delete agent",
+    "deleteAgentButton": "Delete Agent",
+    "recentExecutions": "Recent Executions",
+    "deleteSuccess": "Agent deleted successfully",
+    "deleteError": "Failed to delete agent",
+    "createSuccess": "Agent created successfully",
+    "updateSuccess": "Agent updated successfully",
+    "exportSuccess": "Agent \"{{name}}\" exported successfully",
+    "exportError": "Failed to export agent",
+    "importSuccess": "Agent imported successfully",
+    "importError": "Failed to import agent",
+    "importGithubSuccess": "Agent imported successfully from GitHub",
+    "deleting": "Deleting...",
+    "pagination": {
+      "previous": "Previous",
+      "next": "Next",
+      "pageOf": "Page {{current}} of {{total}}"
+    },
+    "deleteDialog": {
+      "title": "Delete Agent",
+      "description": "Are you sure you want to delete the agent \"{{name}}\"? This action cannot be undone and will permanently remove the agent and all its associated data."
+    },
+    "create": {
+      "title": "Create New Agent",
+      "editTitle": "Edit Agent",
+      "description": "Configure a new Claude Code agent",
+      "editDescription": "Update your Claude Code agent configuration",
+      "backTitle": "Back to Agents",
+      "saving": "Saving...",
+      "saveAgent": "Save Agent",
+      "basicInfo": "Basic Information",
+      "agentName": "Agent Name",
+      "agentNamePlaceholder": "e.g., Code Assistant",
+      "agentIcon": "Agent Icon",
+      "model": "Model",
+      "modelSonnet": "Claude 4 Sonnet",
+      "modelSonnetDesc": "Faster, efficient for most tasks",
+      "modelOpus": "Claude 4 Opus",
+      "modelOpusDesc": "More capable, better for complex tasks",
+      "configuration": "Configuration",
+      "defaultTask": "Default Task (Optional)",
+      "defaultTaskPlaceholder": "e.g., Review this code for security issues",
+      "defaultTaskDescription": "This will be used as the default task placeholder when executing the agent",
+      "systemPrompt": "System Prompt",
+      "systemPromptDescription": "Define the behavior and capabilities of your Claude Code agent",
+      "nameRequired": "Agent name is required",
+      "promptRequired": "System prompt is required",
+      "updateError": "Failed to update agent",
+      "createError": "Failed to create agent",
+      "unsavedChanges": "You have unsaved changes. Are you sure you want to leave?"
+    }
+  },
+  "usage": {
+    "title": "Usage Dashboard",
+    "description": "Track your Claude Code usage and costs",
+    "filters": {
+      "allTime": "All Time",
+      "last7Days": "Last 7 Days",
+      "last30Days": "Last 30 Days"
+    },
+    "errorLoad": "Failed to load usage statistics. Please try again.",
+    "cards": {
+      "totalCost": "Total Cost",
+      "totalSessions": "Total Sessions",
+      "totalTokens": "Total Tokens",
+      "avgCostPerSession": "Avg Cost/Session"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "byModel": "By Model",
+      "byProject": "By Project",
+      "bySession": "By Session",
+      "timeline": "Timeline"
+    },
+    "overview": {
+      "tokenBreakdown": "Token Breakdown",
+      "inputTokens": "Input Tokens",
+      "outputTokens": "Output Tokens",
+      "cacheWrite": "Cache Write",
+      "cacheRead": "Cache Read",
+      "mostUsedModels": "Most Used Models",
+      "topProjects": "Top Projects"
+    },
+    "models": {
+      "heading": "Usage by Model",
+      "input": "Input: ",
+      "output": "Output: ",
+      "cacheWrite": "Cache W: ",
+      "cacheRead": "Cache R: "
+    },
+    "projects": {
+      "heading": "Usage by Project",
+      "totalCount": "{{count}} total projects"
+    },
+    "sessions": {
+      "heading": "Usage by Session",
+      "totalCount": "{{count}} total sessions",
+      "noData": "No session data available for the selected period"
+    },
+    "timeline": {
+      "heading": "Daily Usage",
+      "cost": "Cost: {{amount}}",
+      "modelsUsed": "{{count}} model{{s}}",
+      "chartLabel": "Daily Usage Over Time",
+      "noData": "No usage data available for the selected period"
+    },
+    "tokensCount": "{{count}} tokens",
+    "perSession": "/session"
+  },
+  "mcp": {
+    "title": "MCP Servers",
+    "description": "Manage Model Context Protocol servers",
+    "errorLoad": "Failed to load MCP servers. Make sure Claude Code is installed.",
+    "tabs": {
+      "servers": "Servers",
+      "addServer": "Add Server",
+      "importExport": "Import/Export"
+    },
+    "serverAddSuccess": "MCP server added successfully!",
+    "serverRemoveSuccess": "Server \"{{name}}\" removed successfully!",
+    "importSuccess": "Successfully imported {{count}} server{{s}}!",
+    "importPartialSuccess": "Imported {{imported}} server{{s}}, {{failed}} failed"
+  },
+  "agentExecution": {
+    "back": "Back",
+    "status": {
+      "running": "Running",
+      "complete": "Complete",
+      "ready": "Ready"
+    },
+    "fullscreen": "Fullscreen",
+    "modelSelection": "Model Selection",
+    "sonnet": "Claude 4 Sonnet",
+    "sonnetDesc": "Faster, efficient",
+    "opus": "Claude 4 Opus",
+    "opusDesc": "More capable",
+    "taskDescription": "Task Description",
+    "configureHooks": "Configure Hooks",
+    "taskPlaceholder": "What would you like the agent to do?",
+    "stop": "Stop",
+    "execute": "Execute",
+    "workingIn": "Working in:",
+    "readyToExecute": "Ready to Execute",
+    "enterTask": "Enter a task to run the agent",
+    "initializing": "Initializing agent...",
+    "output": "Output",
+    "copyOutput": "Copy Output",
+    "copyAsJsonl": "Copy as JSONL",
+    "copyAsMarkdown": "Copy as Markdown",
+    "close": "Close",
+    "hooksDialog": {
+      "title": "Configure Hooks",
+      "description": "Configure hooks that run before, during, and after tool executions",
+      "projectTab": "Project Settings",
+      "localTab": "Local Settings",
+      "projectDescription": "Project hooks are stored in <code>.claude/settings.json</code> and are committed to version control, allowing team members to share configurations.",
+      "localDescription": "Local hooks are stored in <code>.claude/settings.local.json</code> and are not committed to version control, perfect for personal preferences."
+    },
+    "confirmLeave": "An agent is currently running. If you navigate away, the agent will continue running in the background. You can view running sessions in the 'Running Sessions' tab within CC Agents.\n\nDo you want to continue?",
+    "markdownExport": {
+      "heading": "Agent Execution:",
+      "task": "Task:",
+      "model": "Model:",
+      "date": "Date:",
+      "systemInit": "System Initialization",
+      "sessionId": "Session ID:",
+      "modelLabel": "Model:",
+      "workingDir": "Working Directory:",
+      "tools": "Tools:",
+      "assistant": "Assistant",
+      "tool": "Tool:",
+      "tokens": "Tokens:",
+      "tokensFormat": "{{input}} in, {{output}} out",
+      "user": "User",
+      "toolResult": "Tool Result",
+      "executionResult": "Execution Result",
+      "error": "Error:",
+      "cost": "Cost:",
+      "duration": "Duration:",
+      "turns": "Turns:",
+      "totalTokens": "Total Tokens:",
+      "totalTokensFormat": "{{total}} ({{input}} in, {{output}} out)"
+    }
+  }
+}

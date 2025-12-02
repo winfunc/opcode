@@ -1,3 +1,5 @@
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Input } from '@/components/ui/input';

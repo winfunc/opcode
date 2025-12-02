@@ -8,6 +8,7 @@ import { api, type MCPServer } from "@/lib/api";
 import { MCPServerList } from "./MCPServerList";
 import { MCPAddServer } from "./MCPAddServer";
 import { MCPImportExport } from "./MCPImportExport";
+import { useTranslation } from 'react-i18next';
 
 interface MCPManagerProps {
   /**
@@ -27,6 +28,7 @@ interface MCPManagerProps {
 export const MCPManager: React.FC<MCPManagerProps> = ({
   className: _className,
 }) => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState("servers");
   const [servers, setServers] = useState<MCPServer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,7 +55,7 @@ export const MCPManager: React.FC<MCPManagerProps> = ({
       setServers(serverList);
     } catch (err) {
       console.error("MCPManager: Failed to load MCP servers:", err);
-      setError("Failed to load MCP servers. Make sure Claude Code is installed.");
+      setError(t('mcp.errorLoad'));
     } finally {
       setLoading(false);
     }
@@ -64,7 +66,7 @@ export const MCPManager: React.FC<MCPManagerProps> = ({
    */
   const handleServerAdded = () => {
     loadServers();
-    setToast({ message: "MCP server added successfully!", type: "success" });
+    setToast({ message: t('mcp.serverAddSuccess'), type: "success" });
     setActiveTab("servers");
   };
 
@@ -73,7 +75,7 @@ export const MCPManager: React.FC<MCPManagerProps> = ({
    */
   const handleServerRemoved = (name: string) => {
     setServers(prev => prev.filter(s => s.name !== name));
-    setToast({ message: `Server "${name}" removed successfully!`, type: "success" });
+    setToast({ message: t('mcp.serverRemoveSuccess'), type: "success" });
   };
 
   /**
@@ -82,14 +84,14 @@ export const MCPManager: React.FC<MCPManagerProps> = ({
   const handleImportCompleted = (imported: number, failed: number) => {
     loadServers();
     if (failed === 0) {
-      setToast({ 
-        message: `Successfully imported ${imported} server${imported > 1 ? 's' : ''}!`, 
-        type: "success" 
+      setToast({
+        message: t('mcp.importSuccess', { count: imported }),
+        type: "success"
       });
     } else {
-      setToast({ 
-        message: `Imported ${imported} server${imported > 1 ? 's' : ''}, ${failed} failed`, 
-        type: "error" 
+      setToast({
+        message: t('mcp.importPartialSuccess', { imported, failed }),
+        type: "error"
       });
     }
   };
@@ -101,9 +103,9 @@ export const MCPManager: React.FC<MCPManagerProps> = ({
         <div className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-heading-1">MCP Servers</h1>
+              <h1 className="text-heading-1">{t('mcp.title')}</h1>
               <p className="mt-1 text-body-small text-muted-foreground">
-                Manage Model Context Protocol servers
+                {t('mcp.description')}
               </p>
             </div>
           </div>
@@ -134,13 +136,13 @@ export const MCPManager: React.FC<MCPManagerProps> = ({
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="grid grid-cols-3 w-full max-w-md mb-6 h-auto p-1">
                 <TabsTrigger value="servers" className="py-2.5 px-3">
-                  Servers
+                  {t('mcp.tabs.servers')}
                 </TabsTrigger>
                 <TabsTrigger value="add" className="py-2.5 px-3">
-                  Add Server
+                  {t('mcp.tabs.addServer')}
                 </TabsTrigger>
                 <TabsTrigger value="import" className="py-2.5 px-3">
-                  Import/Export
+                  {t('mcp.tabs.importExport')}
                 </TabsTrigger>
               </TabsList>
 

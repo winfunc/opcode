@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from 'react-i18next';
 import { motion } from "framer-motion";
 import { Hash } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -29,7 +30,8 @@ export const TokenCounter: React.FC<TokenCounterProps> = ({
   show = true,
   className,
 }) => {
-  if (!show || tokens === 0) return null;
+  
+  const { t } = useTranslation();if (!show || tokens === 0) return null;
 
   return (
     <motion.div

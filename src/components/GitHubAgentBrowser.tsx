@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
@@ -38,7 +39,8 @@ export const GitHubAgentBrowser: React.FC<GitHubAgentBrowserProps> = ({
   onClose,
   onImportSuccess,
 }) => {
-  const [agents, setAgents] = useState<GitHubAgentFile[]>([]);
+  
+  const { t } = useTranslation();const [agents, setAgents] = useState<GitHubAgentFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");

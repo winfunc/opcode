@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useTranslation } from 'react-i18next';
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -58,7 +59,8 @@ export const ClaudeVersionSelector: React.FC<ClaudeVersionSelectorProps> = ({
   isSaving = false,
   simplified = false,
 }) => {
-  const [installations, setInstallations] = useState<ClaudeInstallation[]>([]);
+  
+  const { t } = useTranslation();const [installations, setInstallations] = useState<ClaudeInstallation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedInstallation, setSelectedInstallation] = useState<ClaudeInstallation | null>(null);

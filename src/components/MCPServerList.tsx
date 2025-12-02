@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Network, 
@@ -50,7 +51,8 @@ export const MCPServerList: React.FC<MCPServerListProps> = ({
   onServerRemoved,
   onRefresh,
 }) => {
-  const [removingServer, setRemovingServer] = useState<string | null>(null);
+  
+  const { t } = useTranslation();const [removingServer, setRemovingServer] = useState<string | null>(null);
   const [testingServer, setTestingServer] = useState<string | null>(null);
   const [expandedServers, setExpandedServers] = useState<Set<string>>(new Set());
   const [copiedServer, setCopiedServer] = useState<string | null>(null);

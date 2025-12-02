@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import React, { useState, useEffect } from "react";
 import { 
   Terminal, 
@@ -6,6 +7,7 @@ import {
   AlertCircle, 
   CheckCircle2
 } from "lucide-react";
+  const { t } = useTranslation();
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useTranslation } from 'react-i18next';
 import { motion } from "framer-motion";
 import { 
   ArrowLeft, 
@@ -48,7 +49,8 @@ export const AgentRunView: React.FC<AgentRunViewProps> = ({
   onBack,
   className,
 }) => {
-  const [run, setRun] = useState<AgentRunWithMetrics | null>(null);
+  
+  const { t } = useTranslation();const [run, setRun] = useState<AgentRunWithMetrics | null>(null);
   const [messages, setMessages] = useState<ClaudeStreamMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

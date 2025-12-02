@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useTranslation } from 'react-i18next';
 import { Download, Upload, FileText, Loader2, Info, Network, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -24,7 +25,8 @@ export const MCPImportExport: React.FC<MCPImportExportProps> = ({
   onImportCompleted,
   onError,
 }) => {
-  const [importingDesktop, setImportingDesktop] = useState(false);
+  
+  const { t } = useTranslation();const [importingDesktop, setImportingDesktop] = useState(false);
   const [importingJson, setImportingJson] = useState(false);
   const [importScope, setImportScope] = useState("local");
 

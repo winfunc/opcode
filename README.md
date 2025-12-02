@@ -59,6 +59,7 @@ Think of opcode as your command center for Claude Code - bridging the gap betwee
   - [Working with MCP Servers](#working-with-mcp-servers)
 - [🚀 Installation](#-installation)
 - [🔨 Build from Source](#-build-from-source)
+- [🌍 Internationalization](#-internationalization)
 - [🛠️ Development](#️-development)
 - [🔒 Security](#-security)
 - [🤝 Contributing](#-contributing)
@@ -105,6 +106,21 @@ Think of opcode as your command center for Claude Code - bridging the gap betwee
 - **Live Preview**: See your markdown rendered in real-time
 - **Project Scanner**: Find all CLAUDE.md files in your projects
 - **Syntax Highlighting**: Full markdown support with syntax highlighting
+
+### 🌍 **Multi-Language Support**
+- **International Interface**: Full Chinese (简体中文) translation with 93%+ coverage
+- **Language Switching**: Real-time language switching without app restart
+- **Auto Detection**: Automatic browser language detection
+- **Expandable**: Easy-to-add support for 10+ additional languages with just JSON translations
+- **Community Translations**: Contributions welcome for Japanese, Korean, Spanish, and more
+- **i18n Framework**: Built with [react-i18next](https://react.i18next.com/) for robust multi-language support
+
+**Current Languages**:
+- 🇺🇸 English (100% - 377 translation keys)
+- 🇨🇳 Chinese Simplified (93%+ - 319+ translation keys across 56+ components)
+
+See [INTERNATIONALIZATION.md](INTERNATIONALIZATION.md) for contribution guidelines.
+
 
 ## 📖 Usage
 
@@ -397,7 +413,8 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 - 📚 Documentation improvements
 - 🎨 UI/UX enhancements
 - 🧪 Test coverage
-- 🌐 Internationalization
+- 🌐 **Internationalization** - Help translate opcode to your language! See [INTERNATIONALIZATION.md](INTERNATIONALIZATION.md)
+
 
 ## 📄 License
 

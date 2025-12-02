@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from 'react-i18next';
 import { StreamMessage } from "./StreamMessage";
 import type { ClaudeStreamMessage } from "./AgentExecution";
 
@@ -6,7 +7,8 @@ import type { ClaudeStreamMessage } from "./AgentExecution";
  * Demo component showing all the different message types and tools
  */
 export const AgentExecutionDemo: React.FC = () => {
-  // Sample messages based on the provided JSONL session
+  
+  const { t } = useTranslation();// Sample messages based on the provided JSONL session
   const messages: ClaudeStreamMessage[] = [
     // Skip meta message (should not render)
     {

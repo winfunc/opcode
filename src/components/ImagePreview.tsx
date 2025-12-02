@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useTranslation } from 'react-i18next';
 import { X, Maximize2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -40,7 +41,8 @@ export const ImagePreview: React.FC<ImagePreviewProps> = ({
   onRemove,
   className,
 }) => {
-  const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
+  
+  const { t } = useTranslation();const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [imageErrors, setImageErrors] = useState<Set<number>>(new Set());
 

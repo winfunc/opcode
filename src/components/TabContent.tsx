@@ -1,4 +1,5 @@
 import React, { Suspense, lazy, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTabState } from '@/hooks/useTabState';
 import { useScreenTracking } from '@/hooks/useAnalytics';
@@ -398,7 +399,8 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
 };
 
 export const TabContent: React.FC = () => {
-  const { tabs, activeTabId, createChatTab, createProjectsTab, findTabBySessionId, createClaudeFileTab, createAgentExecutionTab, createCreateAgentTab, createImportAgentTab, closeTab, updateTab } = useTabState();
+  
+  const { t } = useTranslation();const { tabs, activeTabId, createChatTab, createProjectsTab, findTabBySessionId, createClaudeFileTab, createAgentExecutionTab, createCreateAgentTab, createImportAgentTab, closeTab, updateTab } = useTabState();
   
   // Listen for events to open sessions in tabs
   useEffect(() => {
