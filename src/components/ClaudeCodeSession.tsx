@@ -15,38 +15,37 @@ import { Label } from "@/components/ui/label";
 import { Popover } from "@/components/ui/popover";
 import { api, type Session } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { listen as tauriListen } from "@tauri-apps/api/event";
 
-// Conditional imports for Tauri APIs
-let tauriListen: any;
 type UnlistenFn = () => void;
 
-try {
-  if (typeof window !== 'undefined' && window.__TAURI__) {
-    tauriListen = require("@tauri-apps/api/event").listen;
-  }
-} catch (e) {
-  console.log('[ClaudeCodeSession] Tauri APIs not available, using web mode');
-}
+// Runtime check for Tauri environment (must be function to check at call time)
+const isTauriEnv = () => typeof window !== 'undefined' && !!(window.__TAURI__ || window.__TAURI_INTERNALS__);
 
-// Web-compatible replacements
-const listen = tauriListen || ((eventName: string, callback: (event: any) => void) => {
+// Web-compatible fallback for non-Tauri environments
+const webListen = (eventName: string, callback: (event: any) => void) => {
   console.log('[ClaudeCodeSession] Setting up DOM event listener for:', eventName);
 
-  // In web mode, listen for DOM events
   const domEventHandler = (event: any) => {
     console.log('[ClaudeCodeSession] DOM event received:', eventName, event.detail);
-    // Simulate Tauri event structure
     callback({ payload: event.detail });
   };
 
   window.addEventListener(eventName, domEventHandler);
 
-  // Return unlisten function
   return Promise.resolve(() => {
     console.log('[ClaudeCodeSession] Removing DOM event listener for:', eventName);
     window.removeEventListener(eventName, domEventHandler);
   });
-});
+};
+
+// Dynamic listen function that checks environment at runtime
+const listen = (eventName: string, callback: (event: any) => void) => {
+  if (isTauriEnv()) {
+    return tauriListen(eventName, callback);
+  }
+  return webListen(eventName, callback);
+};
 import { StreamMessage } from "./StreamMessage";
 import { FloatingPromptInput, type FloatingPromptInputRef } from "./FloatingPromptInput";
 import { ErrorBoundary } from "./ErrorBoundary";
