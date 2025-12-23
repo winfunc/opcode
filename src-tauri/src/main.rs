@@ -52,6 +52,22 @@ use tauri::Manager;
 use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial};
 
 fn main() {
+    // Apply Linux/Wayland workarounds for WebKitGTK GBM buffer issues (especially on NVIDIA)
+    // This must be done before any GTK/WebKit initialization
+    #[cfg(target_os = "linux")]
+    {
+        use std::env;
+        // Only apply fix for Wayland sessions where GBM buffer issues occur
+        let is_wayland = env::var("WAYLAND_DISPLAY").is_ok()
+            || env::var("XDG_SESSION_TYPE")
+                .map(|v| v == "wayland")
+                .unwrap_or(false);
+
+        if is_wayland && env::var("WEBKIT_DISABLE_DMABUF_RENDERER").is_err() {
+            env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+        }
+    }
+
     // Initialize logger
     env_logger::init();
 

@@ -233,17 +233,17 @@ async fn resume_claude_code() -> Json<ApiResponse<serde_json::Value>> {
 }
 
 /// Cancel Claude execution
-async fn cancel_claude_execution(Path(sessionId): Path<String>) -> Json<ApiResponse<()>> {
+async fn cancel_claude_execution(Path(session_id): Path<String>) -> Json<ApiResponse<()>> {
     // In web mode, we don't have a way to cancel the subprocess cleanly
     // The WebSocket closing should handle cleanup
-    println!("[TRACE] Cancel request for session: {}", sessionId);
+    println!("[TRACE] Cancel request for session: {}", session_id);
     Json(ApiResponse::success(()))
 }
 
 /// Get Claude session output
-async fn get_claude_session_output(Path(sessionId): Path<String>) -> Json<ApiResponse<String>> {
+async fn get_claude_session_output(Path(session_id): Path<String>) -> Json<ApiResponse<String>> {
     // In web mode, output is streamed via WebSocket, not stored
-    println!("[TRACE] Output request for session: {}", sessionId);
+    println!("[TRACE] Output request for session: {}", session_id);
     Json(ApiResponse::success(
         "Output available via WebSocket only".to_string(),
     ))

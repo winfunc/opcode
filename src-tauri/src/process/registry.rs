@@ -82,6 +82,7 @@ impl ProcessRegistry {
     }
 
     /// Register a new running agent process using sidecar (similar to register_process but for sidecar children)
+    #[allow(dead_code)]
     pub fn register_sidecar_process(
         &self,
         run_id: i64,
