@@ -54,10 +54,26 @@ export interface Session {
 }
 
 /**
+ * Represents an environment variable group
+ */
+export interface EnvGroup {
+  /** Display name for the group */
+  name: string;
+  /** Environment variables in this group */
+  variables: Record<string, string>;
+}
+
+/**
  * Represents the settings from ~/.claude/settings.json
  */
 export interface ClaudeSettings {
   [key: string]: any;
+  /** Legacy environment variables (for backward compatibility) */
+  env?: Record<string, string>;
+  /** Multiple environment variable groups */
+  envGroups?: Record<string, EnvGroup>;
+  /** Currently active environment variable group ID */
+  activeEnvGroup?: string;
 }
 
 /**

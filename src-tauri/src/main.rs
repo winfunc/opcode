@@ -14,20 +14,21 @@ use commands::agents::{
     get_live_session_output, get_session_output, get_session_status, import_agent,
     import_agent_from_file, import_agent_from_github, init_database, kill_agent_session,
     list_agent_runs, list_agent_runs_with_metrics, list_agents, list_claude_installations,
-    list_running_sessions, load_agent_session_history, set_claude_binary_path, stream_session_output, update_agent, AgentDb,
+    list_running_sessions, load_agent_session_history, set_claude_binary_path,
+    stream_session_output, update_agent, AgentDb,
 };
 use commands::claude::{
     cancel_claude_execution, check_auto_checkpoint, check_claude_version, cleanup_old_checkpoints,
-    clear_checkpoint_manager, continue_claude_code, create_checkpoint, create_project, execute_claude_code,
-    find_claude_md_files, fork_from_checkpoint, get_checkpoint_diff, get_checkpoint_settings,
-    get_checkpoint_state_stats, get_claude_session_output, get_claude_settings, get_home_directory, get_project_sessions,
+    clear_checkpoint_manager, continue_claude_code, create_checkpoint, create_project,
+    execute_claude_code, find_claude_md_files, fork_from_checkpoint, get_checkpoint_diff,
+    get_checkpoint_settings, get_checkpoint_state_stats, get_claude_session_output,
+    get_claude_settings, get_home_directory, get_hooks_config, get_project_sessions,
     get_recently_modified_files, get_session_timeline, get_system_prompt, list_checkpoints,
     list_directory_contents, list_projects, list_running_claude_sessions, load_session_history,
     open_new_session, read_claude_md_file, restore_checkpoint, resume_claude_code,
     save_claude_md_file, save_claude_settings, save_system_prompt, search_files,
     track_checkpoint_message, track_session_messages, update_checkpoint_settings,
-    get_hooks_config, update_hooks_config, validate_hook_command,
-    ClaudeProcessState,
+    update_hooks_config, validate_hook_command, ClaudeProcessState,
 };
 use commands::mcp::{
     mcp_add, mcp_add_from_claude_desktop, mcp_add_json, mcp_get, mcp_get_server_status, mcp_list,

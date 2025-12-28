@@ -12,16 +12,22 @@ import {
   Lightbulb,
   Cpu,
   Rocket,
-  
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Popover } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
-import { TooltipProvider, TooltipSimple, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip-modern";
+import {
+  TooltipProvider,
+  TooltipSimple,
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip-modern";
 import { FilePicker } from "./FilePicker";
 import { SlashCommandPicker } from "./SlashCommandPicker";
 import { ImagePreview } from "./ImagePreview";
+import { EnvGroupSelector } from "./EnvGroupSelector";
 import { type FileEntry, type SlashCommand } from "@/lib/api";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 
@@ -1040,53 +1046,57 @@ const FloatingPromptInputInner = (
                           </motion.div>
                         </TooltipTrigger>
                         <TooltipContent side="top">
-                          <p className="text-xs font-medium">{selectedModelData.name}</p>
-                          <p className="text-xs text-muted-foreground">{selectedModelData.description}</p>
+                          <p className="text-xs font-medium">
+                            {selectedModelData.name}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {selectedModelData.description}
+                          </p>
                         </TooltipContent>
                       </Tooltip>
-                  }
-                content={
-                  <div className="w-[300px] p-1">
-                    {MODELS.map((model) => (
-                      <button
-                        key={model.id}
-                        onClick={() => {
-                          setSelectedModel(model.id);
-                          setModelPickerOpen(false);
-                        }}
-                        className={cn(
-                          "w-full flex items-start gap-3 p-3 rounded-md transition-colors text-left",
-                          "hover:bg-accent",
-                          selectedModel === model.id && "bg-accent"
-                        )}
-                      >
-                        <div className="mt-0.5">
-                          <span className={model.color}>
-                            {model.icon}
-                          </span>
-                        </div>
-                        <div className="flex-1 space-y-1">
-                          <div className="font-medium text-sm">{model.name}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {model.description}
-                          </div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                }
-                open={modelPickerOpen}
-                onOpenChange={setModelPickerOpen}
-                align="start"
-                side="top"
-              />
+                    }
+                    content={
+                      <div className="w-[300px] p-1">
+                        {MODELS.map((model) => (
+                          <button
+                            key={model.id}
+                            onClick={() => {
+                              setSelectedModel(model.id);
+                              setModelPickerOpen(false);
+                            }}
+                            className={cn(
+                              "w-full flex items-start gap-3 p-3 rounded-md transition-colors text-left",
+                              "hover:bg-accent",
+                              selectedModel === model.id && "bg-accent"
+                            )}
+                          >
+                            <div className="mt-0.5">
+                              <span className={model.color}>{model.icon}</span>
+                            </div>
+                            <div className="flex-1 space-y-1">
+                              <div className="font-medium text-sm">
+                                {model.name}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {model.description}
+                              </div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    }
+                    open={modelPickerOpen}
+                    onOpenChange={setModelPickerOpen}
+                    align="start"
+                    side="top"
+                  />
 
-                <Popover
-                  trigger={
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <motion.div
-                          whileTap={{ scale: 0.97 }}
+                  <Popover
+                    trigger={
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <motion.div
+                            whileTap={{ scale: 0.97 }}
                             transition={{ duration: 0.15 }}
                           >
                             <Button
@@ -1095,162 +1105,206 @@ const FloatingPromptInputInner = (
                               disabled={disabled}
                               className="h-9 px-2 hover:bg-accent/50 gap-1"
                             >
-                              <span className={THINKING_MODES.find(m => m.id === selectedThinkingMode)?.color}>
-                                {THINKING_MODES.find(m => m.id === selectedThinkingMode)?.icon}
+                              <span
+                                className={
+                                  THINKING_MODES.find(
+                                    (m) => m.id === selectedThinkingMode
+                                  )?.color
+                                }
+                              >
+                                {
+                                  THINKING_MODES.find(
+                                    (m) => m.id === selectedThinkingMode
+                                  )?.icon
+                                }
                               </span>
                               <span className="text-[10px] font-semibold opacity-70">
-                                {THINKING_MODES.find(m => m.id === selectedThinkingMode)?.shortName}
+                                {
+                                  THINKING_MODES.find(
+                                    (m) => m.id === selectedThinkingMode
+                                  )?.shortName
+                                }
                               </span>
                               <ChevronUp className="h-3 w-3 ml-0.5 opacity-50" />
                             </Button>
                           </motion.div>
                         </TooltipTrigger>
                         <TooltipContent side="top">
-                          <p className="text-xs font-medium">Thinking: {THINKING_MODES.find(m => m.id === selectedThinkingMode)?.name || "Auto"}</p>
-                          <p className="text-xs text-muted-foreground">{THINKING_MODES.find(m => m.id === selectedThinkingMode)?.description}</p>
+                          <p className="text-xs font-medium">
+                            Thinking:{" "}
+                            {THINKING_MODES.find(
+                              (m) => m.id === selectedThinkingMode
+                            )?.name || "Auto"}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {
+                              THINKING_MODES.find(
+                                (m) => m.id === selectedThinkingMode
+                              )?.description
+                            }
+                          </p>
                         </TooltipContent>
                       </Tooltip>
-                  }
-                content={
-                  <div className="w-[280px] p-1">
-                    {THINKING_MODES.map((mode) => (
-                      <button
-                        key={mode.id}
-                        onClick={() => {
-                          setSelectedThinkingMode(mode.id);
-                          setThinkingModePickerOpen(false);
-                        }}
-                        className={cn(
-                          "w-full flex items-start gap-3 p-3 rounded-md transition-colors text-left",
-                          "hover:bg-accent",
-                          selectedThinkingMode === mode.id && "bg-accent"
-                        )}
+                    }
+                    content={
+                      <div className="w-[280px] p-1">
+                        {THINKING_MODES.map((mode) => (
+                          <button
+                            key={mode.id}
+                            onClick={() => {
+                              setSelectedThinkingMode(mode.id);
+                              setThinkingModePickerOpen(false);
+                            }}
+                            className={cn(
+                              "w-full flex items-start gap-3 p-3 rounded-md transition-colors text-left",
+                              "hover:bg-accent",
+                              selectedThinkingMode === mode.id && "bg-accent"
+                            )}
+                          >
+                            <span className={cn("mt-0.5", mode.color)}>
+                              {mode.icon}
+                            </span>
+                            <div className="flex-1 space-y-1">
+                              <div className="font-medium text-sm">
+                                {mode.name}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {mode.description}
+                              </div>
+                            </div>
+                            <ThinkingModeIndicator level={mode.level} />
+                          </button>
+                        ))}
+                      </div>
+                    }
+                    open={thinkingModePickerOpen}
+                    onOpenChange={setThinkingModePickerOpen}
+                    align="start"
+                    side="top"
+                  />
+
+                  {/* Environment Group Selector */}
+                  <EnvGroupSelector disabled={disabled} />
+                </div>
+
+                {/* Prompt Input - Center */}
+                <div className="flex-1 relative">
+                  <Textarea
+                    ref={textareaRef}
+                    value={prompt}
+                    onChange={handleTextChange}
+                    onKeyDown={handleKeyDown}
+                    onPaste={handlePaste}
+                    placeholder={
+                      dragActive
+                        ? "Drop images here..."
+                        : "Message Claude (@ for files, / for commands)..."
+                    }
+                    disabled={disabled}
+                    className={cn(
+                      "resize-none pr-20 pl-3 py-2.5 transition-all duration-150",
+                      dragActive && "border-primary",
+                      textareaHeight >= 240 && "overflow-y-auto scrollbar-thin"
+                    )}
+                    style={{
+                      height: `${textareaHeight}px`,
+                      overflowY: textareaHeight >= 240 ? "auto" : "hidden",
+                    }}
+                  />
+
+                  {/* Action buttons inside input - fixed at bottom right */}
+                  <div className="absolute right-1.5 bottom-1.5 flex items-center gap-0.5">
+                    <TooltipSimple content="Expand (Ctrl+Shift+E)" side="top">
+                      <motion.div
+                        whileTap={{ scale: 0.97 }}
+                        transition={{ duration: 0.15 }}
                       >
-                        <span className={cn("mt-0.5", mode.color)}>
-                          {mode.icon}
-                        </span>
-                        <div className="flex-1 space-y-1">
-                          <div className="font-medium text-sm">
-                            {mode.name}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {mode.description}
-                          </div>
-                        </div>
-                        <ThinkingModeIndicator level={mode.level} />
-                      </button>
-                    ))}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setIsExpanded(true)}
+                          disabled={disabled}
+                          className="h-8 w-8 hover:bg-accent/50 transition-colors"
+                        >
+                          <Maximize2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </motion.div>
+                    </TooltipSimple>
+
+                    <TooltipSimple
+                      content={
+                        isLoading ? "Stop generation" : "Send message (Enter)"
+                      }
+                      side="top"
+                    >
+                      <motion.div
+                        whileTap={{ scale: 0.97 }}
+                        transition={{ duration: 0.15 }}
+                      >
+                        <Button
+                          onClick={isLoading ? onCancel : handleSend}
+                          disabled={
+                            isLoading ? false : !prompt.trim() || disabled
+                          }
+                          variant={
+                            isLoading
+                              ? "destructive"
+                              : prompt.trim()
+                              ? "default"
+                              : "ghost"
+                          }
+                          size="icon"
+                          className={cn(
+                            "h-8 w-8 transition-all",
+                            prompt.trim() && !isLoading && "shadow-sm"
+                          )}
+                        >
+                          {isLoading ? (
+                            <Square className="h-4 w-4" />
+                          ) : (
+                            <Send className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </motion.div>
+                    </TooltipSimple>
                   </div>
-                }
-                open={thinkingModePickerOpen}
-                onOpenChange={setThinkingModePickerOpen}
-                align="start"
-                side="top"
-              />
 
-              </div>
+                  {/* File Picker */}
+                  <AnimatePresence>
+                    {showFilePicker && projectPath && projectPath.trim() && (
+                      <FilePicker
+                        basePath={projectPath.trim()}
+                        onSelect={handleFileSelect}
+                        onClose={handleFilePickerClose}
+                        initialQuery={filePickerQuery}
+                      />
+                    )}
+                  </AnimatePresence>
 
-              {/* Prompt Input - Center */}
-              <div className="flex-1 relative">
-                <Textarea
-                  ref={textareaRef}
-                  value={prompt}
-                  onChange={handleTextChange}
-                  onKeyDown={handleKeyDown}
-                  onPaste={handlePaste}
-                  placeholder={dragActive ? "Drop images here..." : "Message Claude (@ for files, / for commands)..."}
-                  disabled={disabled}
-                  className={cn(
-                    "resize-none pr-20 pl-3 py-2.5 transition-all duration-150",
-                    dragActive && "border-primary",
-                    textareaHeight >= 240 && "overflow-y-auto scrollbar-thin"
-                  )}
-                  style={{ 
-                    height: `${textareaHeight}px`,
-                    overflowY: textareaHeight >= 240 ? 'auto' : 'hidden'
-                  }}
-                />
-
-                {/* Action buttons inside input - fixed at bottom right */}
-                <div className="absolute right-1.5 bottom-1.5 flex items-center gap-0.5">
-                  <TooltipSimple content="Expand (Ctrl+Shift+E)" side="top">
-                    <motion.div
-                      whileTap={{ scale: 0.97 }}
-                      transition={{ duration: 0.15 }}
-                    >
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setIsExpanded(true)}
-                        disabled={disabled}
-                        className="h-8 w-8 hover:bg-accent/50 transition-colors"
-                      >
-                        <Maximize2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </motion.div>
-                  </TooltipSimple>
-
-                  <TooltipSimple content={isLoading ? "Stop generation" : "Send message (Enter)"} side="top">
-                    <motion.div
-                      whileTap={{ scale: 0.97 }}
-                      transition={{ duration: 0.15 }}
-                    >
-                      <Button
-                        onClick={isLoading ? onCancel : handleSend}
-                        disabled={isLoading ? false : (!prompt.trim() || disabled)}
-                        variant={isLoading ? "destructive" : prompt.trim() ? "default" : "ghost"}
-                        size="icon"
-                        className={cn(
-                          "h-8 w-8 transition-all",
-                          prompt.trim() && !isLoading && "shadow-sm"
-                        )}
-                      >
-                        {isLoading ? (
-                          <Square className="h-4 w-4" />
-                        ) : (
-                          <Send className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </motion.div>
-                  </TooltipSimple>
+                  {/* Slash Command Picker */}
+                  <AnimatePresence>
+                    {showSlashCommandPicker && (
+                      <SlashCommandPicker
+                        projectPath={projectPath}
+                        onSelect={handleSlashCommandSelect}
+                        onClose={handleSlashCommandPickerClose}
+                        initialQuery={slashCommandQuery}
+                      />
+                    )}
+                  </AnimatePresence>
                 </div>
 
-                {/* File Picker */}
-                <AnimatePresence>
-                  {showFilePicker && projectPath && projectPath.trim() && (
-                    <FilePicker
-                      basePath={projectPath.trim()}
-                      onSelect={handleFileSelect}
-                      onClose={handleFilePickerClose}
-                      initialQuery={filePickerQuery}
-                    />
-                  )}
-                </AnimatePresence>
-
-                {/* Slash Command Picker */}
-                <AnimatePresence>
-                  {showSlashCommandPicker && (
-                    <SlashCommandPicker
-                      projectPath={projectPath}
-                      onSelect={handleSlashCommandSelect}
-                      onClose={handleSlashCommandPickerClose}
-                      initialQuery={slashCommandQuery}
-                    />
-                  )}
-                </AnimatePresence>
+                {/* Extra menu items - Right side, fixed at bottom */}
+                {extraMenuItems && (
+                  <div className="flex items-center gap-0.5 shrink-0 mb-1">
+                    {extraMenuItems}
+                  </div>
+                )}
               </div>
-
-              {/* Extra menu items - Right side, fixed at bottom */}
-              {extraMenuItems && (
-                <div className="flex items-center gap-0.5 shrink-0 mb-1">
-                  {extraMenuItems}
-                </div>
-              )}
             </div>
           </div>
         </div>
-      </div>
-    </>
+      </>
     </TooltipProvider>
   );
 };
