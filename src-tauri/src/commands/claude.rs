@@ -65,6 +65,9 @@ struct JsonlEntry {
     entry_type: Option<String>,
     message: Option<MessageContent>,
     timestamp: Option<String>,
+    /// Whether this is a sidechain/warmup session (should be hidden from UI)
+    #[serde(rename = "isSidechain")]
+    is_sidechain: Option<bool>,
 }
 
 /// Represents the message content
@@ -227,6 +230,36 @@ fn extract_first_user_message(jsonl_path: &PathBuf) -> (Option<String>, Option<S
     }
 
     (None, None)
+}
+
+/// Checks if a session file is a sidechain/warmup session that should be hidden
+/// Returns true if the session should be filtered out from the UI
+fn is_sidechain_session(jsonl_path: &PathBuf) -> bool {
+    // First check: agent-* files are always sidechains
+    if let Some(filename) = jsonl_path.file_stem().and_then(|s| s.to_str()) {
+        if filename.starts_with("agent-") {
+            return true;
+        }
+    }
+
+    // Second check: parse first line and check isSidechain field
+    let file = match fs::File::open(jsonl_path) {
+        Ok(file) => file,
+        Err(_) => return false,
+    };
+
+    let reader = BufReader::new(file);
+
+    // Only check the first line - that's where isSidechain is set
+    if let Some(Ok(line)) = reader.lines().next() {
+        if let Ok(entry) = serde_json::from_str::<JsonlEntry>(&line) {
+            if entry.is_sidechain == Some(true) {
+                return true;
+            }
+        }
+    }
+
+    false
 }
 
 /// Helper function to create a tokio Command with proper environment variables
@@ -505,6 +538,12 @@ pub async fn get_project_sessions(project_id: String) -> Result<Vec<Session>, St
         let path = entry.path();
 
         if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("jsonl") {
+            // Skip sidechain/warmup sessions - these are internal Claude Code sessions
+            // that clutter the UI (agent-* files and sessions with isSidechain: true)
+            if is_sidechain_session(&path) {
+                continue;
+            }
+
             if let Some(session_id) = path.file_stem().and_then(|s| s.to_str()) {
                 // Get file creation time
                 let metadata = fs::metadata(&path)
