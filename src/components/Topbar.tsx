@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { Circle, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -52,6 +53,7 @@ export const Topbar: React.FC<TopbarProps> = ({
   onSettingsClick,
   className,
 }) => {
+  const { t } = useTranslation();
   const [versionStatus, setVersionStatus] = useState<ClaudeVersionStatus | null>(null);
   const [checking, setChecking] = useState(true);
   
@@ -75,7 +77,7 @@ export const Topbar: React.FC<TopbarProps> = ({
       console.error("Failed to check Claude version:", err);
       setVersionStatus({
         is_installed: false,
-        output: "Failed to check version",
+        output: t("topbar.failedCheckVersion"),
       });
     } finally {
       setChecking(false);
@@ -87,7 +89,7 @@ export const Topbar: React.FC<TopbarProps> = ({
       return (
         <div className="flex items-center space-x-2 text-xs">
           <Circle className="h-3 w-3 animate-pulse text-muted-foreground" />
-          <span className="text-muted-foreground">Checking...</span>
+          <span className="text-muted-foreground">{t("topbar.checking")}</span>
         </div>
       );
     }
@@ -113,7 +115,7 @@ export const Topbar: React.FC<TopbarProps> = ({
           <span>
             {versionStatus.is_installed && versionStatus.version
               ? `Claude Code v${versionStatus.version}`
-              : "Claude Code"}
+              : t("topbar.claudeCode")}
           </span>
         </div>
       </Button>
@@ -125,7 +127,7 @@ export const Topbar: React.FC<TopbarProps> = ({
           trigger={statusContent}
           content={
             <div className="space-y-3 max-w-xs">
-              <p className="text-sm font-medium">Claude Code not found</p>
+              <p className="text-sm font-medium">{t("topbar.notFound")}</p>
               <div className="rounded-md bg-muted p-3">
                 <pre className="text-xs font-mono whitespace-pre-wrap">
                   {versionStatus.output}
@@ -137,7 +139,7 @@ export const Topbar: React.FC<TopbarProps> = ({
                 className="w-full"
                 onClick={onSettingsClick}
               >
-                Select Claude Installation
+                {t("topbar.selectInstallation")}
               </Button>
               <a
                 href="https://www.anthropic.com/claude-code"
@@ -145,7 +147,7 @@ export const Topbar: React.FC<TopbarProps> = ({
                 rel="noopener noreferrer"
                 className="flex items-center space-x-1 text-xs text-primary hover:underline"
               >
-                <span>Install Claude Code</span>
+                <span>{t("topbar.installClaudeCode")}</span>
                 <ExternalLink className="h-3 w-3" />
               </a>
             </div>
