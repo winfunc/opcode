@@ -131,15 +131,16 @@ fn source_preference(installation: &ClaudeInstallation) -> u8 {
         "system" => 3,
         "nvm-active" => 4,
         source if source.starts_with("nvm") => 5,
-        "local-bin" => 6,
-        "claude-local" => 7,
-        "npm-global" => 8,
-        "yarn" | "yarn-global" => 9,
-        "bun" => 10,
-        "node-modules" => 11,
-        "home-bin" => 12,
-        "PATH" => 13,
-        _ => 14,
+        "asdf" => 6,
+        "local-bin" => 7,
+        "claude-local" => 8,
+        "npm-global" => 9,
+        "yarn" | "yarn-global" => 10,
+        "bun" => 11,
+        "node-modules" => 12,
+        "home-bin" => 13,
+        "PATH" => 14,
+        _ => 15,
     }
 }
 
@@ -152,10 +153,13 @@ fn discover_system_installations() -> Vec<ClaudeInstallation> {
         installations.push(installation);
     }
 
-    // 2. Check NVM paths (includes current active NVM)
+    // 2. Check asdf shims first (before NVM)
+    installations.extend(find_asdf_installations());
+
+    // 3. Check NVM paths (includes current active NVM)
     installations.extend(find_nvm_installations());
 
-    // 3. Check standard paths
+    // 4. Check standard paths
     installations.extend(find_standard_installations());
 
     // Remove duplicates by path
@@ -249,6 +253,120 @@ fn try_which_command() -> Option<ClaudeInstallation> {
         }
         _ => None,
     }
+}
+
+/// Find Claude installations in asdf shims directories
+#[cfg(unix)]
+fn find_asdf_installations() -> Vec<ClaudeInstallation> {
+    let mut installations = Vec::new();
+    let mut checked_paths = std::collections::HashSet::new();
+
+    // Check ASDF_DIR environment variable first
+    if let Ok(asdf_dir) = std::env::var("ASDF_DIR") {
+        let claude_path = PathBuf::from(&asdf_dir).join("shims").join("claude");
+        if claude_path.exists() && claude_path.is_file() {
+            debug!("Found Claude via ASDF_DIR: {:?}", claude_path);
+            let path_str = claude_path.to_string_lossy().to_string();
+            checked_paths.insert(path_str.clone());
+            
+            let version = get_claude_version(&path_str)
+                .ok()
+                .flatten();
+            installations.push(ClaudeInstallation {
+                path: path_str,
+                version,
+                source: "asdf".to_string(),
+                installation_type: InstallationType::System,
+            });
+        }
+    }
+
+    // Then check default ~/.asdf location (skip if already found via ASDF_DIR)
+    if let Ok(home) = std::env::var("HOME") {
+        let asdf_shims_path = PathBuf::from(&home)
+            .join(".asdf")
+            .join("shims")
+            .join("claude");
+
+        let path_str = asdf_shims_path.to_string_lossy().to_string();
+        
+        // Skip if we already found this path via ASDF_DIR
+        if !checked_paths.contains(&path_str) {
+            debug!("Checking asdf shims directory: {:?}", asdf_shims_path);
+
+            if asdf_shims_path.exists() && asdf_shims_path.is_file() {
+                debug!("Found Claude in asdf shims: {}", path_str);
+
+                // Get Claude version
+                let version = get_claude_version(&path_str).ok().flatten();
+
+                installations.push(ClaudeInstallation {
+                    path: path_str,
+                    version,
+                    source: "asdf".to_string(),
+                    installation_type: InstallationType::System,
+                });
+            }
+        }
+    }
+
+    installations
+}
+
+#[cfg(windows)]
+fn find_asdf_installations() -> Vec<ClaudeInstallation> {
+    let mut installations = Vec::new();
+    let mut checked_paths = std::collections::HashSet::new();
+
+    // Check ASDF_DIR environment variable first
+    if let Ok(asdf_dir) = std::env::var("ASDF_DIR") {
+        let claude_path = PathBuf::from(&asdf_dir).join("shims").join("claude.exe");
+        if claude_path.exists() && claude_path.is_file() {
+            debug!("Found Claude via ASDF_DIR: {:?}", claude_path);
+            let path_str = claude_path.to_string_lossy().to_string();
+            checked_paths.insert(path_str.clone());
+            
+            let version = get_claude_version(&path_str)
+                .ok()
+                .flatten();
+            installations.push(ClaudeInstallation {
+                path: path_str,
+                version,
+                source: "asdf".to_string(),
+                installation_type: InstallationType::System,
+            });
+        }
+    }
+
+    // Then check default location (skip if already found via ASDF_DIR)
+    if let Ok(user_profile) = std::env::var("USERPROFILE") {
+        let asdf_shims_path = PathBuf::from(&user_profile)
+            .join(".asdf")
+            .join("shims")
+            .join("claude.exe");
+
+        let path_str = asdf_shims_path.to_string_lossy().to_string();
+        
+        // Skip if we already found this path via ASDF_DIR
+        if !checked_paths.contains(&path_str) {
+            debug!("Checking asdf shims directory: {:?}", asdf_shims_path);
+
+            if asdf_shims_path.exists() && asdf_shims_path.is_file() {
+                debug!("Found Claude in asdf shims: {}", path_str);
+
+                let version = get_claude_version(&path_str).ok().flatten();
+
+                installations.push(ClaudeInstallation {
+                    path: path_str,
+                    version,
+                    source: "asdf".to_string(),
+                    installation_type: InstallationType::System,
+                });
+            }
+        }
+    }
+
+    installations
 }
 
 /// Find Claude installations in NVM directories
@@ -638,6 +756,10 @@ pub fn create_command_with_env(program: &str) -> Command {
             || key == "NVM_BIN"
             || key == "HOMEBREW_PREFIX"
             || key == "HOMEBREW_CELLAR"
+            // Add asdf environment variables
+            || key == "ASDF_DIR"
+            || key == "ASDF_DATA_DIR"
+            || key == "ASDF_CONFIG_FILE"
             // Add proxy environment variables (only uppercase)
             || key == "HTTP_PROXY"
             || key == "HTTPS_PROXY"
@@ -685,6 +807,48 @@ pub fn create_command_with_env(program: &str) -> Command {
                     homebrew_bin_str
                 );
                 cmd.env("PATH", new_path);
+            }
+        }
+    }
+
+    // Add asdf support if the program is in an asdf shims directory
+    // Also check if the program is a symlink pointing to asdf shims
+    let is_asdf_program = program.contains("/.asdf/shims/")
+        || std::fs::read_link(program)
+            .map(|target| target.to_string_lossy().contains("/.asdf/shims/"))
+            .unwrap_or(false);
+
+    if is_asdf_program {
+        if let Ok(home) = std::env::var("HOME") {
+            let asdf_bin_dir = format!("{}/.asdf/bin", home);
+            let asdf_shims_dir = format!("{}/.asdf/shims", home);
+            let current_path = std::env::var("PATH").unwrap_or_default();
+
+            let mut new_path = current_path.clone();
+
+            // Add asdf bin directory if not already in PATH
+            if !current_path.contains(&asdf_bin_dir) {
+                new_path = format!("{}:{}", asdf_bin_dir, new_path);
+                debug!("Adding asdf bin directory to PATH: {}", asdf_bin_dir);
+            }
+
+            // Add asdf shims directory if not already in PATH
+            if !current_path.contains(&asdf_shims_dir) {
+                new_path = format!("{}:{}", asdf_shims_dir, new_path);
+                debug!("Adding asdf shims directory to PATH: {}", asdf_shims_dir);
+            }
+
+            if new_path != current_path {
+                cmd.env("PATH", new_path);
+            }
+
+            // Set ASDF_DIR if not already set
+            if std::env::var("ASDF_DIR").is_err() {
+                let asdf_dir = format!("{}/.asdf", home);
+                if std::path::Path::new(&asdf_dir).exists() {
+                    debug!("Setting ASDF_DIR to: {}", asdf_dir);
+                    cmd.env("ASDF_DIR", asdf_dir);
+                }
             }
         }
     }
