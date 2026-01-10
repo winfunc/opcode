@@ -259,17 +259,21 @@ fn try_which_command() -> Option<ClaudeInstallation> {
 #[cfg(unix)]
 fn find_asdf_installations() -> Vec<ClaudeInstallation> {
     let mut installations = Vec::new();
+    let mut checked_paths = std::collections::HashSet::new();
 
     // Check ASDF_DIR environment variable first
     if let Ok(asdf_dir) = std::env::var("ASDF_DIR") {
         let claude_path = PathBuf::from(&asdf_dir).join("shims").join("claude");
         if claude_path.exists() && claude_path.is_file() {
             debug!("Found Claude via ASDF_DIR: {:?}", claude_path);
-            let version = get_claude_version(&claude_path.to_string_lossy())
+            let path_str = claude_path.to_string_lossy().to_string();
+            checked_paths.insert(path_str.clone());
+            
+            let version = get_claude_version(&path_str)
                 .ok()
                 .flatten();
             installations.push(ClaudeInstallation {
-                path: claude_path.to_string_lossy().to_string(),
+                path: path_str,
                 version,
                 source: "asdf".to_string(),
                 installation_type: InstallationType::System,
@@ -277,29 +281,32 @@ fn find_asdf_installations() -> Vec<ClaudeInstallation> {
         }
     }
 
-    // Then check default ~/.asdf location
+    // Then check default ~/.asdf location (skip if already found via ASDF_DIR)
     if let Ok(home) = std::env::var("HOME") {
         let asdf_shims_path = PathBuf::from(&home)
             .join(".asdf")
             .join("shims")
             .join("claude");
 
-        debug!("Checking asdf shims directory: {:?}", asdf_shims_path);
+        let path_str = asdf_shims_path.to_string_lossy().to_string();
+        
+        // Skip if we already found this path via ASDF_DIR
+        if !checked_paths.contains(&path_str) {
+            debug!("Checking asdf shims directory: {:?}", asdf_shims_path);
 
-        if asdf_shims_path.exists() && asdf_shims_path.is_file() {
-            let path_str = asdf_shims_path.to_string_lossy().to_string();
+            if asdf_shims_path.exists() && asdf_shims_path.is_file() {
+                debug!("Found Claude in asdf shims: {}", path_str);
 
-            debug!("Found Claude in asdf shims: {}", path_str);
+                // Get Claude version
+                let version = get_claude_version(&path_str).ok().flatten();
 
-            // Get Claude version
-            let version = get_claude_version(&path_str).ok().flatten();
-
-            installations.push(ClaudeInstallation {
-                path: path_str,
-                version,
-                source: "asdf".to_string(),
-                installation_type: InstallationType::System,
-            });
+                installations.push(ClaudeInstallation {
+                    path: path_str,
+                    version,
+                    source: "asdf".to_string(),
+                    installation_type: InstallationType::System,
+                });
+            }
         }
     }
 
@@ -309,17 +316,21 @@ fn find_asdf_installations() -> Vec<ClaudeInstallation> {
 #[cfg(windows)]
 fn find_asdf_installations() -> Vec<ClaudeInstallation> {
     let mut installations = Vec::new();
+    let mut checked_paths = std::collections::HashSet::new();
 
     // Check ASDF_DIR environment variable first
     if let Ok(asdf_dir) = std::env::var("ASDF_DIR") {
         let claude_path = PathBuf::from(&asdf_dir).join("shims").join("claude.exe");
         if claude_path.exists() && claude_path.is_file() {
             debug!("Found Claude via ASDF_DIR: {:?}", claude_path);
-            let version = get_claude_version(&claude_path.to_string_lossy())
+            let path_str = claude_path.to_string_lossy().to_string();
+            checked_paths.insert(path_str.clone());
+            
+            let version = get_claude_version(&path_str)
                 .ok()
                 .flatten();
             installations.push(ClaudeInstallation {
-                path: claude_path.to_string_lossy().to_string(),
+                path: path_str,
                 version,
                 source: "asdf".to_string(),
                 installation_type: InstallationType::System,
@@ -327,28 +338,31 @@ fn find_asdf_installations() -> Vec<ClaudeInstallation> {
         }
     }
 
-    // Then check default location
+    // Then check default location (skip if already found via ASDF_DIR)
     if let Ok(user_profile) = std::env::var("USERPROFILE") {
         let asdf_shims_path = PathBuf::from(&user_profile)
             .join(".asdf")
             .join("shims")
             .join("claude.exe");
 
-        debug!("Checking asdf shims directory: {:?}", asdf_shims_path);
+        let path_str = asdf_shims_path.to_string_lossy().to_string();
+        
+        // Skip if we already found this path via ASDF_DIR
+        if !checked_paths.contains(&path_str) {
+            debug!("Checking asdf shims directory: {:?}", asdf_shims_path);
 
-        if asdf_shims_path.exists() && asdf_shims_path.is_file() {
-            let path_str = asdf_shims_path.to_string_lossy().to_string();
+            if asdf_shims_path.exists() && asdf_shims_path.is_file() {
+                debug!("Found Claude in asdf shims: {}", path_str);
 
-            debug!("Found Claude in asdf shims: {}", path_str);
+                let version = get_claude_version(&path_str).ok().flatten();
 
-            let version = get_claude_version(&path_str).ok().flatten();
-
-            installations.push(ClaudeInstallation {
-                path: path_str,
-                version,
-                source: "asdf".to_string(),
-                installation_type: InstallationType::System,
-            });
+                installations.push(ClaudeInstallation {
+                    path: path_str,
+                    version,
+                    source: "asdf".to_string(),
+                    installation_type: InstallationType::System,
+                });
+            }
         }
     }
 
@@ -494,8 +508,6 @@ fn find_standard_installations() -> Vec<ClaudeInstallation> {
                 format!("{}/.config/yarn/global/node_modules/.bin/claude", home),
                 "yarn-global".to_string(),
             ),
-            // Check asdf shims directory
-            (format!("{}/.asdf/shims/claude", home), "asdf".to_string()),
         ]);
     }
 
@@ -802,7 +814,6 @@ pub fn create_command_with_env(program: &str) -> Command {
     // Add asdf support if the program is in an asdf shims directory
     // Also check if the program is a symlink pointing to asdf shims
     let is_asdf_program = program.contains("/.asdf/shims/")
-        || program.contains("/asdf/shims/")
         || std::fs::read_link(program)
             .map(|target| target.to_string_lossy().contains("/.asdf/shims/"))
             .unwrap_or(false);
