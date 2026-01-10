@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Download, Upload, FileText, Loader2, Info, Network, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -15,6 +15,10 @@ interface MCPImportExportProps {
    * Callback for error messages
    */
   onError: (message: string) => void;
+  /**
+   * Callback for success/info messages
+   */
+  onSuccess: (message: string) => void;
 }
 
 /**
@@ -23,10 +27,30 @@ interface MCPImportExportProps {
 export const MCPImportExport: React.FC<MCPImportExportProps> = ({
   onImportCompleted,
   onError,
+  onSuccess,
 }) => {
   const [importingDesktop, setImportingDesktop] = useState(false);
   const [importingJson, setImportingJson] = useState(false);
   const [importScope, setImportScope] = useState("local");
+
+  const [mcpServeRunning, setMcpServeRunning] = useState(false);
+  const [mcpServeChecking, setMcpServeChecking] = useState(false);
+
+  const refreshMcpServeStatus = async () => {
+    try {
+      const statuses = await api.mcpGetServerStatus();
+      setMcpServeRunning(Boolean(statuses["claude-code"]?.running));
+    } catch {
+      // If status fails, don't block UX; just assume stopped
+      setMcpServeRunning(false);
+    }
+  };
+
+  useEffect(() => {
+    refreshMcpServeStatus();
+    const handle = window.setInterval(refreshMcpServeStatus, 2000);
+    return () => window.clearInterval(handle);
+  }, []);
 
   /**
    * Imports servers from Claude Desktop
@@ -39,23 +63,18 @@ export const MCPImportExport: React.FC<MCPImportExportProps> = ({
       
       // Show detailed results if available
       if (result.servers && result.servers.length > 0) {
-        const successfulServers = result.servers.filter(s => s.success);
         const failedServers = result.servers.filter(s => !s.success);
         
-        if (successfulServers.length > 0) {
-          const successMessage = `Successfully imported: ${successfulServers.map(s => s.name).join(", ")}`;
-          onImportCompleted(result.imported_count, result.failed_count);
-          // Show success details
-          if (failedServers.length === 0) {
-            onError(successMessage);
-          }
-        }
+        // Always call onImportCompleted for server list refresh and count-based toast
+        onImportCompleted(result.imported_count, result.failed_count);
         
+        // Only show detailed error messages for failed servers (onImportCompleted already shows success)
         if (failedServers.length > 0) {
           const failureDetails = failedServers
             .map(s => `${s.name}: ${s.error || "Unknown error"}`)
             .join("\n");
-          onError(`Failed to import some servers:\n${failureDetails}`);
+          console.warn("Failed to import some servers:", failureDetails);
+          // Don't call onError here - onImportCompleted already handles the toast
         }
       } else {
         onImportCompleted(result.imported_count, result.failed_count);
@@ -152,11 +171,29 @@ export const MCPImportExport: React.FC<MCPImportExportProps> = ({
    */
   const handleStartMCPServer = async () => {
     try {
-      await api.mcpServe();
-      onError("Claude Code MCP server started. You can now connect to it from other applications.");
+      setMcpServeChecking(true);
+      const message = await api.mcpServe();
+      await refreshMcpServeStatus();
+      onSuccess(message);
     } catch (error) {
       console.error("Failed to start MCP server:", error);
       onError("Failed to start Claude Code as MCP server");
+    } finally {
+      setMcpServeChecking(false);
+    }
+  };
+
+  const handleStopMCPServer = async () => {
+    try {
+      setMcpServeChecking(true);
+      const message = await api.mcpStop();
+      await refreshMcpServeStatus();
+      onSuccess(message);
+    } catch (error) {
+      console.error("Failed to stop MCP server:", error);
+      onError("Failed to stop Claude Code MCP server");
+    } finally {
+      setMcpServeChecking(false);
     }
   };
 
@@ -305,20 +342,39 @@ export const MCPImportExport: React.FC<MCPImportExportProps> = ({
                 <Network className="h-5 w-5 text-green-500" />
               </div>
               <div className="flex-1">
-                <h4 className="text-sm font-medium">Use Claude Code as MCP Server</h4>
+                <div className="flex items-center justify-between gap-3">
+                  <h4 className="text-sm font-medium">Use Claude Code as MCP Server</h4>
+                  <div className="text-xs text-muted-foreground">
+                    {mcpServeChecking ? "Checking…" : mcpServeRunning ? "Running" : "Stopped"}
+                  </div>
+                </div>
                 <p className="text-xs text-muted-foreground mt-1">
                   Start Claude Code as an MCP server that other applications can connect to
                 </p>
               </div>
             </div>
-            <Button
-              onClick={handleStartMCPServer}
-              variant="outline"
-              className="w-full gap-2 border-green-500/20 hover:bg-green-500/10 hover:text-green-600 hover:border-green-500/50"
-            >
-              <Network className="h-4 w-4" />
-              Start MCP Server
-            </Button>
+
+            {mcpServeRunning ? (
+              <Button
+                onClick={handleStopMCPServer}
+                variant="outline"
+                className="w-full gap-2 border-red-500/20 hover:bg-red-500/10 hover:text-red-600 hover:border-red-500/50"
+                disabled={mcpServeChecking}
+              >
+                <Network className="h-4 w-4" />
+                Stop MCP Server
+              </Button>
+            ) : (
+              <Button
+                onClick={handleStartMCPServer}
+                variant="outline"
+                className="w-full gap-2 border-green-500/20 hover:bg-green-500/10 hover:text-green-600 hover:border-green-500/50"
+                disabled={mcpServeChecking}
+              >
+                <Network className="h-4 w-4" />
+                Start MCP Server
+              </Button>
+            )}
           </div>
         </Card>
       </div>

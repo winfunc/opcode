@@ -169,9 +169,10 @@ export const MCPManager: React.FC<MCPManagerProps> = ({
               {/* Import/Export Tab */}
               <TabsContent value="import" className="space-y-6 mt-6">
                 <Card className="overflow-hidden">
-                  <MCPImportExport
+                    <MCPImportExport
                     onImportCompleted={handleImportCompleted}
                     onError={(message: string) => setToast({ message, type: "error" })}
+                    onSuccess={(message: string) => setToast({ message, type: "success" })}
                   />
                 </Card>
               </TabsContent>
