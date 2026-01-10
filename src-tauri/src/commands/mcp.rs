@@ -628,14 +628,6 @@ pub async fn mcp_serve(
         }
     };
 
-    // If already running, don't start another one
-    if let Ok(Some(existing)) = registry.0.get_running_mcp_serve() {
-        return Ok(format!(
-            "Claude Code MCP server already running (PID: {})",
-            existing.pid
-        ));
-    }
-
     let mut cmd = create_command_with_env(&claude_path);
     cmd.arg("mcp").arg("serve");
 
@@ -647,13 +639,34 @@ pub async fn mcp_serve(
                 return Err("MCP server started but PID is unavailable".to_string());
             }
 
-            if let Err(e) = registry.0.register_mcp_serve_process(pid) {
-                error!("Failed to register MCP server process: {}", e);
-                return Err(e);
-            }
+            // Intentionally drop the child handle - MCP server runs as detached process.
+            // We track it by PID only, allowing it to outlive the parent process.
+            std::mem::forget(child);
 
-            info!("Successfully started Claude Code MCP server (PID: {})", pid);
-            Ok(format!("Claude Code MCP server started (PID: {})", pid))
+            // Register atomically - will fail if another instance already exists
+            match registry.0.register_mcp_serve_process(pid) {
+                Ok(_run_id) => {
+                    info!("Successfully started Claude Code MCP server (PID: {})", pid);
+                    Ok(format!("Claude Code MCP server started (PID: {})", pid))
+                }
+                Err(e) => {
+                    // Registration failed (likely already running) - kill the process we just started
+                    error!("Failed to register MCP server process: {}", e);
+                    #[cfg(unix)]
+                    {
+                        use std::process::Command;
+                        let _ = Command::new("kill").arg(pid.to_string()).spawn();
+                    }
+                    #[cfg(windows)]
+                    {
+                        use std::process::Command;
+                        let _ = Command::new("taskkill")
+                            .args(["/PID", &pid.to_string(), "/F"])
+                            .spawn();
+                    }
+                    Err(e)
+                }
+            }
         }
         Err(e) => {
             error!("Failed to start MCP server: {}", e);

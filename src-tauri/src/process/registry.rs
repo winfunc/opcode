@@ -157,9 +157,24 @@ impl ProcessRegistry {
     /// Register a long-running MCP serve process (stores PID only, no child handle)
     ///
     /// NOTE: Only ONE MCP serve process should run at a time (singleton pattern).
-    /// The caller (mcp_serve command) is responsible for checking if a process
-    /// already exists via get_running_mcp_serve() before calling this method.
+    /// This method enforces the singleton by checking atomically within the lock.
     pub fn register_mcp_serve_process(&self, pid: u32) -> Result<i64, String> {
+        // Acquire lock first to make check-and-register atomic (prevents race conditions)
+        let mut processes = self.processes.lock().map_err(|e| e.to_string())?;
+
+        // Check if MCP serve process already exists (atomic with registration)
+        let existing_mcp = processes.values().find(|p| {
+            matches!(p.info.process_type, ProcessType::McpServe)
+        });
+
+        if let Some(existing) = existing_mcp {
+            return Err(format!(
+                "MCP server already running (PID: {})",
+                existing.info.pid
+            ));
+        }
+
+        // Now safe to register new MCP serve process
         let run_id = self.generate_id()?;
 
         let process_info = ProcessInfo {
@@ -171,9 +186,6 @@ impl ProcessRegistry {
             task: "claude mcp serve".to_string(),
             model: "".to_string(),
         };
-
-        // Register without child handle (like sidecar)
-        let mut processes = self.processes.lock().map_err(|e| e.to_string())?;
 
         let process_handle = ProcessHandle {
             info: process_info,
