@@ -33,7 +33,7 @@ use commands::claude::{
 use commands::mcp::{
     mcp_add, mcp_add_from_claude_desktop, mcp_add_json, mcp_get, mcp_get_server_status, mcp_list,
     mcp_read_project_config, mcp_remove, mcp_reset_project_choices, mcp_save_project_config,
-    mcp_serve, mcp_test_connection,
+    mcp_serve, mcp_stop, mcp_test_connection,
 };
 
 use commands::proxy::{apply_proxy_settings, get_proxy_settings, save_proxy_settings};
@@ -268,6 +268,7 @@ fn main() {
             mcp_add_json,
             mcp_add_from_claude_desktop,
             mcp_serve,
+            mcp_stop,
             mcp_test_connection,
             mcp_reset_project_choices,
             mcp_get_server_status,

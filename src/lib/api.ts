@@ -1497,6 +1497,18 @@ export const api = {
   },
 
   /**
+   * Stops Claude Code MCP server
+   */
+  async mcpStop(): Promise<string> {
+    try {
+      return await apiCall<string>("mcp_stop");
+    } catch (error) {
+      console.error("Failed to stop MCP server:", error);
+      throw error;
+    }
+  },
+
+  /**
    * Tests connection to an MCP server
    */
   async mcpTestConnection(name: string): Promise<string> {

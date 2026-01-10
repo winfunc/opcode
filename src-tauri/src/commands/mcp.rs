@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use chrono::Utc;
 use dirs;
 use log::{error, info};
 use serde::{Deserialize, Serialize};
@@ -612,7 +613,10 @@ pub async fn mcp_add_from_claude_desktop(
 
 /// Starts Claude Code as an MCP server
 #[tauri::command]
-pub async fn mcp_serve(app: AppHandle) -> Result<String, String> {
+pub async fn mcp_serve(
+    app: AppHandle,
+    registry: tauri::State<'_, crate::process::ProcessRegistryState>,
+) -> Result<String, String> {
     info!("Starting Claude Code as MCP server");
 
     // Start the server in a separate process
@@ -624,18 +628,56 @@ pub async fn mcp_serve(app: AppHandle) -> Result<String, String> {
         }
     };
 
+    // If already running, don't start another one
+    if let Ok(Some(existing)) = registry.0.get_running_mcp_serve() {
+        return Ok(format!(
+            "Claude Code MCP server already running (PID: {})",
+            existing.pid
+        ));
+    }
+
     let mut cmd = create_command_with_env(&claude_path);
     cmd.arg("mcp").arg("serve");
 
     match cmd.spawn() {
-        Ok(_) => {
-            info!("Successfully started Claude Code MCP server");
-            Ok("Claude Code MCP server started".to_string())
+        Ok(child) => {
+            let pid = child.id();
+            if pid == 0 {
+                error!("MCP server started but PID is unavailable");
+                return Err("MCP server started but PID is unavailable".to_string());
+            }
+
+            if let Err(e) = registry.0.register_mcp_serve_process(pid) {
+                error!("Failed to register MCP server process: {}", e);
+                return Err(e);
+            }
+
+            info!("Successfully started Claude Code MCP server (PID: {})", pid);
+            Ok(format!("Claude Code MCP server started (PID: {})", pid))
         }
         Err(e) => {
             error!("Failed to start MCP server: {}", e);
             Err(e.to_string())
         }
+    }
+}
+
+/// Stops Claude Code MCP server if running
+#[tauri::command]
+pub async fn mcp_stop(
+    registry: tauri::State<'_, crate::process::ProcessRegistryState>,
+) -> Result<String, String> {
+    if let Ok(Some(proc_info)) = registry.0.get_running_mcp_serve() {
+        let run_id = proc_info.run_id;
+        let pid = proc_info.pid;
+        registry
+            .0
+            .kill_process(run_id)
+            .await
+            .map_err(|e| format!("Failed to stop MCP server (PID: {}): {}", pid, e))?;
+        Ok(format!("Claude Code MCP server stopped (PID: {})", pid))
+    } else {
+        Ok("Claude Code MCP server is not running".to_string())
     }
 }
 
@@ -670,12 +712,28 @@ pub async fn mcp_reset_project_choices(app: AppHandle) -> Result<String, String>
 
 /// Gets the status of MCP servers
 #[tauri::command]
-pub async fn mcp_get_server_status() -> Result<HashMap<String, ServerStatus>, String> {
+pub async fn mcp_get_server_status(
+    registry: tauri::State<'_, crate::process::ProcessRegistryState>,
+) -> Result<HashMap<String, ServerStatus>, String> {
     info!("Getting MCP server status");
 
-    // TODO: Implement actual status checking
-    // For now, return empty status
-    Ok(HashMap::new())
+    let mut status_map = HashMap::new();
+
+    if let Ok(Some(proc_info)) = registry.0.get_running_mcp_serve() {
+        status_map.insert(
+            "claude-code".to_string(),
+            ServerStatus {
+                running: true,
+                error: None,
+                last_checked: Some(Utc::now().timestamp() as u64),
+            },
+        );
+
+        // Also include PID in the log for debugging
+        info!("MCP serve running with PID: {}", proc_info.pid);
+    }
+
+    Ok(status_map)
 }
 
 /// Reads .mcp.json from the current project

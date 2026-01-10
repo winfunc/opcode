@@ -9,6 +9,7 @@ use tokio::process::Child;
 pub enum ProcessType {
     AgentRun { agent_id: i64, agent_name: String },
     ClaudeSession { session_id: String },
+    McpServe,
 }
 
 /// Information about a running agent process
@@ -82,6 +83,7 @@ impl ProcessRegistry {
     }
 
     /// Register a new running agent process using sidecar (similar to register_process but for sidecar children)
+    #[allow(dead_code)]
     pub fn register_sidecar_process(
         &self,
         run_id: i64,
@@ -150,6 +152,46 @@ impl ProcessRegistry {
 
         processes.insert(run_id, process_handle);
         Ok(run_id)
+    }
+
+    /// Register a long-running MCP serve process (stores PID only, no child handle)
+    ///
+    /// NOTE: Only ONE MCP serve process should run at a time (singleton pattern).
+    /// The caller (mcp_serve command) is responsible for checking if a process
+    /// already exists via get_running_mcp_serve() before calling this method.
+    pub fn register_mcp_serve_process(&self, pid: u32) -> Result<i64, String> {
+        let run_id = self.generate_id()?;
+
+        let process_info = ProcessInfo {
+            run_id,
+            process_type: ProcessType::McpServe,
+            pid,
+            started_at: Utc::now(),
+            project_path: "".to_string(),
+            task: "claude mcp serve".to_string(),
+            model: "".to_string(),
+        };
+
+        // Register without child handle (like sidecar)
+        let mut processes = self.processes.lock().map_err(|e| e.to_string())?;
+
+        let process_handle = ProcessHandle {
+            info: process_info,
+            child: Arc::new(Mutex::new(None)),
+            live_output: Arc::new(Mutex::new(String::new())),
+        };
+
+        processes.insert(run_id, process_handle);
+        Ok(run_id)
+    }
+
+    /// Get the currently running MCP serve process if any
+    pub fn get_running_mcp_serve(&self) -> Result<Option<ProcessInfo>, String> {
+        let processes = self.processes.lock().map_err(|e| e.to_string())?;
+        Ok(processes
+            .values()
+            .find(|handle| matches!(handle.info.process_type, ProcessType::McpServe))
+            .map(|handle| handle.info.clone()))
     }
 
     /// Internal method to register any process
