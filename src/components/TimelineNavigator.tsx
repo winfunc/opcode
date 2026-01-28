@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { 
-  GitBranch, 
-  Save, 
-  RotateCcw, 
+import {
+  GitBranch,
+  Save,
+  RotateCcw,
   GitFork,
   AlertCircle,
   ChevronDown,
@@ -23,6 +23,11 @@ import { api, type Checkpoint, type TimelineNode, type SessionTimeline, type Che
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { useTrackEvent } from "@/hooks";
+import {
+  isImeComposingKeydown,
+  createCompositionHandlers,
+  type IMECompositionRefs,
+} from "@/utils/ime";
 
 interface TimelineNavigatorProps {
   sessionId: string;
@@ -72,7 +77,8 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
   const trackEvent = useTrackEvent();
 
   // IME composition state
-  const isIMEComposingRef = React.useRef(false);
+  const isComposingRef = React.useRef(false);
+  const justEndedRef = React.useRef(false);
 
   // Load timeline on mount and whenever refreshVersion bumps
   useEffect(() => {
@@ -196,15 +202,13 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
     onFork(checkpoint.id);
   };
 
-  const handleCompositionStart = () => {
-    isIMEComposingRef.current = true;
-  };
-
-  const handleCompositionEnd = () => {
-    setTimeout(() => {
-      isIMEComposingRef.current = false;
-    }, 0);
-  };
+  // IME composition handlers using shared utility
+  const imeRefs: IMECompositionRefs = { isComposingRef, justEndedRef };
+  const {
+    onCompositionStart: handleCompositionStart,
+    onCompositionEnd: handleCompositionEnd,
+    onBlur: handleBlur,
+  } = createCompositionHandlers(imeRefs);
 
   const handleCompare = async (checkpoint: Checkpoint) => {
     if (!selectedCheckpoint) {
@@ -495,8 +499,13 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
                 value={checkpointDescription}
                 onChange={(e) => setCheckpointDescription(e.target.value)}
                 onKeyDown={(e) => {
+                  if (justEndedRef.current && e.key !== "Enter") {
+                    justEndedRef.current = false;
+                  }
                   if (e.key === "Enter" && !isLoading) {
-                    if (e.nativeEvent.isComposing || isIMEComposingRef.current) {
+                    const composing = isImeComposingKeydown(e, isComposingRef);
+                    if (composing || justEndedRef.current) {
+                      justEndedRef.current = false;
                       return;
                     }
                     handleCreateCheckpoint();
@@ -504,6 +513,7 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
                 }}
                 onCompositionStart={handleCompositionStart}
                 onCompositionEnd={handleCompositionEnd}
+                onBlur={handleBlur}
               />
             </div>
           </div>
