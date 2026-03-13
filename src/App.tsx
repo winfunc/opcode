@@ -314,6 +314,7 @@ function AppContent() {
           return (
             <SessionList
               sessions={sessions}
+              projectId={selectedProject.id}
               projectPath={selectedProject.path}
               onEditClaudeFile={handleEditClaudeFile}
             />

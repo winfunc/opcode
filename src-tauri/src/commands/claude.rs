@@ -57,6 +57,166 @@ pub struct Session {
     pub message_timestamp: Option<String>,
 }
 
+/// Represents a session search result with matching snippets
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SessionSearchResult {
+    #[serde(flatten)]
+    pub session: Session,
+    /// Matching text snippets from the session
+    pub snippets: Vec<String>,
+    /// Positive search terms for frontend highlighting
+    pub highlight_terms: Vec<String>,
+}
+
+/// Parsed search query with AND, OR, NOT operators
+#[derive(Debug, Clone)]
+struct ParsedQuery {
+    /// Terms that must ALL be present (AND)
+    and_terms: Vec<String>,
+    /// Groups where at least one term must match
+    or_groups: Vec<Vec<String>>,
+    /// Terms that must NOT be present
+    not_terms: Vec<String>,
+    /// All positive terms for snippet extraction and highlighting
+    highlight_terms: Vec<String>,
+}
+
+/// Parses a search query supporting AND (default), OR, NOT (-), and "exact phrase".
+///
+/// Examples:
+///   `alpha beta` → AND: [alpha, beta]
+///   `alpha OR beta` → OR: [[alpha, beta]]
+///   `-test` → NOT: [test]
+///   `"exact phrase"` → AND: ["exact phrase"]
+///   `"fix bug" refactor OR cleanup -test` → AND: [fix bug], OR: [[refactor, cleanup]], NOT: [test]
+fn parse_query(raw: &str) -> ParsedQuery {
+    // Step 1: Tokenize respecting quotes
+    let mut tokens: Vec<(String, bool)> = Vec::new(); // (term, is_negated)
+    let mut chars = raw.chars().peekable();
+    let mut current = String::new();
+    let mut in_quotes = false;
+    let mut is_negated = false;
+
+    while let Some(&ch) = chars.peek() {
+        if in_quotes {
+            chars.next();
+            if ch == '"' {
+                in_quotes = false;
+                if !current.is_empty() {
+                    tokens.push((current.clone(), is_negated));
+                    current.clear();
+                    is_negated = false;
+                }
+            } else {
+                current.push(ch);
+            }
+        } else if ch == '"' {
+            chars.next();
+            if !current.is_empty() {
+                tokens.push((current.clone(), is_negated));
+                current.clear();
+                is_negated = false;
+            }
+            in_quotes = true;
+        } else if ch.is_whitespace() {
+            chars.next();
+            if !current.is_empty() {
+                tokens.push((current.clone(), is_negated));
+                current.clear();
+                is_negated = false;
+            }
+        } else if ch == '-' && current.is_empty() {
+            chars.next();
+            is_negated = true;
+        } else {
+            chars.next();
+            current.push(ch);
+        }
+    }
+    // Handle unclosed quotes or trailing token
+    if !current.is_empty() {
+        tokens.push((current, is_negated));
+    }
+
+    // Step 2: Build ParsedQuery by processing OR groups
+    let mut and_terms: Vec<String> = Vec::new();
+    let mut or_groups: Vec<Vec<String>> = Vec::new();
+    let mut not_terms: Vec<String> = Vec::new();
+    let mut pending_or_group: Vec<String> = Vec::new();
+
+    let mut i = 0;
+    while i < tokens.len() {
+        let (ref term, negated) = tokens[i];
+        let term_lower = term.to_lowercase();
+
+        if negated {
+            not_terms.push(term_lower);
+            i += 1;
+            continue;
+        }
+
+        // Skip explicit AND operator (it's the default behavior)
+        if term == "AND" && !negated {
+            i += 1;
+            continue;
+        }
+
+        // Check if next token is OR
+        let next_is_or = i + 1 < tokens.len() && tokens[i + 1].0 == "OR" && !tokens[i + 1].1;
+
+        if term == "OR" && !negated {
+            // OR without left context — treat as literal
+            if pending_or_group.is_empty() {
+                and_terms.push(term_lower);
+            }
+            // If pending_or_group is non-empty, this OR was already handled
+            i += 1;
+            continue;
+        }
+
+        if !pending_or_group.is_empty() {
+            // We're continuing an OR chain
+            pending_or_group.push(term_lower);
+            if !next_is_or {
+                // End of OR chain
+                or_groups.push(pending_or_group.clone());
+                pending_or_group.clear();
+            } else {
+                i += 2; // skip term + OR
+                continue;
+            }
+        } else if next_is_or {
+            // Start a new OR chain
+            pending_or_group.push(term_lower);
+            i += 2; // skip term + OR
+            continue;
+        } else {
+            and_terms.push(term_lower);
+        }
+
+        i += 1;
+    }
+
+    // Flush any remaining OR group
+    if !pending_or_group.is_empty() {
+        or_groups.push(pending_or_group);
+    }
+
+    // Build highlight_terms from all positive terms
+    let mut highlight_terms: Vec<String> = Vec::new();
+    highlight_terms.extend(and_terms.iter().cloned());
+    for group in &or_groups {
+        highlight_terms.extend(group.iter().cloned());
+    }
+
+    ParsedQuery {
+        and_terms,
+        or_groups,
+        not_terms,
+        highlight_terms,
+    }
+}
+
 /// Represents a message entry in the JSONL file
 #[derive(Debug, Deserialize)]
 struct JsonlEntry {
@@ -553,6 +713,435 @@ pub async fn get_project_sessions(project_id: String) -> Result<Vec<Session>, St
         project_id
     );
     Ok(sessions)
+}
+
+/// Checks if a session matches the parsed query (AND, OR, NOT logic).
+/// Reads all message content and checks term presence.
+fn session_matches(jsonl_path: &PathBuf, query: &ParsedQuery) -> bool {
+    let file = match fs::File::open(jsonl_path) {
+        Ok(file) => file,
+        Err(_) => return false,
+    };
+
+    let reader = BufReader::new(file);
+    let mut all_content = String::new();
+
+    for line in reader.lines() {
+        if let Ok(line) = line {
+            if let Ok(entry) = serde_json::from_str::<JsonlEntry>(&line) {
+                if let Some(message) = entry.message {
+                    if let Some(content) = message.content {
+                        all_content.push(' ');
+                        all_content.push_str(&content);
+                    }
+                }
+            }
+        }
+    }
+
+    let content_lower = all_content.to_lowercase();
+
+    // Check NOT terms first (early exit)
+    for term in &query.not_terms {
+        if content_lower.contains(term.as_str()) {
+            return false;
+        }
+    }
+
+    // Check AND terms — all must be present
+    for term in &query.and_terms {
+        if !content_lower.contains(term.as_str()) {
+            return false;
+        }
+    }
+
+    // Check OR groups — at least one term per group
+    for group in &query.or_groups {
+        if !group
+            .iter()
+            .any(|term| content_lower.contains(term.as_str()))
+        {
+            return false;
+        }
+    }
+
+    true
+}
+
+/// Extracts matching text snippets for multiple search terms.
+/// Returns up to MAX_SNIPPETS snippets with context around each match.
+fn extract_snippets_for_terms(jsonl_path: &PathBuf, terms: &[String]) -> Vec<String> {
+    const MAX_SNIPPETS: usize = 20;
+    const CONTEXT_CHARS: usize = 100;
+
+    let file = match fs::File::open(jsonl_path) {
+        Ok(file) => file,
+        Err(_) => return Vec::new(),
+    };
+
+    if terms.is_empty() {
+        return Vec::new();
+    }
+
+    let reader = BufReader::new(file);
+    let mut snippets = Vec::new();
+
+    // Pre-compute query chars for each term
+    let term_chars: Vec<Vec<char>> = terms.iter().map(|t| t.chars().collect()).collect();
+
+    for line in reader.lines() {
+        if snippets.len() >= MAX_SNIPPETS {
+            break;
+        }
+        if let Ok(line) = line {
+            if let Ok(entry) = serde_json::from_str::<JsonlEntry>(&line) {
+                if let Some(message) = entry.message {
+                    if let Some(content) = message.content {
+                        let chars_orig: Vec<(usize, char)> = content.char_indices().collect();
+
+                        // Search for each term in this message
+                        for query_chars in &term_chars {
+                            if snippets.len() >= MAX_SNIPPETS {
+                                break;
+                            }
+                            let mut ci = 0;
+                            while ci + query_chars.len() <= chars_orig.len() {
+                                if snippets.len() >= MAX_SNIPPETS {
+                                    break;
+                                }
+                                let matched = chars_orig[ci..ci + query_chars.len()]
+                                    .iter()
+                                    .zip(query_chars)
+                                    .all(|((_, c), q)| c.to_lowercase().eq(q.to_lowercase()));
+                                if matched {
+                                    let ctx_start_ci = ci.saturating_sub(CONTEXT_CHARS);
+                                    let ctx_end_ci = (ci + query_chars.len() + CONTEXT_CHARS)
+                                        .min(chars_orig.len());
+                                    let start = chars_orig[ctx_start_ci].0;
+                                    let end = if ctx_end_ci < chars_orig.len() {
+                                        chars_orig[ctx_end_ci].0
+                                    } else {
+                                        content.len()
+                                    };
+                                    let raw = &content[start..end];
+                                    let mut snippet =
+                                        raw.split_whitespace().collect::<Vec<_>>().join(" ");
+                                    if start > 0 {
+                                        snippet = format!("...{}", snippet);
+                                    }
+                                    if end < content.len() {
+                                        snippet = format!("{}...", snippet);
+                                    }
+                                    if !snippet.is_empty() {
+                                        snippets.push(snippet);
+                                    }
+                                    ci += query_chars.len();
+                                } else {
+                                    ci += 1;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    snippets
+}
+
+/// Searches through all session JSONL files in a project for messages containing the query
+#[tauri::command]
+pub async fn search_project_sessions(
+    project_id: String,
+    query: String,
+) -> Result<Vec<SessionSearchResult>, String> {
+    let query = query.trim().to_string();
+    if query.is_empty() || query.len() < 2 {
+        return Ok(Vec::new());
+    }
+    if query.len() > 256 {
+        return Err("Query is too long".to_string());
+    }
+
+    log::info!(
+        "Searching sessions for project: {} (query length: {})",
+        project_id,
+        query.len()
+    );
+
+    if project_id.is_empty() {
+        return Err("Invalid project id".to_string());
+    }
+
+    let parsed = parse_query(&query);
+    if parsed.and_terms.is_empty() && parsed.or_groups.is_empty() && parsed.not_terms.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let claude_dir = get_claude_dir().map_err(|e| e.to_string())?;
+    let projects_dir = claude_dir.join("projects");
+    let project_dir = projects_dir.join(&project_id);
+
+    // Verify resolved path stays under the projects root
+    let canonical_projects_dir = projects_dir.canonicalize().map_err(|e| e.to_string())?;
+    let canonical_project_dir = project_dir
+        .canonicalize()
+        .map_err(|_| format!("Project directory not found: {}", project_id))?;
+    if !canonical_project_dir.starts_with(&canonical_projects_dir) {
+        return Err("Invalid project id".to_string());
+    }
+    // Use canonical path for all subsequent operations to prevent TOCTOU
+    let project_dir = canonical_project_dir;
+    let todos_dir = claude_dir.join("todos");
+
+    tokio::task::spawn_blocking(move || {
+        const MAX_RESULTS: usize = 100;
+
+        let project_path = match get_project_path_from_sessions(&project_dir) {
+            Ok(path) => path,
+            Err(_) => decode_project_path(&project_id),
+        };
+
+        let mut results: Vec<SessionSearchResult> = Vec::new();
+
+        let entries = fs::read_dir(&project_dir)
+            .map_err(|e| format!("Failed to read project directory: {}", e))?;
+
+        for entry in entries {
+            let entry = match entry {
+                Ok(e) => e,
+                Err(e) => {
+                    log::warn!("Skipping unreadable directory entry: {}", e);
+                    continue;
+                }
+            };
+            let file_type = match entry.file_type() {
+                Ok(ft) => ft,
+                Err(e) => {
+                    log::warn!(
+                        "Skipping entry with unreadable type {:?}: {}",
+                        entry.path(),
+                        e
+                    );
+                    continue;
+                }
+            };
+            if file_type.is_symlink() || !file_type.is_file() {
+                continue;
+            }
+            let path = entry.path();
+
+            if path.extension().and_then(|s| s.to_str()) == Some("jsonl") {
+                if let Some(session_id) = path.file_stem().and_then(|s| s.to_str()) {
+                    if !session_matches(&path, &parsed) {
+                        continue;
+                    }
+                    let snippets = extract_snippets_for_terms(&path, &parsed.highlight_terms);
+
+                    let metadata = match fs::metadata(&path) {
+                        Ok(m) => m,
+                        Err(e) => {
+                            log::warn!("Skipping unreadable session file {:?}: {}", path, e);
+                            continue;
+                        }
+                    };
+
+                    let created_at = metadata
+                        .created()
+                        .or_else(|_| metadata.modified())
+                        .unwrap_or(SystemTime::UNIX_EPOCH)
+                        .duration_since(SystemTime::UNIX_EPOCH)
+                        .unwrap_or_default()
+                        .as_secs();
+
+                    let (first_message, message_timestamp) = extract_first_user_message(&path);
+
+                    let todo_path = todos_dir.join(format!("{}.json", session_id));
+                    let todo_data = if todo_path.exists() {
+                        fs::read_to_string(&todo_path)
+                            .ok()
+                            .and_then(|content| serde_json::from_str(&content).ok())
+                    } else {
+                        None
+                    };
+
+                    results.push(SessionSearchResult {
+                        session: Session {
+                            id: session_id.to_string(),
+                            project_id: project_id.clone(),
+                            project_path: project_path.clone(),
+                            todo_data,
+                            created_at,
+                            first_message,
+                            message_timestamp,
+                        },
+                        snippets,
+                        highlight_terms: parsed.highlight_terms.clone(),
+                    });
+                }
+            }
+        }
+
+        results.sort_by(|a, b| b.session.created_at.cmp(&a.session.created_at));
+        results.truncate(MAX_RESULTS);
+
+        log::info!(
+            "Found {} matching sessions for project {}",
+            results.len(),
+            project_id
+        );
+        Ok(results)
+    })
+    .await
+    .map_err(|e| format!("Search task failed: {}", e))?
+}
+
+/// Searches through all projects' session JSONL files for messages containing the query
+#[tauri::command]
+pub async fn search_all_sessions(query: String) -> Result<Vec<SessionSearchResult>, String> {
+    let query = query.trim().to_string();
+    if query.is_empty() || query.len() < 2 {
+        return Ok(Vec::new());
+    }
+    if query.len() > 256 {
+        return Err("Query is too long".to_string());
+    }
+
+    log::info!(
+        "Searching all sessions across all projects (query length: {})",
+        query.len()
+    );
+
+    let parsed = parse_query(&query);
+    if parsed.and_terms.is_empty() && parsed.or_groups.is_empty() && parsed.not_terms.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let claude_dir = get_claude_dir().map_err(|e| e.to_string())?;
+    let projects_dir = claude_dir.join("projects");
+
+    if !projects_dir.exists() {
+        return Ok(Vec::new());
+    }
+
+    let todos_dir = claude_dir.join("todos");
+
+    tokio::task::spawn_blocking(move || {
+        const MAX_RESULTS: usize = 100;
+
+        let mut results: Vec<SessionSearchResult> = Vec::new();
+
+        let project_entries = fs::read_dir(&projects_dir)
+            .map_err(|e| format!("Failed to read projects directory: {}", e))?;
+
+        for project_entry in project_entries {
+            if results.len() >= MAX_RESULTS {
+                break;
+            }
+
+            let project_entry = match project_entry {
+                Ok(e) => e,
+                Err(_) => continue,
+            };
+            let project_dir = project_entry.path();
+            if !project_dir.is_dir() {
+                continue;
+            }
+
+            let project_id = match project_dir.file_name().and_then(|n| n.to_str()) {
+                Some(name) => name.to_string(),
+                None => continue,
+            };
+
+            let project_path = match get_project_path_from_sessions(&project_dir) {
+                Ok(path) => path,
+                Err(_) => decode_project_path(&project_id),
+            };
+
+            let session_entries = match fs::read_dir(&project_dir) {
+                Ok(entries) => entries,
+                Err(_) => continue,
+            };
+
+            for entry in session_entries {
+                if results.len() >= MAX_RESULTS {
+                    break;
+                }
+
+                let entry = match entry {
+                    Ok(e) => e,
+                    Err(_) => continue,
+                };
+                let file_type = match entry.file_type() {
+                    Ok(ft) => ft,
+                    Err(_) => continue,
+                };
+                if file_type.is_symlink() || !file_type.is_file() {
+                    continue;
+                }
+                let path = entry.path();
+
+                if path.extension().and_then(|s| s.to_str()) == Some("jsonl") {
+                    if let Some(session_id) = path.file_stem().and_then(|s| s.to_str()) {
+                        if !session_matches(&path, &parsed) {
+                            continue;
+                        }
+                        let snippets = extract_snippets_for_terms(&path, &parsed.highlight_terms);
+
+                        let metadata = match fs::metadata(&path) {
+                            Ok(m) => m,
+                            Err(_) => continue,
+                        };
+
+                        let created_at = metadata
+                            .created()
+                            .or_else(|_| metadata.modified())
+                            .unwrap_or(SystemTime::UNIX_EPOCH)
+                            .duration_since(SystemTime::UNIX_EPOCH)
+                            .unwrap_or_default()
+                            .as_secs();
+
+                        let (first_message, message_timestamp) = extract_first_user_message(&path);
+
+                        let todo_path = todos_dir.join(format!("{}.json", session_id));
+                        let todo_data = if todo_path.exists() {
+                            fs::read_to_string(&todo_path)
+                                .ok()
+                                .and_then(|content| serde_json::from_str(&content).ok())
+                        } else {
+                            None
+                        };
+
+                        results.push(SessionSearchResult {
+                            session: Session {
+                                id: session_id.to_string(),
+                                project_id: project_id.clone(),
+                                project_path: project_path.clone(),
+                                todo_data,
+                                created_at,
+                                first_message,
+                                message_timestamp,
+                            },
+                            snippets,
+                            highlight_terms: parsed.highlight_terms.clone(),
+                        });
+                    }
+                }
+            }
+        }
+
+        results.sort_by(|a, b| b.session.created_at.cmp(&a.session.created_at));
+        results.truncate(MAX_RESULTS);
+
+        log::info!(
+            "Found {} matching sessions across all projects",
+            results.len()
+        );
+        Ok(results)
+    })
+    .await
+    .map_err(|e| format!("Search task failed: {}", e))?
 }
 
 /// Reads the Claude settings file
@@ -2204,6 +2793,91 @@ mod tests {
         let mut file = fs::File::create(file_path)?;
         file.write_all(content.as_bytes())?;
         Ok(())
+    }
+
+    #[test]
+    fn test_parse_query_single_term() {
+        let q = parse_query("hello");
+        assert_eq!(q.and_terms, vec!["hello"]);
+        assert!(q.or_groups.is_empty());
+        assert!(q.not_terms.is_empty());
+        assert_eq!(q.highlight_terms, vec!["hello"]);
+    }
+
+    #[test]
+    fn test_parse_query_and_terms() {
+        let q = parse_query("alpha beta gamma");
+        assert_eq!(q.and_terms, vec!["alpha", "beta", "gamma"]);
+        assert!(q.or_groups.is_empty());
+        assert!(q.not_terms.is_empty());
+    }
+
+    #[test]
+    fn test_parse_query_or_group() {
+        let q = parse_query("alpha OR beta");
+        assert!(q.and_terms.is_empty());
+        assert_eq!(q.or_groups, vec![vec!["alpha", "beta"]]);
+        assert!(q.not_terms.is_empty());
+        assert_eq!(q.highlight_terms, vec!["alpha", "beta"]);
+    }
+
+    #[test]
+    fn test_parse_query_chained_or() {
+        let q = parse_query("alpha OR beta OR gamma");
+        assert!(q.and_terms.is_empty());
+        assert_eq!(q.or_groups, vec![vec!["alpha", "beta", "gamma"]]);
+    }
+
+    #[test]
+    fn test_parse_query_not_term() {
+        let q = parse_query("alpha -beta");
+        assert_eq!(q.and_terms, vec!["alpha"]);
+        assert_eq!(q.not_terms, vec!["beta"]);
+        assert_eq!(q.highlight_terms, vec!["alpha"]);
+    }
+
+    #[test]
+    fn test_parse_query_quoted_phrase() {
+        let q = parse_query("\"hello world\" test");
+        assert_eq!(q.and_terms, vec!["hello world", "test"]);
+        assert!(q.or_groups.is_empty());
+    }
+
+    #[test]
+    fn test_parse_query_mixed() {
+        let q = parse_query("\"fix bug\" refactor OR cleanup -test");
+        assert_eq!(q.and_terms, vec!["fix bug"]);
+        assert_eq!(q.or_groups, vec![vec!["refactor", "cleanup"]]);
+        assert_eq!(q.not_terms, vec!["test"]);
+        assert_eq!(q.highlight_terms, vec!["fix bug", "refactor", "cleanup"]);
+    }
+
+    #[test]
+    fn test_parse_query_standalone_or() {
+        let q = parse_query("OR");
+        assert_eq!(q.and_terms, vec!["or"]);
+        assert!(q.or_groups.is_empty());
+    }
+
+    #[test]
+    fn test_parse_query_negated_phrase() {
+        let q = parse_query("-\"bad phrase\"");
+        assert!(q.and_terms.is_empty());
+        assert_eq!(q.not_terms, vec!["bad phrase"]);
+    }
+
+    #[test]
+    fn test_parse_query_explicit_and() {
+        let q = parse_query("Altera AND outages");
+        assert_eq!(q.and_terms, vec!["altera", "outages"]);
+        assert!(q.or_groups.is_empty());
+        assert_eq!(q.highlight_terms, vec!["altera", "outages"]);
+    }
+
+    #[test]
+    fn test_parse_query_case_preservation() {
+        let q = parse_query("Hello WORLD");
+        assert_eq!(q.and_terms, vec!["hello", "world"]);
     }
 
     #[test]
