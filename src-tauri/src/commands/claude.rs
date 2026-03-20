@@ -153,14 +153,12 @@ fn get_project_path_from_sessions(project_dir: &PathBuf) -> Result<String, Strin
         if let Ok(entry) = entry {
             let path = entry.path();
             if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("jsonl") {
-                // Read the JSONL file and find the first line with a valid cwd
                 if let Ok(file) = fs::File::open(&path) {
                     let reader = BufReader::new(file);
-                    // Check first few lines instead of just the first line
-                    // Some session files may have null cwd in the first line
-                    for line in reader.lines().take(10) {
+                    // Scan up to 20 lines — cwd may not be in the first line
+                    // (e.g. first line can be a "file-history-snapshot" entry)
+                    for line in reader.lines().take(20) {
                         if let Ok(line_content) = line {
-                            // Parse the JSON and extract cwd
                             if let Ok(json) =
                                 serde_json::from_str::<serde_json::Value>(&line_content)
                             {
