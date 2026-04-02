@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { 
   Terminal, 
   User, 
@@ -14,6 +14,87 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { getClaudeSyntaxTheme } from "@/lib/claudeSyntaxTheme";
 import { useTheme } from "@/hooks";
 import type { ClaudeStreamMessage } from "./AgentExecution";
+
+/** Renders user text with collapsed images and long pasted text */
+function UserTextDisplay({ text, imageCounter }: { text: string; imageCounter: React.MutableRefObject<number> }) {
+  const LINE_THRESHOLD = 10;
+
+  // Split text into segments: image refs and regular text
+  const segments = useMemo(() => {
+    const parts: { type: 'text' | 'image'; content: string; dataUrl?: string; imageNum?: number }[] = [];
+    const regex = /@"(data:image\/[^;]+;base64,[^"]+)"/g;
+    let lastIndex = 0;
+    let match;
+
+    while ((match = regex.exec(text)) !== null) {
+      // Text before this image ref
+      if (match.index > lastIndex) {
+        parts.push({ type: 'text', content: text.slice(lastIndex, match.index) });
+      }
+      imageCounter.current += 1;
+      parts.push({ type: 'image', content: '', dataUrl: match[1], imageNum: imageCounter.current });
+      lastIndex = match.index + match[0].length;
+    }
+    // Remaining text
+    if (lastIndex < text.length) {
+      parts.push({ type: 'text', content: text.slice(lastIndex) });
+    }
+    return parts;
+  }, [text]);
+
+  return (
+    <>
+      {segments.map((seg, i) => {
+        if (seg.type === 'image') {
+          return (
+            <span key={i} className="inline-flex items-center gap-1.5 align-middle">
+              <span className="text-blue-400 font-medium">[Image #{seg.imageNum}]</span>
+              {seg.dataUrl && (
+                <img
+                  src={seg.dataUrl}
+                  alt={`Image #${seg.imageNum}`}
+                  className="inline-block max-h-16 max-w-24 rounded border border-muted-foreground/30 align-middle"
+                />
+              )}
+            </span>
+          );
+        }
+        // Text segment — check if long
+        const trimmed = seg.content.trim();
+        if (!trimmed) return null;
+        const lines = trimmed.split('\n');
+        if (lines.length > LINE_THRESHOLD) {
+          return <CollapsedText key={i} text={trimmed} lineCount={lines.length} />;
+        }
+        return <span key={i}>{seg.content}</span>;
+      })}
+    </>
+  );
+}
+
+function CollapsedText({ text, lineCount }: { text: string; lineCount: number }) {
+  const [expanded, setExpanded] = useState(false);
+  const preview = text.split('\n').slice(0, 3).join('\n');
+  return (
+    <div className="my-1">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="text-blue-400 hover:text-blue-300 text-sm font-medium cursor-pointer"
+      >
+        {expanded ? '▼' : '▶'} [Pasted text +{lineCount} lines]
+      </button>
+      {expanded ? (
+        <pre className="mt-1 p-2 bg-background/50 rounded border border-muted-foreground/20 text-xs font-mono overflow-x-auto whitespace-pre-wrap max-h-64 overflow-y-auto">
+          {text}
+        </pre>
+      ) : (
+        <pre className="mt-1 p-2 bg-background/50 rounded border border-muted-foreground/20 text-xs font-mono overflow-x-auto whitespace-pre-wrap opacity-60 max-h-12 overflow-hidden">
+          {preview}...
+        </pre>
+      )}
+    </div>
+  );
+}
 import {
   TodoWidget,
   TodoReadWidget,
@@ -52,6 +133,9 @@ interface StreamMessageProps {
  * Component to render a single Claude Code stream message
  */
 const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, className, streamMessages, onLinkDetected }) => {
+  // Counter for image numbering within this message
+  const imageCounterRef = React.useRef(0);
+
   // State to track tool results mapped by tool call ID
   const [toolResults, setToolResults] = useState<Map<string, any>>(new Map());
   
@@ -358,10 +442,10 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                       return <CommandOutputWidget output={output} onLinkDetected={onLinkDetected} />;
                     }
                     
-                    // Otherwise render as plain text
+                    // Render with image/long-text support
                     return (
                       <div className="text-sm">
-                        {contentStr}
+                        <UserTextDisplay text={contentStr} imageCounter={imageCounterRef} />
                       </div>
                     );
                   })()
@@ -612,14 +696,14 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                   // Text content
                   if (content.type === "text") {
                     // Handle both string and object formats
-                    const textContent = typeof content.text === 'string' 
-                      ? content.text 
+                    const textContent = typeof content.text === 'string'
+                      ? content.text
                       : (content.text?.text || JSON.stringify(content.text));
-                    
+
                     renderedSomething = true;
                     return (
                       <div key={idx} className="text-sm">
-                        {textContent}
+                        <UserTextDisplay text={textContent} imageCounter={imageCounterRef} />
                       </div>
                     );
                   }
@@ -656,30 +740,10 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
                   {isError ? "Execution Failed" : "Execution Complete"}
                 </h4>
                 
-                {message.result && (
+                {/* Result text is already shown in the assistant message above; only show if it's an error */}
+                {isError && message.result && (
                   <div className="prose prose-sm dark:prose-invert max-w-none">
-                    <ReactMarkdown
-                      remarkPlugins={[remarkGfm]}
-                      components={{
-                        code({ node, inline, className, children, ...props }: any) {
-                          const match = /language-(\w+)/.exec(className || '');
-                          return !inline && match ? (
-                            <SyntaxHighlighter
-                              style={syntaxTheme}
-                              language={match[1]}
-                              PreTag="div"
-                              {...props}
-                            >
-                              {String(children).replace(/\n$/, '')}
-                            </SyntaxHighlighter>
-                          ) : (
-                            <code className={className} {...props}>
-                              {children}
-                            </code>
-                          );
-                        }
-                      }}
-                    >
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
                       {message.result}
                     </ReactMarkdown>
                   </div>
