@@ -3,15 +3,7 @@ import { api } from '@/lib/api';
 import { getEnvironmentInfo } from '@/lib/apiAdapter';
 import type { ClaudeStreamMessage } from '../AgentExecution';
 
-// Conditional import for Tauri
-let tauriListen: any;
-try {
-  if (typeof window !== 'undefined' && window.__TAURI__) {
-    tauriListen = require('@tauri-apps/api/event').listen;
-  }
-} catch (e) {
-  console.log('[useClaudeMessages] Tauri event API not available, using web mode');
-}
+import { listen as tauriListen } from '@tauri-apps/api/event';
 
 interface UseClaudeMessagesOptions {
   onSessionInfo?: (info: { sessionId: string; projectId: string }) => void;
