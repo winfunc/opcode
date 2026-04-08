@@ -1,0 +1,71 @@
+{
+  "welcome": {
+    "title": "Welcome to opcode",
+    "cc_agents": "CC Agents",
+    "projects": "Projects"
+  },
+  "navigation": {
+    "agents": "Agents",
+    "usage": "Usage",
+    "claude": "Claude",
+    "mcp": "MCP",
+    "settings": "Settings",
+    "info": "Info"
+  },
+  "projects": {
+    "title": "Projects",
+    "open_project": "Open Project",
+    "loading": "Loading projects...",
+    "no_projects": "No projects found",
+    "create_project": "Create Project"
+  },
+  "sessions": {
+    "title": "Sessions",
+    "loading": "Loading sessions...",
+    "no_sessions": "No sessions found",
+    "resume": "Resume",
+    "new_session": "New Session"
+  },
+  "agents": {
+    "title": "CC Agents",
+    "create_agent": "Create Agent",
+    "execute": "Execute",
+    "running": "Running",
+    "completed": "Completed",
+    "failed": "Failed"
+  },
+  "usage": {
+    "title": "Usage Dashboard",
+    "cost": "Cost",
+    "tokens": "Tokens",
+    "by_model": "By Model",
+    "by_project": "By Project",
+    "export": "Export Data"
+  },
+  "mcp": {
+    "title": "MCP Manager",
+    "add_server": "Add Server",
+    "import": "Import",
+    "test": "Test Connection"
+  },
+  "settings": {
+    "title": "Settings",
+    "general": "General",
+    "appearance": "Appearance",
+    "language": "Language",
+    "save": "Save"
+  },
+  "common": {
+    "back": "Back",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "submit": "Submit",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "info": "Info"
+  }
+}

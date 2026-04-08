@@ -1,0 +1,71 @@
+{
+  "welcome": {
+    "title": "欢迎使用 opcode",
+    "cc_agents": "CC 代理",
+    "projects": "项目"
+  },
+  "navigation": {
+    "agents": "代理",
+    "usage": "使用情况",
+    "claude": "Claude",
+    "mcp": "MCP",
+    "settings": "设置",
+    "info": "信息"
+  },
+  "projects": {
+    "title": "项目",
+    "open_project": "打开项目",
+    "loading": "加载项目中...",
+    "no_projects": "未找到项目",
+    "create_project": "创建项目"
+  },
+  "sessions": {
+    "title": "会话",
+    "loading": "加载会话中...",
+    "no_sessions": "未找到会话",
+    "resume": "恢复",
+    "new_session": "新会话"
+  },
+  "agents": {
+    "title": "CC 代理",
+    "create_agent": "创建代理",
+    "execute": "执行",
+    "running": "运行中",
+    "completed": "已完成",
+    "failed": "失败"
+  },
+  "usage": {
+    "title": "使用情况仪表板",
+    "cost": "成本",
+    "tokens": "令牌",
+    "by_model": "按模型",
+    "by_project": "按项目",
+    "export": "导出数据"
+  },
+  "mcp": {
+    "title": "MCP 管理器",
+    "add_server": "添加服务器",
+    "import": "导入",
+    "test": "测试连接"
+  },
+  "settings": {
+    "title": "设置",
+    "general": "常规",
+    "appearance": "外观",
+    "language": "语言",
+    "save": "保存"
+  },
+  "common": {
+    "back": "返回",
+    "save": "保存",
+    "cancel": "取消",
+    "delete": "删除",
+    "edit": "编辑",
+    "create": "创建",
+    "submit": "提交",
+    "loading": "加载中...",
+    "error": "错误",
+    "success": "成功",
+    "info": "信息"
+  }
+}
