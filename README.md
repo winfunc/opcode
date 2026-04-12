@@ -171,7 +171,7 @@ Before building opcode from source, ensure you have the following installed:
 
 #### System Requirements
 
-- **Operating System**: Windows 10/11, macOS 11+, or Linux (Ubuntu 20.04+)
+- **Operating System**: Windows 10/11, macOS 11+, or Linux (Ubuntu 20.04+, Fedora 40+)
 - **RAM**: Minimum 4GB (8GB recommended)
 - **Storage**: At least 1GB free space
 
@@ -221,6 +221,24 @@ sudo apt install -y \
   libxdo-dev \
   libsoup-3.0-dev \
   libjavascriptcoregtk-4.1-dev
+```
+
+**Linux (Fedora/RHEL)**
+```bash
+# Install system dependencies
+sudo dnf install -y \
+  webkit2gtk4.1-devel \
+  gtk3-devel \
+  libappindicator-gtk3-devel \
+  librsvg2-devel \
+  patchelf \
+  gcc gcc-c++ make \
+  openssl-devel \
+  libxdo-devel \
+  libsoup3-devel \
+  javascriptcoregtk4.1-devel \
+  perl-IPC-Cmd \
+  perl-File-Compare
 ```
 
 **macOS**
@@ -290,6 +308,11 @@ brew install pkg-config
 2. **Linux: "webkit2gtk not found" error**
    - Install the webkit2gtk development packages listed above
    - On newer Ubuntu versions, you might need `libwebkit2gtk-4.0-dev`
+   - On Fedora, the package is named `webkit2gtk4.1-devel`
+
+6. **Fedora: OpenSSL build fails with missing Perl modules**
+   - Install `perl-IPC-Cmd` and `perl-File-Compare` (included in the Fedora dependencies above)
+   - Alternatively, skip the vendored OpenSSL build by setting `OPENSSL_NO_VENDOR=1 bun run tauri build`
 
 3. **Windows: "MSVC not found" error**
    - Install Visual Studio Build Tools with C++ support
@@ -322,7 +345,8 @@ The build process creates several artifacts:
 
 - **Executable**: The main opcode application
 - **Installers** (when using `tauri build`):
-  - `.deb` package (Linux)
+  - `.deb` package (Debian/Ubuntu)
+  - `.rpm` package (Fedora/RHEL)
   - `.AppImage` (Linux)
   - `.dmg` installer (macOS)
   - `.msi` installer (Windows)
