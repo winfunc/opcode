@@ -156,9 +156,8 @@ fn get_project_path_from_sessions(project_dir: &PathBuf) -> Result<String, Strin
                 // Read the JSONL file and find the first line with a valid cwd
                 if let Ok(file) = fs::File::open(&path) {
                     let reader = BufReader::new(file);
-                    // Check first few lines instead of just the first line
-                    // Some session files may have null cwd in the first line
-                    for line in reader.lines().take(10) {
+                    // Some session files may start with metadata entries before cwd appears.
+                    for line in reader.lines() {
                         if let Ok(line_content) = line {
                             // Parse the JSON and extract cwd
                             if let Ok(json) =
@@ -2271,6 +2270,21 @@ mod tests {
         let result = get_project_path_from_sessions(&project_dir);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "/Users/test/project");
+    }
+
+    #[test]
+    fn test_get_project_path_from_sessions_scans_past_ten_lines() {
+        let temp_dir = TempDir::new().unwrap();
+        let project_dir = temp_dir.path().to_path_buf();
+
+        let mut lines = vec![r#"{"type":"permission-mode"}"#; 12];
+        lines.push(r#"{"type":"system","cwd":"/Users/test/deep-project"}"#);
+        let content = lines.join("\n");
+        create_test_session_file(&project_dir, "session1.jsonl", &content).unwrap();
+
+        let result = get_project_path_from_sessions(&project_dir);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "/Users/test/deep-project");
     }
 
     #[test]
