@@ -1,0 +1,16 @@
+# Keep GitHub Actions up to date with GitHub's Dependabot...
+# https://docs.github.com/en/code-security/how-tos/secure-your-supply-chain/secure-your-dependencies/auto-update-actions
+# https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference#package-ecosystem
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    groups:
+      github-actions:
+        patterns:
+          - "*"  # Group all Actions updates into a single larger pull request
+    schedule:
+      interval: weekly
+    cooldown:  # https://nesbitt.io/2026/03/04/package-managers-need-to-cool-down.html
+      default-days: 7
+      exclude:
