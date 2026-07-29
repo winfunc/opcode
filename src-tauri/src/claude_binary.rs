@@ -214,7 +214,11 @@ fn try_which_command() -> Option<ClaudeInstallation> {
 fn try_which_command() -> Option<ClaudeInstallation> {
     debug!("Trying 'where claude' to find binary...");
 
-    match Command::new("where").arg("claude").output() {
+    let mut cmd = Command::new("where");
+    cmd.arg("claude");
+    suppress_console_window_std(&mut cmd);
+
+    match cmd.output() {
         Ok(output) if output.status.success() => {
             let output_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
 
@@ -481,7 +485,10 @@ fn find_standard_installations() -> Vec<ClaudeInstallation> {
     }
 
     // Also check if claude is available in PATH (without full path)
-    if let Ok(output) = Command::new("claude.exe").arg("--version").output() {
+    let mut path_check_cmd = Command::new("claude.exe");
+    path_check_cmd.arg("--version");
+    suppress_console_window_std(&mut path_check_cmd);
+    if let Ok(output) = path_check_cmd.output() {
         if output.status.success() {
             debug!("claude.exe is available in PATH");
             let version = extract_version_from_output(&output.stdout);
@@ -500,7 +507,11 @@ fn find_standard_installations() -> Vec<ClaudeInstallation> {
 
 /// Get Claude version by running --version command
 fn get_claude_version(path: &str) -> Result<Option<String>, String> {
-    match Command::new(path).arg("--version").output() {
+    let mut cmd = Command::new(path);
+    cmd.arg("--version");
+    suppress_console_window_std(&mut cmd);
+
+    match cmd.output() {
         Ok(output) => {
             if output.status.success() {
                 Ok(extract_version_from_output(&output.stdout))
@@ -616,6 +627,43 @@ fn compare_versions(a: &str, b: &str) -> Ordering {
     Ordering::Equal
 }
 
+/// Windows process creation flag that prevents a console window from being
+/// allocated for the child process. Without this, every spawn of the Claude
+/// CLI (and any console subprocess it spawns in turn, e.g. an MCP server)
+/// flashes a visible CMD window on top of the app.
+#[cfg(target_os = "windows")]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
+
+/// Configures a tokio [`Command`](tokio::process::Command) to not open a
+/// visible console window when spawned on Windows. No-op on other platforms.
+/// Does not affect stdout/stderr piping - `Stdio::piped()` is independent of
+/// console window allocation.
+pub fn suppress_console_window(cmd: &mut tokio::process::Command) {
+    #[cfg(target_os = "windows")]
+    {
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = cmd;
+    }
+}
+
+/// Same as [`suppress_console_window`] but for a plain `std::process::Command`,
+/// used by the short-lived binary-detection commands below (`where`,
+/// `--version`) which also run on every prompt via `find_claude_binary`.
+fn suppress_console_window_std(cmd: &mut Command) {
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = cmd;
+    }
+}
+
 /// Helper function to create a Command with proper environment variables
 /// This ensures commands like Claude can find Node.js and other dependencies
 pub fn create_command_with_env(program: &str) -> Command {
@@ -688,6 +736,8 @@ pub fn create_command_with_env(program: &str) -> Command {
             }
         }
     }
+
+    suppress_console_window_std(&mut cmd);
 
     cmd
 }

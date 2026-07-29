@@ -497,6 +497,7 @@ async fn execute_claude_command(
     cmd.current_dir(&project_path);
     cmd.stdout(std::process::Stdio::piped());
     cmd.stderr(std::process::Stdio::piped());
+    crate::claude_binary::suppress_console_window(&mut cmd);
 
     println!(
         "[TRACE] Command: {} {:?} (in dir: {})",
@@ -609,6 +610,7 @@ async fn continue_claude_command(
     cmd.current_dir(&project_path);
     cmd.stdout(std::process::Stdio::piped());
     cmd.stderr(std::process::Stdio::piped());
+    crate::claude_binary::suppress_console_window(&mut cmd);
 
     // Spawn and stream output
     let mut child = cmd
@@ -698,6 +700,7 @@ async fn resume_claude_command(
     cmd.current_dir(&project_path);
     cmd.stdout(std::process::Stdio::piped());
     cmd.stderr(std::process::Stdio::piped());
+    crate::claude_binary::suppress_console_window(&mut cmd);
 
     println!(
         "[resume_claude_command] Command: {} {:?} (in dir: {})",

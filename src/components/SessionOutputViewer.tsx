@@ -24,6 +24,7 @@ export interface ClaudeStreamMessage {
   type: "system" | "assistant" | "user" | "result";
   subtype?: string;
   message?: {
+    id?: string;
     content?: any[];
     usage?: {
       input_tokens: number;
