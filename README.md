@@ -20,8 +20,6 @@
   </p>
 </div>
 
-![457013521-6133a738-d0cb-4d3e-8746-c6768c82672c](https://github.com/user-attachments/assets/a028de9e-d881-44d8-bae5-7326ab3558b9)
-
 
 
 https://github.com/user-attachments/assets/6bceea0f-60b6-4c3e-a745-b891de00b8d0
