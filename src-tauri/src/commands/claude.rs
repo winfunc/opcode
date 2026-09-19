@@ -286,6 +286,8 @@ fn create_command_with_env(program: &str) -> Command {
         }
     }
 
+    crate::claude_binary::suppress_console_window(&mut tokio_cmd);
+
     tokio_cmd
 }
 

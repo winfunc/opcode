@@ -12,6 +12,7 @@ export interface Tab {
   agentData?: any; // for agent-execution tabs
   claudeFileId?: string; // for claude-file tabs
   initialProjectPath?: string; // for chat tabs
+  projectId?: string; // originating project id for chat tabs, used to restore the session list on "Back"
   projectPath?: string; // for agent-execution tabs
   status: 'active' | 'idle' | 'running' | 'complete' | 'error';
   hasUnsavedChanges: boolean;

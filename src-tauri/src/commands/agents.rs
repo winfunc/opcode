@@ -1696,6 +1696,8 @@ fn create_command_with_env(program: &str) -> Command {
         tokio_cmd.env("PATH", "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin");
     }
 
+    crate::claude_binary::suppress_console_window(&mut tokio_cmd);
+
     tokio_cmd
 }
 

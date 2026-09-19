@@ -116,7 +116,8 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
         title: projectName,
         sessionId: undefined,
         sessionData: undefined,
-        initialProjectPath: selectedProject.path
+        initialProjectPath: selectedProject.path,
+        projectId: selectedProject.id
       });
     } else {
       updateTab(tab.id, {
@@ -124,10 +125,56 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
         title: 'New Session',
         sessionId: undefined,
         sessionData: undefined,
-        initialProjectPath: undefined
+        initialProjectPath: undefined,
+        projectId: undefined
       });
     }
   };
+
+  // When returning to the 'projects' view via ClaudeCodeSession's Back button,
+  // the tab type flips back to 'projects' but this component's local
+  // selectedProject state was never set (it's a fresh mount for tabs created
+  // directly as 'chat', e.g. from SessionList/"open in tab" flows). Restore
+  // the same project's session list using the id/path preserved on the tab
+  // itself, instead of falling back to the root project list.
+  useEffect(() => {
+    if (tab.type !== 'projects' || selectedProject) return;
+
+    const projectId = tab.projectId || tab.sessionData?.project_id;
+    const projectPath = tab.initialProjectPath || tab.sessionData?.project_path;
+    if (!projectId) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const sessionList = await api.getProjectSessions(projectId);
+        if (cancelled) return;
+        setSessions(sessionList);
+        setSelectedProject({
+          id: projectId,
+          path: projectPath || '',
+          sessions: sessionList.map(s => s.id),
+          created_at: Math.floor(Date.now() / 1000),
+        });
+        const projectName = (projectPath || '').split(/[\\/]/).pop() || 'Project';
+        updateTab(tab.id, { title: projectName });
+      } catch (err) {
+        if (!cancelled) {
+          console.error('Failed to restore project sessions:', err);
+          setError('Failed to load sessions for this project.');
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab.type, tab.projectId, tab.sessionData, tab.initialProjectPath]);
   
   // Panel visibility - hide when not active
   const panelVisibilityClass = isActive ? "" : "hidden";
@@ -220,7 +267,8 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
                             title: session.project_path.split('/').pop() || 'Session',
                             sessionId: session.id,
                             sessionData: session,
-                            initialProjectPath: session.project_path
+                            initialProjectPath: session.project_path,
+                            projectId: session.project_id
                           });
                         }}
                         onEditClaudeFile={(file: ClaudeMdFile) => {
