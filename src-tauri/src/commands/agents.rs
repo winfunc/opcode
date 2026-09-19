@@ -6,7 +6,10 @@ use reqwest;
 use rusqlite::{params, Connection, Result as SqliteResult};
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
+use serde_yaml;
+use std::fs;
 use std::io::{BufRead, BufReader};
+use std::path::Path;
 use std::process::Stdio;
 use std::sync::Mutex;
 use tauri::{AppHandle, Emitter, Manager, State};
@@ -20,7 +23,7 @@ fn find_claude_binary(app_handle: &AppHandle) -> Result<String, String> {
     crate::claude_binary::find_claude_binary(app_handle)
 }
 
-/// Represents a CC Agent stored in the database
+/// Represents a CC Agent stored in the database or loaded from filesystem
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Agent {
     pub id: Option<i64>,
@@ -35,6 +38,10 @@ pub struct Agent {
     pub hooks: Option<String>, // JSON string of hooks configuration
     pub created_at: String,
     pub updated_at: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source: Option<String>, // "database" or "filesystem"
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub file_path: Option<String>, // Path if loaded from filesystem
 }
 
 /// Represents an agent execution run
@@ -90,6 +97,16 @@ pub struct AgentData {
     pub default_task: Option<String>,
     pub model: String,
     pub hooks: Option<String>,
+}
+
+/// Frontmatter structure for agent markdown files
+#[derive(Debug, Serialize, Deserialize)]
+struct AgentFrontmatter {
+    name: String,
+    description: Option<String>,
+    tools: Option<String>,
+    model: Option<String>,
+    icon: Option<String>,
 }
 
 /// Database connection state
@@ -345,6 +362,119 @@ pub fn init_database(app: &AppHandle) -> SqliteResult<Connection> {
     Ok(conn)
 }
 
+/// Parse a markdown file with YAML frontmatter
+fn parse_agent_markdown(file_path: &Path) -> Result<Agent, String> {
+    let content = fs::read_to_string(file_path)
+        .map_err(|e| format!("Failed to read file {}: {}", file_path.display(), e))?;
+
+    // Split frontmatter and content
+    let parts: Vec<&str> = content.splitn(3, "---").collect();
+    if parts.len() < 3 {
+        return Err(format!("Invalid markdown format in {}", file_path.display()));
+    }
+
+    // Parse frontmatter
+    let frontmatter: AgentFrontmatter = serde_yaml::from_str(parts[1])
+        .map_err(|e| format!("Failed to parse frontmatter in {}: {}", file_path.display(), e))?;
+
+    // Extract system prompt from markdown content
+    let system_prompt = parts[2].trim().to_string();
+
+    // Determine icon based on name or use default
+    let icon = frontmatter.icon.unwrap_or_else(|| {
+        // Map common agent names to icons
+        match frontmatter.name.as_str() {
+            name if name.contains("ai") => "bot",
+            name if name.contains("api") => "globe",
+            name if name.contains("cloud") => "cloud",
+            name if name.contains("data") => "database",
+            name if name.contains("test") || name.contains("qa") => "shield",
+            name if name.contains("deploy") => "package",
+            name if name.contains("architect") => "layout",
+            name if name.contains("security") => "shield",
+            name if name.contains("debug") => "bug",
+            name if name.contains("doc") => "file-text",
+            name if name.contains("review") => "eye",
+            _ => "bot",
+        }.to_string()
+    });
+
+    let now = chrono::Local::now().to_rfc3339();
+
+    Ok(Agent {
+        id: None, // File-based agents don't have database IDs
+        name: frontmatter.name.clone(),
+        icon,
+        system_prompt,
+        default_task: frontmatter.description,
+        model: frontmatter.model.unwrap_or_else(|| "sonnet".to_string()),
+        enable_file_read: true,
+        enable_file_write: true,
+        enable_network: false,
+        hooks: None,
+        created_at: now.clone(),
+        updated_at: now,
+        source: Some("filesystem".to_string()),
+        file_path: Some(file_path.to_string_lossy().to_string()),
+    })
+}
+
+/// Load agents from the .claude/agents directory
+fn load_filesystem_agents() -> Vec<Agent> {
+    let mut agents = Vec::new();
+
+    // Get the .claude/agents directory
+    let home = match dirs::home_dir() {
+        Some(h) => h,
+        None => {
+            warn!("Could not determine home directory");
+            return agents;
+        }
+    };
+
+    let agents_dir = home.join(".claude").join("agents");
+    if !agents_dir.exists() {
+        debug!("No .claude/agents directory found");
+        return agents;
+    }
+
+    // Recursively walk through the agents directory
+    fn scan_directory(dir: &Path, agents: &mut Vec<Agent>) {
+        if let Ok(entries) = fs::read_dir(dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    // Skip hidden directories
+                    if let Some(name) = path.file_name() {
+                        if !name.to_string_lossy().starts_with('.') {
+                            scan_directory(&path, agents);
+                        }
+                    }
+                } else if path.is_file() {
+                    // Check if it's a markdown file
+                    if let Some(ext) = path.extension() {
+                        if ext == "md" || ext == "markdown" {
+                            match parse_agent_markdown(&path) {
+                                Ok(agent) => {
+                                    debug!("Loaded agent from file: {}", agent.name);
+                                    agents.push(agent);
+                                }
+                                Err(e) => {
+                                    warn!("Failed to parse agent file {}: {}", path.display(), e);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    scan_directory(&agents_dir, &mut agents);
+    info!("Loaded {} agents from filesystem", agents.len());
+    agents
+}
+
 /// List all agents
 #[tauri::command]
 pub async fn list_agents(db: State<'_, AgentDb>) -> Result<Vec<Agent>, String> {
@@ -354,7 +484,7 @@ pub async fn list_agents(db: State<'_, AgentDb>) -> Result<Vec<Agent>, String> {
         .prepare("SELECT id, name, icon, system_prompt, default_task, model, enable_file_read, enable_file_write, enable_network, hooks, created_at, updated_at FROM agents ORDER BY created_at DESC")
         .map_err(|e| e.to_string())?;
 
-    let agents = stmt
+    let mut agents = stmt
         .query_map([], |row| {
             Ok(Agent {
                 id: Some(row.get(0)?),
@@ -371,11 +501,19 @@ pub async fn list_agents(db: State<'_, AgentDb>) -> Result<Vec<Agent>, String> {
                 hooks: row.get(9)?,
                 created_at: row.get(10)?,
                 updated_at: row.get(11)?,
+                source: Some("database".to_string()),
+                file_path: None,
             })
         })
         .map_err(|e| e.to_string())?
         .collect::<Result<Vec<_>, _>>()
         .map_err(|e| e.to_string())?;
+
+    // Load agents from filesystem
+    let filesystem_agents = load_filesystem_agents();
+
+    // Combine agents from both sources
+    agents.extend(filesystem_agents);
 
     Ok(agents)
 }
@@ -427,6 +565,8 @@ pub async fn create_agent(
                     hooks: row.get(9)?,
                     created_at: row.get(10)?,
                     updated_at: row.get(11)?,
+                    source: Some("database".to_string()),
+                    file_path: None,
                 })
             },
         )
@@ -512,6 +652,8 @@ pub async fn update_agent(
                     hooks: row.get(9)?,
                     created_at: row.get(10)?,
                     updated_at: row.get(11)?,
+                    source: Some("database".to_string()),
+                    file_path: None,
                 })
             },
         )
@@ -554,6 +696,8 @@ pub async fn get_agent(db: State<'_, AgentDb>, id: i64) -> Result<Agent, String>
                     hooks: row.get(9)?,
                     created_at: row.get(10)?,
                     updated_at: row.get(11)?,
+                    source: Some("database".to_string()),
+                    file_path: None,
                 })
             },
         )
@@ -1768,6 +1912,8 @@ pub async fn import_agent(db: State<'_, AgentDb>, json_data: String) -> Result<A
                     hooks: row.get(9)?,
                     created_at: row.get(10)?,
                     updated_at: row.get(11)?,
+                    source: Some("database".to_string()),
+                    file_path: None,
                 })
             },
         )
