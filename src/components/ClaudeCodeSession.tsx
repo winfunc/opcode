@@ -15,21 +15,16 @@ import { Label } from "@/components/ui/label";
 import { Popover } from "@/components/ui/popover";
 import { api, type Session } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { listen as tauriListen } from "@tauri-apps/api/event";
 
-// Conditional imports for Tauri APIs
-let tauriListen: any;
 type UnlistenFn = () => void;
 
-try {
-  if (typeof window !== 'undefined' && window.__TAURI__) {
-    tauriListen = require("@tauri-apps/api/event").listen;
-  }
-} catch (e) {
-  console.log('[ClaudeCodeSession] Tauri APIs not available, using web mode');
-}
-
 // Web-compatible replacements
-const listen = tauriListen || ((eventName: string, callback: (event: any) => void) => {
+const listen = (eventName: string, callback: (event: any) => void) => {
+  if (typeof window !== 'undefined' && '__TAURI__' in window) {
+    return tauriListen(eventName, callback);
+  }
+
   console.log('[ClaudeCodeSession] Setting up DOM event listener for:', eventName);
 
   // In web mode, listen for DOM events
@@ -46,7 +41,7 @@ const listen = tauriListen || ((eventName: string, callback: (event: any) => voi
     console.log('[ClaudeCodeSession] Removing DOM event listener for:', eventName);
     window.removeEventListener(eventName, domEventHandler);
   });
-});
+};
 import { StreamMessage } from "./StreamMessage";
 import { FloatingPromptInput, type FloatingPromptInputRef } from "./FloatingPromptInput";
 import { ErrorBoundary } from "./ErrorBoundary";
