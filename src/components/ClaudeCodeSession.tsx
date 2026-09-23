@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
+import {
   Copy,
   ChevronDown,
   GitBranch,
@@ -15,6 +15,11 @@ import { Label } from "@/components/ui/label";
 import { Popover } from "@/components/ui/popover";
 import { api, type Session } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import {
+  isImeComposingKeydown,
+  createCompositionHandlers,
+  type IMECompositionRefs,
+} from "@/utils/ime";
 
 // Conditional imports for Tauri APIs
 let tauriListen: any;
@@ -145,7 +150,9 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   const isMountedRef = useRef(true);
   const isListeningRef = useRef(false);
   const sessionStartTime = useRef<number>(Date.now());
-  const isIMEComposingRef = useRef(false);
+  // Tracks IME composition state
+  const isComposingRef = useRef(false);
+  const justEndedRef = useRef(false);
   
   // Session metrics state for enhanced analytics
   const sessionMetrics = useRef({
@@ -1096,15 +1103,13 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     setShowForkDialog(true);
   };
 
-  const handleCompositionStart = () => {
-    isIMEComposingRef.current = true;
-  };
-
-  const handleCompositionEnd = () => {
-    setTimeout(() => {
-      isIMEComposingRef.current = false;
-    }, 0);
-  };
+  // IME composition handlers using shared utility
+  const imeRefs: IMECompositionRefs = { isComposingRef, justEndedRef };
+  const {
+    onCompositionStart: handleCompositionStart,
+    onCompositionEnd: handleCompositionEnd,
+    onBlur: handleBlur,
+  } = createCompositionHandlers(imeRefs);
 
   const handleConfirmFork = async () => {
     if (!forkCheckpointId || !forkSessionName.trim() || !effectiveSession) return;
@@ -1695,8 +1700,14 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                 value={forkSessionName}
                 onChange={(e) => setForkSessionName(e.target.value)}
                 onKeyDown={(e) => {
+                  // Reset justEnded flag on non-Enter keys
+                  if (justEndedRef.current && e.key !== "Enter") {
+                    justEndedRef.current = false;
+                  }
                   if (e.key === "Enter" && !isLoading) {
-                    if (e.nativeEvent.isComposing || isIMEComposingRef.current) {
+                    const composing = isImeComposingKeydown(e, isComposingRef);
+                    if (composing || justEndedRef.current) {
+                      justEndedRef.current = false;
                       return;
                     }
                     handleConfirmFork();
@@ -1704,6 +1715,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                 }}
                 onCompositionStart={handleCompositionStart}
                 onCompositionEnd={handleCompositionEnd}
+                onBlur={handleBlur}
               />
             </div>
           </div>

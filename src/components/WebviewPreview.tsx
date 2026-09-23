@@ -16,6 +16,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import {
+  isImeComposingKeydown,
+  createCompositionHandlers,
+  type IMECompositionRefs,
+} from "@/utils/ime";
 
 interface WebviewPreviewProps {
   /**
@@ -76,7 +81,8 @@ const WebviewPreviewComponent: React.FC<WebviewPreviewProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   // const previewId = useRef(`preview-${Date.now()}`);
-  const isIMEComposingRef = useRef(false);
+  const isComposingRef = useRef(false);
+  const justEndedRef = useRef(false);
 
   // Handle ESC key to exit full screen
   useEffect(() => {
@@ -143,19 +149,22 @@ const WebviewPreviewComponent: React.FC<WebviewPreviewProps> = ({
     }
   };
 
-  const handleCompositionStart = () => {
-    isIMEComposingRef.current = true;
-  };
-
-  const handleCompositionEnd = () => {
-    setTimeout(() => {
-      isIMEComposingRef.current = false;
-    }, 0);
-  };
+  // IME composition handlers using shared utility
+  const imeRefs: IMECompositionRefs = { isComposingRef, justEndedRef };
+  const {
+    onCompositionStart: handleCompositionStart,
+    onCompositionEnd: handleCompositionEnd,
+    onBlur: handleBlur,
+  } = createCompositionHandlers(imeRefs);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (justEndedRef.current && e.key !== "Enter") {
+      justEndedRef.current = false;
+    }
     if (e.key === 'Enter') {
-      if (e.nativeEvent.isComposing || isIMEComposingRef.current) {
+      const composing = isImeComposingKeydown(e, isComposingRef);
+      if (composing || justEndedRef.current) {
+        justEndedRef.current = false;
         return;
       }
       handleNavigate();
@@ -286,6 +295,7 @@ const WebviewPreviewComponent: React.FC<WebviewPreviewProps> = ({
               onKeyDown={handleKeyDown}
               onCompositionStart={handleCompositionStart}
               onCompositionEnd={handleCompositionEnd}
+              onBlur={handleBlur}
               placeholder="Enter URL..."
               className="pr-10 h-8 text-sm font-mono"
             />

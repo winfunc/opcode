@@ -12,7 +12,7 @@ import {
   Lightbulb,
   Cpu,
   Rocket,
-  
+
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,11 @@ import { FilePicker } from "./FilePicker";
 import { SlashCommandPicker } from "./SlashCommandPicker";
 import { ImagePreview } from "./ImagePreview";
 import { type FileEntry, type SlashCommand } from "@/lib/api";
+import {
+  isImeComposingKeydown,
+  createCompositionHandlers,
+  type IMECompositionRefs,
+} from "@/utils/ime";
 
 // Conditional import for Tauri webview window
 let tauriGetCurrentWebviewWindow: any;
@@ -242,7 +247,10 @@ const FloatingPromptInputInner = (
   const expandedTextareaRef = useRef<HTMLTextAreaElement>(null);
   const unlistenDragDropRef = useRef<(() => void) | null>(null);
   const [textareaHeight, setTextareaHeight] = useState<number>(48);
-  const isIMEComposingRef = useRef(false);
+  // Tracks IME composition state (between compositionstart and compositionend)
+  const isComposingRef = useRef(false);
+  // Flag to skip the first Enter after compositionend (one-shot)
+  const justEndedRef = useRef(false);
 
   // Expose a method to add images programmatically
   React.useImperativeHandle(
@@ -653,49 +661,17 @@ const FloatingPromptInputInner = (
     }, 0);
   };
 
-  const handleCompositionStart = () => {
-    isIMEComposingRef.current = true;
-  };
-
-  const handleCompositionEnd = () => {
-    setTimeout(() => {
-      isIMEComposingRef.current = false;
-    }, 0);
-  };
-
-  const isIMEInteraction = (event?: React.KeyboardEvent) => {
-    if (isIMEComposingRef.current) {
-      return true;
-    }
-
-    if (!event) {
-      return false;
-    }
-
-    const nativeEvent = event.nativeEvent;
-
-    if (nativeEvent.isComposing) {
-      return true;
-    }
-
-    const key = nativeEvent.key;
-    if (key === 'Process' || key === 'Unidentified') {
-      return true;
-    }
-
-    const keyboardEvent = nativeEvent as unknown as KeyboardEvent;
-    const keyCode = keyboardEvent.keyCode ?? (keyboardEvent as unknown as { which?: number }).which;
-    if (keyCode === 229) {
-      return true;
-    }
-
-    return false;
-  };
+  // IME composition handlers using shared utility
+  const imeRefs: IMECompositionRefs = { isComposingRef, justEndedRef };
+  const {
+    onCompositionStart: handleCompositionStart,
+    onCompositionEnd: handleCompositionEnd,
+    onBlur: handleBlur,
+  } = createCompositionHandlers(imeRefs);
 
   const handleSend = () => {
-    if (isIMEInteraction()) {
-      return;
-    }
+    // handleSend is called from button click, no IME check needed
+    // keydown path checks in handleKeyDown
 
     if (prompt.trim() && !disabled) {
       let finalPrompt = prompt.trim();
@@ -714,6 +690,11 @@ const FloatingPromptInputInner = (
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    // Reset justEnded flag on non-Enter keys
+    if (justEndedRef.current && e.key !== "Enter") {
+      justEndedRef.current = false;
+    }
+
     if (showFilePicker && e.key === 'Escape') {
       e.preventDefault();
       setShowFilePicker(false);
@@ -728,7 +709,7 @@ const FloatingPromptInputInner = (
       return;
     }
 
-    // Add keyboard shortcut for expanding
+    // Keyboard shortcut for expanding
     if (e.key === 'e' && (e.ctrlKey || e.metaKey) && e.shiftKey) {
       e.preventDefault();
       setIsExpanded(true);
@@ -742,7 +723,10 @@ const FloatingPromptInputInner = (
       !showFilePicker &&
       !showSlashCommandPicker
     ) {
-      if (isIMEInteraction(e)) {
+      // Skip if IME composing or just ended composition
+      const composing = isImeComposingKeydown(e, isComposingRef);
+      if (composing || justEndedRef.current) {
+        justEndedRef.current = false;
         return;
       }
       e.preventDefault();
@@ -901,6 +885,7 @@ const FloatingPromptInputInner = (
                 onChange={handleTextChange}
                 onCompositionStart={handleCompositionStart}
                 onCompositionEnd={handleCompositionEnd}
+                onBlur={handleBlur}
                 onPaste={handlePaste}
                 placeholder="Type your message..."
                 className="min-h-[200px] resize-none"
@@ -1226,6 +1211,7 @@ const FloatingPromptInputInner = (
                   onKeyDown={handleKeyDown}
                   onCompositionStart={handleCompositionStart}
                   onCompositionEnd={handleCompositionEnd}
+                  onBlur={handleBlur}
                   onPaste={handlePaste}
                   placeholder={
                     dragActive

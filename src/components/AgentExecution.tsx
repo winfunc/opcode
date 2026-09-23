@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  ArrowLeft, 
-  Play, 
-  StopCircle, 
+import {
+  ArrowLeft,
+  Play,
+  StopCircle,
   Terminal,
   AlertCircle,
   Loader2,
@@ -34,6 +34,11 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { HooksEditor } from "./HooksEditor";
 import { useTrackEvent, useComponentMetrics, useFeatureAdoptionTracking } from "@/hooks";
 import { useTabState } from "@/hooks/useTabState";
+import {
+  isImeComposingKeydown,
+  createCompositionHandlers,
+  type IMECompositionRefs,
+} from "@/utils/ime";
 
 interface AgentExecutionProps {
   /**
@@ -109,7 +114,8 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
   const [isHooksDialogOpen, setIsHooksDialogOpen] = useState(false);
 
   // IME composition state
-  const isIMEComposingRef = useRef(false);
+  const isComposingRef = useRef(false);
+  const justEndedRef = useRef(false);
   const [activeHooksTab, setActiveHooksTab] = useState("project");
 
   // Execution stats
@@ -431,15 +437,13 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
     }
   };
 
-  const handleCompositionStart = () => {
-    isIMEComposingRef.current = true;
-  };
-
-  const handleCompositionEnd = () => {
-    setTimeout(() => {
-      isIMEComposingRef.current = false;
-    }, 0);
-  };
+  // IME composition handlers using shared utility
+  const imeRefs: IMECompositionRefs = { isComposingRef, justEndedRef };
+  const {
+    onCompositionStart: handleCompositionStart,
+    onCompositionEnd: handleCompositionEnd,
+    onBlur: handleBlur,
+  } = createCompositionHandlers(imeRefs);
 
   const handleBackWithConfirmation = () => {
     if (isRunning) {
@@ -680,8 +684,13 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
                   disabled={isRunning}
                   className="flex-1 h-9"
                   onKeyDown={(e) => {
+                    if (justEndedRef.current && e.key !== "Enter") {
+                      justEndedRef.current = false;
+                    }
                     if (e.key === "Enter" && !isRunning && projectPath && task.trim()) {
-                      if (e.nativeEvent.isComposing || isIMEComposingRef.current) {
+                      const composing = isImeComposingKeydown(e, isComposingRef);
+                      if (composing || justEndedRef.current) {
+                        justEndedRef.current = false;
                         return;
                       }
                       handleExecute();
@@ -689,6 +698,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
                   }}
                   onCompositionStart={handleCompositionStart}
                   onCompositionEnd={handleCompositionEnd}
+                  onBlur={handleBlur}
                 />
                 <motion.div
                   whileTap={{ scale: 0.97 }}
