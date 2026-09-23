@@ -141,6 +141,8 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
   const unlistenRefs = useRef<UnlistenFn[]>([]);
   const hasActiveSessionRef = useRef(false);
   const floatingPromptRef = useRef<FloatingPromptInputRef>(null);
+  const floatingPromptBarRef = useRef<HTMLDivElement>(null);
+  const [floatingPromptBarHeight, setFloatingPromptBarHeight] = useState(0);
   const queuedPromptsRef = useRef<Array<{ id: string; prompt: string; model: "sonnet" | "opus" }>>([]);
   const isMountedRef = useRef(true);
   const isListeningRef = useRef(false);
@@ -1218,12 +1220,27 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     };
   }, [effectiveSession, projectPath]);
 
+  // Keep the message list's bottom padding in sync with the floating prompt
+  // bar's real height so the last message never ends up hidden behind it.
+  useEffect(() => {
+    const barEl = floatingPromptBarRef.current;
+    if (!barEl) return;
+
+    const updateHeight = () => setFloatingPromptBarHeight(barEl.offsetHeight);
+    updateHeight();
+
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(barEl);
+    return () => observer.disconnect();
+  }, []);
+
   const messagesList = (
     <div
       ref={parentRef}
-      className="flex-1 overflow-y-auto relative pb-20"
+      className="flex-1 overflow-y-auto relative"
       style={{
         contain: 'strict',
+        paddingBottom: `${floatingPromptBarHeight + 24}px`,
       }}
     >
       <div
@@ -1516,10 +1533,13 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
             </motion.div>
           )}
 
-          <div className={cn(
-            "fixed bottom-0 left-0 right-0 transition-all duration-300 z-50",
-            showTimeline && "sm:right-96"
-          )}>
+          <div
+            ref={floatingPromptBarRef}
+            className={cn(
+              "fixed bottom-0 left-0 right-0 transition-all duration-300 z-50",
+              showTimeline && "sm:right-96"
+            )}
+          >
             <FloatingPromptInput
               ref={floatingPromptRef}
               onSend={handleSendPrompt}
