@@ -1,7 +1,7 @@
 use axum::extract::ws::{Message, WebSocket};
 use axum::http::Method;
 use axum::{
-    extract::{Path, State as AxumState, WebSocketUpgrade},
+    extract::{Path, Query, State as AxumState, WebSocketUpgrade},
     response::{Html, Json, Response},
     routing::get,
     Router,
@@ -10,6 +10,7 @@ use chrono;
 use futures_util::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::net::TcpListener;
@@ -19,6 +20,9 @@ use tower_http::services::ServeDir;
 use which;
 
 use crate::commands;
+use crate::commands::claude::{
+    find_claude_md_files, read_claude_md_file, save_claude_md_file, ClaudeMdFile,
+};
 
 // Find Claude binary for web mode - use bundled binary first
 fn find_claude_binary_web() -> Result<String, String> {
@@ -766,6 +770,52 @@ async fn send_to_session(state: &AppState, session_id: &str, message: String) {
     }
 }
 
+/// Find CLAUDE.md files in a project directory
+async fn find_claude_md_files_handler(
+    Query(params): Query<HashMap<String, String>>,
+) -> Json<ApiResponse<Vec<ClaudeMdFile>>> {
+    let project_path = match params.get("projectPath") {
+        Some(p) => p.clone(),
+        None => return Json(ApiResponse::error("Missing projectPath parameter".to_string())),
+    };
+    match find_claude_md_files(project_path).await {
+        Ok(files) => Json(ApiResponse::success(files)),
+        Err(e) => Json(ApiResponse::error(e)),
+    }
+}
+
+/// Read a specific CLAUDE.md file
+async fn read_claude_md_file_handler(
+    Query(params): Query<HashMap<String, String>>,
+) -> Json<ApiResponse<String>> {
+    let file_path = match params.get("filePath") {
+        Some(p) => p.clone(),
+        None => return Json(ApiResponse::error("Missing filePath parameter".to_string())),
+    };
+    match read_claude_md_file(file_path).await {
+        Ok(content) => Json(ApiResponse::success(content)),
+        Err(e) => Json(ApiResponse::error(e)),
+    }
+}
+
+/// Save a CLAUDE.md file
+async fn save_claude_md_file_handler(
+    Query(params): Query<HashMap<String, String>>,
+) -> Json<ApiResponse<String>> {
+    let file_path = match params.get("filePath") {
+        Some(p) => p.clone(),
+        None => return Json(ApiResponse::error("Missing filePath parameter".to_string())),
+    };
+    let content = match params.get("content") {
+        Some(c) => c.clone(),
+        None => return Json(ApiResponse::error("Missing content parameter".to_string())),
+    };
+    match save_claude_md_file(file_path, content).await {
+        Ok(msg) => Json(ApiResponse::success(msg)),
+        Err(e) => Json(ApiResponse::error(e)),
+    }
+}
+
 /// Create the web server
 pub async fn create_web_server(port: u16) -> Result<(), Box<dyn std::error::Error>> {
     let state = AppState {
@@ -802,6 +852,10 @@ pub async fn create_web_server(port: u16) -> Result<(), Box<dyn std::error::Erro
         .route("/api/slash-commands", get(list_slash_commands))
         // MCP
         .route("/api/mcp/servers", get(mcp_list))
+        // CLAUDE.md file operations
+        .route("/api/claude-md", get(find_claude_md_files_handler))
+        .route("/api/claude-md/read", get(read_claude_md_file_handler))
+        .route("/api/claude-md/save", get(save_claude_md_file_handler))
         // Session history
         .route(
             "/api/sessions/{session_id}/history/{project_id}",
