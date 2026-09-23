@@ -1,8 +1,8 @@
-import { apiCall } from './apiAdapter';
-import type { HooksConfiguration } from '@/types/hooks';
+import { apiCall } from "./apiAdapter";
+import type { HooksConfiguration } from "@/types/hooks";
 
 /** Process type for tracking in ProcessRegistry */
-export type ProcessType = 
+export type ProcessType =
   | { AgentRun: { agent_id: number; agent_name: string } }
   | { ClaudeSession: { session_id: string } };
 
@@ -54,10 +54,21 @@ export interface Session {
 }
 
 /**
+ * Represents an environment variable group
+ */
+export interface EnvGroup {
+  name: string;
+  variables: Record<string, string>;
+}
+
+/**
  * Represents the settings from ~/.claude/settings.json
  */
 export interface ClaudeSettings {
   [key: string]: any;
+  env?: Record<string, string>;
+  envGroups?: Record<string, EnvGroup>;
+  activeEnvGroup?: string;
 }
 
 /**
@@ -302,7 +313,11 @@ export interface SessionTimeline {
 /**
  * Strategy for automatic checkpoint creation
  */
-export type CheckpointStrategy = 'manual' | 'per_prompt' | 'per_tool_use' | 'smart';
+export type CheckpointStrategy =
+  | "manual"
+  | "per_prompt"
+  | "per_tool_use"
+  | "smart";
 
 /**
  * Result of a checkpoint operation
@@ -481,7 +496,7 @@ export const api = {
    */
   async createProject(path: string): Promise<Project> {
     try {
-      return await apiCall<Project>('create_project', { path });
+      return await apiCall<Project>("create_project", { path });
     } catch (error) {
       console.error("Failed to create project:", error);
       throw error;
@@ -495,7 +510,7 @@ export const api = {
    */
   async getProjectSessions(projectId: string): Promise<Session[]> {
     try {
-      return await apiCall<Session[]>('get_project_sessions', { projectId });
+      return await apiCall<Session[]>("get_project_sessions", { projectId });
     } catch (error) {
       console.error("Failed to get project sessions:", error);
       throw error;
@@ -508,7 +523,7 @@ export const api = {
    */
   async fetchGitHubAgents(): Promise<GitHubAgentFile[]> {
     try {
-      return await apiCall<GitHubAgentFile[]>('fetch_github_agents');
+      return await apiCall<GitHubAgentFile[]>("fetch_github_agents");
     } catch (error) {
       console.error("Failed to fetch GitHub agents:", error);
       throw error;
@@ -522,7 +537,9 @@ export const api = {
    */
   async fetchGitHubAgentContent(downloadUrl: string): Promise<AgentExport> {
     try {
-      return await apiCall<AgentExport>('fetch_github_agent_content', { downloadUrl });
+      return await apiCall<AgentExport>("fetch_github_agent_content", {
+        downloadUrl,
+      });
     } catch (error) {
       console.error("Failed to fetch GitHub agent content:", error);
       throw error;
@@ -536,7 +553,7 @@ export const api = {
    */
   async importAgentFromGitHub(downloadUrl: string): Promise<Agent> {
     try {
-      return await apiCall<Agent>('import_agent_from_github', { downloadUrl });
+      return await apiCall<Agent>("import_agent_from_github", { downloadUrl });
     } catch (error) {
       console.error("Failed to import agent from GitHub:", error);
       throw error;
@@ -549,15 +566,17 @@ export const api = {
    */
   async getClaudeSettings(): Promise<ClaudeSettings> {
     try {
-      const result = await apiCall<{ data: ClaudeSettings }>("get_claude_settings");
+      const result = await apiCall<{ data: ClaudeSettings }>(
+        "get_claude_settings"
+      );
       console.log("Raw result from get_claude_settings:", result);
-      
+
       // The Rust backend returns ClaudeSettings { data: ... }
       // We need to extract the data field
-      if (result && typeof result === 'object' && 'data' in result) {
+      if (result && typeof result === "object" && "data" in result) {
         return result.data;
       }
-      
+
       // If the result is already the settings object, return it
       return result as ClaudeSettings;
     } catch (error) {
@@ -641,7 +660,9 @@ export const api = {
    */
   async findClaudeMdFiles(projectPath: string): Promise<ClaudeMdFile[]> {
     try {
-      return await apiCall<ClaudeMdFile[]>("find_claude_md_files", { projectPath });
+      return await apiCall<ClaudeMdFile[]>("find_claude_md_files", {
+        projectPath,
+      });
     } catch (error) {
       console.error("Failed to find CLAUDE.md files:", error);
       throw error;
@@ -670,7 +691,10 @@ export const api = {
    */
   async saveClaudeMdFile(filePath: string, content: string): Promise<string> {
     try {
-      return await apiCall<string>("save_claude_md_file", { filePath, content });
+      return await apiCall<string>("save_claude_md_file", {
+        filePath,
+        content,
+      });
     } catch (error) {
       console.error("Failed to save CLAUDE.md file:", error);
       throw error;
@@ -678,14 +702,14 @@ export const api = {
   },
 
   // Agent API methods
-  
+
   /**
    * Lists all CC agents
    * @returns Promise resolving to an array of agents
    */
   async listAgents(): Promise<Agent[]> {
     try {
-      return await apiCall<Agent[]>('list_agents');
+      return await apiCall<Agent[]>("list_agents");
     } catch (error) {
       console.error("Failed to list agents:", error);
       throw error;
@@ -703,21 +727,21 @@ export const api = {
    * @returns Promise resolving to the created agent
    */
   async createAgent(
-    name: string, 
-    icon: string, 
-    system_prompt: string, 
-    default_task?: string, 
+    name: string,
+    icon: string,
+    system_prompt: string,
+    default_task?: string,
     model?: string,
     hooks?: string
   ): Promise<Agent> {
     try {
-      return await apiCall<Agent>('create_agent', { 
-        name, 
-        icon, 
+      return await apiCall<Agent>("create_agent", {
+        name,
+        icon,
         systemPrompt: system_prompt,
         defaultTask: default_task,
         model,
-        hooks
+        hooks,
       });
     } catch (error) {
       console.error("Failed to create agent:", error);
@@ -737,23 +761,23 @@ export const api = {
    * @returns Promise resolving to the updated agent
    */
   async updateAgent(
-    id: number, 
-    name: string, 
-    icon: string, 
-    system_prompt: string, 
-    default_task?: string, 
+    id: number,
+    name: string,
+    icon: string,
+    system_prompt: string,
+    default_task?: string,
     model?: string,
     hooks?: string
   ): Promise<Agent> {
     try {
-      return await apiCall<Agent>('update_agent', { 
-        id, 
-        name, 
-        icon, 
+      return await apiCall<Agent>("update_agent", {
+        id,
+        name,
+        icon,
         systemPrompt: system_prompt,
         defaultTask: default_task,
         model,
-        hooks
+        hooks,
       });
     } catch (error) {
       console.error("Failed to update agent:", error);
@@ -768,7 +792,7 @@ export const api = {
    */
   async deleteAgent(id: number): Promise<void> {
     try {
-      return await apiCall('delete_agent', { id });
+      return await apiCall("delete_agent", { id });
     } catch (error) {
       console.error("Failed to delete agent:", error);
       throw error;
@@ -782,7 +806,7 @@ export const api = {
    */
   async getAgent(id: number): Promise<Agent> {
     try {
-      return await apiCall<Agent>('get_agent', { id });
+      return await apiCall<Agent>("get_agent", { id });
     } catch (error) {
       console.error("Failed to get agent:", error);
       throw error;
@@ -796,7 +820,7 @@ export const api = {
    */
   async exportAgent(id: number): Promise<string> {
     try {
-      return await apiCall<string>('export_agent', { id });
+      return await apiCall<string>("export_agent", { id });
     } catch (error) {
       console.error("Failed to export agent:", error);
       throw error;
@@ -810,7 +834,7 @@ export const api = {
    */
   async importAgent(jsonData: string): Promise<Agent> {
     try {
-      return await apiCall<Agent>('import_agent', { jsonData });
+      return await apiCall<Agent>("import_agent", { jsonData });
     } catch (error) {
       console.error("Failed to import agent:", error);
       throw error;
@@ -824,7 +848,7 @@ export const api = {
    */
   async importAgentFromFile(filePath: string): Promise<Agent> {
     try {
-      return await apiCall<Agent>('import_agent_from_file', { filePath });
+      return await apiCall<Agent>("import_agent_from_file", { filePath });
     } catch (error) {
       console.error("Failed to import agent from file:", error);
       throw error;
@@ -839,13 +863,27 @@ export const api = {
    * @param model - Optional model override
    * @returns Promise resolving to the run ID when execution starts
    */
-  async executeAgent(agentId: number, projectPath: string, task: string, model?: string): Promise<number> {
+  async executeAgent(
+    agentId: number,
+    projectPath: string,
+    task: string,
+    model?: string
+  ): Promise<number> {
     try {
-      return await apiCall<number>('execute_agent', { agentId, projectPath, task, model });
+      return await apiCall<number>("execute_agent", {
+        agentId,
+        projectPath,
+        task,
+        model,
+      });
     } catch (error) {
       console.error("Failed to execute agent:", error);
       // Return a sentinel value to indicate error
-      throw new Error(`Failed to execute agent: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to execute agent: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     }
   },
 
@@ -856,7 +894,9 @@ export const api = {
    */
   async listAgentRuns(agentId?: number): Promise<AgentRunWithMetrics[]> {
     try {
-      return await apiCall<AgentRunWithMetrics[]>('list_agent_runs', { agentId });
+      return await apiCall<AgentRunWithMetrics[]>("list_agent_runs", {
+        agentId,
+      });
     } catch (error) {
       console.error("Failed to list agent runs:", error);
       // Return empty array instead of throwing to prevent UI crashes
@@ -869,9 +909,14 @@ export const api = {
    * @param agentId - Optional agent ID to filter runs
    * @returns Promise resolving to an array of agent runs with metrics
    */
-  async listAgentRunsWithMetrics(agentId?: number): Promise<AgentRunWithMetrics[]> {
+  async listAgentRunsWithMetrics(
+    agentId?: number
+  ): Promise<AgentRunWithMetrics[]> {
     try {
-      return await apiCall<AgentRunWithMetrics[]>('list_agent_runs_with_metrics', { agentId });
+      return await apiCall<AgentRunWithMetrics[]>(
+        "list_agent_runs_with_metrics",
+        { agentId }
+      );
     } catch (error) {
       console.error("Failed to list agent runs with metrics:", error);
       // Return empty array instead of throwing to prevent UI crashes
@@ -886,10 +931,14 @@ export const api = {
    */
   async getAgentRun(id: number): Promise<AgentRunWithMetrics> {
     try {
-      return await apiCall<AgentRunWithMetrics>('get_agent_run', { id });
+      return await apiCall<AgentRunWithMetrics>("get_agent_run", { id });
     } catch (error) {
       console.error("Failed to get agent run:", error);
-      throw new Error(`Failed to get agent run: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to get agent run: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     }
   },
 
@@ -898,12 +947,21 @@ export const api = {
    * @param id - The run ID
    * @returns Promise resolving to the agent run with metrics
    */
-  async getAgentRunWithRealTimeMetrics(id: number): Promise<AgentRunWithMetrics> {
+  async getAgentRunWithRealTimeMetrics(
+    id: number
+  ): Promise<AgentRunWithMetrics> {
     try {
-      return await apiCall<AgentRunWithMetrics>('get_agent_run_with_real_time_metrics', { id });
+      return await apiCall<AgentRunWithMetrics>(
+        "get_agent_run_with_real_time_metrics",
+        { id }
+      );
     } catch (error) {
       console.error("Failed to get agent run with real-time metrics:", error);
-      throw new Error(`Failed to get agent run with real-time metrics: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to get agent run with real-time metrics: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     }
   },
 
@@ -913,10 +971,14 @@ export const api = {
    */
   async listRunningAgentSessions(): Promise<AgentRun[]> {
     try {
-      return await apiCall<AgentRun[]>('list_running_sessions');
+      return await apiCall<AgentRun[]>("list_running_sessions");
     } catch (error) {
       console.error("Failed to list running agent sessions:", error);
-      throw new Error(`Failed to list running agent sessions: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to list running agent sessions: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     }
   },
 
@@ -927,10 +989,14 @@ export const api = {
    */
   async killAgentSession(runId: number): Promise<boolean> {
     try {
-      return await apiCall<boolean>('kill_agent_session', { runId });
+      return await apiCall<boolean>("kill_agent_session", { runId });
     } catch (error) {
       console.error("Failed to kill agent session:", error);
-      throw new Error(`Failed to kill agent session: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to kill agent session: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     }
   },
 
@@ -941,10 +1007,14 @@ export const api = {
    */
   async getSessionStatus(runId: number): Promise<string | null> {
     try {
-      return await apiCall<string | null>('get_session_status', { runId });
+      return await apiCall<string | null>("get_session_status", { runId });
     } catch (error) {
       console.error("Failed to get session status:", error);
-      throw new Error(`Failed to get session status: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to get session status: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     }
   },
 
@@ -954,10 +1024,14 @@ export const api = {
    */
   async cleanupFinishedProcesses(): Promise<number[]> {
     try {
-      return await apiCall<number[]>('cleanup_finished_processes');
+      return await apiCall<number[]>("cleanup_finished_processes");
     } catch (error) {
       console.error("Failed to cleanup finished processes:", error);
-      throw new Error(`Failed to cleanup finished processes: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to cleanup finished processes: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     }
   },
 
@@ -968,10 +1042,14 @@ export const api = {
    */
   async getSessionOutput(runId: number): Promise<string> {
     try {
-      return await apiCall<string>('get_session_output', { runId });
+      return await apiCall<string>("get_session_output", { runId });
     } catch (error) {
       console.error("Failed to get session output:", error);
-      throw new Error(`Failed to get session output: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to get session output: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     }
   },
 
@@ -982,10 +1060,14 @@ export const api = {
    */
   async getLiveSessionOutput(runId: number): Promise<string> {
     try {
-      return await apiCall<string>('get_live_session_output', { runId });
+      return await apiCall<string>("get_live_session_output", { runId });
     } catch (error) {
       console.error("Failed to get live session output:", error);
-      throw new Error(`Failed to get live session output: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to get live session output: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     }
   },
 
@@ -996,17 +1078,24 @@ export const api = {
    */
   async streamSessionOutput(runId: number): Promise<void> {
     try {
-      return await apiCall<void>('stream_session_output', { runId });
+      return await apiCall<void>("stream_session_output", { runId });
     } catch (error) {
       console.error("Failed to start streaming session output:", error);
-      throw new Error(`Failed to start streaming session output: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to start streaming session output: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     }
   },
 
   /**
    * Loads the JSONL history for a specific session
    */
-  async loadSessionHistory(sessionId: string, projectId: string): Promise<any[]> {
+  async loadSessionHistory(
+    sessionId: string,
+    projectId: string
+  ): Promise<any[]> {
     return apiCall("load_session_history", { sessionId, projectId });
   },
 
@@ -1018,7 +1107,7 @@ export const api = {
    */
   async loadAgentSessionHistory(sessionId: string): Promise<any[]> {
     try {
-      return await apiCall<any[]>('load_agent_session_history', { sessionId });
+      return await apiCall<any[]>("load_agent_session_history", { sessionId });
     } catch (error) {
       console.error("Failed to load agent session history:", error);
       throw error;
@@ -1028,22 +1117,40 @@ export const api = {
   /**
    * Executes a new interactive Claude Code session with streaming output
    */
-  async executeClaudeCode(projectPath: string, prompt: string, model: string): Promise<void> {
+  async executeClaudeCode(
+    projectPath: string,
+    prompt: string,
+    model: string
+  ): Promise<void> {
     return apiCall("execute_claude_code", { projectPath, prompt, model });
   },
 
   /**
    * Continues an existing Claude Code conversation with streaming output
    */
-  async continueClaudeCode(projectPath: string, prompt: string, model: string): Promise<void> {
+  async continueClaudeCode(
+    projectPath: string,
+    prompt: string,
+    model: string
+  ): Promise<void> {
     return apiCall("continue_claude_code", { projectPath, prompt, model });
   },
 
   /**
    * Resumes an existing Claude Code session by ID with streaming output
    */
-  async resumeClaudeCode(projectPath: string, sessionId: string, prompt: string, model: string): Promise<void> {
-    return apiCall("resume_claude_code", { projectPath, sessionId, prompt, model });
+  async resumeClaudeCode(
+    projectPath: string,
+    sessionId: string,
+    prompt: string,
+    model: string
+  ): Promise<void> {
+    return apiCall("resume_claude_code", {
+      projectPath,
+      sessionId,
+      prompt,
+      model,
+    });
   },
 
   /**
@@ -1104,9 +1211,15 @@ export const api = {
    * @param endDate - End date (ISO format)
    * @returns Promise resolving to usage statistics
    */
-  async getUsageByDateRange(startDate: string, endDate: string): Promise<UsageStats> {
+  async getUsageByDateRange(
+    startDate: string,
+    endDate: string
+  ): Promise<UsageStats> {
     try {
-      return await apiCall<UsageStats>("get_usage_by_date_range", { startDate, endDate });
+      return await apiCall<UsageStats>("get_usage_by_date_range", {
+        startDate,
+        endDate,
+      });
     } catch (error) {
       console.error("Failed to get usage by date range:", error);
       throw error;
@@ -1166,7 +1279,7 @@ export const api = {
       projectId,
       projectPath,
       messageIndex,
-      description
+      description,
     });
   },
 
@@ -1183,7 +1296,7 @@ export const api = {
       checkpointId,
       sessionId,
       projectId,
-      projectPath
+      projectPath,
     });
   },
 
@@ -1198,7 +1311,7 @@ export const api = {
     return apiCall("list_checkpoints", {
       sessionId,
       projectId,
-      projectPath
+      projectPath,
     });
   },
 
@@ -1219,7 +1332,7 @@ export const api = {
       projectId,
       projectPath,
       newSessionId,
-      description
+      description,
     });
   },
 
@@ -1234,7 +1347,7 @@ export const api = {
     return apiCall("get_session_timeline", {
       sessionId,
       projectId,
-      projectPath
+      projectPath,
     });
   },
 
@@ -1253,7 +1366,7 @@ export const api = {
       projectId,
       projectPath,
       autoCheckpointEnabled,
-      checkpointStrategy
+      checkpointStrategy,
     });
   },
 
@@ -1271,7 +1384,7 @@ export const api = {
         fromCheckpointId,
         toCheckpointId,
         sessionId,
-        projectId
+        projectId,
       });
     } catch (error) {
       console.error("Failed to get checkpoint diff:", error);
@@ -1293,7 +1406,7 @@ export const api = {
         sessionId,
         projectId,
         projectPath,
-        message
+        message,
       });
     } catch (error) {
       console.error("Failed to track checkpoint message:", error);
@@ -1315,7 +1428,7 @@ export const api = {
         sessionId,
         projectId,
         projectPath,
-        message
+        message,
       });
     } catch (error) {
       console.error("Failed to check auto checkpoint:", error);
@@ -1337,7 +1450,7 @@ export const api = {
         sessionId,
         projectId,
         projectPath,
-        keepCount
+        keepCount,
       });
     } catch (error) {
       console.error("Failed to cleanup old checkpoints:", error);
@@ -1362,7 +1475,7 @@ export const api = {
       return await apiCall("get_checkpoint_settings", {
         sessionId,
         projectId,
-        projectPath
+        projectPath,
       });
     } catch (error) {
       console.error("Failed to get checkpoint settings:", error);
@@ -1386,12 +1499,17 @@ export const api = {
    * Tracks a batch of messages for a session for checkpointing
    */
   trackSessionMessages: (
-    sessionId: string, 
-    projectId: string, 
-    projectPath: string, 
+    sessionId: string,
+    projectId: string,
+    projectPath: string,
     messages: string[]
   ): Promise<void> =>
-    apiCall("track_session_messages", { sessionId, projectId, projectPath, messages }),
+    apiCall("track_session_messages", {
+      sessionId,
+      projectId,
+      projectPath,
+      messages,
+    }),
 
   /**
    * Adds a new MCP server
@@ -1413,7 +1531,7 @@ export const api = {
         args,
         env,
         url,
-        scope
+        scope,
       });
     } catch (error) {
       console.error("Failed to add MCP server:", error);
@@ -1463,9 +1581,17 @@ export const api = {
   /**
    * Adds an MCP server from JSON configuration
    */
-  async mcpAddJson(name: string, jsonConfig: string, scope: string = "local"): Promise<AddServerResult> {
+  async mcpAddJson(
+    name: string,
+    jsonConfig: string,
+    scope: string = "local"
+  ): Promise<AddServerResult> {
     try {
-      return await apiCall<AddServerResult>("mcp_add_json", { name, jsonConfig, scope });
+      return await apiCall<AddServerResult>("mcp_add_json", {
+        name,
+        jsonConfig,
+        scope,
+      });
     } catch (error) {
       console.error("Failed to add MCP server from JSON:", error);
       throw error;
@@ -1475,9 +1601,13 @@ export const api = {
   /**
    * Imports MCP servers from Claude Desktop
    */
-  async mcpAddFromClaudeDesktop(scope: string = "local"): Promise<ImportResult> {
+  async mcpAddFromClaudeDesktop(
+    scope: string = "local"
+  ): Promise<ImportResult> {
     try {
-      return await apiCall<ImportResult>("mcp_add_from_claude_desktop", { scope });
+      return await apiCall<ImportResult>("mcp_add_from_claude_desktop", {
+        scope,
+      });
     } catch (error) {
       console.error("Failed to import from Claude Desktop:", error);
       throw error;
@@ -1525,7 +1655,9 @@ export const api = {
    */
   async mcpGetServerStatus(): Promise<Record<string, ServerStatus>> {
     try {
-      return await apiCall<Record<string, ServerStatus>>("mcp_get_server_status");
+      return await apiCall<Record<string, ServerStatus>>(
+        "mcp_get_server_status"
+      );
     } catch (error) {
       console.error("Failed to get server status:", error);
       throw error;
@@ -1537,7 +1669,9 @@ export const api = {
    */
   async mcpReadProjectConfig(projectPath: string): Promise<MCPProjectConfig> {
     try {
-      return await apiCall<MCPProjectConfig>("mcp_read_project_config", { projectPath });
+      return await apiCall<MCPProjectConfig>("mcp_read_project_config", {
+        projectPath,
+      });
     } catch (error) {
       console.error("Failed to read project MCP config:", error);
       throw error;
@@ -1547,9 +1681,15 @@ export const api = {
   /**
    * Saves .mcp.json to the current project
    */
-  async mcpSaveProjectConfig(projectPath: string, config: MCPProjectConfig): Promise<string> {
+  async mcpSaveProjectConfig(
+    projectPath: string,
+    config: MCPProjectConfig
+  ): Promise<string> {
     try {
-      return await apiCall<string>("mcp_save_project_config", { projectPath, config });
+      return await apiCall<string>("mcp_save_project_config", {
+        projectPath,
+        config,
+      });
     } catch (error) {
       console.error("Failed to save project MCP config:", error);
       throw error;
@@ -1741,14 +1881,14 @@ export const api = {
   async getSetting(key: string): Promise<string | null> {
     try {
       // Fast path: check localStorage mirror to avoid startup flicker
-      if (typeof window !== 'undefined' && 'localStorage' in window) {
+      if (typeof window !== "undefined" && "localStorage" in window) {
         const cached = window.localStorage.getItem(`app_setting:${key}`);
         if (cached !== null) {
           return cached;
         }
       }
       // Use storageReadTable to safely query the app_settings table
-      const result = await this.storageReadTable('app_settings', 1, 1000);
+      const result = await this.storageReadTable("app_settings", 1, 1000);
       const setting = result?.data?.find((row: any) => row.key === key);
       return setting?.value || null;
     } catch (error) {
@@ -1766,7 +1906,7 @@ export const api = {
   async saveSetting(key: string, value: string): Promise<void> {
     try {
       // Mirror to localStorage for instant availability on next startup
-      if (typeof window !== 'undefined' && 'localStorage' in window) {
+      if (typeof window !== "undefined" && "localStorage" in window) {
         try {
           window.localStorage.setItem(`app_setting:${key}`, value);
         } catch (_ignore) {
@@ -1775,14 +1915,10 @@ export const api = {
       }
       // Try to update first
       try {
-        await this.storageUpdateRow(
-          'app_settings',
-          { key },
-          { value }
-        );
+        await this.storageUpdateRow("app_settings", { key }, { value });
       } catch (updateError) {
         // If update fails (row doesn't exist), insert new row
-        await this.storageInsertRow('app_settings', { key, value });
+        await this.storageInsertRow("app_settings", { key, value });
       }
     } catch (error) {
       console.error(`Failed to save setting ${key}:`, error);
@@ -1796,9 +1932,15 @@ export const api = {
    * @param projectPath - Project path (required for project and local scopes)
    * @returns Promise resolving to the hooks configuration
    */
-  async getHooksConfig(scope: 'user' | 'project' | 'local', projectPath?: string): Promise<HooksConfiguration> {
+  async getHooksConfig(
+    scope: "user" | "project" | "local",
+    projectPath?: string
+  ): Promise<HooksConfiguration> {
     try {
-      return await apiCall<HooksConfiguration>("get_hooks_config", { scope, projectPath });
+      return await apiCall<HooksConfiguration>("get_hooks_config", {
+        scope,
+        projectPath,
+      });
     } catch (error) {
       console.error("Failed to get hooks config:", error);
       throw error;
@@ -1813,12 +1955,16 @@ export const api = {
    * @returns Promise resolving to success message
    */
   async updateHooksConfig(
-    scope: 'user' | 'project' | 'local',
+    scope: "user" | "project" | "local",
     hooks: HooksConfiguration,
     projectPath?: string
   ): Promise<string> {
     try {
-      return await apiCall<string>("update_hooks_config", { scope, projectPath, hooks });
+      return await apiCall<string>("update_hooks_config", {
+        scope,
+        projectPath,
+        hooks,
+      });
     } catch (error) {
       console.error("Failed to update hooks config:", error);
       throw error;
@@ -1830,9 +1976,14 @@ export const api = {
    * @param command - The shell command to validate
    * @returns Promise resolving to validation result
    */
-  async validateHookCommand(command: string): Promise<{ valid: boolean; message: string }> {
+  async validateHookCommand(
+    command: string
+  ): Promise<{ valid: boolean; message: string }> {
     try {
-      return await apiCall<{ valid: boolean; message: string }>("validate_hook_command", { command });
+      return await apiCall<{ valid: boolean; message: string }>(
+        "validate_hook_command",
+        { command }
+      );
     } catch (error) {
       console.error("Failed to validate hook command:", error);
       throw error;
@@ -1847,13 +1998,13 @@ export const api = {
   async getMergedHooksConfig(projectPath: string): Promise<HooksConfiguration> {
     try {
       const [userHooks, projectHooks, localHooks] = await Promise.all([
-        this.getHooksConfig('user'),
-        this.getHooksConfig('project', projectPath),
-        this.getHooksConfig('local', projectPath)
+        this.getHooksConfig("user"),
+        this.getHooksConfig("project", projectPath),
+        this.getHooksConfig("local", projectPath),
       ]);
 
       // Import HooksManager for merging
-      const { HooksManager } = await import('@/lib/hooksManager');
+      const { HooksManager } = await import("@/lib/hooksManager");
       return HooksManager.mergeConfigs(userHooks, projectHooks, localHooks);
     } catch (error) {
       console.error("Failed to get merged hooks config:", error);
@@ -1870,7 +2021,9 @@ export const api = {
    */
   async slashCommandsList(projectPath?: string): Promise<SlashCommand[]> {
     try {
-      return await apiCall<SlashCommand[]>("slash_commands_list", { projectPath });
+      return await apiCall<SlashCommand[]>("slash_commands_list", {
+        projectPath,
+      });
     } catch (error) {
       console.error("Failed to list slash commands:", error);
       throw error;
@@ -1919,7 +2072,7 @@ export const api = {
         content,
         description,
         allowedTools,
-        projectPath
+        projectPath,
       });
     } catch (error) {
       console.error("Failed to save slash command:", error);
@@ -1933,13 +2086,18 @@ export const api = {
    * @param projectPath - Optional project path for deleting project commands
    * @returns Promise resolving to deletion message
    */
-  async slashCommandDelete(commandId: string, projectPath?: string): Promise<string> {
+  async slashCommandDelete(
+    commandId: string,
+    projectPath?: string
+  ): Promise<string> {
     try {
-      return await apiCall<string>("slash_command_delete", { commandId, projectPath });
+      return await apiCall<string>("slash_command_delete", {
+        commandId,
+        projectPath,
+      });
     } catch (error) {
       console.error("Failed to delete slash command:", error);
       throw error;
     }
   },
-
 };
