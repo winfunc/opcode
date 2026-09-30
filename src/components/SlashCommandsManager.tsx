@@ -464,6 +464,7 @@ export const SlashCommandsManager: React.FC<SlashCommandsManagerProps> = ({
                               className="h-8 w-8"
                             >
                               <Edit className="h-4 w-4" />
+                              <span className="sr-only">Edit command</span>
                             </Button>
                             <Button
                               variant="ghost"
@@ -472,6 +473,7 @@ export const SlashCommandsManager: React.FC<SlashCommandsManagerProps> = ({
                               className="h-8 w-8 text-destructive hover:text-destructive"
                             >
                               <Trash2 className="h-4 w-4" />
+                              <span className="sr-only">Delete command</span>
                             </Button>
                           </div>
                         </div>

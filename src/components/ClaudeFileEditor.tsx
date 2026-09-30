@@ -110,6 +110,7 @@ export const ClaudeFileEditor: React.FC<ClaudeFileEditorProps> = ({
               className="h-8 w-8"
             >
               <ArrowLeft className="h-4 w-4" />
+              <span className="sr-only">Back</span>
             </Button>
             <div className="min-w-0 flex-1">
               <h2 className="text-lg font-semibold truncate">{file.relative_path}</h2>

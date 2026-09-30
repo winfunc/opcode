@@ -266,9 +266,15 @@ export const MCPServerList: React.FC<MCPServerListProps> = ({
                 className="hover:bg-green-500/10 hover:text-green-600"
               >
                 {testingServer === server.name ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="sr-only">Testing connection</span>
+                  </>
                 ) : (
-                  <Play className="h-4 w-4" />
+                  <>
+                    <Play className="h-4 w-4" />
+                    <span className="sr-only">Test connection</span>
+                  </>
                 )}
               </Button>
               <Button
@@ -279,9 +285,15 @@ export const MCPServerList: React.FC<MCPServerListProps> = ({
                 className="hover:bg-destructive/10 hover:text-destructive"
               >
                 {removingServer === server.name ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="sr-only">Removing server</span>
+                  </>
                 ) : (
-                  <Trash2 className="h-4 w-4" />
+                  <>
+                    <Trash2 className="h-4 w-4" />
+                    <span className="sr-only">Remove server</span>
+                  </>
                 )}
               </Button>
             </div>

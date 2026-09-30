@@ -73,6 +73,7 @@ export const PromptQueue: React.FC<PromptQueueProps> = React.memo(({
                   onClick={() => onRemove(queuedPrompt.id)}
                 >
                   <X className="h-3 w-3" />
+                  <span className="sr-only">Remove from queue</span>
                 </Button>
               </motion.div>
             ))}
