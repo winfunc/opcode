@@ -291,9 +291,14 @@ async function handleStreamingCommand<T>(command: string, params?: any): Promise
     console.log(`[TRACE]   command: ${command}`);
     console.log(`[TRACE]   params:`, params);
     console.log(`[TRACE]   WebSocket URL: ${wsUrl}`);
-    
+
+    // Track session_id extracted from Claude's init message so we can dispatch
+    // scoped events (e.g. claude-complete:${sessionId}) that ClaudeCodeSession
+    // switches to after it receives the first init message.
+    let trackedSessionId: string | null = null;
+
     const ws = new WebSocket(wsUrl);
-    
+
     ws.onopen = () => {
       console.log(`[TRACE] WebSocket opened successfully`);
       
@@ -333,6 +338,12 @@ async function handleStreamingCommand<T>(command: string, params?: any): Promise
               : message.content;
             console.log(`[TRACE] Parsed Claude message:`, claudeMessage);
             
+            // Extract session_id from init message so we can send scoped events later
+            if (claudeMessage?.type === 'system' && claudeMessage?.subtype === 'init' && claudeMessage?.session_id) {
+              trackedSessionId = claudeMessage.session_id;
+              console.log(`[TRACE] Tracked session_id from init message: ${trackedSessionId}`);
+            }
+
             // Simulate Tauri event for compatibility with existing UI
             const customEvent = new CustomEvent('claude-output', {
               detail: claudeMessage
@@ -340,6 +351,11 @@ async function handleStreamingCommand<T>(command: string, params?: any): Promise
             console.log(`[TRACE] Dispatching claude-output event:`, customEvent.detail);
             console.log(`[TRACE] Event type:`, customEvent.type);
             window.dispatchEvent(customEvent);
+
+            // Also dispatch scoped event if we already know the session_id
+            if (trackedSessionId) {
+              window.dispatchEvent(new CustomEvent(`claude-output:${trackedSessionId}`, { detail: claudeMessage }));
+            }
           } catch (e) {
             console.error(`[TRACE] Failed to parse Claude output content:`, e);
             console.error(`[TRACE] Content that failed to parse:`, message.content);
@@ -348,11 +364,19 @@ async function handleStreamingCommand<T>(command: string, params?: any): Promise
           console.log(`[TRACE] Completion message:`, message);
           
           // Dispatch claude-complete event for UI state management
+          const completeDetail = message.status === 'success';
           const completeEvent = new CustomEvent('claude-complete', {
-            detail: message.status === 'success'
+            detail: completeDetail
           });
           console.log(`[TRACE] Dispatching claude-complete event:`, completeEvent.detail);
           window.dispatchEvent(completeEvent);
+
+          // Also dispatch scoped event so ClaudeCodeSession receives it after
+          // switching from generic to session-specific listeners
+          if (trackedSessionId) {
+            console.log(`[TRACE] Dispatching scoped claude-complete:${trackedSessionId}`);
+            window.dispatchEvent(new CustomEvent(`claude-complete:${trackedSessionId}`, { detail: completeDetail }));
+          }
           
           ws.close();
           if (message.status === 'success') {
@@ -366,11 +390,16 @@ async function handleStreamingCommand<T>(command: string, params?: any): Promise
           console.log(`[TRACE] Error message:`, message);
           
           // Dispatch claude-error event for UI error handling
+          const errorDetail = message.message || 'Unknown error';
           const errorEvent = new CustomEvent('claude-error', {
-            detail: message.message || 'Unknown error'
+            detail: errorDetail
           });
           console.log(`[TRACE] Dispatching claude-error event:`, errorEvent.detail);
           window.dispatchEvent(errorEvent);
+
+          if (trackedSessionId) {
+            window.dispatchEvent(new CustomEvent(`claude-error:${trackedSessionId}`, { detail: errorDetail }));
+          }
           
           reject(new Error(message.message || 'Unknown error'));
         } else {
