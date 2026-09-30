@@ -1,11 +1,12 @@
 import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Network, 
-  Globe, 
-  Terminal, 
-  Trash2, 
-  Play, 
+import {
+  Network,
+  Globe,
+  Terminal,
+  Trash2,
+  Play,
   CheckCircle,
   Loader2,
   RefreshCw,
@@ -50,12 +51,13 @@ export const MCPServerList: React.FC<MCPServerListProps> = ({
   onServerRemoved,
   onRefresh,
 }) => {
+  const { t } = useTranslation();
   const [removingServer, setRemovingServer] = useState<string | null>(null);
   const [testingServer, setTestingServer] = useState<string | null>(null);
   const [expandedServers, setExpandedServers] = useState<Set<string>>(new Set());
   const [copiedServer, setCopiedServer] = useState<string | null>(null);
   const [connectedServers] = useState<string[]>([]);
-  
+
   // Analytics tracking
   const trackEvent = useTrackEvent();
 
@@ -184,11 +186,11 @@ export const MCPServerList: React.FC<MCPServerListProps> = ({
   const getScopeDisplayName = (scope: string) => {
     switch (scope) {
       case "local":
-        return "Local (Project-specific)";
+        return t("mcp.scopes.local");
       case "project":
-        return "Project (Shared via .mcp.json)";
+        return t("mcp.scopes.project");
       case "user":
-        return "User (All projects)";
+        return t("mcp.scopes.user");
       default:
         return scope;
     }
@@ -220,11 +222,11 @@ export const MCPServerList: React.FC<MCPServerListProps> = ({
                 {server.status?.running && (
                   <Badge variant="outline" className="gap-1 flex-shrink-0 border-green-500/50 text-green-600 bg-green-500/10">
                     <CheckCircle className="h-3 w-3" />
-                    Running
+                    {t("mcp.running")}
                   </Badge>
                 )}
               </div>
-              
+
               {server.command && !isExpanded && (
                 <div className="flex items-center gap-2">
                   <p className="text-xs text-muted-foreground font-mono truncate pl-9 flex-1" title={server.command}>
@@ -237,11 +239,11 @@ export const MCPServerList: React.FC<MCPServerListProps> = ({
                     className="h-6 px-2 text-xs hover:bg-primary/10"
                   >
                     <ChevronDown className="h-3 w-3 mr-1" />
-                    Show full
+                    {t("mcp.showFull")}
                   </Button>
                 </div>
               )}
-              
+
               {server.transport === "sse" && server.url && !isExpanded && (
                 <div className="overflow-hidden">
                   <p className="text-xs text-muted-foreground font-mono truncate pl-9" title={server.url}>
@@ -249,10 +251,10 @@ export const MCPServerList: React.FC<MCPServerListProps> = ({
                   </p>
                 </div>
               )}
-              
+
               {Object.keys(server.env).length > 0 && !isExpanded && (
                 <div className="flex items-center gap-1 text-xs text-muted-foreground pl-9">
-                  <span>Environment variables: {Object.keys(server.env).length}</span>
+                  <span>{t("mcp.envVarsCount", { count: Object.keys(server.env).length })}</span>
                 </div>
               )}
             </div>
@@ -299,7 +301,7 @@ export const MCPServerList: React.FC<MCPServerListProps> = ({
               {server.command && (
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
-                    <p className="text-xs font-medium text-muted-foreground">Command</p>
+                    <p className="text-xs font-medium text-muted-foreground">{t("mcp.command")}</p>
                     <div className="flex items-center gap-1">
                       <Button
                         variant="ghost"
@@ -308,7 +310,7 @@ export const MCPServerList: React.FC<MCPServerListProps> = ({
                         className="h-6 px-2 text-xs hover:bg-primary/10"
                       >
                         <Copy className="h-3 w-3 mr-1" />
-                        {isCopied ? "Copied!" : "Copy"}
+                        {isCopied ? t("mcp.copied") : t("mcp.copy")}
                       </Button>
                       <Button
                         variant="ghost"
@@ -317,7 +319,7 @@ export const MCPServerList: React.FC<MCPServerListProps> = ({
                         className="h-6 px-2 text-xs hover:bg-primary/10"
                       >
                         <ChevronUp className="h-3 w-3 mr-1" />
-                        Hide
+                        {t("mcp.hide")}
                       </Button>
                     </div>
                   </div>
@@ -326,10 +328,10 @@ export const MCPServerList: React.FC<MCPServerListProps> = ({
                   </p>
                 </div>
               )}
-              
+
               {server.args && server.args.length > 0 && (
                 <div className="space-y-1">
-                  <p className="text-xs font-medium text-muted-foreground">Arguments</p>
+                  <p className="text-xs font-medium text-muted-foreground">{t("mcp.arguments")}</p>
                   <div className="text-xs font-mono bg-muted/50 p-2 rounded space-y-1">
                     {server.args.map((arg, idx) => (
                       <div key={idx} className="break-all">
@@ -340,19 +342,19 @@ export const MCPServerList: React.FC<MCPServerListProps> = ({
                   </div>
                 </div>
               )}
-              
+
               {server.transport === "sse" && server.url && (
                 <div className="space-y-1">
-                  <p className="text-xs font-medium text-muted-foreground">URL</p>
+                  <p className="text-xs font-medium text-muted-foreground">{t("mcp.url")}</p>
                   <p className="text-xs font-mono bg-muted/50 p-2 rounded break-all">
                     {server.url}
                   </p>
                 </div>
               )}
-              
+
               {Object.keys(server.env).length > 0 && (
                 <div className="space-y-1">
-                  <p className="text-xs font-medium text-muted-foreground">Environment Variables</p>
+                  <p className="text-xs font-medium text-muted-foreground">{t("mcp.envVars")}</p>
                   <div className="text-xs font-mono bg-muted/50 p-2 rounded space-y-1">
                     {Object.entries(server.env).map(([key, value]) => (
                       <div key={key} className="break-all">
@@ -384,9 +386,9 @@ export const MCPServerList: React.FC<MCPServerListProps> = ({
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h3 className="text-base font-semibold">Configured Servers</h3>
+          <h3 className="text-base font-semibold">{t("mcp.configuredServers")}</h3>
           <p className="text-sm text-muted-foreground">
-            {servers.length} server{servers.length !== 1 ? "s" : ""} configured
+            {t("mcp.serversConfigured", { count: servers.length })}
           </p>
         </div>
         <Button
@@ -396,7 +398,7 @@ export const MCPServerList: React.FC<MCPServerListProps> = ({
           className="gap-2 hover:bg-primary/10 hover:text-primary hover:border-primary/50"
         >
           <RefreshCw className="h-4 w-4" />
-          Refresh
+          {t("mcp.refresh")}
         </Button>
       </div>
 
@@ -406,9 +408,9 @@ export const MCPServerList: React.FC<MCPServerListProps> = ({
           <div className="p-4 bg-primary/10 rounded-full mb-4">
             <Network className="h-12 w-12 text-primary" />
           </div>
-          <p className="text-muted-foreground mb-2 font-medium">No MCP servers configured</p>
+          <p className="text-muted-foreground mb-2 font-medium">{t("mcp.noServers")}</p>
           <p className="text-sm text-muted-foreground">
-            Add a server to get started with Model Context Protocol
+            {t("mcp.noServersDesc")}
           </p>
         </div>
       ) : (
