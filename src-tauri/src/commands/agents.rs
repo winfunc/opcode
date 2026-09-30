@@ -1038,7 +1038,7 @@ async fn spawn_agent_system(
                     "🔍 Process likely stuck waiting for input, attempting to kill PID: {}",
                     pid
                 );
-                let kill_result = std::process::Command::new("kill")
+                let kill_result = crate::claude_binary::hidden_command("kill")
                     .arg("-TERM")
                     .arg(pid.to_string())
                     .output();
@@ -1049,7 +1049,7 @@ async fn spawn_agent_system(
                     }
                     Ok(_) => {
                         warn!("🔍 Failed to kill process with TERM, trying KILL");
-                        let _ = std::process::Command::new("kill")
+                        let _ = crate::claude_binary::hidden_command("kill")
                             .arg("-KILL")
                             .arg(pid.to_string())
                             .output();
@@ -1295,7 +1295,7 @@ pub async fn cleanup_finished_processes(db: State<'_, AgentDb>) -> Result<Vec<i6
         // Check if the process is still running
         let is_running = if cfg!(target_os = "windows") {
             // On Windows, use tasklist to check if process exists
-            match std::process::Command::new("tasklist")
+            match crate::claude_binary::hidden_command("tasklist")
                 .args(["/FI", &format!("PID eq {}", pid)])
                 .args(["/FO", "CSV"])
                 .output()
@@ -1308,7 +1308,7 @@ pub async fn cleanup_finished_processes(db: State<'_, AgentDb>) -> Result<Vec<i6
             }
         } else {
             // On Unix-like systems, use kill -0 to check if process exists
-            match std::process::Command::new("kill")
+            match crate::claude_binary::hidden_command("kill")
                 .args(["-0", &pid.to_string()])
                 .output()
             {
@@ -1694,6 +1694,13 @@ fn create_command_with_env(program: &str) -> Command {
         tokio_cmd.env("PATH", joined);
     } else {
         tokio_cmd.env("PATH", "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin");
+    }
+
+    // On Windows, prevent spawning a visible console window for subprocesses
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        tokio_cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
     }
 
     tokio_cmd

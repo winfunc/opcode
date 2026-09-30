@@ -1,4 +1,13 @@
 import { useState, useEffect } from "react";
+
+// Suppress console output in production builds to avoid overhead
+if (import.meta.env.PROD) {
+  console.log = () => {};
+  console.debug = () => {};
+  console.time = () => {};
+  console.timeEnd = () => {};
+  console.timeLog = () => {};
+}
 import { motion } from "framer-motion";
 import { Bot, FolderCode } from "lucide-react";
 import { api, type Project, type Session, type ClaudeMdFile } from "@/lib/api";

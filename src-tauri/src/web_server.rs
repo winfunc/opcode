@@ -1,3 +1,11 @@
+macro_rules! trace_log {
+    ($($arg:tt)*) => {
+        if cfg!(debug_assertions) {
+            println!($($arg)*);
+        }
+    };
+}
+
 use axum::extract::ws::{Message, WebSocket};
 use axum::http::Method;
 use axum::{
@@ -25,7 +33,7 @@ fn find_claude_binary_web() -> Result<String, String> {
     // First try the bundled binary (same location as Tauri app uses)
     let bundled_binary = "src-tauri/binaries/claude-code-x86_64-unknown-linux-gnu";
     if std::path::Path::new(bundled_binary).exists() {
-        println!(
+        trace_log!(
             "[find_claude_binary_web] Using bundled binary: {}",
             bundled_binary
         );
@@ -48,7 +56,7 @@ fn find_claude_binary_web() -> Result<String, String> {
 
     for candidate in candidates {
         if which::which(candidate).is_ok() {
-            println!(
+            trace_log!(
                 "[find_claude_binary_web] Using system binary: {}",
                 candidate
             );
@@ -236,14 +244,14 @@ async fn resume_claude_code() -> Json<ApiResponse<serde_json::Value>> {
 async fn cancel_claude_execution(Path(sessionId): Path<String>) -> Json<ApiResponse<()>> {
     // In web mode, we don't have a way to cancel the subprocess cleanly
     // The WebSocket closing should handle cleanup
-    println!("[TRACE] Cancel request for session: {}", sessionId);
+    trace_log!("[TRACE] Cancel request for session: {}", sessionId);
     Json(ApiResponse::success(()))
 }
 
 /// Get Claude session output
 async fn get_claude_session_output(Path(sessionId): Path<String>) -> Json<ApiResponse<String>> {
     // In web mode, output is streamed via WebSocket, not stored
-    println!("[TRACE] Output request for session: {}", sessionId);
+    trace_log!("[TRACE] Output request for session: {}", sessionId);
     Json(ApiResponse::success(
         "Output available via WebSocket only".to_string(),
     ))
@@ -258,7 +266,7 @@ async fn claude_websocket_handler(socket: WebSocket, state: AppState) {
     let (mut sender, mut receiver) = socket.split();
     let session_id = uuid::Uuid::new_v4().to_string();
 
-    println!(
+    trace_log!(
         "[TRACE] WebSocket handler started - session_id: {}",
         session_id
     );
@@ -270,7 +278,7 @@ async fn claude_websocket_handler(socket: WebSocket, state: AppState) {
     {
         let mut sessions = state.active_sessions.lock().await;
         sessions.insert(session_id.clone(), tx);
-        println!(
+        trace_log!(
             "[TRACE] Session stored in state - active sessions count: {}",
             sessions.len()
         );
@@ -279,54 +287,54 @@ async fn claude_websocket_handler(socket: WebSocket, state: AppState) {
     // Task to forward channel messages to WebSocket
     let session_id_for_forward = session_id.clone();
     let forward_task = tokio::spawn(async move {
-        println!(
+        trace_log!(
             "[TRACE] Forward task started for session {}",
             session_id_for_forward
         );
         while let Some(message) = rx.recv().await {
-            println!("[TRACE] Forwarding message to WebSocket: {}", message);
+            trace_log!("[TRACE] Forwarding message to WebSocket: {}", message);
             if sender.send(Message::Text(message.into())).await.is_err() {
-                println!("[TRACE] Failed to send message to WebSocket - connection closed");
+                trace_log!("[TRACE] Failed to send message to WebSocket - connection closed");
                 break;
             }
         }
-        println!(
+        trace_log!(
             "[TRACE] Forward task ended for session {}",
             session_id_for_forward
         );
     });
 
     // Handle incoming messages from WebSocket
-    println!("[TRACE] Starting to listen for WebSocket messages");
+    trace_log!("[TRACE] Starting to listen for WebSocket messages");
     while let Some(msg) = receiver.next().await {
-        println!("[TRACE] Received WebSocket message: {:?}", msg);
+        trace_log!("[TRACE] Received WebSocket message: {:?}", msg);
         if let Ok(msg) = msg {
             if let Message::Text(text) = msg {
-                println!(
+                trace_log!(
                     "[TRACE] WebSocket text message received - length: {} chars",
                     text.len()
                 );
-                println!("[TRACE] WebSocket message content: {}", text);
+                trace_log!("[TRACE] WebSocket message content: {}", text);
                 match serde_json::from_str::<ClaudeExecutionRequest>(&text) {
                     Ok(request) => {
-                        println!("[TRACE] Successfully parsed request: {:?}", request);
-                        println!("[TRACE] Command type: {}", request.command_type);
-                        println!("[TRACE] Project path: {}", request.project_path);
-                        println!("[TRACE] Prompt length: {} chars", request.prompt.len());
+                        trace_log!("[TRACE] Successfully parsed request: {:?}", request);
+                        trace_log!("[TRACE] Command type: {}", request.command_type);
+                        trace_log!("[TRACE] Project path: {}", request.project_path);
+                        trace_log!("[TRACE] Prompt length: {} chars", request.prompt.len());
 
                         // Execute Claude command based on request type
                         let session_id_clone = session_id.clone();
                         let state_clone = state.clone();
 
-                        println!(
+                        trace_log!(
                             "[TRACE] Spawning task to execute command: {}",
                             request.command_type
                         );
                         tokio::spawn(async move {
-                            println!("[TRACE] Task started for command execution");
+                            trace_log!("[TRACE] Task started for command execution");
                             let result = match request.command_type.as_str() {
                                 "execute" => {
-                                    println!("[TRACE] Calling execute_claude_command");
+                                    trace_log!("[TRACE] Calling execute_claude_command");
                                     execute_claude_command(
                                         request.project_path,
                                         request.prompt,
@@ -337,7 +345,7 @@ async fn claude_websocket_handler(socket: WebSocket, state: AppState) {
                                     .await
                                 }
                                 "continue" => {
-                                    println!("[TRACE] Calling continue_claude_command");
+                                    trace_log!("[TRACE] Calling continue_claude_command");
                                     continue_claude_command(
                                         request.project_path,
                                         request.prompt,
@@ -348,7 +356,7 @@ async fn claude_websocket_handler(socket: WebSocket, state: AppState) {
                                     .await
                                 }
                                 "resume" => {
-                                    println!("[TRACE] Calling resume_claude_command");
+                                    trace_log!("[TRACE] Calling resume_claude_command");
                                     resume_claude_command(
                                         request.project_path,
                                         request.session_id.unwrap_or_default(),
@@ -360,7 +368,7 @@ async fn claude_websocket_handler(socket: WebSocket, state: AppState) {
                                     .await
                                 }
                                 _ => {
-                                    println!(
+                                    trace_log!(
                                         "[TRACE] Unknown command type: {}",
                                         request.command_type
                                     );
@@ -368,7 +376,7 @@ async fn claude_websocket_handler(socket: WebSocket, state: AppState) {
                                 }
                             };
 
-                            println!(
+                            trace_log!(
                                 "[TRACE] Command execution finished with result: {:?}",
                                 result
                             );
@@ -391,16 +399,16 @@ async fn claude_websocket_handler(socket: WebSocket, state: AppState) {
                                         "error": e
                                     }),
                                 };
-                                println!("[TRACE] Sending completion message: {}", completion_msg);
+                                trace_log!("[TRACE] Sending completion message: {}", completion_msg);
                                 let _ = sender.send(completion_msg.to_string()).await;
                             } else {
-                                println!("[TRACE] Session not found in active sessions when sending completion");
+                                trace_log!("[TRACE] Session not found in active sessions when sending completion");
                             }
                         });
                     }
                     Err(e) => {
-                        println!("[TRACE] Failed to parse WebSocket request: {}", e);
-                        println!("[TRACE] Raw message that failed to parse: {}", text);
+                        trace_log!("[TRACE] Failed to parse WebSocket request: {}", e);
+                        trace_log!("[TRACE] Raw message that failed to parse: {}", text);
 
                         // Send error back to client
                         let error_msg = json!({
@@ -414,23 +422,23 @@ async fn claude_websocket_handler(socket: WebSocket, state: AppState) {
                     }
                 }
             } else if let Message::Close(_) = msg {
-                println!("[TRACE] WebSocket close message received");
+                trace_log!("[TRACE] WebSocket close message received");
                 break;
             } else {
-                println!("[TRACE] Non-text WebSocket message received: {:?}", msg);
+                trace_log!("[TRACE] Non-text WebSocket message received: {:?}", msg);
             }
         } else {
-            println!("[TRACE] Error receiving WebSocket message");
+            trace_log!("[TRACE] Error receiving WebSocket message");
         }
     }
 
-    println!("[TRACE] WebSocket message loop ended");
+    trace_log!("[TRACE] WebSocket message loop ended");
 
     // Clean up session
     {
         let mut sessions = state.active_sessions.lock().await;
         sessions.remove(&session_id);
-        println!(
+        trace_log!(
             "[TRACE] Session {} removed from state - remaining sessions: {}",
             session_id,
             sessions.len()
@@ -438,7 +446,7 @@ async fn claude_websocket_handler(socket: WebSocket, state: AppState) {
     }
 
     forward_task.abort();
-    println!("[TRACE] WebSocket handler ended for session {}", session_id);
+    trace_log!("[TRACE] WebSocket handler ended for session {}", session_id);
 }
 
 // Claude command execution functions for WebSocket streaming
@@ -452,14 +460,14 @@ async fn execute_claude_command(
     use tokio::io::{AsyncBufReadExt, BufReader};
     use tokio::process::Command;
 
-    println!("[TRACE] execute_claude_command called:");
-    println!("[TRACE]   project_path: {}", project_path);
-    println!("[TRACE]   prompt length: {} chars", prompt.len());
-    println!("[TRACE]   model: {}", model);
-    println!("[TRACE]   session_id: {}", session_id);
+    trace_log!("[TRACE] execute_claude_command called:");
+    trace_log!("[TRACE]   project_path: {}", project_path);
+    trace_log!("[TRACE]   prompt length: {} chars", prompt.len());
+    trace_log!("[TRACE]   model: {}", model);
+    trace_log!("[TRACE]   session_id: {}", session_id);
 
     // Send initial message
-    println!("[TRACE] Sending initial start message");
+    trace_log!("[TRACE] Sending initial start message");
     send_to_session(
         &state,
         &session_id,
@@ -472,16 +480,16 @@ async fn execute_claude_command(
     .await;
 
     // Find Claude binary (simplified for web mode)
-    println!("[TRACE] Finding Claude binary...");
+    trace_log!("[TRACE] Finding Claude binary...");
     let claude_path = find_claude_binary_web().map_err(|e| {
         let error = format!("Claude binary not found: {}", e);
-        println!("[TRACE] Error finding Claude binary: {}", error);
+        trace_log!("[TRACE] Error finding Claude binary: {}", error);
         error
     })?;
-    println!("[TRACE] Found Claude binary: {}", claude_path);
+    trace_log!("[TRACE] Found Claude binary: {}", claude_path);
 
     // Create Claude command
-    println!("[TRACE] Creating Claude command...");
+    trace_log!("[TRACE] Creating Claude command...");
     let mut cmd = Command::new(&claude_path);
     let args = [
         "-p",
@@ -495,37 +503,43 @@ async fn execute_claude_command(
     ];
     cmd.args(args);
     cmd.current_dir(&project_path);
+    cmd.stdin(std::process::Stdio::null());
     cmd.stdout(std::process::Stdio::piped());
     cmd.stderr(std::process::Stdio::piped());
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x08000000);
+    }
 
-    println!(
+    trace_log!(
         "[TRACE] Command: {} {:?} (in dir: {})",
         claude_path, args, project_path
     );
 
     // Spawn Claude process
-    println!("[TRACE] Spawning Claude process...");
+    trace_log!("[TRACE] Spawning Claude process...");
     let mut child = cmd.spawn().map_err(|e| {
         let error = format!("Failed to spawn Claude: {}", e);
-        println!("[TRACE] Spawn error: {}", error);
+        trace_log!("[TRACE] Spawn error: {}", error);
         error
     })?;
-    println!("[TRACE] Claude process spawned successfully");
+    trace_log!("[TRACE] Claude process spawned successfully");
 
     // Get stdout for streaming
     let stdout = child.stdout.take().ok_or_else(|| {
-        println!("[TRACE] Failed to get stdout from child process");
+        trace_log!("[TRACE] Failed to get stdout from child process");
         "Failed to get stdout".to_string()
     })?;
     let stdout_reader = BufReader::new(stdout);
 
-    println!("[TRACE] Starting to read Claude output...");
+    trace_log!("[TRACE] Starting to read Claude output...");
     // Stream output line by line
     let mut lines = stdout_reader.lines();
     let mut line_count = 0;
     while let Ok(Some(line)) = lines.next_line().await {
         line_count += 1;
-        println!("[TRACE] Claude output line {}: {}", line_count, line);
+        trace_log!("[TRACE] Claude output line {}: {}", line_count, line);
 
         // Send each line to WebSocket
         let message = json!({
@@ -533,24 +547,24 @@ async fn execute_claude_command(
             "content": line
         })
         .to_string();
-        println!("[TRACE] Sending output message to session: {}", message);
+        trace_log!("[TRACE] Sending output message to session: {}", message);
         send_to_session(&state, &session_id, message).await;
     }
 
-    println!(
+    trace_log!(
         "[TRACE] Finished reading Claude output ({} lines total)",
         line_count
     );
 
     // Wait for process to complete
-    println!("[TRACE] Waiting for Claude process to complete...");
+    trace_log!("[TRACE] Waiting for Claude process to complete...");
     let exit_status = child.wait().await.map_err(|e| {
         let error = format!("Failed to wait for Claude: {}", e);
-        println!("[TRACE] Wait error: {}", error);
+        trace_log!("[TRACE] Wait error: {}", error);
         error
     })?;
 
-    println!(
+    trace_log!(
         "[TRACE] Claude process completed with status: {:?}",
         exit_status
     );
@@ -560,11 +574,11 @@ async fn execute_claude_command(
             "Claude execution failed with exit code: {:?}",
             exit_status.code()
         );
-        println!("[TRACE] Claude execution failed: {}", error);
+        trace_log!("[TRACE] Claude execution failed: {}", error);
         return Err(error);
     }
 
-    println!("[TRACE] execute_claude_command completed successfully");
+    trace_log!("[TRACE] execute_claude_command completed successfully");
     Ok(())
 }
 
@@ -607,8 +621,14 @@ async fn continue_claude_command(
         "--dangerously-skip-permissions",
     ]);
     cmd.current_dir(&project_path);
+    cmd.stdin(std::process::Stdio::null());
     cmd.stdout(std::process::Stdio::piped());
     cmd.stderr(std::process::Stdio::piped());
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x08000000);
+    }
 
     // Spawn and stream output
     let mut child = cmd
@@ -656,7 +676,7 @@ async fn resume_claude_command(
     use tokio::io::{AsyncBufReadExt, BufReader};
     use tokio::process::Command;
 
-    println!("[resume_claude_command] Starting with project_path: {}, claude_session_id: {}, prompt: {}, model: {}", 
+    trace_log!("[resume_claude_command] Starting with project_path: {}, claude_session_id: {}, prompt: {}, model: {}", 
              project_path, claude_session_id, prompt, model);
 
     send_to_session(
@@ -671,16 +691,16 @@ async fn resume_claude_command(
     .await;
 
     // Find Claude binary
-    println!("[resume_claude_command] Finding Claude binary...");
+    trace_log!("[resume_claude_command] Finding Claude binary...");
     let claude_path =
         find_claude_binary_web().map_err(|e| format!("Claude binary not found: {}", e))?;
-    println!(
+    trace_log!(
         "[resume_claude_command] Found Claude binary: {}",
         claude_path
     );
 
     // Create resume command
-    println!("[resume_claude_command] Creating command...");
+    trace_log!("[resume_claude_command] Creating command...");
     let mut cmd = Command::new(&claude_path);
     let args = [
         "--resume",
@@ -696,22 +716,28 @@ async fn resume_claude_command(
     ];
     cmd.args(args);
     cmd.current_dir(&project_path);
+    cmd.stdin(std::process::Stdio::null());
     cmd.stdout(std::process::Stdio::piped());
     cmd.stderr(std::process::Stdio::piped());
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x08000000);
+    }
 
-    println!(
+    trace_log!(
         "[resume_claude_command] Command: {} {:?} (in dir: {})",
         claude_path, args, project_path
     );
 
     // Spawn and stream output
-    println!("[resume_claude_command] Spawning process...");
+    trace_log!("[resume_claude_command] Spawning process...");
     let mut child = cmd.spawn().map_err(|e| {
         let error = format!("Failed to spawn Claude: {}", e);
-        println!("[resume_claude_command] Spawn error: {}", error);
+        trace_log!("[resume_claude_command] Spawn error: {}", error);
         error
     })?;
-    println!("[resume_claude_command] Process spawned successfully");
+    trace_log!("[resume_claude_command] Process spawned successfully");
     let stdout = child.stdout.take().ok_or("Failed to get stdout")?;
     let stdout_reader = BufReader::new(stdout);
 
@@ -744,22 +770,22 @@ async fn resume_claude_command(
 }
 
 async fn send_to_session(state: &AppState, session_id: &str, message: String) {
-    println!("[TRACE] send_to_session called for session: {}", session_id);
-    println!("[TRACE] Message: {}", message);
+    trace_log!("[TRACE] send_to_session called for session: {}", session_id);
+    trace_log!("[TRACE] Message: {}", message);
 
     let sessions = state.active_sessions.lock().await;
     if let Some(sender) = sessions.get(session_id) {
-        println!("[TRACE] Found session in active sessions, sending message...");
+        trace_log!("[TRACE] Found session in active sessions, sending message...");
         match sender.send(message).await {
-            Ok(_) => println!("[TRACE] Message sent successfully"),
-            Err(e) => println!("[TRACE] Failed to send message: {}", e),
+            Ok(_) => trace_log!("[TRACE] Message sent successfully"),
+            Err(e) => trace_log!("[TRACE] Failed to send message: {}", e),
         }
     } else {
-        println!(
+        trace_log!(
             "[TRACE] Session {} not found in active sessions",
             session_id
         );
-        println!(
+        trace_log!(
             "[TRACE] Active sessions: {:?}",
             sessions.keys().collect::<Vec<_>>()
         );
@@ -829,8 +855,8 @@ pub async fn create_web_server(port: u16) -> Result<(), Box<dyn std::error::Erro
         .with_state(state);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
-    println!("🌐 Web server running on http://0.0.0.0:{}", port);
-    println!("📱 Access from phone: http://YOUR_PC_IP:{}", port);
+    trace_log!("🌐 Web server running on http://0.0.0.0:{}", port);
+    trace_log!("📱 Access from phone: http://YOUR_PC_IP:{}", port);
 
     let listener = TcpListener::bind(addr).await?;
     axum::serve(listener, app).await?;
@@ -842,6 +868,6 @@ pub async fn create_web_server(port: u16) -> Result<(), Box<dyn std::error::Erro
 pub async fn start_web_mode(port: Option<u16>) -> Result<(), Box<dyn std::error::Error>> {
     let port = port.unwrap_or(8080);
 
-    println!("🚀 Starting Opcode in web server mode...");
+    trace_log!("🚀 Starting Opcode in web server mode...");
     create_web_server(port).await
 }

@@ -5,10 +5,11 @@
   "identifier": "opcode.asterisk.so",
   "build": {
     "beforeDevCommand": "",
-    "beforeBuildCommand": "bun run build",
+    "beforeBuildCommand": "npm run build",
     "frontendDist": "../dist"
   },
   "app": {
+    "withGlobalTauri": true,
     "macOSPrivateApi": true,
     "windows": [
       {
@@ -16,8 +17,8 @@
         "width": 800,
         "height": 600,
         "decorations": false,
-        "transparent": true,
-        "shadow": true,
+        "transparent": false,
+        "shadow": false,
         "center": true,
         "resizable": true,
         "alwaysOnTop": false
@@ -57,11 +58,8 @@
   "bundle": {
     "active": true,
     "targets": [
-      "deb",
-      "rpm",
-      "appimage",
-      "app",
-      "dmg"
+      "nsis",
+      "msi"
     ],
     "icon": [
       "icons/32x32.png",

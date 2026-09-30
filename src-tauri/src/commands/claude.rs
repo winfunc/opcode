@@ -286,7 +286,68 @@ fn create_command_with_env(program: &str) -> Command {
         }
     }
 
+    // On Windows, prevent spawning a visible console window for subprocesses
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        tokio_cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+    }
+
     tokio_cmd
+}
+
+/// Checks if a prompt contains image references (@"data:image/..." or @"path/to/image")
+fn prompt_has_images(prompt: &str) -> bool {
+    prompt.contains("@\"data:image/")
+}
+
+/// Parses a prompt with image references into Claude stream-json content blocks.
+/// Returns (content_blocks_json, cleaned_text_without_refs)
+fn build_image_content_blocks(prompt: &str) -> String {
+    let mut content_blocks: Vec<serde_json::Value> = Vec::new();
+    let mut remaining_text = prompt.to_string();
+
+    // Extract @"data:image/TYPE;base64,DATA" references
+    let re = regex::Regex::new(r#"@"(data:image/([^;]+);base64,([^"]+))""#).unwrap();
+
+    for caps in re.captures_iter(prompt) {
+        let full_match = caps.get(0).unwrap().as_str();
+        let media_type = format!("image/{}", &caps[2]);
+        let base64_data = &caps[3];
+
+        // Add image content block
+        content_blocks.push(serde_json::json!({
+            "type": "image",
+            "source": {
+                "type": "base64",
+                "media_type": media_type,
+                "data": base64_data
+            }
+        }));
+
+        // Remove the reference from the text
+        remaining_text = remaining_text.replace(full_match, "");
+    }
+
+    // Add remaining text as text block
+    let text = remaining_text.trim();
+    if !text.is_empty() {
+        content_blocks.push(serde_json::json!({
+            "type": "text",
+            "text": text
+        }));
+    }
+
+    // Build the stream-json user message
+    let msg = serde_json::json!({
+        "type": "user",
+        "message": {
+            "role": "user",
+            "content": content_blocks
+        }
+    });
+
+    msg.to_string()
 }
 
 /// Creates a system binary command with the given arguments
@@ -299,6 +360,7 @@ fn create_system_command(claude_path: &str, args: Vec<String>, project_path: &st
     }
 
     cmd.current_dir(project_path)
+        .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
 
@@ -600,7 +662,7 @@ pub async fn open_new_session(app: AppHandle, path: Option<String>) -> Result<St
 
     #[cfg(debug_assertions)]
     {
-        let mut cmd = std::process::Command::new(claude_path);
+        let mut cmd = crate::claude_binary::hidden_command(&claude_path);
 
         // If a path is provided, use it; otherwise use current directory
         if let Some(project_path) = path {
@@ -678,7 +740,7 @@ pub async fn check_claude_version(app: AppHandle) -> Result<ClaudeVersionStatus,
 
     #[cfg(debug_assertions)]
     {
-        let output = std::process::Command::new(claude_path)
+        let output = crate::claude_binary::hidden_command(&claude_path)
             .arg("--version")
             .output();
 
@@ -931,20 +993,8 @@ pub async fn execute_claude_code(
     );
 
     let claude_path = find_claude_binary(&app)?;
-
-    let args = vec![
-        "-p".to_string(),
-        prompt.clone(),
-        "--model".to_string(),
-        model.clone(),
-        "--output-format".to_string(),
-        "stream-json".to_string(),
-        "--verbose".to_string(),
-        "--dangerously-skip-permissions".to_string(),
-    ];
-
-    let cmd = create_system_command(&claude_path, args, &project_path);
-    spawn_claude_process(app, cmd, prompt, model, project_path).await
+    let extra_args: Vec<String> = vec![];
+    spawn_with_image_support(app, &claude_path, extra_args, prompt, model, project_path).await
 }
 
 /// Continue an existing Claude Code conversation with streaming output
@@ -962,21 +1012,8 @@ pub async fn continue_claude_code(
     );
 
     let claude_path = find_claude_binary(&app)?;
-
-    let args = vec![
-        "-c".to_string(), // Continue flag
-        "-p".to_string(),
-        prompt.clone(),
-        "--model".to_string(),
-        model.clone(),
-        "--output-format".to_string(),
-        "stream-json".to_string(),
-        "--verbose".to_string(),
-        "--dangerously-skip-permissions".to_string(),
-    ];
-
-    let cmd = create_system_command(&claude_path, args, &project_path);
-    spawn_claude_process(app, cmd, prompt, model, project_path).await
+    let extra_args = vec!["-c".to_string()]; // Continue flag
+    spawn_with_image_support(app, &claude_path, extra_args, prompt, model, project_path).await
 }
 
 /// Resume an existing Claude Code session by ID with streaming output
@@ -996,22 +1033,8 @@ pub async fn resume_claude_code(
     );
 
     let claude_path = find_claude_binary(&app)?;
-
-    let args = vec![
-        "--resume".to_string(),
-        session_id.clone(),
-        "-p".to_string(),
-        prompt.clone(),
-        "--model".to_string(),
-        model.clone(),
-        "--output-format".to_string(),
-        "stream-json".to_string(),
-        "--verbose".to_string(),
-        "--dangerously-skip-permissions".to_string(),
-    ];
-
-    let cmd = create_system_command(&claude_path, args, &project_path);
-    spawn_claude_process(app, cmd, prompt, model, project_path).await
+    let extra_args = vec!["--resume".to_string(), session_id.clone()];
+    spawn_with_image_support(app, &claude_path, extra_args, prompt, model, project_path).await
 }
 
 /// Cancel the currently running Claude Code execution
@@ -1092,11 +1115,11 @@ pub async fn cancel_claude_execution(
                     if let Some(pid) = pid {
                         log::info!("Attempting system kill as last resort for PID: {}", pid);
                         let kill_result = if cfg!(target_os = "windows") {
-                            std::process::Command::new("taskkill")
+                            crate::claude_binary::hidden_command("taskkill")
                                 .args(["/F", "/PID", &pid.to_string()])
                                 .output()
                         } else {
-                            std::process::Command::new("kill")
+                            crate::claude_binary::hidden_command("kill")
                                 .args(["-KILL", &pid.to_string()])
                                 .output()
                         };
@@ -1170,6 +1193,87 @@ pub async fn get_claude_session_output(
     }
 }
 
+/// Unified spawn helper that handles both text and image prompts
+async fn spawn_with_image_support(
+    app: AppHandle,
+    claude_path: &str,
+    extra_args: Vec<String>,
+    prompt: String,
+    model: String,
+    project_path: String,
+) -> Result<(), String> {
+    if prompt_has_images(&prompt) {
+        let stdin_payload = build_image_content_blocks(&prompt);
+        let mut args = extra_args;
+        args.extend([
+            "-p".to_string(),
+            "--input-format".to_string(),
+            "stream-json".to_string(),
+            "--model".to_string(),
+            model.clone(),
+            "--output-format".to_string(),
+            "stream-json".to_string(),
+            "--verbose".to_string(),
+            "--dangerously-skip-permissions".to_string(),
+        ]);
+        let mut cmd = create_command_with_env(claude_path);
+        for arg in args { cmd.arg(arg); }
+        cmd.current_dir(&project_path)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+        spawn_claude_process_with_stdin(app, cmd, stdin_payload, prompt, model, project_path).await
+    } else {
+        let mut args = extra_args;
+        args.extend([
+            "-p".to_string(),
+            prompt.clone(),
+            "--model".to_string(),
+            model.clone(),
+            "--output-format".to_string(),
+            "stream-json".to_string(),
+            "--verbose".to_string(),
+            "--dangerously-skip-permissions".to_string(),
+        ]);
+        let cmd = create_system_command(claude_path, args, &project_path);
+        spawn_claude_process(app, cmd, prompt, model, project_path).await
+    }
+}
+
+/// Helper to spawn Claude process with stdin data (for image support)
+async fn spawn_claude_process_with_stdin(
+    app: AppHandle,
+    mut cmd: Command,
+    stdin_data: String,
+    prompt: String,
+    model: String,
+    project_path: String,
+) -> Result<(), String> {
+    use tokio::io::AsyncWriteExt;
+
+    let mut child = cmd
+        .spawn()
+        .map_err(|e| format!("Failed to spawn Claude: {}", e))?;
+
+    // Write the image payload to stdin, then close it
+    if let Some(mut stdin) = child.stdin.take() {
+        let data = stdin_data.clone();
+        tokio::spawn(async move {
+            let _ = stdin.write_all(data.as_bytes()).await;
+            let _ = stdin.write_all(b"\n").await;
+            let _ = stdin.shutdown().await;
+        });
+    }
+
+    // Re-wrap as a command-less child and delegate to spawn_claude_process_from_child
+    // Actually, we need stdout/stderr from the child. Let's inline the remaining logic.
+    let stdout = child.stdout.take().ok_or("Failed to get stdout")?;
+    let stderr = child.stderr.take().ok_or("Failed to get stderr")?;
+
+    // Delegate to the shared streaming handler
+    handle_claude_streaming(app, child, stdout, stderr, prompt, model, project_path).await
+}
+
 /// Helper function to spawn Claude process and handle streaming
 async fn spawn_claude_process(
     app: AppHandle,
@@ -1178,9 +1282,6 @@ async fn spawn_claude_process(
     model: String,
     project_path: String,
 ) -> Result<(), String> {
-    use std::sync::Mutex;
-    use tokio::io::{AsyncBufReadExt, BufReader};
-
     // Spawn the process
     let mut child = cmd
         .spawn()
@@ -1189,6 +1290,22 @@ async fn spawn_claude_process(
     // Get stdout and stderr
     let stdout = child.stdout.take().ok_or("Failed to get stdout")?;
     let stderr = child.stderr.take().ok_or("Failed to get stderr")?;
+
+    handle_claude_streaming(app, child, stdout, stderr, prompt, model, project_path).await
+}
+
+/// Shared streaming handler for Claude process output
+async fn handle_claude_streaming(
+    app: AppHandle,
+    mut child: tokio::process::Child,
+    stdout: tokio::process::ChildStdout,
+    stderr: tokio::process::ChildStderr,
+    prompt: String,
+    model: String,
+    project_path: String,
+) -> Result<(), String> {
+    use std::sync::Mutex;
+    use tokio::io::{AsyncBufReadExt, BufReader};
 
     // Get the child PID for logging
     let pid = child.id().unwrap_or(0);
@@ -2164,7 +2281,7 @@ pub async fn validate_hook_command(command: String) -> Result<serde_json::Value,
     log::info!("Validating hook command syntax");
 
     // Validate syntax without executing
-    let mut cmd = std::process::Command::new("bash");
+    let mut cmd = crate::claude_binary::hidden_command("bash");
     cmd.arg("-n") // Syntax check only
         .arg("-c")
         .arg(&command);

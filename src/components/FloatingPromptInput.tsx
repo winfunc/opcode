@@ -24,18 +24,7 @@ import { SlashCommandPicker } from "./SlashCommandPicker";
 import { ImagePreview } from "./ImagePreview";
 import { type FileEntry, type SlashCommand } from "@/lib/api";
 
-// Conditional import for Tauri webview window
-let tauriGetCurrentWebviewWindow: any;
-try {
-  if (typeof window !== 'undefined' && window.__TAURI__) {
-    tauriGetCurrentWebviewWindow = require("@tauri-apps/api/webviewWindow").getCurrentWebviewWindow;
-  }
-} catch (e) {
-  console.log('[FloatingPromptInput] Tauri webview API not available, using web mode');
-}
-
-// Web-compatible replacement
-const getCurrentWebviewWindow = tauriGetCurrentWebviewWindow || (() => ({ listen: () => Promise.resolve(() => {}) }));
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 
 interface FloatingPromptInputProps {
   /**
@@ -237,6 +226,10 @@ const FloatingPromptInputInner = (
   const [cursorPosition, setCursorPosition] = useState(0);
   const [embeddedImages, setEmbeddedImages] = useState<string[]>([]);
   const [dragActive, setDragActive] = useState(false);
+
+  // Store base64 image data separately, keyed by image number
+  const imageDataMapRef = useRef<Map<number, string>>(new Map());
+  const imageCounterRef = useRef(0);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const expandedTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -706,9 +699,16 @@ const FloatingPromptInputInner = (
         finalPrompt = `${finalPrompt}.\n\n${thinkingMode.phrase}.`;
       }
 
+      // Replace [Image #N] placeholders with actual @"data:image/..." references
+      for (const [imgNum, dataUrl] of imageDataMapRef.current.entries()) {
+        finalPrompt = finalPrompt.replace(`[Image #${imgNum}]`, `@"${dataUrl}"`);
+      }
+
       onSend(finalPrompt, selectedModel);
       setPrompt("");
       setEmbeddedImages([]);
+      imageDataMapRef.current.clear();
+      imageCounterRef.current = 0;
       setTextareaHeight(48); // Reset height after sending
     }
   };
@@ -767,13 +767,17 @@ const FloatingPromptInputInner = (
           const reader = new FileReader();
           reader.onload = () => {
             const base64Data = reader.result as string;
-            
-            // Add the base64 data URL directly to the prompt
+
+            // Assign an image number and store the data separately
+            imageCounterRef.current += 1;
+            const imgNum = imageCounterRef.current;
+            imageDataMapRef.current.set(imgNum, base64Data);
+
+            // Insert a short placeholder in the textarea
             setPrompt(currentPrompt => {
-              // Use the data URL directly as the image reference
-              const mention = `@"${base64Data}"`;
-              const newPrompt = currentPrompt + (currentPrompt.endsWith(' ') || currentPrompt === '' ? '' : ' ') + mention + ' ';
-              
+              const placeholder = `[Image #${imgNum}]`;
+              const newPrompt = currentPrompt + (currentPrompt.endsWith(' ') || currentPrompt === '' ? '' : ' ') + placeholder + ' ';
+
               // Focus the textarea and move cursor to end
               setTimeout(() => {
                 const target = isExpanded ? expandedTextareaRef.current : textareaRef.current;
@@ -783,8 +787,11 @@ const FloatingPromptInputInner = (
 
               return newPrompt;
             });
+
+            // Update embeddedImages for the ImagePreview component
+            setEmbeddedImages(prev => [...prev, base64Data]);
           };
-          
+
           reader.readAsDataURL(blob);
         } catch (error) {
           console.error('Failed to paste image:', error);
@@ -810,13 +817,25 @@ const FloatingPromptInputInner = (
   const handleRemoveImage = (index: number) => {
     // Remove the corresponding @mention from the prompt
     const imagePath = embeddedImages[index];
-    
-    // For data URLs, we need to handle them specially since they're always quoted
+
+    // For data URLs stored via placeholder, find and remove the [Image #N] placeholder
     if (imagePath.startsWith('data:')) {
-      // Simply remove the exact quoted data URL
+      // Find which image number this data URL corresponds to
+      for (const [imgNum, dataUrl] of imageDataMapRef.current.entries()) {
+        if (dataUrl === imagePath) {
+          const placeholder = `[Image #${imgNum}]`;
+          const newPrompt = prompt.replace(placeholder, '').replace(/\s{2,}/g, ' ').trim();
+          setPrompt(newPrompt);
+          imageDataMapRef.current.delete(imgNum);
+          break;
+        }
+      }
+      // Also try the old format in case it exists
       const quotedPath = `@"${imagePath}"`;
-      const newPrompt = prompt.replace(quotedPath, '').trim();
-      setPrompt(newPrompt);
+      if (prompt.includes(quotedPath)) {
+        const newPrompt = prompt.replace(quotedPath, '').trim();
+        setPrompt(newPrompt);
+      }
       return;
     }
     
