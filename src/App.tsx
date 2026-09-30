@@ -457,32 +457,6 @@ function AppContent() {
         )}
       </ToastContainer>
 
-      {/* File picker modal for selecting project directory */}
-      {showProjectPicker && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-          <div className="w-full max-w-2xl h-[600px] bg-background border rounded-lg shadow-lg">
-            <FilePicker
-              basePath={homeDirectory}
-              onSelect={async (entry) => {
-                if (entry.is_directory) {
-                  // Create or open a project for this directory
-                  try {
-                    const project = await api.createProject(entry.path);
-                    setShowProjectPicker(false);
-                    await loadProjects();
-                    // Load sessions for the selected project
-                    await handleProjectClick(project);
-                  } catch (err) {
-                    console.error('Failed to create project:', err);
-                    setError('Failed to create project for the selected directory.');
-                  }
-                }
-              }}
-              onClose={() => setShowProjectPicker(false)}
-            />
-          </div>
-        </div>
-      )}
     </div>
   );
 }

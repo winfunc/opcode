@@ -984,8 +984,8 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     if (!claudeSessionId || !isLoading) return;
     
     try {
-      const sessionStartTime = messages.length > 0 ? messages[0].timestamp || Date.now() : Date.now();
-      const duration = Date.now() - sessionStartTime;
+      const sessionStartTimestamp = messages.length > 0 ? messages[0].timestamp || Date.now() : Date.now();
+      const duration = Date.now() - sessionStartTimestamp;
       
       await api.cancelClaudeExecution(claudeSessionId);
       
