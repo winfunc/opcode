@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Clock, MessageSquare } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Card } from "@/components/ui/card";
 import { Pagination } from "@/components/ui/pagination";
 import { ClaudeMemoriesDropdown } from "@/components/ClaudeMemoriesDropdown";
@@ -56,6 +57,7 @@ export const SessionList: React.FC<SessionListProps> = ({
   onEditClaudeFile,
   className,
 }) => {
+  const { t } = useTranslation();
   const [currentPage, setCurrentPage] = useState(1);
   
   // Calculate pagination
@@ -139,7 +141,7 @@ export const SessionList: React.FC<SessionListProps> = ({
                       </div>
                       {session.todo_data && (
                         <span className="inline-flex items-center px-1.5 py-0.5 rounded text-caption font-medium bg-primary/10 text-primary">
-                          Todo
+                          {t('sessions.todoBadge')}
                         </span>
                       )}
                     </div>
@@ -151,7 +153,7 @@ export const SessionList: React.FC<SessionListProps> = ({
                       </p>
                     ) : (
                       <p className="text-caption text-muted-foreground/60 italic mb-2">
-                        No messages yet
+                        {t('sessions.noMessages')}
                       </p>
                     )}
                   </div>

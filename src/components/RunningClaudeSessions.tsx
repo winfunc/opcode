@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useTranslation } from 'react-i18next';
 import { motion } from "framer-motion";
 import { Play, Loader2, Terminal, AlertCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,7 +26,8 @@ export const RunningClaudeSessions: React.FC<RunningClaudeSessionsProps> = ({
   onSessionClick,
   className,
 }) => {
-  const [runningSessions, setRunningSessions] = useState<ProcessInfo[]>([]);
+  
+  const { t } = useTranslation();const [runningSessions, setRunningSessions] = useState<ProcessInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

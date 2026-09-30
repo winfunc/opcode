@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, Edit2, FileText, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -36,7 +37,8 @@ export const ClaudeMemoriesDropdown: React.FC<ClaudeMemoriesDropdownProps> = ({
   onEditFile,
   className,
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
+  
+  const { t } = useTranslation();const [isOpen, setIsOpen] = useState(false);
   const [files, setFiles] = useState<ClaudeMdFile[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

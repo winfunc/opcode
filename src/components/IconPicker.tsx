@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from "framer-motion";
 import {
   // Interface & Navigation
@@ -331,7 +332,8 @@ export const IconPicker: React.FC<IconPickerProps> = ({
   isOpen,
   onClose,
 }) => {
-  const [searchQuery, setSearchQuery] = useState("");
+  
+  const { t } = useTranslation();const [searchQuery, setSearchQuery] = useState("");
   const [hoveredIcon, setHoveredIcon] = useState<string | null>(null);
 
   // Filter icons based on search query

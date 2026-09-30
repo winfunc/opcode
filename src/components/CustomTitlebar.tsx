@@ -3,6 +3,8 @@ import { motion } from 'framer-motion';
 import { Settings, Minus, Square, X, Bot, BarChart3, FileText, Network, Info, MoreVertical } from 'lucide-react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { TooltipProvider, TooltipSimple } from '@/components/ui/tooltip-modern';
+import { useTranslation } from 'react-i18next';
+import { LanguageSwitcher } from './LanguageSwitcher';
 
 interface CustomTitlebarProps {
   onSettingsClick?: () => void;
@@ -21,6 +23,7 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
   onMCPClick,
   onInfoClick
 }) => {
+  const { t } = useTranslation();
   const [isHovered, setIsHovered] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -90,7 +93,7 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
               handleClose();
             }}
             className="group relative w-3 h-3 rounded-full bg-red-500 hover:bg-red-600 transition-all duration-200 flex items-center justify-center tauri-no-drag"
-            title="Close"
+            title={t('titlebar.close')}
           >
             {isHovered && (
               <X size={8} className="text-red-900 opacity-60 group-hover:opacity-100" />
@@ -104,7 +107,7 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
               handleMinimize();
             }}
             className="group relative w-3 h-3 rounded-full bg-yellow-500 hover:bg-yellow-600 transition-all duration-200 flex items-center justify-center tauri-no-drag"
-            title="Minimize"
+            title={t('titlebar.minimize')}
           >
             {isHovered && (
               <Minus size={8} className="text-yellow-900 opacity-60 group-hover:opacity-100" />
@@ -118,7 +121,7 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
               handleMaximize();
             }}
             className="group relative w-3 h-3 rounded-full bg-green-500 hover:bg-green-600 transition-all duration-200 flex items-center justify-center tauri-no-drag"
-            title="Maximize"
+            title={t('titlebar.maximize')}
           >
             {isHovered && (
               <Square size={6} className="text-green-900 opacity-60 group-hover:opacity-100" />
@@ -137,10 +140,16 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
 
       {/* Right side - Navigation icons with improved spacing */}
       <div className="flex items-center pr-5 gap-3 tauri-no-drag">
+        {/* Language switcher */}
+        <LanguageSwitcher />
+
+        {/* Visual separator */}
+        <div className="w-px h-5 bg-border/50" />
+
         {/* Primary actions group */}
         <div className="flex items-center gap-1">
           {onAgentsClick && (
-            <TooltipSimple content="Agents" side="bottom">
+            <TooltipSimple content={t('titlebar.agents')} side="bottom">
               <motion.button
                 onClick={onAgentsClick}
                 whileTap={{ scale: 0.97 }}
@@ -151,9 +160,9 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
               </motion.button>
             </TooltipSimple>
           )}
-          
+
           {onUsageClick && (
-            <TooltipSimple content="Usage Dashboard" side="bottom">
+            <TooltipSimple content={t('titlebar.usageDashboard')} side="bottom">
               <motion.button
                 onClick={onUsageClick}
                 whileTap={{ scale: 0.97 }}
@@ -172,7 +181,7 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
         {/* Secondary actions group */}
         <div className="flex items-center gap-1">
           {onSettingsClick && (
-            <TooltipSimple content="Settings" side="bottom">
+            <TooltipSimple content={t('titlebar.settings')} side="bottom">
               <motion.button
                 onClick={onSettingsClick}
                 whileTap={{ scale: 0.97 }}
@@ -186,7 +195,7 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
 
           {/* Dropdown menu for additional options */}
           <div className="relative" ref={dropdownRef}>
-            <TooltipSimple content="More options" side="bottom">
+            <TooltipSimple content={t('titlebar.moreOptions')} side="bottom">
               <motion.button
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                 whileTap={{ scale: 0.97 }}
@@ -209,10 +218,10 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
                       className="w-full px-4 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground transition-colors flex items-center gap-3"
                     >
                       <FileText size={14} />
-                      <span>CLAUDE.md</span>
+                      <span>{t('titlebar.claudeMd')}</span>
                     </button>
                   )}
-                  
+
                   {onMCPClick && (
                     <button
                       onClick={() => {
@@ -222,10 +231,10 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
                       className="w-full px-4 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground transition-colors flex items-center gap-3"
                     >
                       <Network size={14} />
-                      <span>MCP Servers</span>
+                      <span>{t('titlebar.mcpServers')}</span>
                     </button>
                   )}
-                  
+
                   {onInfoClick && (
                     <button
                       onClick={() => {
@@ -235,7 +244,7 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
                       className="w-full px-4 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground transition-colors flex items-center gap-3"
                     >
                       <Info size={14} />
-                      <span>About</span>
+                      <span>{t('titlebar.about')}</span>
                     </button>
                   )}
                 </div>

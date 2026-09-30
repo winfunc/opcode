@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useTranslation } from 'react-i18next';
 import { motion } from "framer-motion";
 import { 
   GitBranch, 
@@ -57,7 +58,8 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
   onCheckpointCreated,
   className
 }) => {
-  const [timeline, setTimeline] = useState<SessionTimeline | null>(null);
+  
+  const { t } = useTranslation();const [timeline, setTimeline] = useState<SessionTimeline | null>(null);
   const [selectedCheckpoint, setSelectedCheckpoint] = useState<Checkpoint | null>(null);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [showCreateDialog, setShowCreateDialog] = useState(false);

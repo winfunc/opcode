@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BarChart3, Shield, X, Check, Info } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -18,7 +19,8 @@ export const AnalyticsConsent: React.FC<AnalyticsConsentProps> = ({
   onOpenChange,
   onComplete,
 }) => {
-  const [internalOpen, setInternalOpen] = useState(false);
+  
+  const { t } = useTranslation();const [internalOpen, setInternalOpen] = useState(false);
   const [hasShownConsent, setHasShownConsent] = useState(false);
   
   const isControlled = controlledOpen !== undefined;
