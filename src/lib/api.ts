@@ -53,6 +53,13 @@ export interface Session {
   message_timestamp?: string;
 }
 
+export interface SessionSearchResult extends Session {
+  /** Matching text snippets from the session */
+  snippets: string[];
+  /** Positive search terms for frontend highlighting */
+  highlight_terms: string[];
+}
+
 /**
  * Represents the settings from ~/.claude/settings.json
  */
@@ -498,6 +505,35 @@ export const api = {
       return await apiCall<Session[]>('get_project_sessions', { projectId });
     } catch (error) {
       console.error("Failed to get project sessions:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Searches through all session messages for a project
+   * @param projectId - The ID of the project
+   * @param query - The search query
+   * @returns Promise resolving to an array of matching sessions
+   */
+  async searchProjectSessions(projectId: string, query: string): Promise<SessionSearchResult[]> {
+    try {
+      return await apiCall<SessionSearchResult[]>('search_project_sessions', { projectId, query });
+    } catch (error) {
+      console.error("Failed to search project sessions:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Search across all projects' sessions for messages matching the query
+   * @param query - The search query (supports AND, OR, NOT, "exact phrase")
+   * @returns Promise resolving to an array of matching sessions across all projects
+   */
+  async searchAllSessions(query: string): Promise<SessionSearchResult[]> {
+    try {
+      return await apiCall<SessionSearchResult[]>('search_all_sessions', { query });
+    } catch (error) {
+      console.error("Failed to search all sessions:", error);
       throw error;
     }
   },
