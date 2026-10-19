@@ -91,6 +91,7 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
             }}
             className="group relative w-3 h-3 rounded-full bg-red-500 hover:bg-red-600 transition-all duration-200 flex items-center justify-center tauri-no-drag"
             title="Close"
+            aria-label="Close window"
           >
             {isHovered && (
               <X size={8} className="text-red-900 opacity-60 group-hover:opacity-100" />
@@ -105,6 +106,7 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
             }}
             className="group relative w-3 h-3 rounded-full bg-yellow-500 hover:bg-yellow-600 transition-all duration-200 flex items-center justify-center tauri-no-drag"
             title="Minimize"
+            aria-label="Minimize window"
           >
             {isHovered && (
               <Minus size={8} className="text-yellow-900 opacity-60 group-hover:opacity-100" />
@@ -119,6 +121,7 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
             }}
             className="group relative w-3 h-3 rounded-full bg-green-500 hover:bg-green-600 transition-all duration-200 flex items-center justify-center tauri-no-drag"
             title="Maximize"
+            aria-label="Maximize window"
           >
             {isHovered && (
               <Square size={6} className="text-green-900 opacity-60 group-hover:opacity-100" />
@@ -146,6 +149,7 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
                 whileTap={{ scale: 0.97 }}
                 transition={{ duration: 0.15 }}
                 className="p-2 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors tauri-no-drag"
+                aria-label="Agents manager"
               >
                 <Bot size={16} />
               </motion.button>
@@ -159,6 +163,7 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
                 whileTap={{ scale: 0.97 }}
                 transition={{ duration: 0.15 }}
                 className="p-2 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors tauri-no-drag"
+                aria-label="Usage dashboard"
               >
                 <BarChart3 size={16} />
               </motion.button>
@@ -178,6 +183,7 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
                 whileTap={{ scale: 0.97 }}
                 transition={{ duration: 0.15 }}
                 className="p-2 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors tauri-no-drag"
+                aria-label="Settings"
               >
                 <Settings size={16} />
               </motion.button>
@@ -192,13 +198,19 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
                 whileTap={{ scale: 0.97 }}
                 transition={{ duration: 0.15 }}
                 className="p-2 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors flex items-center gap-1"
+                aria-label="More options"
+                aria-expanded={isDropdownOpen}
               >
                 <MoreVertical size={16} />
               </motion.button>
             </TooltipSimple>
 
             {isDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-48 bg-popover border border-border rounded-lg shadow-lg z-[250]">
+              <div 
+                className="absolute right-0 mt-2 w-48 bg-popover border border-border rounded-lg shadow-lg z-[250]"
+                role="menu"
+                aria-label="Additional options menu"
+              >
                 <div className="py-1">
                   {onClaudeClick && (
                     <button
@@ -207,6 +219,8 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
                         setIsDropdownOpen(false);
                       }}
                       className="w-full px-4 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground transition-colors flex items-center gap-3"
+                      role="menuitem"
+                      aria-label="CLAUDE.md file editor"
                     >
                       <FileText size={14} />
                       <span>CLAUDE.md</span>
@@ -220,6 +234,8 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
                         setIsDropdownOpen(false);
                       }}
                       className="w-full px-4 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground transition-colors flex items-center gap-3"
+                      role="menuitem"
+                      aria-label="MCP servers manager"
                     >
                       <Network size={14} />
                       <span>MCP Servers</span>
@@ -233,6 +249,8 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
                         setIsDropdownOpen(false);
                       }}
                       className="w-full px-4 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground transition-colors flex items-center gap-3"
+                      role="menuitem"
+                      aria-label="Show about information"
                     >
                       <Info size={14} />
                       <span>About</span>

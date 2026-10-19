@@ -143,6 +143,9 @@ export const MessageList: React.FC<MessageListProps> = React.memo(({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="sticky bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-background to-transparent"
+          role="status"
+          aria-live="polite"
+          aria-label="Claude is processing your request"
         >
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <div className="h-2 w-2 bg-primary rounded-full animate-pulse" />

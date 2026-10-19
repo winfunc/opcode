@@ -281,11 +281,12 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
               size="icon"
               className="h-6 w-6 -ml-1"
               onClick={() => toggleNodeExpansion(node.checkpoint.id)}
+              aria-label={isExpanded ? "Collapse checkpoint" : "Expand checkpoint"}
             >
               {isExpanded ? (
-                <ChevronDown className="h-3 w-3" />
+                <ChevronDown className="h-3 w-3" aria-hidden="true" />
               ) : (
-                <ChevronRight className="h-3 w-3" />
+                <ChevronRight className="h-3 w-3" aria-hidden="true" />
               )}
             </Button>
           )}
@@ -348,8 +349,9 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
                             e.stopPropagation();
                             handleRestoreCheckpoint(node.checkpoint);
                           }}
+                          aria-label="Restore to this checkpoint"
                         >
-                          <RotateCcw className="h-3 w-3" />
+                          <RotateCcw className="h-3 w-3" aria-hidden="true" />
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>Restore to this checkpoint</TooltipContent>
@@ -367,8 +369,9 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
                             e.stopPropagation();
                             handleFork(node.checkpoint);
                           }}
+                          aria-label="Fork from this checkpoint"
                         >
-                          <GitFork className="h-3 w-3" />
+                          <GitFork className="h-3 w-3" aria-hidden="true" />
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>Fork from this checkpoint</TooltipContent>
@@ -386,8 +389,9 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
                             e.stopPropagation();
                             handleCompare(node.checkpoint);
                           }}
+                          aria-label="Compare with another checkpoint"
                         >
-                          <Diff className="h-3 w-3" />
+                          <Diff className="h-3 w-3" aria-hidden="true" />
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>Compare with another checkpoint</TooltipContent>
