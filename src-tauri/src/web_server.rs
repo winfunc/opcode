@@ -767,7 +767,7 @@ async fn send_to_session(state: &AppState, session_id: &str, message: String) {
 }
 
 /// Create the web server
-pub async fn create_web_server(port: u16) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn create_web_server(port: u16, host: &str) -> Result<(), Box<dyn std::error::Error>> {
     let state = AppState {
         active_sessions: Arc::new(Mutex::new(std::collections::HashMap::new())),
     };
@@ -828,9 +828,11 @@ pub async fn create_web_server(port: u16) -> Result<(), Box<dyn std::error::Erro
         .layer(cors)
         .with_state(state);
 
-    let addr = SocketAddr::from(([0, 0, 0, 0], port));
-    println!("🌐 Web server running on http://0.0.0.0:{}", port);
-    println!("📱 Access from phone: http://YOUR_PC_IP:{}", port);
+    let addr: SocketAddr = format!("{}:{}", host, port).parse()?;
+    println!("🌐 Web server running on http://{}:{}", host, port);
+    if host == "0.0.0.0" {
+        println!("📱 Accessible from other devices on your network (no authentication!)");
+    }
 
     let listener = TcpListener::bind(addr).await?;
     axum::serve(listener, app).await?;
@@ -839,9 +841,9 @@ pub async fn create_web_server(port: u16) -> Result<(), Box<dyn std::error::Erro
 }
 
 /// Start web server mode (alternative to Tauri GUI)
-pub async fn start_web_mode(port: Option<u16>) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn start_web_mode(port: Option<u16>, host: &str) -> Result<(), Box<dyn std::error::Error>> {
     let port = port.unwrap_or(8080);
 
     println!("🚀 Starting Opcode in web server mode...");
-    create_web_server(port).await
+    create_web_server(port, host).await
 }
