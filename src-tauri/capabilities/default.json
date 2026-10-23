@@ -39,8 +39,6 @@
     "fs:allow-rename",
     "fs:allow-exists",
     "fs:allow-copy-file",
-    "fs:read-all",
-    "fs:write-all",
     "fs:scope-app-recursive",
     "fs:scope-home-recursive",
     "http:default",
