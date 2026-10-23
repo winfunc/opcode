@@ -2163,6 +2163,16 @@ pub async fn update_hooks_config(
 pub async fn validate_hook_command(command: String) -> Result<serde_json::Value, String> {
     log::info!("Validating hook command syntax");
 
+    // `bash -n` is not available on Windows. Skip the syntax check there
+    // instead of failing validation with "program not found".
+    if cfg!(target_os = "windows") {
+        let _ = &command;
+        return Ok(serde_json::json!({
+            "valid": true,
+            "message": "Syntax check is not available on Windows; skipping"
+        }));
+    }
+
     // Validate syntax without executing
     let mut cmd = std::process::Command::new("bash");
     cmd.arg("-n") // Syntax check only
