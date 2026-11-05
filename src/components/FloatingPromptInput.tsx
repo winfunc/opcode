@@ -23,19 +23,8 @@ import { FilePicker } from "./FilePicker";
 import { SlashCommandPicker } from "./SlashCommandPicker";
 import { ImagePreview } from "./ImagePreview";
 import { type FileEntry, type SlashCommand } from "@/lib/api";
-
-// Conditional import for Tauri webview window
-let tauriGetCurrentWebviewWindow: any;
-try {
-  if (typeof window !== 'undefined' && window.__TAURI__) {
-    tauriGetCurrentWebviewWindow = require("@tauri-apps/api/webviewWindow").getCurrentWebviewWindow;
-  }
-} catch (e) {
-  console.log('[FloatingPromptInput] Tauri webview API not available, using web mode');
-}
-
-// Web-compatible replacement
-const getCurrentWebviewWindow = tauriGetCurrentWebviewWindow || (() => ({ listen: () => Promise.resolve(() => {}) }));
+import { isTauriRuntime } from "@/lib/apiAdapter";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 
 interface FloatingPromptInputProps {
   /**
@@ -364,6 +353,9 @@ const FloatingPromptInputInner = (
     let lastDropTime = 0;
 
     const setupListener = async () => {
+      // Native file drag-drop is only available in the desktop app.
+      if (!isTauriRuntime()) return;
+
       try {
         // If a listener from a previous mount/render is still around, clean it up.
         if (unlistenDragDropRef.current) {
