@@ -143,36 +143,110 @@ fn get_claude_dir() -> Result<PathBuf> {
         .context("Could not find ~/.claude directory")
 }
 
+/// Maximum number of lines inspected per session file when looking for `cwd`.
+///
+/// Newer Claude Code session files can start with several entries that carry
+/// no `cwd` (e.g. `last-prompt`, `permission-mode`), so the first handful of
+/// lines is not enough. The cap keeps the worst case bounded.
+const MAX_CWD_SCAN_LINES: usize = 200;
+
+/// Maximum number of session files inspected per project directory.
+const MAX_CWD_SCAN_FILES: usize = 5;
+
+/// Lines longer than this are skipped without being parsed, so a huge line
+/// can never blow up memory use.
+const MAX_CWD_SCAN_LINE_BYTES: u64 = 1024 * 1024;
+
+/// Reads one line into `buf` (cleared first), reading at most
+/// `MAX_CWD_SCAN_LINE_BYTES` of it. Any remainder of an over-long line is
+/// discarded. Returns `Ok(None)` at end of file, `Ok(Some(true))` when the
+/// line fits in `buf` and `Ok(Some(false))` when it was too long to keep.
+fn read_line_capped<R: BufRead>(
+    reader: &mut R,
+    buf: &mut Vec<u8>,
+) -> std::io::Result<Option<bool>> {
+    use std::io::Read;
+
+    buf.clear();
+    let read = reader
+        .by_ref()
+        .take(MAX_CWD_SCAN_LINE_BYTES)
+        .read_until(b'\n', buf)?;
+    if read == 0 {
+        return Ok(None);
+    }
+    if buf.last() == Some(&b'\n') || (read as u64) < MAX_CWD_SCAN_LINE_BYTES {
+        return Ok(Some(true));
+    }
+
+    // Over-long line: drop the rest of it without buffering.
+    loop {
+        let (consumed, done) = {
+            let available = reader.fill_buf()?;
+            if available.is_empty() {
+                (0, true)
+            } else if let Some(pos) = available.iter().position(|&b| b == b'\n') {
+                (pos + 1, true)
+            } else {
+                (available.len(), false)
+            }
+        };
+        reader.consume(consumed);
+        if done {
+            break;
+        }
+    }
+    buf.clear();
+    Ok(Some(false))
+}
+
+/// Looks for a non-empty top-level `cwd` in one session file.
+///
+/// Streams the file line by line, stops at the first match and never reads
+/// more than `MAX_CWD_SCAN_LINES` lines, so the common case (cwd within the
+/// first few lines) costs the same as before.
+fn find_cwd_in_session_file(path: &std::path::Path) -> Option<String> {
+    let file = fs::File::open(path).ok()?;
+    let mut reader = BufReader::new(file);
+    let mut buf = Vec::new();
+
+    for _ in 0..MAX_CWD_SCAN_LINES {
+        match read_line_capped(&mut reader, &mut buf) {
+            Ok(Some(true)) => {}
+            Ok(Some(false)) => continue,
+            Ok(None) | Err(_) => break,
+        }
+        // Cheap pre-filter: skip JSON parsing for lines that cannot hold a cwd.
+        if !buf.windows(5).any(|w| w == b"\"cwd\"") {
+            continue;
+        }
+        if let Ok(json) = serde_json::from_slice::<serde_json::Value>(&buf) {
+            if let Some(cwd) = json.get("cwd").and_then(|v| v.as_str()) {
+                if !cwd.is_empty() {
+                    return Some(cwd.to_string());
+                }
+            }
+        }
+    }
+    None
+}
+
 /// Gets the actual project path by reading the cwd from the JSONL entries
 fn get_project_path_from_sessions(project_dir: &PathBuf) -> Result<String, String> {
-    // Try to read any JSONL file in the directory
+    // Try the JSONL files in the directory until one yields a cwd
     let entries = fs::read_dir(project_dir)
         .map_err(|e| format!("Failed to read project directory: {}", e))?;
 
-    for entry in entries {
-        if let Ok(entry) = entry {
-            let path = entry.path();
-            if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("jsonl") {
-                // Read the JSONL file and find the first line with a valid cwd
-                if let Ok(file) = fs::File::open(&path) {
-                    let reader = BufReader::new(file);
-                    // Check first few lines instead of just the first line
-                    // Some session files may have null cwd in the first line
-                    for line in reader.lines().take(10) {
-                        if let Ok(line_content) = line {
-                            // Parse the JSON and extract cwd
-                            if let Ok(json) =
-                                serde_json::from_str::<serde_json::Value>(&line_content)
-                            {
-                                if let Some(cwd) = json.get("cwd").and_then(|v| v.as_str()) {
-                                    if !cwd.is_empty() {
-                                        return Ok(cwd.to_string());
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+    let mut files_tried = 0;
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("jsonl") {
+            if let Some(cwd) = find_cwd_in_session_file(&path) {
+                return Ok(cwd);
+            }
+            files_tried += 1;
+            if files_tried >= MAX_CWD_SCAN_FILES {
+                break;
             }
         }
     }
@@ -2338,5 +2412,175 @@ mod tests {
         // Should get one of the paths (implementation checks first file it finds)
         let path = result.unwrap();
         assert!(path == "/path1" || path == "/path2");
+    }
+
+    // ---------------------------------------------------------------------
+    // Issue #465 regression tests
+    // ---------------------------------------------------------------------
+
+    /// Independent re-implementation of Claude Code's folder naming
+    /// (every non-alphanumeric character becomes `-`), kept local to the
+    /// tests so they do not depend on the production helper.
+    fn claude_dir_name(path: &str) -> String {
+        path.chars()
+            .map(|c| if c.is_ascii_alphanumeric() { c } else { '-' })
+            .collect()
+    }
+
+    /// Creates `<temp>/<rel>` on disk and returns (real path, Claude folder name).
+    fn make_real_project(temp: &TempDir, rel: &str) -> (String, String) {
+        let real = temp.path().join(rel);
+        fs::create_dir_all(&real).unwrap();
+        let real = real.to_string_lossy().to_string();
+        let encoded = claude_dir_name(&real);
+        (real, encoded)
+    }
+
+    #[test]
+    fn test_issue_465_cwd_found_after_many_lines_without_cwd() {
+        // Newer Claude Code session files start with entries that carry no `cwd`
+        // (e.g. `last-prompt`, `permission-mode`). The lookup must keep scanning.
+        let temp_dir = TempDir::new().unwrap();
+        let project_dir = temp_dir.path().to_path_buf();
+
+        let mut content = String::new();
+        content.push_str("{\"type\":\"permission-mode\",\"mode\":\"default\"}\n");
+        for i in 0..40 {
+            content.push_str(&format!("{{\"type\":\"last-prompt\",\"n\":{}}}\n", i));
+        }
+        content.push_str(r#"{"type":"user","cwd":"/home/michal_mikes/my-project"}"#);
+        create_test_session_file(&project_dir, "session1.jsonl", &content).unwrap();
+
+        let result = get_project_path_from_sessions(&project_dir);
+        assert_eq!(result.unwrap(), "/home/michal_mikes/my-project");
+    }
+
+    #[test]
+    fn test_issue_465_cwd_scan_is_bounded() {
+        // A cwd that only appears after MAX_CWD_SCAN_LINES lines is not searched
+        // for: the scan must stay cheap on huge sessions.
+        let temp_dir = TempDir::new().unwrap();
+        let project_dir = temp_dir.path().to_path_buf();
+
+        let mut content = String::new();
+        for _ in 0..(MAX_CWD_SCAN_LINES + 50) {
+            content.push_str("{\"type\":\"assistant\"}\n");
+        }
+        content.push_str(r#"{"type":"user","cwd":"/too/late"}"#);
+        create_test_session_file(&project_dir, "session1.jsonl", &content).unwrap();
+
+        assert!(get_project_path_from_sessions(&project_dir).is_err());
+    }
+
+    #[test]
+    fn test_issue_465_cwd_scan_skips_oversized_and_invalid_lines() {
+        let temp_dir = TempDir::new().unwrap();
+        let project_dir = temp_dir.path().to_path_buf();
+
+        let mut content: Vec<u8> = Vec::new();
+        content.extend_from_slice(b"{\"cwd\":\"");
+        content.extend(std::iter::repeat(b'x').take(MAX_CWD_SCAN_LINE_BYTES as usize + 10));
+        content.extend_from_slice(b"\"}\n");
+        content.extend_from_slice(&[0xff, 0xfe, b'\n']); // invalid UTF-8 line
+        content.extend_from_slice(b"{\"type\":\"user\",\"cwd\":\"/ok/path_1\"}\n");
+        fs::write(project_dir.join("session1.jsonl"), content).unwrap();
+
+        assert_eq!(
+            get_project_path_from_sessions(&project_dir).unwrap(),
+            "/ok/path_1"
+        );
+    }
+
+    #[test]
+    fn test_issue_465_cwd_found_in_later_file_when_first_has_none() {
+        let temp_dir = TempDir::new().unwrap();
+        let project_dir = temp_dir.path().to_path_buf();
+        create_test_session_file(&project_dir, "a.jsonl", "{\"type\":\"summary\"}\n").unwrap();
+        create_test_session_file(&project_dir, "b.jsonl", "{\"cwd\":\"/b/c_d\"}\n").unwrap();
+
+        assert_eq!(
+            get_project_path_from_sessions(&project_dir).unwrap(),
+            "/b/c_d"
+        );
+    }
+
+    #[test]
+    #[ignore = "enabled by the decoder rewrite (T4)"]
+    fn test_issue_465_decode_underscore_in_path() {
+        let temp_dir = TempDir::new().unwrap();
+        let (real, encoded) = make_real_project(&temp_dir, "michal_mikes/projects");
+        assert_eq!(decode_project_path(&encoded), real);
+    }
+
+    #[test]
+    #[ignore = "enabled by the decoder rewrite (T4)"]
+    fn test_issue_465_decode_hyphen_in_path() {
+        let temp_dir = TempDir::new().unwrap();
+        let (real, encoded) = make_real_project(&temp_dir, "user/my-project");
+        assert_eq!(decode_project_path(&encoded), real);
+    }
+
+    #[test]
+    #[ignore = "enabled by the decoder rewrite (T4)"]
+    fn test_issue_465_decode_dot_folder_in_path() {
+        let temp_dir = TempDir::new().unwrap();
+        let (real, encoded) = make_real_project(&temp_dir, "me/.projects/myproject");
+        assert_eq!(decode_project_path(&encoded), real);
+    }
+
+    #[test]
+    #[ignore = "enabled by the decoder rewrite (T4)"]
+    fn test_issue_465_decode_mixed_separators_in_path() {
+        let temp_dir = TempDir::new().unwrap();
+        let (real, encoded) = make_real_project(&temp_dir, "john_doe/.cfg/my-app_v2.0");
+        assert_eq!(decode_project_path(&encoded), real);
+    }
+
+    /// Baseline timing for the hot path (run with
+    /// `cargo test --release -- --ignored --nocapture bench_`).
+    #[test]
+    #[ignore]
+    fn bench_project_path_lookup_baseline() {
+        use std::time::Instant;
+
+        let temp_dir = TempDir::new().unwrap();
+        let root = temp_dir.path().to_path_buf();
+
+        // 200 normal projects: cwd on the first line.
+        let mut dirs = Vec::new();
+        for i in 0..200 {
+            let d = root.join(format!("p{}", i));
+            fs::create_dir_all(&d).unwrap();
+            create_test_session_file(
+                &d,
+                "s.jsonl",
+                &format!("{{\"type\":\"user\",\"cwd\":\"/Users/test/proj{}\"}}\n", i),
+            )
+            .unwrap();
+            dirs.push(d);
+        }
+        let start = Instant::now();
+        for d in &dirs {
+            let _ = get_project_path_from_sessions(d);
+        }
+        println!("BASELINE 200 normal projects: {:?}", start.elapsed());
+
+        // One project with a ~100 MB session file (cwd on line 1).
+        let big = root.join("big");
+        fs::create_dir_all(&big).unwrap();
+        let mut f = fs::File::create(big.join("s.jsonl")).unwrap();
+        f.write_all(b"{\"type\":\"user\",\"cwd\":\"/Users/test/big\"}\n")
+            .unwrap();
+        let line = format!(
+            "{{\"type\":\"assistant\",\"pad\":\"{}\"}}\n",
+            "x".repeat(1000)
+        );
+        for _ in 0..100_000 {
+            f.write_all(line.as_bytes()).unwrap();
+        }
+        drop(f);
+        let start = Instant::now();
+        let _ = get_project_path_from_sessions(&big);
+        println!("BASELINE 1 project, ~100MB session: {:?}", start.elapsed());
     }
 }
