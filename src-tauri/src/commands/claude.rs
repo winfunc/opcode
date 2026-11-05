@@ -1447,6 +1447,23 @@ pub async fn get_claude_session_output(
     }
 }
 
+/// Checks that the working directory handed to the `claude` process exists.
+///
+/// A non-existent directory makes the spawn fail with an opaque OS error, so
+/// check up front and return a message that names the offending path.
+fn validate_project_dir(project_path: &str) -> Result<(), String> {
+    if project_path.trim().is_empty() {
+        return Err("Project path is empty".to_string());
+    }
+    if !std::path::Path::new(project_path).is_dir() {
+        return Err(format!(
+            "Project directory not found: {}. Check that the folder still exists and has not been moved or renamed.",
+            project_path
+        ));
+    }
+    Ok(())
+}
+
 /// Helper function to spawn Claude process and handle streaming
 async fn spawn_claude_process(
     app: AppHandle,
@@ -1457,6 +1474,8 @@ async fn spawn_claude_process(
 ) -> Result<(), String> {
     use std::sync::Mutex;
     use tokio::io::{AsyncBufReadExt, BufReader};
+
+    validate_project_dir(&project_path)?;
 
     // Spawn the process
     let mut child = cmd
@@ -2753,6 +2772,25 @@ mod tests {
             session_jsonl_path(projects, "/Users/me/.projects/x", "s1"),
             PathBuf::from("/home/u/.claude/projects/-Users-me--projects-x/s1.jsonl")
         );
+    }
+
+    #[test]
+    fn test_validate_project_dir() {
+        let temp = TempDir::new().unwrap();
+        let ok = temp.path().to_string_lossy().to_string();
+        assert!(validate_project_dir(&ok).is_ok());
+
+        let missing = temp.path().join("michal/mikes/projects");
+        let err = validate_project_dir(&missing.to_string_lossy()).unwrap_err();
+        assert!(err.contains("Project directory not found"), "{}", err);
+        assert!(err.contains("michal/mikes/projects"), "{}", err);
+
+        let file = temp.path().join("a_file");
+        fs::write(&file, "x").unwrap();
+        assert!(validate_project_dir(&file.to_string_lossy()).is_err());
+
+        let err = validate_project_dir("  ").unwrap_err();
+        assert!(err.contains("empty"), "{}", err);
     }
 
     #[test]
