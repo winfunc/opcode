@@ -254,6 +254,29 @@ fn get_project_path_from_sessions(project_dir: &PathBuf) -> Result<String, Strin
     Err("Could not determine project path from session files".to_string())
 }
 
+/// Encodes a project path into the directory name Claude Code uses under
+/// `~/.claude/projects`.
+///
+/// Claude Code replaces every character that is not an ASCII letter or digit
+/// with `-` (so `/`, `\`, `:`, `_`, `-`, `.` and spaces all collapse to the same
+/// character). It does this per UTF-16 code unit, so a character outside the
+/// Basic Multilingual Plane becomes two dashes. This mirrors that behaviour in
+/// a single allocation-light pass; the result is *not* reversible, see
+/// [`decode_project_path`].
+pub(crate) fn encode_project_path(path: &str) -> String {
+    let mut encoded = String::with_capacity(path.len());
+    for c in path.chars() {
+        if c.is_ascii_alphanumeric() {
+            encoded.push(c);
+        } else {
+            for _ in 0..c.len_utf16() {
+                encoded.push('-');
+            }
+        }
+    }
+    encoded
+}
+
 /// Decodes a project directory name back to its original path
 /// The directory names in ~/.claude/projects are encoded paths
 /// DEPRECATED: Use get_project_path_from_sessions instead when possible
@@ -2453,6 +2476,40 @@ mod tests {
 
         let result = get_project_path_from_sessions(&project_dir);
         assert_eq!(result.unwrap(), "/home/michal_mikes/my-project");
+    }
+
+    #[test]
+    fn test_encode_project_path_matches_claude_code_naming() {
+        assert_eq!(encode_project_path("/Users/me/app"), "-Users-me-app");
+        assert_eq!(
+            encode_project_path("/home/michal_mikes/projects"),
+            "-home-michal-mikes-projects"
+        );
+        assert_eq!(
+            encode_project_path("/Users/me/.projects/myproject"),
+            "-Users-me--projects-myproject"
+        );
+        assert_eq!(encode_project_path("/a/my-app_v2.0"), "-a-my-app-v2-0");
+        assert_eq!(encode_project_path("/a/with space"), "-a-with-space");
+        assert_eq!(encode_project_path(""), "");
+    }
+
+    #[test]
+    fn test_encode_project_path_windows_and_unicode() {
+        assert_eq!(
+            encode_project_path(r"C:\Users\john_doe\app"),
+            "C--Users-john-doe-app"
+        );
+        // Claude Code (JavaScript) replaces per UTF-16 code unit: a BMP char is
+        // one dash, a supplementary-plane char (surrogate pair) is two.
+        assert_eq!(encode_project_path("/a/caf\u{e9}"), "-a-caf-");
+        assert_eq!(encode_project_path("/a/\u{1F600}"), "-a---");
+    }
+
+    #[test]
+    fn test_encode_project_path_is_idempotent_on_encoded_names() {
+        let once = encode_project_path("/Users/me/.projects/my_app");
+        assert_eq!(encode_project_path(&once), once);
     }
 
     #[test]
