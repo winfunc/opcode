@@ -444,9 +444,11 @@ fn resolve_below(dir: &str, sep: char, rest: &str, probe: &dyn PathProbe) -> Opt
 /// modification time is unchanged (it changes whenever a session file is
 /// added or removed). Avoids re-reading session files and re-walking the
 /// filesystem on every `list_projects` call.
-static PROJECT_PATH_CACHE: std::sync::OnceLock<
-    std::sync::Mutex<std::collections::HashMap<PathBuf, (Option<SystemTime>, String)>>,
-> = std::sync::OnceLock::new();
+static PROJECT_PATH_CACHE: std::sync::OnceLock<std::sync::Mutex<ProjectPathCache>> =
+    std::sync::OnceLock::new();
+
+/// Project folder -> (folder mtime when resolved, resolved path).
+type ProjectPathCache = std::collections::HashMap<PathBuf, (Option<SystemTime>, String)>;
 
 /// Works out the real directory a `~/.claude/projects/<name>` folder belongs to.
 ///
@@ -2842,7 +2844,10 @@ mod tests {
 
         let mut content: Vec<u8> = Vec::new();
         content.extend_from_slice(b"{\"cwd\":\"");
-        content.extend(std::iter::repeat(b'x').take(MAX_CWD_SCAN_LINE_BYTES as usize + 10));
+        content.extend(std::iter::repeat_n(
+            b'x',
+            MAX_CWD_SCAN_LINE_BYTES as usize + 10,
+        ));
         content.extend_from_slice(b"\"}\n");
         content.extend_from_slice(&[0xff, 0xfe, b'\n']); // invalid UTF-8 line
         content.extend_from_slice(b"{\"type\":\"user\",\"cwd\":\"/ok/path_1\"}\n");
