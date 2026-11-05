@@ -511,20 +511,31 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
 
         let currentSessionId: string | null = claudeSessionId || effectiveSession?.id || null;
 
+        // The backend emits every line twice: first on the session-scoped
+        // channel, then on the generic one. While switching from generic to
+        // scoped listeners both can be active for a moment, so once a scoped
+        // listener has received an event on a channel, the generic listener
+        // for that channel ignores what follows (one flag per channel, so a
+        // completion event can never be skipped).
+        const scopedChannelActive = { output: false, error: false, complete: false };
+
         // Helper to attach session-specific listeners **once we are sure**
         const attachSessionSpecificListeners = async (sid: string) => {
           console.log('[ClaudeCodeSession] Attaching session-specific listeners for', sid);
 
           const specificOutputUnlisten = await listen(`claude-output:${sid}`, (evt: any) => {
+            scopedChannelActive.output = true;
             handleStreamMessage(evt.payload);
           });
 
           const specificErrorUnlisten = await listen(`claude-error:${sid}`, (evt: any) => {
+            scopedChannelActive.error = true;
             console.error('Claude error (scoped):', evt.payload);
             setError(evt.payload);
           });
 
           const specificCompleteUnlisten = await listen(`claude-complete:${sid}`, (evt: any) => {
+            scopedChannelActive.complete = true;
             console.log('[ClaudeCodeSession] Received claude-complete (scoped):', evt.payload);
             processComplete(evt.payload);
           });
@@ -536,6 +547,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
 
         // Generic listeners (catch-all)
         const genericOutputUnlisten = await listen('claude-output', async (event: any) => {
+          if (scopedChannelActive.output) return;
           handleStreamMessage(event.payload);
 
           // Attempt to extract session_id on the fly (for the very first init)
@@ -767,11 +779,13 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
         };
 
         const genericErrorUnlisten = await listen('claude-error', (evt: any) => {
+          if (scopedChannelActive.error) return;
           console.error('Claude error:', evt.payload);
           setError(evt.payload);
         });
 
         const genericCompleteUnlisten = await listen('claude-complete', (evt: any) => {
+          if (scopedChannelActive.complete) return;
           console.log('[ClaudeCodeSession] Received claude-complete (generic):', evt.payload);
           processComplete(evt.payload);
         });
