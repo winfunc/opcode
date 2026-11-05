@@ -277,6 +277,18 @@ pub(crate) fn encode_project_path(path: &str) -> String {
     encoded
 }
 
+/// Path of a session's JSONL file inside Claude's projects directory, using
+/// Claude Code's folder naming for `project_path` (see [`encode_project_path`]).
+pub(crate) fn session_jsonl_path(
+    projects_dir: &std::path::Path,
+    project_path: &str,
+    session_id: &str,
+) -> PathBuf {
+    projects_dir
+        .join(encode_project_path(project_path))
+        .join(format!("{}.jsonl", session_id))
+}
+
 /// Decodes a project directory name back to its original path
 /// The directory names in ~/.claude/projects are encoded paths
 ///
@@ -695,7 +707,7 @@ pub async fn create_project(path: String) -> Result<Project, String> {
     log::info!("Creating project for path: {}", path);
 
     // Encode the path to create a project ID
-    let project_id = path.replace('/', "-");
+    let project_id = encode_project_path(&path);
 
     // Get claude directory
     let claude_dir = get_claude_dir().map_err(|e| e.to_string())?;
@@ -2727,6 +2739,19 @@ mod tests {
         assert_eq!(
             resolve_project_path(&project_dir, &encoded),
             real.to_string_lossy()
+        );
+    }
+
+    #[test]
+    fn test_session_jsonl_path_uses_claude_folder_naming() {
+        let projects = std::path::Path::new("/home/u/.claude/projects");
+        assert_eq!(
+            session_jsonl_path(projects, "/home/michal_mikes/my-app", "abc"),
+            PathBuf::from("/home/u/.claude/projects/-home-michal-mikes-my-app/abc.jsonl")
+        );
+        assert_eq!(
+            session_jsonl_path(projects, "/Users/me/.projects/x", "s1"),
+            PathBuf::from("/home/u/.claude/projects/-Users-me--projects-x/s1.jsonl")
         );
     }
 
