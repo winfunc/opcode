@@ -24,6 +24,7 @@ import { SlashCommandPicker } from "./SlashCommandPicker";
 import { ImagePreview } from "./ImagePreview";
 import { type FileEntry, type SlashCommand } from "@/lib/api";
 import { isTauriRuntime } from "@/lib/apiAdapter";
+import { isAnyElementVisible } from "@/lib/domVisibility";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 
 interface FloatingPromptInputProps {
@@ -366,10 +367,7 @@ const FloatingPromptInputInner = (
         unlistenDragDropRef.current = await webview.onDragDropEvent((event: any) => {
           // Drag-drop events are window-wide and every chat tab stays mounted
           // (inactive tabs are only hidden), so only the visible prompt reacts.
-          const isVisible = [textareaRef.current, expandedTextareaRef.current].some(
-            (el) => !!el && el.getClientRects().length > 0
-          );
-          if (!isVisible) return;
+          if (!isAnyElementVisible([textareaRef.current, expandedTextareaRef.current])) return;
 
           if (event.payload.type === 'enter' || event.payload.type === 'over') {
             setDragActive(true);
