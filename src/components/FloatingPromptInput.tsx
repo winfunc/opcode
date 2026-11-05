@@ -364,6 +364,13 @@ const FloatingPromptInputInner = (
 
         const webview = getCurrentWebviewWindow();
         unlistenDragDropRef.current = await webview.onDragDropEvent((event: any) => {
+          // Drag-drop events are window-wide and every chat tab stays mounted
+          // (inactive tabs are only hidden), so only the visible prompt reacts.
+          const isVisible = [textareaRef.current, expandedTextareaRef.current].some(
+            (el) => !!el && el.getClientRects().length > 0
+          );
+          if (!isVisible) return;
+
           if (event.payload.type === 'enter' || event.payload.type === 'over') {
             setDragActive(true);
           } else if (event.payload.type === 'leave') {
