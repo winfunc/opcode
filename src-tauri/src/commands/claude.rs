@@ -403,6 +403,60 @@ fn resolve_below(dir: &std::path::Path, rest: &str, probe: &dyn PathProbe) -> Op
     None
 }
 
+/// Resolved project paths keyed by project folder, valid while the folder's
+/// modification time is unchanged (it changes whenever a session file is
+/// added or removed). Avoids re-reading session files and re-walking the
+/// filesystem on every `list_projects` call.
+static PROJECT_PATH_CACHE: std::sync::OnceLock<
+    std::sync::Mutex<std::collections::HashMap<PathBuf, (Option<SystemTime>, String)>>,
+> = std::sync::OnceLock::new();
+
+/// Works out the real directory a `~/.claude/projects/<name>` folder belongs to.
+///
+/// Order of trust: (1) the `cwd` recorded in the session files, (2) the folder
+/// name resolved against the real filesystem, (3) a best-effort guess. Only
+/// the first two are cached, so a guess is retried once the directory exists.
+fn resolve_project_path(project_dir: &PathBuf, dir_name: &str) -> String {
+    let modified = fs::metadata(project_dir).and_then(|m| m.modified()).ok();
+    let cache = PROJECT_PATH_CACHE.get_or_init(Default::default);
+
+    if let Ok(guard) = cache.lock() {
+        if let Some((cached_at, path)) = guard.get(project_dir) {
+            if modified.is_some() && *cached_at == modified {
+                return path.clone();
+            }
+        }
+    }
+
+    let resolved = match get_project_path_from_sessions(project_dir) {
+        Ok(path) => Some(path),
+        Err(e) => {
+            log::debug!(
+                "No cwd in sessions for {} ({}), resolving from folder name",
+                dir_name,
+                e
+            );
+            resolve_project_dir_name(dir_name)
+        }
+    };
+
+    match resolved {
+        Some(path) => {
+            if let Ok(mut guard) = cache.lock() {
+                guard.insert(project_dir.clone(), (modified, path.clone()));
+            }
+            path
+        }
+        None => {
+            log::warn!(
+                "Could not resolve the project path for {}; using a best-effort guess",
+                dir_name
+            );
+            decode_project_path(dir_name)
+        }
+    }
+}
+
 /// Extracts the first valid user message from a JSONL file
 fn extract_first_user_message(jsonl_path: &PathBuf) -> (Option<String>, Option<String>) {
     let file = match fs::File::open(jsonl_path) {
@@ -529,6 +583,13 @@ pub async fn get_home_directory() -> Result<String, String> {
 /// Lists all projects in the ~/.claude/projects directory
 #[tauri::command]
 pub async fn list_projects() -> Result<Vec<Project>, String> {
+    // Blocking filesystem work: keep it off the async runtime threads.
+    tokio::task::spawn_blocking(list_projects_blocking)
+        .await
+        .map_err(|e| format!("Failed to list projects: {}", e))?
+}
+
+fn list_projects_blocking() -> Result<Vec<Project>, String> {
     log::info!("Listing projects from ~/.claude/projects");
 
     let claude_dir = get_claude_dir().map_err(|e| e.to_string())?;
@@ -567,14 +628,8 @@ pub async fn list_projects() -> Result<Vec<Project>, String> {
                 .unwrap_or_default()
                 .as_secs();
 
-            // Get the actual project path from JSONL files
-            let project_path = match get_project_path_from_sessions(&path) {
-                Ok(path) => path,
-                Err(e) => {
-                    log::warn!("Failed to get project path from sessions for {}: {}, falling back to decode", dir_name, e);
-                    decode_project_path(dir_name)
-                }
-            };
+            // Resolve the real project path (session cwd, then filesystem match)
+            let project_path = resolve_project_path(&path, dir_name);
 
             // List all JSONL files (sessions) in this project directory
             let mut sessions = Vec::new();
@@ -684,6 +739,13 @@ pub async fn create_project(path: String) -> Result<Project, String> {
 /// Gets sessions for a specific project
 #[tauri::command]
 pub async fn get_project_sessions(project_id: String) -> Result<Vec<Session>, String> {
+    // Blocking filesystem work: keep it off the async runtime threads.
+    tokio::task::spawn_blocking(move || get_project_sessions_blocking(project_id))
+        .await
+        .map_err(|e| format!("Failed to get project sessions: {}", e))?
+}
+
+fn get_project_sessions_blocking(project_id: String) -> Result<Vec<Session>, String> {
     log::info!("Getting sessions for project: {}", project_id);
 
     let claude_dir = get_claude_dir().map_err(|e| e.to_string())?;
@@ -694,18 +756,8 @@ pub async fn get_project_sessions(project_id: String) -> Result<Vec<Session>, St
         return Err(format!("Project directory not found: {}", project_id));
     }
 
-    // Get the actual project path from JSONL files
-    let project_path = match get_project_path_from_sessions(&project_dir) {
-        Ok(path) => path,
-        Err(e) => {
-            log::warn!(
-                "Failed to get project path from sessions for {}: {}, falling back to decode",
-                project_id,
-                e
-            );
-            decode_project_path(&project_id)
-        }
-    };
+    // Resolve the real project path (session cwd, then filesystem match)
+    let project_path = resolve_project_path(&project_dir, &project_id);
 
     let mut sessions = Vec::new();
 
@@ -2629,6 +2681,56 @@ mod tests {
     }
 
     #[test]
+    fn test_resolve_project_path_prefers_cwd_from_sessions() {
+        let temp = TempDir::new().unwrap();
+        let project_dir = temp.path().join("-home-john-doe-app");
+        fs::create_dir_all(&project_dir).unwrap();
+        create_test_session_file(
+            &project_dir,
+            "s.jsonl",
+            "{\"type\":\"permission-mode\"}\n{\"cwd\":\"/home/john_doe/app\"}\n",
+        )
+        .unwrap();
+
+        assert_eq!(
+            resolve_project_path(&project_dir, "-home-john-doe-app"),
+            "/home/john_doe/app"
+        );
+    }
+
+    #[test]
+    fn test_resolve_project_path_falls_back_to_filesystem_without_sessions() {
+        // New project: folder exists but has no session files yet (the case that
+        // used to produce "Failed to send prompt").
+        let temp = TempDir::new().unwrap();
+        let (real, encoded) = make_real_project(&temp, "john_doe/my-app");
+        let project_dir = temp.path().join("claude-projects").join(&encoded);
+        fs::create_dir_all(&project_dir).unwrap();
+
+        assert_eq!(resolve_project_path(&project_dir, &encoded), real);
+    }
+
+    #[test]
+    fn test_resolve_project_path_does_not_cache_a_guess() {
+        let temp = TempDir::new().unwrap();
+        let encoded = claude_dir_name(&format!("{}/later_created", temp.path().display()));
+        let project_dir = temp.path().join("claude-projects").join(&encoded);
+        fs::create_dir_all(&project_dir).unwrap();
+
+        // Directory does not exist yet: best-effort guess, must not be cached.
+        let guess = resolve_project_path(&project_dir, &encoded);
+        assert!(!std::path::Path::new(&guess).exists());
+
+        // Once the real directory appears the next call must find it.
+        let real = temp.path().join("later_created");
+        fs::create_dir_all(&real).unwrap();
+        assert_eq!(
+            resolve_project_path(&project_dir, &encoded),
+            real.to_string_lossy()
+        );
+    }
+
+    #[test]
     fn test_issue_465_cwd_scan_is_bounded() {
         // A cwd that only appears after MAX_CWD_SCAN_LINES lines is not searched
         // for: the scan must stay cheap on huge sessions.
@@ -2808,6 +2910,23 @@ mod tests {
             let _ = get_project_path_from_sessions(d);
         }
         println!("BASELINE 200 normal projects: {:?}", start.elapsed());
+
+        let start = Instant::now();
+        for (i, d) in dirs.iter().enumerate() {
+            let _ = resolve_project_path(d, &format!("p{}", i));
+        }
+        println!(
+            "NEW resolve_project_path cold, 200 projects: {:?}",
+            start.elapsed()
+        );
+        let start = Instant::now();
+        for (i, d) in dirs.iter().enumerate() {
+            let _ = resolve_project_path(d, &format!("p{}", i));
+        }
+        println!(
+            "NEW resolve_project_path cached, 200 projects: {:?}",
+            start.elapsed()
+        );
 
         // One project with a ~100 MB session file (cwd on line 1).
         let big = root.join("big");
