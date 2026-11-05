@@ -299,24 +299,28 @@ pub(crate) fn session_jsonl_path(
 /// [`resolve_project_dir_name`]. If nothing on disk matches, the old
 /// best-effort guess (every `-` becomes `/`) is returned.
 fn decode_project_path(encoded: &str) -> String {
-    resolve_project_dir_name(encoded).unwrap_or_else(|| encoded.replace('-', "/"))
+    resolve_project_dir_name(encoded).unwrap_or_else(|| match split_encoded_root(encoded) {
+        Some((root, sep, rest)) => format!("{}{}", root, rest.replace('-', &sep.to_string())),
+        None => encoded.replace('-', "/"),
+    })
 }
 
 /// Read-only view of the filesystem used to resolve project folder names.
 /// Abstracted so the matching logic can be unit-tested (including Windows-style
-/// layouts) without touching the real disk.
+/// layouts) without touching the real disk. Paths are plain strings in the
+/// platform's own syntax (`/a/b` or `C:\a\b`).
 trait PathProbe {
     /// Names of the entries directly inside `dir` (no metadata lookups).
-    fn child_names(&self, dir: &std::path::Path) -> Vec<String>;
+    fn child_names(&self, dir: &str) -> Vec<String>;
     /// Whether `path` is a directory (symlinks are followed).
-    fn is_dir(&self, path: &std::path::Path) -> bool;
+    fn is_dir(&self, path: &str) -> bool;
 }
 
 /// [`PathProbe`] backed by the real filesystem.
 struct RealFs;
 
 impl PathProbe for RealFs {
-    fn child_names(&self, dir: &std::path::Path) -> Vec<String> {
+    fn child_names(&self, dir: &str) -> Vec<String> {
         match fs::read_dir(dir) {
             Ok(entries) => entries
                 .flatten()
@@ -326,9 +330,28 @@ impl PathProbe for RealFs {
         }
     }
 
-    fn is_dir(&self, path: &std::path::Path) -> bool {
-        path.is_dir()
+    fn is_dir(&self, path: &str) -> bool {
+        std::path::Path::new(path).is_dir()
     }
+}
+
+/// Splits a project folder name into `(root, separator, remainder)`.
+///
+/// * Unix paths start with the encoded root separator: `-Users-me-app` is
+///   rooted at `/`.
+/// * Windows paths start with a drive letter followed by the encoded `:\`,
+///   i.e. `C--Users-me-app` is rooted at `C:\`.
+///
+/// Anything else (for example UNC paths) is not supported and yields `None`.
+fn split_encoded_root(encoded: &str) -> Option<(String, char, &str)> {
+    if let Some(rest) = encoded.strip_prefix('-') {
+        return Some(("/".to_string(), '/', rest)).filter(|(_, _, r)| !r.is_empty());
+    }
+    let bytes = encoded.as_bytes();
+    if bytes.len() > 3 && bytes[0].is_ascii_alphabetic() && bytes[1] == b'-' && bytes[2] == b'-' {
+        return Some((format!("{}:\\", bytes[0] as char), '\\', &encoded[3..]));
+    }
+    None
 }
 
 /// Resolves a `~/.claude/projects` folder name to the real directory it was
@@ -370,16 +393,14 @@ fn encoded_name_prefix_len(name: &str, rest: &str) -> Option<usize> {
 /// layouts encode identically, deterministically picks the first match in
 /// name order.
 fn resolve_project_dir_name_with(encoded: &str, probe: &dyn PathProbe) -> Option<String> {
-    // A leading '-' is the encoded root separator.
-    let rest = encoded.strip_prefix('-')?;
+    let (root, sep, rest) = split_encoded_root(encoded)?;
     if rest.is_empty() {
         return None;
     }
-    let found = resolve_below(std::path::Path::new("/"), rest, probe)?;
-    Some(found.to_string_lossy().into_owned())
+    resolve_below(&root, sep, rest, probe)
 }
 
-fn resolve_below(dir: &std::path::Path, rest: &str, probe: &dyn PathProbe) -> Option<PathBuf> {
+fn resolve_below(dir: &str, sep: char, rest: &str, probe: &dyn PathProbe) -> Option<String> {
     // (name, remaining encoded text after this component, or None if this
     // component consumes the whole remainder)
     let mut candidates: Vec<(String, Option<usize>)> = probe
@@ -399,14 +420,18 @@ fn resolve_below(dir: &std::path::Path, rest: &str, probe: &dyn PathProbe) -> Op
     candidates.sort_by(|a, b| a.0.cmp(&b.0));
 
     for (name, next) in candidates {
-        let child = dir.join(&name);
+        let child = if dir.ends_with(sep) {
+            format!("{}{}", dir, name)
+        } else {
+            format!("{}{}{}", dir, sep, name)
+        };
         if !probe.is_dir(&child) {
             continue;
         }
         match next {
             None => return Some(child),
             Some(offset) => {
-                if let Some(found) = resolve_below(&child, &rest[offset..], probe) {
+                if let Some(found) = resolve_below(&child, sep, &rest[offset..], probe) {
                     return Some(found);
                 }
             }
@@ -2843,40 +2868,100 @@ mod tests {
     }
 
     /// In-memory filesystem used to test path resolution without touching disk.
+    /// Paths are plain strings so Windows-style layouts (`C:\\Users\\x`) can be
+    /// tested on any host.
     struct FakeFs {
-        dirs: std::collections::HashSet<PathBuf>,
+        children: std::collections::HashMap<String, Vec<String>>,
+        dirs: std::collections::HashSet<String>,
         lists: std::cell::Cell<usize>,
     }
 
     impl FakeFs {
-        fn new(dirs: &[&str]) -> Self {
-            let mut set = std::collections::HashSet::new();
-            for d in dirs {
-                let mut p = PathBuf::new();
-                for comp in PathBuf::from(d).components() {
-                    p.push(comp);
-                    set.insert(p.clone());
+        fn new(paths: &[&str]) -> Self {
+            let mut children: std::collections::HashMap<String, Vec<String>> = Default::default();
+            let mut dirs = std::collections::HashSet::new();
+            for p in paths {
+                let (root, sep, rest) = if let Some(rest) = p.strip_prefix('/') {
+                    ("/".to_string(), '/', rest)
+                } else {
+                    (p[..3].to_string(), '\\', &p[3..])
+                };
+                dirs.insert(root.clone());
+                let mut cur = root;
+                for comp in rest.split(sep).filter(|c| !c.is_empty()) {
+                    let list = children.entry(cur.clone()).or_default();
+                    if !list.iter().any(|c| c == comp) {
+                        list.push(comp.to_string());
+                    }
+                    cur = if cur.ends_with(sep) {
+                        format!("{}{}", cur, comp)
+                    } else {
+                        format!("{}{}{}", cur, sep, comp)
+                    };
+                    dirs.insert(cur.clone());
                 }
             }
             Self {
-                dirs: set,
+                children,
+                dirs,
                 lists: std::cell::Cell::new(0),
             }
         }
     }
 
     impl PathProbe for FakeFs {
-        fn child_names(&self, dir: &std::path::Path) -> Vec<String> {
+        fn child_names(&self, dir: &str) -> Vec<String> {
             self.lists.set(self.lists.get() + 1);
-            self.dirs
-                .iter()
-                .filter(|p| p.parent() == Some(dir))
-                .filter_map(|p| p.file_name().and_then(|n| n.to_str()).map(String::from))
-                .collect()
+            self.children.get(dir).cloned().unwrap_or_default()
         }
-        fn is_dir(&self, path: &std::path::Path) -> bool {
+        fn is_dir(&self, path: &str) -> bool {
             self.dirs.contains(path)
         }
+    }
+
+    #[test]
+    fn test_resolve_windows_drive_paths() {
+        let fs = FakeFs::new(&[
+            r"C:\Users\john_doe\app",
+            r"C:\dev\my-app",
+            r"C:\Users\me\.cfg\tool",
+        ]);
+        assert_eq!(
+            resolve_project_dir_name_with("C--Users-john-doe-app", &fs).as_deref(),
+            Some(r"C:\Users\john_doe\app")
+        );
+        assert_eq!(
+            resolve_project_dir_name_with("C--dev-my-app", &fs).as_deref(),
+            Some(r"C:\dev\my-app")
+        );
+        assert_eq!(
+            resolve_project_dir_name_with("C--Users-me--cfg-tool", &fs).as_deref(),
+            Some(r"C:\Users\me\.cfg\tool")
+        );
+    }
+
+    #[test]
+    fn test_resolve_windows_unsupported_and_missing_return_none() {
+        let fs = FakeFs::new(&[r"C:\Users\x"]);
+        // UNC paths (\\server\share) are not supported: no drive letter
+        assert_eq!(resolve_project_dir_name_with("--server-share-x", &fs), None);
+        // Drive that does not exist in the view
+        assert_eq!(resolve_project_dir_name_with("D--Users-x", &fs), None);
+        // Drive prefix with nothing after it
+        assert_eq!(resolve_project_dir_name_with("C--", &fs), None);
+    }
+
+    #[test]
+    fn test_decode_project_path_best_effort_guess_keeps_platform_shape() {
+        // Nothing on disk matches these names, so the last-resort guess is used.
+        assert_eq!(
+            decode_project_path("-nonexistent-zzz-qqq"),
+            "/nonexistent/zzz/qqq"
+        );
+        assert_eq!(
+            decode_project_path("Q--nonexistent-zzz"),
+            r"Q:\nonexistent\zzz"
+        );
     }
 
     #[test]
