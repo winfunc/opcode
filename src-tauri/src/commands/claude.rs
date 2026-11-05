@@ -279,12 +279,128 @@ pub(crate) fn encode_project_path(path: &str) -> String {
 
 /// Decodes a project directory name back to its original path
 /// The directory names in ~/.claude/projects are encoded paths
-/// DEPRECATED: Use get_project_path_from_sessions instead when possible
+///
+/// Prefer [`get_project_path_from_sessions`]; this is only the fallback for
+/// projects whose session files carry no `cwd`. The encoding is lossy (`/`,
+/// `_`, `-`, `.` and spaces all become `-`), so the real path is recovered by
+/// matching the name against what actually exists on disk, see
+/// [`resolve_project_dir_name`]. If nothing on disk matches, the old
+/// best-effort guess (every `-` becomes `/`) is returned.
 fn decode_project_path(encoded: &str) -> String {
-    // This is a fallback - the encoding isn't reversible when paths contain hyphens
-    // For example: -Users-mufeedvh-dev-jsonl-viewer could be /Users/mufeedvh/dev/jsonl-viewer
-    // or /Users/mufeedvh/dev/jsonl/viewer
-    encoded.replace('-', "/")
+    resolve_project_dir_name(encoded).unwrap_or_else(|| encoded.replace('-', "/"))
+}
+
+/// Read-only view of the filesystem used to resolve project folder names.
+/// Abstracted so the matching logic can be unit-tested (including Windows-style
+/// layouts) without touching the real disk.
+trait PathProbe {
+    /// Names of the entries directly inside `dir` (no metadata lookups).
+    fn child_names(&self, dir: &std::path::Path) -> Vec<String>;
+    /// Whether `path` is a directory (symlinks are followed).
+    fn is_dir(&self, path: &std::path::Path) -> bool;
+}
+
+/// [`PathProbe`] backed by the real filesystem.
+struct RealFs;
+
+impl PathProbe for RealFs {
+    fn child_names(&self, dir: &std::path::Path) -> Vec<String> {
+        match fs::read_dir(dir) {
+            Ok(entries) => entries
+                .flatten()
+                .filter_map(|e| e.file_name().into_string().ok())
+                .collect(),
+            Err(_) => Vec::new(),
+        }
+    }
+
+    fn is_dir(&self, path: &std::path::Path) -> bool {
+        path.is_dir()
+    }
+}
+
+/// Resolves a `~/.claude/projects` folder name to the real directory it was
+/// created from, or `None` if no existing directory encodes to that name.
+fn resolve_project_dir_name(encoded: &str) -> Option<String> {
+    resolve_project_dir_name_with(encoded, &RealFs)
+}
+
+/// Returns the number of bytes of `rest` that the encoding of `name` occupies
+/// if `rest` starts with that encoding. Allocation-free equivalent of
+/// `rest.starts_with(&encode_project_path(name))`.
+fn encoded_name_prefix_len(name: &str, rest: &str) -> Option<usize> {
+    let rest = rest.as_bytes();
+    let mut i = 0;
+    for c in name.chars() {
+        if c.is_ascii_alphanumeric() {
+            if rest.get(i) != Some(&(c as u8)) {
+                return None;
+            }
+            i += 1;
+        } else {
+            for _ in 0..c.len_utf16() {
+                if rest.get(i) != Some(&b'-') {
+                    return None;
+                }
+                i += 1;
+            }
+        }
+    }
+    Some(i)
+}
+
+/// Core of [`resolve_project_dir_name`], generic over the filesystem view.
+///
+/// Instead of guessing which `-` was a separator, walk down from the root:
+/// at each level keep only the child directories whose encoded name matches
+/// the front of what is left of the folder name, then recurse. That costs one
+/// directory listing per path level (not exponential) and, when several
+/// layouts encode identically, deterministically picks the first match in
+/// name order.
+fn resolve_project_dir_name_with(encoded: &str, probe: &dyn PathProbe) -> Option<String> {
+    // A leading '-' is the encoded root separator.
+    let rest = encoded.strip_prefix('-')?;
+    if rest.is_empty() {
+        return None;
+    }
+    let found = resolve_below(std::path::Path::new("/"), rest, probe)?;
+    Some(found.to_string_lossy().into_owned())
+}
+
+fn resolve_below(dir: &std::path::Path, rest: &str, probe: &dyn PathProbe) -> Option<PathBuf> {
+    // (name, remaining encoded text after this component, or None if this
+    // component consumes the whole remainder)
+    let mut candidates: Vec<(String, Option<usize>)> = probe
+        .child_names(dir)
+        .into_iter()
+        .filter_map(|name| {
+            let len = encoded_name_prefix_len(&name, rest)?;
+            if len == rest.len() {
+                Some((name, None))
+            } else if rest.as_bytes()[len] == b'-' {
+                Some((name, Some(len + 1)))
+            } else {
+                None
+            }
+        })
+        .collect();
+    candidates.sort_by(|a, b| a.0.cmp(&b.0));
+
+    for (name, next) in candidates {
+        let child = dir.join(&name);
+        if !probe.is_dir(&child) {
+            continue;
+        }
+        match next {
+            None => return Some(child),
+            Some(offset) => {
+                if let Some(found) = resolve_below(&child, &rest[offset..], probe) {
+                    return Some(found);
+                }
+            }
+        }
+    }
+    None
 }
 
 /// Extracts the first valid user message from a JSONL file
@@ -2561,8 +2677,82 @@ mod tests {
         );
     }
 
+    /// In-memory filesystem used to test path resolution without touching disk.
+    struct FakeFs {
+        dirs: std::collections::HashSet<PathBuf>,
+        lists: std::cell::Cell<usize>,
+    }
+
+    impl FakeFs {
+        fn new(dirs: &[&str]) -> Self {
+            let mut set = std::collections::HashSet::new();
+            for d in dirs {
+                let mut p = PathBuf::new();
+                for comp in PathBuf::from(d).components() {
+                    p.push(comp);
+                    set.insert(p.clone());
+                }
+            }
+            Self {
+                dirs: set,
+                lists: std::cell::Cell::new(0),
+            }
+        }
+    }
+
+    impl PathProbe for FakeFs {
+        fn child_names(&self, dir: &std::path::Path) -> Vec<String> {
+            self.lists.set(self.lists.get() + 1);
+            self.dirs
+                .iter()
+                .filter(|p| p.parent() == Some(dir))
+                .filter_map(|p| p.file_name().and_then(|n| n.to_str()).map(String::from))
+                .collect()
+        }
+        fn is_dir(&self, path: &std::path::Path) -> bool {
+            self.dirs.contains(path)
+        }
+    }
+
     #[test]
-    #[ignore = "enabled by the decoder rewrite (T4)"]
+    fn test_resolve_prefers_deterministic_match_when_ambiguous() {
+        // Both /a/b-c and /a/b/c exist: encoded names are identical.
+        let fs = FakeFs::new(&["/a/b-c", "/a/b/c"]);
+        let first = resolve_project_dir_name_with("-a-b-c", &fs);
+        let second = resolve_project_dir_name_with("-a-b-c", &fs);
+        assert_eq!(first, second);
+        assert!(first.is_some());
+    }
+
+    #[test]
+    fn test_resolve_backtracks_out_of_dead_ends() {
+        // "/a/b" exists but has no matching child, and the real project is
+        // /a/b-c/d, so the search must abandon the "b" branch and backtrack.
+        let fs = FakeFs::new(&["/a/b", "/a/b-c/d"]);
+        assert_eq!(
+            resolve_project_dir_name_with("-a-b-c-d", &fs).as_deref(),
+            Some("/a/b-c/d")
+        );
+    }
+
+    #[test]
+    fn test_resolve_returns_none_when_nothing_matches() {
+        let fs = FakeFs::new(&["/a/b"]);
+        assert_eq!(resolve_project_dir_name_with("-a-x-y", &fs), None);
+        assert_eq!(resolve_project_dir_name_with("", &fs), None);
+        assert_eq!(resolve_project_dir_name_with("no-leading-dash", &fs), None);
+    }
+
+    #[test]
+    fn test_resolve_lists_each_directory_level_once() {
+        let fs = FakeFs::new(&["/Users/john_doe/my-app/src"]);
+        let got = resolve_project_dir_name_with("-Users-john-doe-my-app-src", &fs);
+        assert_eq!(got.as_deref(), Some("/Users/john_doe/my-app/src"));
+        // root + Users + john_doe + my-app = 4 listings, never exponential.
+        assert!(fs.lists.get() <= 4, "listed {} dirs", fs.lists.get());
+    }
+
+    #[test]
     fn test_issue_465_decode_underscore_in_path() {
         let temp_dir = TempDir::new().unwrap();
         let (real, encoded) = make_real_project(&temp_dir, "michal_mikes/projects");
@@ -2570,7 +2760,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "enabled by the decoder rewrite (T4)"]
     fn test_issue_465_decode_hyphen_in_path() {
         let temp_dir = TempDir::new().unwrap();
         let (real, encoded) = make_real_project(&temp_dir, "user/my-project");
@@ -2578,7 +2767,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "enabled by the decoder rewrite (T4)"]
     fn test_issue_465_decode_dot_folder_in_path() {
         let temp_dir = TempDir::new().unwrap();
         let (real, encoded) = make_real_project(&temp_dir, "me/.projects/myproject");
@@ -2586,7 +2774,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "enabled by the decoder rewrite (T4)"]
     fn test_issue_465_decode_mixed_separators_in_path() {
         let temp_dir = TempDir::new().unwrap();
         let (real, encoded) = make_real_project(&temp_dir, "john_doe/.cfg/my-app_v2.0");
