@@ -269,6 +269,15 @@ function mapCommandToEndpoint(command: string, _params?: any): string {
 }
 
 /**
+ * Whether the app runs inside the Tauri desktop runtime (as opposed to web
+ * mode). Uses the same detection as API calls, so events and commands always
+ * agree on the environment.
+ */
+export function isTauriRuntime(): boolean {
+  return detectEnvironment();
+}
+
+/**
  * Get environment info for debugging
  */
 export function getEnvironmentInfo() {
