@@ -153,6 +153,32 @@ Menu → MCP Manager → Add Server → Configure
 - Import from Claude Desktop configuration
 - Test connections before using
 
+#### Example: Parallel Search
+
+[Parallel Search MCP](https://docs.parallel.ai/integrations/mcp/search-mcp) provides
+`web_search` and `web_fetch` without a Parallel account or API key. To connect it
+through opcode's existing Stdio form, install Node.js with `npx` available to
+opcode, then open **MCP Manager → Add Server → Stdio** and enter:
+
+| Field | Value |
+| --- | --- |
+| Server Name | `parallel-search` |
+| Command | `npx` |
+| Arguments | `-y mcp-remote https://search.parallel.ai/mcp --transport http-only` |
+| Scope | `User (all projects)` |
+| Environment Variables | Leave empty |
+
+Click **Add Stdio Server**, then start a new session. The
+[`mcp-remote`](https://github.com/punkpeye/mcp-remote) bridge downloads on first use
+and connects to Parallel over Streamable HTTP. Use the Stdio form for this
+recipe; the SSE URL field uses a different transport.
+
+This adds the server for all projects. Once enabled, the agent may invoke its
+tools under your existing permissions, sending queries, requested URLs, and
+supplied objectives or context to Parallel. Free access is rate limited. To
+remove it, use the trash button for `parallel-search` in **MCP Manager → Servers**
+and start a new session.
+
 ## 🚀 Installation
 
 ### Prerequisites
