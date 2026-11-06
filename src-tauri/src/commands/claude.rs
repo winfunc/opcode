@@ -143,36 +143,110 @@ fn get_claude_dir() -> Result<PathBuf> {
         .context("Could not find ~/.claude directory")
 }
 
+/// Maximum number of lines inspected per session file when looking for `cwd`.
+///
+/// Newer Claude Code session files can start with several entries that carry
+/// no `cwd` (e.g. `last-prompt`, `permission-mode`), so the first handful of
+/// lines is not enough. The cap keeps the worst case bounded.
+const MAX_CWD_SCAN_LINES: usize = 200;
+
+/// Maximum number of session files inspected per project directory.
+const MAX_CWD_SCAN_FILES: usize = 5;
+
+/// Lines longer than this are skipped without being parsed, so a huge line
+/// can never blow up memory use.
+const MAX_CWD_SCAN_LINE_BYTES: u64 = 1024 * 1024;
+
+/// Reads one line into `buf` (cleared first), reading at most
+/// `MAX_CWD_SCAN_LINE_BYTES` of it. Any remainder of an over-long line is
+/// discarded. Returns `Ok(None)` at end of file, `Ok(Some(true))` when the
+/// line fits in `buf` and `Ok(Some(false))` when it was too long to keep.
+fn read_line_capped<R: BufRead>(
+    reader: &mut R,
+    buf: &mut Vec<u8>,
+) -> std::io::Result<Option<bool>> {
+    use std::io::Read;
+
+    buf.clear();
+    let read = reader
+        .by_ref()
+        .take(MAX_CWD_SCAN_LINE_BYTES)
+        .read_until(b'\n', buf)?;
+    if read == 0 {
+        return Ok(None);
+    }
+    if buf.last() == Some(&b'\n') || (read as u64) < MAX_CWD_SCAN_LINE_BYTES {
+        return Ok(Some(true));
+    }
+
+    // Over-long line: drop the rest of it without buffering.
+    loop {
+        let (consumed, done) = {
+            let available = reader.fill_buf()?;
+            if available.is_empty() {
+                (0, true)
+            } else if let Some(pos) = available.iter().position(|&b| b == b'\n') {
+                (pos + 1, true)
+            } else {
+                (available.len(), false)
+            }
+        };
+        reader.consume(consumed);
+        if done {
+            break;
+        }
+    }
+    buf.clear();
+    Ok(Some(false))
+}
+
+/// Looks for a non-empty top-level `cwd` in one session file.
+///
+/// Streams the file line by line, stops at the first match and never reads
+/// more than `MAX_CWD_SCAN_LINES` lines, so the common case (cwd within the
+/// first few lines) costs the same as before.
+fn find_cwd_in_session_file(path: &std::path::Path) -> Option<String> {
+    let file = fs::File::open(path).ok()?;
+    let mut reader = BufReader::new(file);
+    let mut buf = Vec::new();
+
+    for _ in 0..MAX_CWD_SCAN_LINES {
+        match read_line_capped(&mut reader, &mut buf) {
+            Ok(Some(true)) => {}
+            Ok(Some(false)) => continue,
+            Ok(None) | Err(_) => break,
+        }
+        // Cheap pre-filter: skip JSON parsing for lines that cannot hold a cwd.
+        if !buf.windows(5).any(|w| w == b"\"cwd\"") {
+            continue;
+        }
+        if let Ok(json) = serde_json::from_slice::<serde_json::Value>(&buf) {
+            if let Some(cwd) = json.get("cwd").and_then(|v| v.as_str()) {
+                if !cwd.is_empty() {
+                    return Some(cwd.to_string());
+                }
+            }
+        }
+    }
+    None
+}
+
 /// Gets the actual project path by reading the cwd from the JSONL entries
 fn get_project_path_from_sessions(project_dir: &PathBuf) -> Result<String, String> {
-    // Try to read any JSONL file in the directory
+    // Try the JSONL files in the directory until one yields a cwd
     let entries = fs::read_dir(project_dir)
         .map_err(|e| format!("Failed to read project directory: {}", e))?;
 
-    for entry in entries {
-        if let Ok(entry) = entry {
-            let path = entry.path();
-            if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("jsonl") {
-                // Read the JSONL file and find the first line with a valid cwd
-                if let Ok(file) = fs::File::open(&path) {
-                    let reader = BufReader::new(file);
-                    // Check first few lines instead of just the first line
-                    // Some session files may have null cwd in the first line
-                    for line in reader.lines().take(10) {
-                        if let Ok(line_content) = line {
-                            // Parse the JSON and extract cwd
-                            if let Ok(json) =
-                                serde_json::from_str::<serde_json::Value>(&line_content)
-                            {
-                                if let Some(cwd) = json.get("cwd").and_then(|v| v.as_str()) {
-                                    if !cwd.is_empty() {
-                                        return Ok(cwd.to_string());
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+    let mut files_tried = 0;
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("jsonl") {
+            if let Some(cwd) = find_cwd_in_session_file(&path) {
+                return Ok(cwd);
+            }
+            files_tried += 1;
+            if files_tried >= MAX_CWD_SCAN_FILES {
+                break;
             }
         }
     }
@@ -180,14 +254,246 @@ fn get_project_path_from_sessions(project_dir: &PathBuf) -> Result<String, Strin
     Err("Could not determine project path from session files".to_string())
 }
 
+/// Encodes a project path into the directory name Claude Code uses under
+/// `~/.claude/projects`.
+///
+/// Claude Code replaces every character that is not an ASCII letter or digit
+/// with `-` (so `/`, `\`, `:`, `_`, `-`, `.` and spaces all collapse to the same
+/// character). It does this per UTF-16 code unit, so a character outside the
+/// Basic Multilingual Plane becomes two dashes. This mirrors that behaviour in
+/// a single allocation-light pass; the result is *not* reversible, see
+/// [`decode_project_path`].
+pub(crate) fn encode_project_path(path: &str) -> String {
+    let mut encoded = String::with_capacity(path.len());
+    for c in path.chars() {
+        if c.is_ascii_alphanumeric() {
+            encoded.push(c);
+        } else {
+            for _ in 0..c.len_utf16() {
+                encoded.push('-');
+            }
+        }
+    }
+    encoded
+}
+
+/// Path of a session's JSONL file inside Claude's projects directory, using
+/// Claude Code's folder naming for `project_path` (see [`encode_project_path`]).
+pub(crate) fn session_jsonl_path(
+    projects_dir: &std::path::Path,
+    project_path: &str,
+    session_id: &str,
+) -> PathBuf {
+    projects_dir
+        .join(encode_project_path(project_path))
+        .join(format!("{}.jsonl", session_id))
+}
+
 /// Decodes a project directory name back to its original path
 /// The directory names in ~/.claude/projects are encoded paths
-/// DEPRECATED: Use get_project_path_from_sessions instead when possible
+///
+/// Prefer [`get_project_path_from_sessions`]; this is only the fallback for
+/// projects whose session files carry no `cwd`. The encoding is lossy (`/`,
+/// `_`, `-`, `.` and spaces all become `-`), so the real path is recovered by
+/// matching the name against what actually exists on disk, see
+/// [`resolve_project_dir_name`]. If nothing on disk matches, the old
+/// best-effort guess (every `-` becomes `/`) is returned.
 fn decode_project_path(encoded: &str) -> String {
-    // This is a fallback - the encoding isn't reversible when paths contain hyphens
-    // For example: -Users-mufeedvh-dev-jsonl-viewer could be /Users/mufeedvh/dev/jsonl-viewer
-    // or /Users/mufeedvh/dev/jsonl/viewer
-    encoded.replace('-', "/")
+    resolve_project_dir_name(encoded).unwrap_or_else(|| match split_encoded_root(encoded) {
+        Some((root, sep, rest)) => format!("{}{}", root, rest.replace('-', &sep.to_string())),
+        None => encoded.replace('-', "/"),
+    })
+}
+
+/// Read-only view of the filesystem used to resolve project folder names.
+/// Abstracted so the matching logic can be unit-tested (including Windows-style
+/// layouts) without touching the real disk. Paths are plain strings in the
+/// platform's own syntax (`/a/b` or `C:\a\b`).
+trait PathProbe {
+    /// Names of the entries directly inside `dir` (no metadata lookups).
+    fn child_names(&self, dir: &str) -> Vec<String>;
+    /// Whether `path` is a directory (symlinks are followed).
+    fn is_dir(&self, path: &str) -> bool;
+}
+
+/// [`PathProbe`] backed by the real filesystem.
+struct RealFs;
+
+impl PathProbe for RealFs {
+    fn child_names(&self, dir: &str) -> Vec<String> {
+        match fs::read_dir(dir) {
+            Ok(entries) => entries
+                .flatten()
+                .filter_map(|e| e.file_name().into_string().ok())
+                .collect(),
+            Err(_) => Vec::new(),
+        }
+    }
+
+    fn is_dir(&self, path: &str) -> bool {
+        std::path::Path::new(path).is_dir()
+    }
+}
+
+/// Splits a project folder name into `(root, separator, remainder)`.
+///
+/// * Unix paths start with the encoded root separator: `-Users-me-app` is
+///   rooted at `/`.
+/// * Windows paths start with a drive letter followed by the encoded `:\`,
+///   i.e. `C--Users-me-app` is rooted at `C:\`.
+///
+/// Anything else (for example UNC paths) is not supported and yields `None`.
+fn split_encoded_root(encoded: &str) -> Option<(String, char, &str)> {
+    if let Some(rest) = encoded.strip_prefix('-') {
+        return Some(("/".to_string(), '/', rest)).filter(|(_, _, r)| !r.is_empty());
+    }
+    let bytes = encoded.as_bytes();
+    if bytes.len() > 3 && bytes[0].is_ascii_alphabetic() && bytes[1] == b'-' && bytes[2] == b'-' {
+        return Some((format!("{}:\\", bytes[0] as char), '\\', &encoded[3..]));
+    }
+    None
+}
+
+/// Resolves a `~/.claude/projects` folder name to the real directory it was
+/// created from, or `None` if no existing directory encodes to that name.
+fn resolve_project_dir_name(encoded: &str) -> Option<String> {
+    resolve_project_dir_name_with(encoded, &RealFs)
+}
+
+/// Returns the number of bytes of `rest` that the encoding of `name` occupies
+/// if `rest` starts with that encoding. Allocation-free equivalent of
+/// `rest.starts_with(&encode_project_path(name))`.
+fn encoded_name_prefix_len(name: &str, rest: &str) -> Option<usize> {
+    let rest = rest.as_bytes();
+    let mut i = 0;
+    for c in name.chars() {
+        if c.is_ascii_alphanumeric() {
+            if rest.get(i) != Some(&(c as u8)) {
+                return None;
+            }
+            i += 1;
+        } else {
+            for _ in 0..c.len_utf16() {
+                if rest.get(i) != Some(&b'-') {
+                    return None;
+                }
+                i += 1;
+            }
+        }
+    }
+    Some(i)
+}
+
+/// Core of [`resolve_project_dir_name`], generic over the filesystem view.
+///
+/// Instead of guessing which `-` was a separator, walk down from the root:
+/// at each level keep only the child directories whose encoded name matches
+/// the front of what is left of the folder name, then recurse. That costs one
+/// directory listing per path level (not exponential) and, when several
+/// layouts encode identically, deterministically picks the first match in
+/// name order.
+fn resolve_project_dir_name_with(encoded: &str, probe: &dyn PathProbe) -> Option<String> {
+    let (root, sep, rest) = split_encoded_root(encoded)?;
+    if rest.is_empty() {
+        return None;
+    }
+    resolve_below(&root, sep, rest, probe)
+}
+
+fn resolve_below(dir: &str, sep: char, rest: &str, probe: &dyn PathProbe) -> Option<String> {
+    // (name, remaining encoded text after this component, or None if this
+    // component consumes the whole remainder)
+    let mut candidates: Vec<(String, Option<usize>)> = probe
+        .child_names(dir)
+        .into_iter()
+        .filter_map(|name| {
+            let len = encoded_name_prefix_len(&name, rest)?;
+            if len == rest.len() {
+                Some((name, None))
+            } else if rest.as_bytes()[len] == b'-' {
+                Some((name, Some(len + 1)))
+            } else {
+                None
+            }
+        })
+        .collect();
+    candidates.sort_by(|a, b| a.0.cmp(&b.0));
+
+    for (name, next) in candidates {
+        let child = if dir.ends_with(sep) {
+            format!("{}{}", dir, name)
+        } else {
+            format!("{}{}{}", dir, sep, name)
+        };
+        if !probe.is_dir(&child) {
+            continue;
+        }
+        match next {
+            None => return Some(child),
+            Some(offset) => {
+                if let Some(found) = resolve_below(&child, sep, &rest[offset..], probe) {
+                    return Some(found);
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Resolved project paths keyed by project folder, valid while the folder's
+/// modification time is unchanged (it changes whenever a session file is
+/// added or removed). Avoids re-reading session files and re-walking the
+/// filesystem on every `list_projects` call.
+static PROJECT_PATH_CACHE: std::sync::OnceLock<std::sync::Mutex<ProjectPathCache>> =
+    std::sync::OnceLock::new();
+
+/// Project folder -> (folder mtime when resolved, resolved path).
+type ProjectPathCache = std::collections::HashMap<PathBuf, (Option<SystemTime>, String)>;
+
+/// Works out the real directory a `~/.claude/projects/<name>` folder belongs to.
+///
+/// Order of trust: (1) the `cwd` recorded in the session files, (2) the folder
+/// name resolved against the real filesystem, (3) a best-effort guess. Only
+/// the first two are cached, so a guess is retried once the directory exists.
+fn resolve_project_path(project_dir: &PathBuf, dir_name: &str) -> String {
+    let modified = fs::metadata(project_dir).and_then(|m| m.modified()).ok();
+    let cache = PROJECT_PATH_CACHE.get_or_init(Default::default);
+
+    if let Ok(guard) = cache.lock() {
+        if let Some((cached_at, path)) = guard.get(project_dir) {
+            if modified.is_some() && *cached_at == modified {
+                return path.clone();
+            }
+        }
+    }
+
+    let resolved = match get_project_path_from_sessions(project_dir) {
+        Ok(path) => Some(path),
+        Err(e) => {
+            log::debug!(
+                "No cwd in sessions for {} ({}), resolving from folder name",
+                dir_name,
+                e
+            );
+            resolve_project_dir_name(dir_name)
+        }
+    };
+
+    match resolved {
+        Some(path) => {
+            if let Ok(mut guard) = cache.lock() {
+                guard.insert(project_dir.clone(), (modified, path.clone()));
+            }
+            path
+        }
+        None => {
+            log::warn!(
+                "Could not resolve the project path for {}; using a best-effort guess",
+                dir_name
+            );
+            decode_project_path(dir_name)
+        }
+    }
 }
 
 /// Extracts the first valid user message from a JSONL file
@@ -316,6 +622,13 @@ pub async fn get_home_directory() -> Result<String, String> {
 /// Lists all projects in the ~/.claude/projects directory
 #[tauri::command]
 pub async fn list_projects() -> Result<Vec<Project>, String> {
+    // Blocking filesystem work: keep it off the async runtime threads.
+    tokio::task::spawn_blocking(list_projects_blocking)
+        .await
+        .map_err(|e| format!("Failed to list projects: {}", e))?
+}
+
+fn list_projects_blocking() -> Result<Vec<Project>, String> {
     log::info!("Listing projects from ~/.claude/projects");
 
     let claude_dir = get_claude_dir().map_err(|e| e.to_string())?;
@@ -354,14 +667,8 @@ pub async fn list_projects() -> Result<Vec<Project>, String> {
                 .unwrap_or_default()
                 .as_secs();
 
-            // Get the actual project path from JSONL files
-            let project_path = match get_project_path_from_sessions(&path) {
-                Ok(path) => path,
-                Err(e) => {
-                    log::warn!("Failed to get project path from sessions for {}: {}, falling back to decode", dir_name, e);
-                    decode_project_path(dir_name)
-                }
-            };
+            // Resolve the real project path (session cwd, then filesystem match)
+            let project_path = resolve_project_path(&path, dir_name);
 
             // List all JSONL files (sessions) in this project directory
             let mut sessions = Vec::new();
@@ -427,7 +734,7 @@ pub async fn create_project(path: String) -> Result<Project, String> {
     log::info!("Creating project for path: {}", path);
 
     // Encode the path to create a project ID
-    let project_id = path.replace('/', "-");
+    let project_id = encode_project_path(&path);
 
     // Get claude directory
     let claude_dir = get_claude_dir().map_err(|e| e.to_string())?;
@@ -471,6 +778,13 @@ pub async fn create_project(path: String) -> Result<Project, String> {
 /// Gets sessions for a specific project
 #[tauri::command]
 pub async fn get_project_sessions(project_id: String) -> Result<Vec<Session>, String> {
+    // Blocking filesystem work: keep it off the async runtime threads.
+    tokio::task::spawn_blocking(move || get_project_sessions_blocking(project_id))
+        .await
+        .map_err(|e| format!("Failed to get project sessions: {}", e))?
+}
+
+fn get_project_sessions_blocking(project_id: String) -> Result<Vec<Session>, String> {
     log::info!("Getting sessions for project: {}", project_id);
 
     let claude_dir = get_claude_dir().map_err(|e| e.to_string())?;
@@ -481,18 +795,8 @@ pub async fn get_project_sessions(project_id: String) -> Result<Vec<Session>, St
         return Err(format!("Project directory not found: {}", project_id));
     }
 
-    // Get the actual project path from JSONL files
-    let project_path = match get_project_path_from_sessions(&project_dir) {
-        Ok(path) => path,
-        Err(e) => {
-            log::warn!(
-                "Failed to get project path from sessions for {}: {}, falling back to decode",
-                project_id,
-                e
-            );
-            decode_project_path(&project_id)
-        }
-    };
+    // Resolve the real project path (session cwd, then filesystem match)
+    let project_path = resolve_project_path(&project_dir, &project_id);
 
     let mut sessions = Vec::new();
 
@@ -1170,6 +1474,23 @@ pub async fn get_claude_session_output(
     }
 }
 
+/// Checks that the working directory handed to the `claude` process exists.
+///
+/// A non-existent directory makes the spawn fail with an opaque OS error, so
+/// check up front and return a message that names the offending path.
+fn validate_project_dir(project_path: &str) -> Result<(), String> {
+    if project_path.trim().is_empty() {
+        return Err("Project path is empty".to_string());
+    }
+    if !std::path::Path::new(project_path).is_dir() {
+        return Err(format!(
+            "Project directory not found: {}. Check that the folder still exists and has not been moved or renamed.",
+            project_path
+        ));
+    }
+    Ok(())
+}
+
 /// Helper function to spawn Claude process and handle streaming
 async fn spawn_claude_process(
     app: AppHandle,
@@ -1180,6 +1501,8 @@ async fn spawn_claude_process(
 ) -> Result<(), String> {
     use std::sync::Mutex;
     use tokio::io::{AsyncBufReadExt, BufReader};
+
+    validate_project_dir(&project_path)?;
 
     // Spawn the process
     let mut child = cmd
@@ -2338,5 +2661,442 @@ mod tests {
         // Should get one of the paths (implementation checks first file it finds)
         let path = result.unwrap();
         assert!(path == "/path1" || path == "/path2");
+    }
+
+    // ---------------------------------------------------------------------
+    // Issue #465 regression tests
+    // ---------------------------------------------------------------------
+
+    /// Independent re-implementation of Claude Code's folder naming
+    /// (every non-alphanumeric character becomes `-`), kept local to the
+    /// tests so they do not depend on the production helper.
+    fn claude_dir_name(path: &str) -> String {
+        path.chars()
+            .map(|c| if c.is_ascii_alphanumeric() { c } else { '-' })
+            .collect()
+    }
+
+    /// Creates `<temp>/<rel>` on disk and returns (real path, Claude folder name).
+    fn make_real_project(temp: &TempDir, rel: &str) -> (String, String) {
+        let real = temp.path().join(rel);
+        fs::create_dir_all(&real).unwrap();
+        let real = real.to_string_lossy().to_string();
+        let encoded = claude_dir_name(&real);
+        (real, encoded)
+    }
+
+    #[test]
+    fn test_issue_465_cwd_found_after_many_lines_without_cwd() {
+        // Newer Claude Code session files start with entries that carry no `cwd`
+        // (e.g. `last-prompt`, `permission-mode`). The lookup must keep scanning.
+        let temp_dir = TempDir::new().unwrap();
+        let project_dir = temp_dir.path().to_path_buf();
+
+        let mut content = String::new();
+        content.push_str("{\"type\":\"permission-mode\",\"mode\":\"default\"}\n");
+        for i in 0..40 {
+            content.push_str(&format!("{{\"type\":\"last-prompt\",\"n\":{}}}\n", i));
+        }
+        content.push_str(r#"{"type":"user","cwd":"/home/michal_mikes/my-project"}"#);
+        create_test_session_file(&project_dir, "session1.jsonl", &content).unwrap();
+
+        let result = get_project_path_from_sessions(&project_dir);
+        assert_eq!(result.unwrap(), "/home/michal_mikes/my-project");
+    }
+
+    #[test]
+    fn test_encode_project_path_matches_claude_code_naming() {
+        assert_eq!(encode_project_path("/Users/me/app"), "-Users-me-app");
+        assert_eq!(
+            encode_project_path("/home/michal_mikes/projects"),
+            "-home-michal-mikes-projects"
+        );
+        assert_eq!(
+            encode_project_path("/Users/me/.projects/myproject"),
+            "-Users-me--projects-myproject"
+        );
+        assert_eq!(encode_project_path("/a/my-app_v2.0"), "-a-my-app-v2-0");
+        assert_eq!(encode_project_path("/a/with space"), "-a-with-space");
+        assert_eq!(encode_project_path(""), "");
+    }
+
+    #[test]
+    fn test_encode_project_path_windows_and_unicode() {
+        assert_eq!(
+            encode_project_path(r"C:\Users\john_doe\app"),
+            "C--Users-john-doe-app"
+        );
+        // Claude Code (JavaScript) replaces per UTF-16 code unit: a BMP char is
+        // one dash, a supplementary-plane char (surrogate pair) is two.
+        assert_eq!(encode_project_path("/a/caf\u{e9}"), "-a-caf-");
+        assert_eq!(encode_project_path("/a/\u{1F600}"), "-a---");
+    }
+
+    #[test]
+    fn test_encode_project_path_is_idempotent_on_encoded_names() {
+        let once = encode_project_path("/Users/me/.projects/my_app");
+        assert_eq!(encode_project_path(&once), once);
+    }
+
+    #[test]
+    fn test_resolve_project_path_prefers_cwd_from_sessions() {
+        let temp = TempDir::new().unwrap();
+        let project_dir = temp.path().join("-home-john-doe-app");
+        fs::create_dir_all(&project_dir).unwrap();
+        create_test_session_file(
+            &project_dir,
+            "s.jsonl",
+            "{\"type\":\"permission-mode\"}\n{\"cwd\":\"/home/john_doe/app\"}\n",
+        )
+        .unwrap();
+
+        assert_eq!(
+            resolve_project_path(&project_dir, "-home-john-doe-app"),
+            "/home/john_doe/app"
+        );
+    }
+
+    #[test]
+    fn test_resolve_project_path_falls_back_to_filesystem_without_sessions() {
+        // New project: folder exists but has no session files yet (the case that
+        // used to produce "Failed to send prompt").
+        let temp = TempDir::new().unwrap();
+        let (real, encoded) = make_real_project(&temp, "john_doe/my-app");
+        let project_dir = temp.path().join("claude-projects").join(&encoded);
+        fs::create_dir_all(&project_dir).unwrap();
+
+        assert_eq!(resolve_project_path(&project_dir, &encoded), real);
+    }
+
+    #[test]
+    fn test_resolve_project_path_does_not_cache_a_guess() {
+        let temp = TempDir::new().unwrap();
+        let encoded = claude_dir_name(&format!("{}/later_created", temp.path().display()));
+        let project_dir = temp.path().join("claude-projects").join(&encoded);
+        fs::create_dir_all(&project_dir).unwrap();
+
+        // Directory does not exist yet: best-effort guess, must not be cached.
+        let guess = resolve_project_path(&project_dir, &encoded);
+        assert!(!std::path::Path::new(&guess).exists());
+
+        // Once the real directory appears the next call must find it.
+        let real = temp.path().join("later_created");
+        fs::create_dir_all(&real).unwrap();
+        assert_eq!(
+            resolve_project_path(&project_dir, &encoded),
+            real.to_string_lossy()
+        );
+    }
+
+    #[test]
+    fn test_session_jsonl_path_uses_claude_folder_naming() {
+        let projects = std::path::Path::new("/home/u/.claude/projects");
+        assert_eq!(
+            session_jsonl_path(projects, "/home/michal_mikes/my-app", "abc"),
+            PathBuf::from("/home/u/.claude/projects/-home-michal-mikes-my-app/abc.jsonl")
+        );
+        assert_eq!(
+            session_jsonl_path(projects, "/Users/me/.projects/x", "s1"),
+            PathBuf::from("/home/u/.claude/projects/-Users-me--projects-x/s1.jsonl")
+        );
+    }
+
+    #[test]
+    fn test_validate_project_dir() {
+        let temp = TempDir::new().unwrap();
+        let ok = temp.path().to_string_lossy().to_string();
+        assert!(validate_project_dir(&ok).is_ok());
+
+        let missing = temp.path().join("michal/mikes/projects");
+        let err = validate_project_dir(&missing.to_string_lossy()).unwrap_err();
+        assert!(err.contains("Project directory not found"), "{}", err);
+        assert!(err.contains("michal/mikes/projects"), "{}", err);
+
+        let file = temp.path().join("a_file");
+        fs::write(&file, "x").unwrap();
+        assert!(validate_project_dir(&file.to_string_lossy()).is_err());
+
+        let err = validate_project_dir("  ").unwrap_err();
+        assert!(err.contains("empty"), "{}", err);
+    }
+
+    #[test]
+    fn test_issue_465_cwd_scan_is_bounded() {
+        // A cwd that only appears after MAX_CWD_SCAN_LINES lines is not searched
+        // for: the scan must stay cheap on huge sessions.
+        let temp_dir = TempDir::new().unwrap();
+        let project_dir = temp_dir.path().to_path_buf();
+
+        let mut content = String::new();
+        for _ in 0..(MAX_CWD_SCAN_LINES + 50) {
+            content.push_str("{\"type\":\"assistant\"}\n");
+        }
+        content.push_str(r#"{"type":"user","cwd":"/too/late"}"#);
+        create_test_session_file(&project_dir, "session1.jsonl", &content).unwrap();
+
+        assert!(get_project_path_from_sessions(&project_dir).is_err());
+    }
+
+    #[test]
+    fn test_issue_465_cwd_scan_skips_oversized_and_invalid_lines() {
+        let temp_dir = TempDir::new().unwrap();
+        let project_dir = temp_dir.path().to_path_buf();
+
+        let mut content: Vec<u8> = Vec::new();
+        content.extend_from_slice(b"{\"cwd\":\"");
+        content.extend(std::iter::repeat_n(
+            b'x',
+            MAX_CWD_SCAN_LINE_BYTES as usize + 10,
+        ));
+        content.extend_from_slice(b"\"}\n");
+        content.extend_from_slice(&[0xff, 0xfe, b'\n']); // invalid UTF-8 line
+        content.extend_from_slice(b"{\"type\":\"user\",\"cwd\":\"/ok/path_1\"}\n");
+        fs::write(project_dir.join("session1.jsonl"), content).unwrap();
+
+        assert_eq!(
+            get_project_path_from_sessions(&project_dir).unwrap(),
+            "/ok/path_1"
+        );
+    }
+
+    #[test]
+    fn test_issue_465_cwd_found_in_later_file_when_first_has_none() {
+        let temp_dir = TempDir::new().unwrap();
+        let project_dir = temp_dir.path().to_path_buf();
+        create_test_session_file(&project_dir, "a.jsonl", "{\"type\":\"summary\"}\n").unwrap();
+        create_test_session_file(&project_dir, "b.jsonl", "{\"cwd\":\"/b/c_d\"}\n").unwrap();
+
+        assert_eq!(
+            get_project_path_from_sessions(&project_dir).unwrap(),
+            "/b/c_d"
+        );
+    }
+
+    /// In-memory filesystem used to test path resolution without touching disk.
+    /// Paths are plain strings so Windows-style layouts (`C:\\Users\\x`) can be
+    /// tested on any host.
+    struct FakeFs {
+        children: std::collections::HashMap<String, Vec<String>>,
+        dirs: std::collections::HashSet<String>,
+        lists: std::cell::Cell<usize>,
+    }
+
+    impl FakeFs {
+        fn new(paths: &[&str]) -> Self {
+            let mut children: std::collections::HashMap<String, Vec<String>> = Default::default();
+            let mut dirs = std::collections::HashSet::new();
+            for p in paths {
+                let (root, sep, rest) = if let Some(rest) = p.strip_prefix('/') {
+                    ("/".to_string(), '/', rest)
+                } else {
+                    (p[..3].to_string(), '\\', &p[3..])
+                };
+                dirs.insert(root.clone());
+                let mut cur = root;
+                for comp in rest.split(sep).filter(|c| !c.is_empty()) {
+                    let list = children.entry(cur.clone()).or_default();
+                    if !list.iter().any(|c| c == comp) {
+                        list.push(comp.to_string());
+                    }
+                    cur = if cur.ends_with(sep) {
+                        format!("{}{}", cur, comp)
+                    } else {
+                        format!("{}{}{}", cur, sep, comp)
+                    };
+                    dirs.insert(cur.clone());
+                }
+            }
+            Self {
+                children,
+                dirs,
+                lists: std::cell::Cell::new(0),
+            }
+        }
+    }
+
+    impl PathProbe for FakeFs {
+        fn child_names(&self, dir: &str) -> Vec<String> {
+            self.lists.set(self.lists.get() + 1);
+            self.children.get(dir).cloned().unwrap_or_default()
+        }
+        fn is_dir(&self, path: &str) -> bool {
+            self.dirs.contains(path)
+        }
+    }
+
+    #[test]
+    fn test_resolve_windows_drive_paths() {
+        let fs = FakeFs::new(&[
+            r"C:\Users\john_doe\app",
+            r"C:\dev\my-app",
+            r"C:\Users\me\.cfg\tool",
+        ]);
+        assert_eq!(
+            resolve_project_dir_name_with("C--Users-john-doe-app", &fs).as_deref(),
+            Some(r"C:\Users\john_doe\app")
+        );
+        assert_eq!(
+            resolve_project_dir_name_with("C--dev-my-app", &fs).as_deref(),
+            Some(r"C:\dev\my-app")
+        );
+        assert_eq!(
+            resolve_project_dir_name_with("C--Users-me--cfg-tool", &fs).as_deref(),
+            Some(r"C:\Users\me\.cfg\tool")
+        );
+    }
+
+    #[test]
+    fn test_resolve_windows_unsupported_and_missing_return_none() {
+        let fs = FakeFs::new(&[r"C:\Users\x"]);
+        // UNC paths (\\server\share) are not supported: no drive letter
+        assert_eq!(resolve_project_dir_name_with("--server-share-x", &fs), None);
+        // Drive that does not exist in the view
+        assert_eq!(resolve_project_dir_name_with("D--Users-x", &fs), None);
+        // Drive prefix with nothing after it
+        assert_eq!(resolve_project_dir_name_with("C--", &fs), None);
+    }
+
+    #[test]
+    fn test_decode_project_path_best_effort_guess_keeps_platform_shape() {
+        // Nothing on disk matches these names, so the last-resort guess is used.
+        assert_eq!(
+            decode_project_path("-nonexistent-zzz-qqq"),
+            "/nonexistent/zzz/qqq"
+        );
+        assert_eq!(
+            decode_project_path("Q--nonexistent-zzz"),
+            r"Q:\nonexistent\zzz"
+        );
+    }
+
+    #[test]
+    fn test_resolve_prefers_deterministic_match_when_ambiguous() {
+        // Both /a/b-c and /a/b/c exist: encoded names are identical.
+        let fs = FakeFs::new(&["/a/b-c", "/a/b/c"]);
+        let first = resolve_project_dir_name_with("-a-b-c", &fs);
+        let second = resolve_project_dir_name_with("-a-b-c", &fs);
+        assert_eq!(first, second);
+        assert!(first.is_some());
+    }
+
+    #[test]
+    fn test_resolve_backtracks_out_of_dead_ends() {
+        // "/a/b" exists but has no matching child, and the real project is
+        // /a/b-c/d, so the search must abandon the "b" branch and backtrack.
+        let fs = FakeFs::new(&["/a/b", "/a/b-c/d"]);
+        assert_eq!(
+            resolve_project_dir_name_with("-a-b-c-d", &fs).as_deref(),
+            Some("/a/b-c/d")
+        );
+    }
+
+    #[test]
+    fn test_resolve_returns_none_when_nothing_matches() {
+        let fs = FakeFs::new(&["/a/b"]);
+        assert_eq!(resolve_project_dir_name_with("-a-x-y", &fs), None);
+        assert_eq!(resolve_project_dir_name_with("", &fs), None);
+        assert_eq!(resolve_project_dir_name_with("no-leading-dash", &fs), None);
+    }
+
+    #[test]
+    fn test_resolve_lists_each_directory_level_once() {
+        let fs = FakeFs::new(&["/Users/john_doe/my-app/src"]);
+        let got = resolve_project_dir_name_with("-Users-john-doe-my-app-src", &fs);
+        assert_eq!(got.as_deref(), Some("/Users/john_doe/my-app/src"));
+        // root + Users + john_doe + my-app = 4 listings, never exponential.
+        assert!(fs.lists.get() <= 4, "listed {} dirs", fs.lists.get());
+    }
+
+    #[test]
+    fn test_issue_465_decode_underscore_in_path() {
+        let temp_dir = TempDir::new().unwrap();
+        let (real, encoded) = make_real_project(&temp_dir, "michal_mikes/projects");
+        assert_eq!(decode_project_path(&encoded), real);
+    }
+
+    #[test]
+    fn test_issue_465_decode_hyphen_in_path() {
+        let temp_dir = TempDir::new().unwrap();
+        let (real, encoded) = make_real_project(&temp_dir, "user/my-project");
+        assert_eq!(decode_project_path(&encoded), real);
+    }
+
+    #[test]
+    fn test_issue_465_decode_dot_folder_in_path() {
+        let temp_dir = TempDir::new().unwrap();
+        let (real, encoded) = make_real_project(&temp_dir, "me/.projects/myproject");
+        assert_eq!(decode_project_path(&encoded), real);
+    }
+
+    #[test]
+    fn test_issue_465_decode_mixed_separators_in_path() {
+        let temp_dir = TempDir::new().unwrap();
+        let (real, encoded) = make_real_project(&temp_dir, "john_doe/.cfg/my-app_v2.0");
+        assert_eq!(decode_project_path(&encoded), real);
+    }
+
+    /// Baseline timing for the hot path (run with
+    /// `cargo test --release -- --ignored --nocapture bench_`).
+    #[test]
+    #[ignore]
+    fn bench_project_path_lookup_baseline() {
+        use std::time::Instant;
+
+        let temp_dir = TempDir::new().unwrap();
+        let root = temp_dir.path().to_path_buf();
+
+        // 200 normal projects: cwd on the first line.
+        let mut dirs = Vec::new();
+        for i in 0..200 {
+            let d = root.join(format!("p{}", i));
+            fs::create_dir_all(&d).unwrap();
+            create_test_session_file(
+                &d,
+                "s.jsonl",
+                &format!("{{\"type\":\"user\",\"cwd\":\"/Users/test/proj{}\"}}\n", i),
+            )
+            .unwrap();
+            dirs.push(d);
+        }
+        let start = Instant::now();
+        for d in &dirs {
+            let _ = get_project_path_from_sessions(d);
+        }
+        println!("BASELINE 200 normal projects: {:?}", start.elapsed());
+
+        let start = Instant::now();
+        for (i, d) in dirs.iter().enumerate() {
+            let _ = resolve_project_path(d, &format!("p{}", i));
+        }
+        println!(
+            "NEW resolve_project_path cold, 200 projects: {:?}",
+            start.elapsed()
+        );
+        let start = Instant::now();
+        for (i, d) in dirs.iter().enumerate() {
+            let _ = resolve_project_path(d, &format!("p{}", i));
+        }
+        println!(
+            "NEW resolve_project_path cached, 200 projects: {:?}",
+            start.elapsed()
+        );
+
+        // One project with a ~100 MB session file (cwd on line 1).
+        let big = root.join("big");
+        fs::create_dir_all(&big).unwrap();
+        let mut f = fs::File::create(big.join("s.jsonl")).unwrap();
+        f.write_all(b"{\"type\":\"user\",\"cwd\":\"/Users/test/big\"}\n")
+            .unwrap();
+        let line = format!(
+            "{{\"type\":\"assistant\",\"pad\":\"{}\"}}\n",
+            "x".repeat(1000)
+        );
+        for _ in 0..100_000 {
+            f.write_all(line.as_bytes()).unwrap();
+        }
+        drop(f);
+        let start = Instant::now();
+        let _ = get_project_path_from_sessions(&big);
+        println!("BASELINE 1 project, ~100MB session: {:?}", start.elapsed());
     }
 }

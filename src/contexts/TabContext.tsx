@@ -1,6 +1,8 @@
 import React, { createContext, useState, useContext, useCallback, useEffect, useRef } from 'react';
 import { TabPersistenceService } from '@/services/tabPersistence';
 import { SessionPersistenceService } from '@/services/sessionPersistence';
+import { api } from '@/lib/api';
+import { buildProjectPathIndex, resolveRestoredProjectPath } from '@/lib/projectPaths';
 
 export interface Tab {
   id: string;
@@ -58,12 +60,40 @@ export const TabProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const { tabs: savedTabs, activeTabId: savedActiveTabId } = TabPersistenceService.loadTabs();
     
     if (savedTabs.length > 0) {
+      // Persisted project paths may be stale (older builds could save a wrongly
+      // reconstructed path). Re-resolve them from the backend, but only when
+      // there is a chat tab to restore, and with a single listing call.
+      let currentPaths: ReadonlyMap<string, string> = new Map();
+      if (savedTabs.some((tab) => tab.type === 'chat' && tab.sessionId)) {
+        try {
+          currentPaths = buildProjectPathIndex(await api.listProjects());
+        } catch (error) {
+          console.warn('Could not refresh project paths, using saved ones:', error);
+        }
+      }
+
       // For chat tabs, restore session data
       const restoredTabs = await Promise.all(savedTabs.map(async (tab) => {
         if (tab.type === 'chat' && tab.sessionId) {
           // Check if session can be restored
-          const sessionData = SessionPersistenceService.loadSession(tab.sessionId);
-          if (sessionData) {
+          const storedData = SessionPersistenceService.loadSession(tab.sessionId);
+          if (storedData) {
+            const projectPath = resolveRestoredProjectPath(
+              storedData.projectPath,
+              storedData.projectId,
+              currentPaths
+            );
+            const sessionData = { ...storedData, projectPath };
+            if (projectPath !== storedData.projectPath) {
+              // Repair the saved record so the stale path is not reused next time
+              SessionPersistenceService.saveSession(
+                storedData.sessionId,
+                storedData.projectId,
+                projectPath,
+                storedData.lastMessageCount,
+                storedData.scrollPosition
+              );
+            }
             // Create a Session object for the tab
             const session = SessionPersistenceService.createSessionFromRestoreData(sessionData);
             return {

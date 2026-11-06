@@ -884,7 +884,10 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       }
     } catch (err) {
       console.error("Failed to send prompt:", err);
-      setError("Failed to send prompt");
+      // Surface the backend's reason (e.g. "Project directory not found: ...")
+      // instead of hiding it behind a generic message.
+      const detail = typeof err === "string" ? err : err instanceof Error ? err.message : "";
+      setError(detail ? `Failed to send prompt: ${detail}` : "Failed to send prompt");
       setIsLoading(false);
       hasActiveSessionRef.current = false;
     }

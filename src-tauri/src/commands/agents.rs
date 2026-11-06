@@ -174,9 +174,8 @@ pub async fn read_session_jsonl(session_id: &str, project_path: &str) -> Result<
         .join("projects");
 
     // Encode project path to match Claude Code's directory naming
-    let encoded_project = project_path.replace('/', "-");
-    let project_dir = claude_dir.join(&encoded_project);
-    let session_file = project_dir.join(format!("{}.jsonl", session_id));
+    let session_file =
+        crate::commands::claude::session_jsonl_path(&claude_dir, project_path, session_id);
 
     if !session_file.exists() {
         return Err(format!(
@@ -1464,9 +1463,8 @@ pub async fn stream_session_output(
             None => return,
         };
 
-        let encoded_project = project_path.replace('/', "-");
-        let project_dir = claude_dir.join(&encoded_project);
-        let session_file = project_dir.join(format!("{}.jsonl", session_id));
+        let session_file =
+            crate::commands::claude::session_jsonl_path(&claude_dir, &project_path, &session_id);
 
         let mut last_size = 0u64;
 
