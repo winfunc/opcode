@@ -403,14 +403,21 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
                           >
                             <Card className="h-full hover:shadow-lg transition-shadow">
                               <CardContent className="p-6 flex flex-col items-center text-center">
-                                <div className="mb-4 p-4 rounded-full bg-primary/10 text-primary">
+                                <div className="mb-4 p-4 rounded-full bg-primary/10 text-primary relative">
                                   {renderIcon(agent.icon)}
+                                  {agent.source === "filesystem" && (
+                                    <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+                                      FILE
+                                    </span>
+                                  )}
                                 </div>
                                 <h3 className="text-heading-4 mb-2">
                                   {agent.name}
                                 </h3>
                                 <p className="text-caption text-muted-foreground">
-                                  Created: {new Date(agent.created_at).toLocaleDateString()}
+                                  {agent.source === "filesystem"
+                                    ? "From .claude/agents"
+                                    : `Created: ${new Date(agent.created_at).toLocaleDateString()}`}
                                 </p>
                               </CardContent>
                               <CardFooter className="p-4 pt-0 flex justify-center gap-1 flex-wrap">
@@ -424,36 +431,42 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
                                   <Play className="h-3 w-3" />
                                   Execute
                                 </Button>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => handleEditAgent(agent)}
-                                  className="flex items-center gap-1"
-                                  title="Edit agent"
-                                >
-                                  <Edit className="h-3 w-3" />
-                                  Edit
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => handleExportAgent(agent)}
-                                  className="flex items-center gap-1"
-                                  title="Export agent to .opcode.json"
-                                >
-                                  <Upload className="h-3 w-3" />
-                                  Export
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => handleDeleteAgent(agent)}
-                                  className="flex items-center gap-1 text-destructive hover:text-destructive"
-                                  title="Delete agent"
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                  Delete
-                                </Button>
+                                {agent.source !== "filesystem" && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => handleEditAgent(agent)}
+                                    className="flex items-center gap-1"
+                                    title="Edit agent"
+                                  >
+                                    <Edit className="h-3 w-3" />
+                                    Edit
+                                  </Button>
+                                )}
+                                {agent.source !== "filesystem" && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => handleExportAgent(agent)}
+                                    className="flex items-center gap-1"
+                                    title="Export agent to .opcode.json"
+                                  >
+                                    <Upload className="h-3 w-3" />
+                                    Export
+                                  </Button>
+                                )}
+                                {agent.source !== "filesystem" && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => handleDeleteAgent(agent)}
+                                    className="flex items-center gap-1 text-destructive hover:text-destructive"
+                                    title="Delete agent"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                    Delete
+                                  </Button>
+                                )}
                               </CardFooter>
                             </Card>
                           </motion.div>

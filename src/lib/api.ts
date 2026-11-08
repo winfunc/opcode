@@ -122,6 +122,8 @@ export interface Agent {
   hooks?: string; // JSON string of HooksConfiguration
   created_at: string;
   updated_at: string;
+  source?: string; // "database" or "filesystem"
+  file_path?: string; // Path if loaded from filesystem
 }
 
 export interface AgentExport {
