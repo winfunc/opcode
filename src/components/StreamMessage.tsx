@@ -118,6 +118,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
             <div className="flex items-start gap-3">
               <Bot className="h-5 w-5 text-primary mt-0.5" />
               <div className="flex-1 space-y-2 min-w-0">
+                <h2 className="sr-only">Assistant Response</h2>
                 {msg.content && Array.isArray(msg.content) && msg.content.map((content: any, idx: number) => {
                   // Text content - render as markdown
                   if (content.type === "text") {
@@ -331,6 +332,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
             <div className="flex items-start gap-3">
               <User className="h-5 w-5 text-muted-foreground mt-0.5" />
               <div className="flex-1 space-y-2 min-w-0">
+                <h2 className="sr-only">User Prompt</h2>
                 {/* Handle content that is a simple string (e.g. from user commands) */}
                 {(typeof msg.content === 'string' || (msg.content && !Array.isArray(msg.content))) && (
                   (() => {

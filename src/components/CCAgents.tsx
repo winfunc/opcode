@@ -469,6 +469,7 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
                           variant="outline"
                           onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                           disabled={currentPage === 1}
+                          aria-label={`Go to previous page (page ${currentPage - 1} of ${totalPages})`}
                         >
                           Previous
                         </Button>
@@ -480,6 +481,7 @@ export const CCAgents: React.FC<CCAgentsProps> = ({ onBack, className }) => {
                           variant="outline"
                           onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                           disabled={currentPage === totalPages}
+                          aria-label={`Go to next page (page ${currentPage + 1} of ${totalPages})`}
                         >
                           Next
                         </Button>

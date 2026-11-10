@@ -85,7 +85,7 @@ export const Topbar: React.FC<TopbarProps> = ({
   const StatusIndicator = () => {
     if (checking) {
       return (
-        <div className="flex items-center space-x-2 text-xs">
+        <div className="flex items-center space-x-2 text-xs" aria-live="polite" aria-label="Claude Code status">
           <Circle className="h-3 w-3 animate-pulse text-muted-foreground" />
           <span className="text-muted-foreground">Checking...</span>
         </div>
@@ -100,8 +100,11 @@ export const Topbar: React.FC<TopbarProps> = ({
         size="sm"
         className="h-auto py-1 px-2 hover:bg-accent"
         onClick={onSettingsClick}
+        aria-label={versionStatus.is_installed 
+          ? `Claude Code is installed, version ${versionStatus.version || 'unknown'}. Click to open settings.`
+          : "Claude Code not found. Click to configure installation."}
       >
-        <div className="flex items-center space-x-2 text-xs">
+        <div className="flex items-center space-x-2 text-xs" aria-live="polite">
           <Circle
             className={cn(
               "h-3 w-3",
