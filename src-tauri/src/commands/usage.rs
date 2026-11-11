@@ -63,16 +63,78 @@ pub struct ProjectUsage {
     last_used: String,
 }
 
-// Claude 4 pricing constants (per million tokens)
-const OPUS_4_INPUT_PRICE: f64 = 15.0;
-const OPUS_4_OUTPUT_PRICE: f64 = 75.0;
-const OPUS_4_CACHE_WRITE_PRICE: f64 = 18.75;
-const OPUS_4_CACHE_READ_PRICE: f64 = 1.50;
+/// USD prices per million tokens for one Claude model.
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct ModelPricing {
+    input: f64,
+    output: f64,
+    /// Cache write with the default 5-minute lifetime.
+    cache_write_5m: f64,
+    /// Cache write with the 1-hour lifetime, which Claude Code also uses.
+    cache_write_1h: f64,
+    cache_read: f64,
+}
 
-const SONNET_4_INPUT_PRICE: f64 = 3.0;
-const SONNET_4_OUTPUT_PRICE: f64 = 15.0;
-const SONNET_4_CACHE_WRITE_PRICE: f64 = 3.75;
-const SONNET_4_CACHE_READ_PRICE: f64 = 0.30;
+impl ModelPricing {
+    /// Anthropic bills a 5-minute cache write at 1.25x the input price and a
+    /// 1-hour cache write at 2x; the cache-read price varies by model.
+    fn new(input: f64, output: f64, cache_read: f64) -> Self {
+        Self {
+            input,
+            output,
+            cache_write_5m: input * 1.25,
+            cache_write_1h: input * 2.0,
+            cache_read,
+        }
+    }
+}
+
+/// Prices a Claude model from its ID, such as `claude-opus-4-8`,
+/// `claude-sonnet-4-5-20250929`, the older `claude-3-5-haiku-20241022` or a
+/// Bedrock ID like `us.anthropic.claude-opus-4-1-20250805-v1:0`.
+///
+/// Returns `None` for a model it does not know.
+fn model_pricing(model: &str) -> Option<ModelPricing> {
+    let parts: Vec<&str> = model.split('-').collect();
+    let family_index = parts
+        .iter()
+        .position(|part| matches!(*part, "opus" | "sonnet" | "haiku" | "fable" | "mythos"))?;
+    // Version parts are short numbers; a dated snapshot suffix (20250514) is not one.
+    let is_version_part = |part: &&str| part.len() <= 2 && part.bytes().all(|b| b.is_ascii_digit());
+    // Newer IDs put the version after the family (claude-opus-4-8), older
+    // ones before it (claude-3-5-haiku).
+    let mut version: Vec<&str> = parts[family_index + 1..]
+        .iter()
+        .copied()
+        .take_while(is_version_part)
+        .collect();
+    if version.is_empty() {
+        version = parts[..family_index]
+            .iter()
+            .rev()
+            .copied()
+            .take_while(is_version_part)
+            .collect();
+        version.reverse();
+    }
+
+    let pricing = match (parts[family_index], version.join(".").as_str()) {
+        ("opus", "3" | "4" | "4.1") => ModelPricing::new(15.0, 75.0, 1.5),
+        ("opus", "4.5" | "4.6" | "4.7" | "4.8" | "5") => ModelPricing::new(5.0, 25.0, 0.5),
+        ("opus", "5.5") => ModelPricing::new(4.0, 20.0, 0.2),
+        ("sonnet", "3.5" | "3.7" | "4" | "4.5" | "4.6") => ModelPricing::new(3.0, 15.0, 0.3),
+        ("sonnet", "5") => ModelPricing::new(2.0, 10.0, 0.2),
+        ("sonnet", "5.5") => ModelPricing::new(2.0, 10.0, 0.1),
+        ("haiku", "3.5") => ModelPricing::new(0.8, 4.0, 0.08),
+        ("haiku", "4.5") => ModelPricing::new(1.0, 5.0, 0.1),
+        ("haiku", "5.5") => ModelPricing::new(0.1, 0.5, 0.01),
+        ("fable" | "mythos", "5") => ModelPricing::new(10.0, 50.0, 1.0),
+        ("fable" | "mythos", "5.1") => ModelPricing::new(10.0, 50.0, 0.25),
+        ("fable" | "mythos", "5.2") => ModelPricing::new(8.0, 40.0, 0.2),
+        _ => return None,
+    };
+    Some(pricing)
+}
 
 #[derive(Debug, Deserialize)]
 struct JsonlEntry {
@@ -99,42 +161,44 @@ struct UsageData {
     output_tokens: Option<u64>,
     cache_creation_input_tokens: Option<u64>,
     cache_read_input_tokens: Option<u64>,
+    /// How `cache_creation_input_tokens` splits by cache lifetime.
+    cache_creation: Option<CacheCreation>,
+}
+
+#[derive(Debug, Deserialize)]
+struct CacheCreation {
+    ephemeral_1h_input_tokens: Option<u64>,
 }
 
 fn calculate_cost(model: &str, usage: &UsageData) -> f64 {
-    let input_tokens = usage.input_tokens.unwrap_or(0) as f64;
-    let output_tokens = usage.output_tokens.unwrap_or(0) as f64;
-    let cache_creation_tokens = usage.cache_creation_input_tokens.unwrap_or(0) as f64;
-    let cache_read_tokens = usage.cache_read_input_tokens.unwrap_or(0) as f64;
+    let Some(pricing) = model_pricing(model) else {
+        // Return 0 for unknown models to avoid incorrect cost estimations.
+        return 0.0;
+    };
 
-    // Calculate cost based on model
-    let (input_price, output_price, cache_write_price, cache_read_price) =
-        if model.contains("opus-4") || model.contains("claude-opus-4") {
-            (
-                OPUS_4_INPUT_PRICE,
-                OPUS_4_OUTPUT_PRICE,
-                OPUS_4_CACHE_WRITE_PRICE,
-                OPUS_4_CACHE_READ_PRICE,
-            )
-        } else if model.contains("sonnet-4") || model.contains("claude-sonnet-4") {
-            (
-                SONNET_4_INPUT_PRICE,
-                SONNET_4_OUTPUT_PRICE,
-                SONNET_4_CACHE_WRITE_PRICE,
-                SONNET_4_CACHE_READ_PRICE,
-            )
-        } else {
-            // Return 0 for unknown models to avoid incorrect cost estimations.
-            (0.0, 0.0, 0.0, 0.0)
-        };
+    let cache_write_tokens = usage.cache_creation_input_tokens.unwrap_or(0);
+    // The 1-hour share of the cache writes is billed at the 1-hour rate and the
+    // rest at the 5-minute rate.
+    let cache_write_1h_tokens = usage
+        .cache_creation
+        .as_ref()
+        .and_then(|split| split.ephemeral_1h_input_tokens)
+        .unwrap_or(0)
+        .min(cache_write_tokens);
 
-    // Calculate cost (prices are per million tokens)
-    let cost = (input_tokens * input_price / 1_000_000.0)
-        + (output_tokens * output_price / 1_000_000.0)
-        + (cache_creation_tokens * cache_write_price / 1_000_000.0)
-        + (cache_read_tokens * cache_read_price / 1_000_000.0);
-
-    cost
+    // Prices are per million tokens.
+    let cost_of = |tokens: u64, price: f64| tokens as f64 * price / 1_000_000.0;
+    cost_of(usage.input_tokens.unwrap_or(0), pricing.input)
+        + cost_of(usage.output_tokens.unwrap_or(0), pricing.output)
+        + cost_of(
+            cache_write_tokens - cache_write_1h_tokens,
+            pricing.cache_write_5m,
+        )
+        + cost_of(cache_write_1h_tokens, pricing.cache_write_1h)
+        + cost_of(
+            usage.cache_read_input_tokens.unwrap_or(0),
+            pricing.cache_read,
+        )
 }
 
 fn parse_jsonl_file(
@@ -711,4 +775,113 @@ pub fn get_session_stats(
     }
 
     Ok(by_session)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn usage(value: serde_json::Value) -> UsageData {
+        serde_json::from_value(value).expect("valid usage")
+    }
+
+    fn assert_close(actual: f64, expected: f64) {
+        assert!(
+            (actual - expected).abs() < 1e-9,
+            "expected {expected}, got {actual}"
+        );
+    }
+
+    #[test]
+    fn prices_each_model_generation_at_its_own_rate() {
+        let price = |model: &str| model_pricing(model).map(|p| (p.input, p.output));
+        assert_eq!(price("claude-opus-4-20250514"), Some((15.0, 75.0)));
+        assert_eq!(price("claude-opus-4-1-20250805"), Some((15.0, 75.0)));
+        assert_eq!(price("claude-opus-4-5-20251101"), Some((5.0, 25.0)));
+        assert_eq!(price("claude-opus-4-8"), Some((5.0, 25.0)));
+        assert_eq!(price("claude-opus-5-5"), Some((4.0, 20.0)));
+        assert_eq!(price("claude-sonnet-4-5-20250929"), Some((3.0, 15.0)));
+        assert_eq!(price("claude-sonnet-5-5"), Some((2.0, 10.0)));
+        assert_eq!(price("claude-3-5-haiku-20241022"), Some((0.8, 4.0)));
+        assert_eq!(price("claude-haiku-4-5-20251001"), Some((1.0, 5.0)));
+        assert_eq!(price("claude-haiku-5-5"), Some((0.1, 0.5)));
+        assert_eq!(price("claude-fable-5-2"), Some((8.0, 40.0)));
+        assert_eq!(
+            price("us.anthropic.claude-opus-4-1-20250805-v1:0"),
+            Some((15.0, 75.0))
+        );
+    }
+
+    #[test]
+    fn unknown_models_are_not_priced() {
+        assert_eq!(model_pricing("<synthetic>"), None);
+        assert_eq!(model_pricing("gpt-5"), None);
+        assert_eq!(model_pricing("claude-opus-9-9"), None);
+        assert_close(
+            calculate_cost(
+                "<synthetic>",
+                &usage(serde_json::json!({"input_tokens": 1000})),
+            ),
+            0.0,
+        );
+    }
+
+    #[test]
+    fn prices_cache_writes_by_their_lifetime() {
+        // claude-opus-4-8: 5-minute cache write $6.25/MTok, 1-hour cache write $10/MTok.
+        let cost = |one_hour: u64| {
+            calculate_cost(
+                "claude-opus-4-8",
+                &usage(serde_json::json!({
+                    "input_tokens": 0,
+                    "output_tokens": 0,
+                    "cache_creation_input_tokens": 1_000_000,
+                    "cache_creation": {
+                        "ephemeral_5m_input_tokens": 1_000_000 - one_hour,
+                        "ephemeral_1h_input_tokens": one_hour,
+                    },
+                })),
+            )
+        };
+        assert_close(cost(1_000_000), 10.0);
+        assert_close(cost(400_000), 0.6 * 6.25 + 0.4 * 10.0);
+        assert_close(cost(0), 6.25);
+    }
+
+    #[test]
+    fn cache_writes_without_a_lifetime_split_use_the_5_minute_rate() {
+        let cost = calculate_cost(
+            "claude-opus-4-8",
+            &usage(serde_json::json!({"cache_creation_input_tokens": 1_000_000})),
+        );
+        assert_close(cost, 6.25);
+    }
+
+    #[test]
+    fn never_prices_more_1_hour_writes_than_were_written() {
+        let cost = calculate_cost(
+            "claude-opus-4-8",
+            &usage(serde_json::json!({
+                "cache_creation_input_tokens": 1_000_000,
+                "cache_creation": {"ephemeral_1h_input_tokens": 5_000_000},
+            })),
+        );
+        assert_close(cost, 10.0);
+    }
+
+    #[test]
+    fn prices_every_kind_of_token() {
+        // claude-sonnet-4-5: input $3, output $15, cache read $0.30 per MTok.
+        let cost = calculate_cost(
+            "claude-sonnet-4-5",
+            &usage(serde_json::json!({
+                "input_tokens": 1_000_000,
+                "output_tokens": 1_000_000,
+                "cache_read_input_tokens": 1_000_000,
+                "cache_creation_input_tokens": 1_000_000,
+                "cache_creation": {"ephemeral_1h_input_tokens": 1_000_000},
+            })),
+        );
+        assert_close(cost, 3.0 + 15.0 + 0.3 + 6.0);
+    }
 }
