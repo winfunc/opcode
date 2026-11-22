@@ -3,12 +3,13 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { HooksEditor } from '@/components/HooksEditor';
 import { SlashCommandsManager } from '@/components/SlashCommandsManager';
 import { api } from '@/lib/api';
-import { 
-  AlertTriangle, 
-  ArrowLeft, 
+import {
+  AlertTriangle,
+  ArrowLeft,
   Settings,
   FolderOpen,
   GitBranch,
@@ -33,9 +34,10 @@ export const ProjectSettings: React.FC<ProjectSettingsProps> = ({
   onBack,
   className
 }) => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('commands');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-  
+
   // Other hooks settings
   const [gitIgnoreLocal, setGitIgnoreLocal] = useState(true);
 
@@ -70,11 +72,11 @@ export const ProjectSettings: React.FC<ProjectSettingsProps> = ({
         content += '\n# Claude local settings (machine-specific)\n.claude/settings.local.json\n';
         await api.saveClaudeMdFile(gitignorePath, content);
         setGitIgnoreLocal(true);
-        setToast({ message: 'Added to .gitignore', type: 'success' });
+        setToast({ message: t('projectSettings.localHooks.addedToGitignore'), type: 'success' });
       }
     } catch (err) {
       console.error('Failed to update .gitignore:', err);
-      setToast({ message: 'Failed to update .gitignore', type: 'error' });
+      setToast({ message: t('projectSettings.localHooks.failedUpdateGitignore'), type: 'error' });
     }
   };
 
@@ -86,15 +88,15 @@ export const ProjectSettings: React.FC<ProjectSettingsProps> = ({
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="sm" onClick={onBack}>
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
+              {t('projectSettings.back')}
             </Button>
             <div className="flex items-center gap-2">
               <Settings className="h-5 w-5 text-muted-foreground" />
-              <h2 className="text-xl font-semibold">Project Settings</h2>
+              <h2 className="text-xl font-semibold">{t('projectSettings.title')}</h2>
             </div>
           </div>
         </div>
-        
+
         <div className="mt-4 flex items-center gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
             <FolderOpen className="h-4 w-4" />
@@ -110,15 +112,15 @@ export const ProjectSettings: React.FC<ProjectSettingsProps> = ({
             <TabsList className="mb-6">
               <TabsTrigger value="commands" className="gap-2">
                 <Command className="h-4 w-4" />
-                Slash Commands
+                {t('projectSettings.tabs.commands')}
               </TabsTrigger>
               <TabsTrigger value="project" className="gap-2">
                 <GitBranch className="h-4 w-4" />
-                Project Hooks
+                {t('projectSettings.tabs.projectHooks')}
               </TabsTrigger>
               <TabsTrigger value="local" className="gap-2">
                 <Shield className="h-4 w-4" />
-                Local Hooks
+                {t('projectSettings.tabs.localHooks')}
               </TabsTrigger>
             </TabsList>
 
@@ -126,14 +128,14 @@ export const ProjectSettings: React.FC<ProjectSettingsProps> = ({
               <Card className="p-6">
                 <div className="space-y-4">
                   <div>
-                    <h3 className="text-lg font-semibold mb-2">Project Slash Commands</h3>
+                    <h3 className="text-lg font-semibold mb-2">{t('projectSettings.slashCommands.title')}</h3>
                     <p className="text-sm text-muted-foreground mb-4">
-                      Custom commands that are specific to this project. These commands are stored in
+                      {t('projectSettings.slashCommands.description')}
                       <code className="mx-1 px-2 py-1 bg-muted rounded text-xs">.claude/slash-commands/</code>
-                      and can be committed to version control.
+                      {t('projectSettings.slashCommands.pathDesc')}
                     </p>
                   </div>
-                  
+
                   <SlashCommandsManager
                     projectPath={project.path}
                     scopeFilter="project"
@@ -146,14 +148,14 @@ export const ProjectSettings: React.FC<ProjectSettingsProps> = ({
               <Card className="p-6">
                 <div className="space-y-4">
                   <div>
-                    <h3 className="text-lg font-semibold mb-2">Project Hooks</h3>
+                    <h3 className="text-lg font-semibold mb-2">{t('projectSettings.projectHooks.title')}</h3>
                     <p className="text-sm text-muted-foreground mb-4">
-                      These hooks apply to all users working on this project. They are stored in
+                      {t('projectSettings.projectHooks.description')}
                       <code className="mx-1 px-2 py-1 bg-muted rounded text-xs">.claude/settings.json</code>
-                      and should be committed to version control.
+                      {t('projectSettings.projectHooks.pathDesc')}
                     </p>
                   </div>
-                  
+
                   <HooksEditor
                     projectPath={project.path}
                     scope="project"
@@ -166,19 +168,19 @@ export const ProjectSettings: React.FC<ProjectSettingsProps> = ({
               <Card className="p-6">
                 <div className="space-y-4">
                   <div>
-                    <h3 className="text-lg font-semibold mb-2">Local Hooks</h3>
+                    <h3 className="text-lg font-semibold mb-2">{t('projectSettings.localHooks.title')}</h3>
                     <p className="text-sm text-muted-foreground mb-4">
-                      These hooks only apply to your machine. They are stored in
+                      {t('projectSettings.localHooks.description')}
                       <code className="mx-1 px-2 py-1 bg-muted rounded text-xs">.claude/settings.local.json</code>
-                      and should NOT be committed to version control.
+                      {t('projectSettings.localHooks.pathDesc')}
                     </p>
-                    
+
                     {!gitIgnoreLocal && (
                       <div className="flex items-center gap-4 p-3 bg-yellow-500/10 rounded-md">
                         <AlertTriangle className="h-5 w-5 text-yellow-600" />
                         <div className="flex-1">
                           <p className="text-sm text-yellow-600">
-                            Local settings file is not in .gitignore
+                            {t('projectSettings.localHooks.notInGitignore')}
                           </p>
                         </div>
                         <Button
@@ -186,12 +188,12 @@ export const ProjectSettings: React.FC<ProjectSettingsProps> = ({
                           variant="outline"
                           onClick={addToGitIgnore}
                         >
-                          Add to .gitignore
+                          {t('projectSettings.localHooks.addToGitignore')}
                         </Button>
                       </div>
                     )}
                   </div>
-                  
+
                   <HooksEditor
                     projectPath={project.path}
                     scope="local"
