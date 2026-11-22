@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import React, { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -6,6 +7,7 @@ import {
   X, 
   Folder, 
   File, 
+  const { t } = useTranslation();
   ArrowLeft,
   FileCode,
   FileText,

@@ -1,3 +1,5 @@
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { AnimatePresence, motion } from "framer-motion";
 import opcodeLogo from "../../src-tauri/icons/icon.png";
 import type { CSSProperties } from "react";

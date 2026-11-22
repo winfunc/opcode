@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bot, Plus, Loader2, Play, Clock, CheckCircle, XCircle, Trash2, Import, ChevronDown, FileJson, Globe, Download } from 'lucide-react';
 import {
@@ -32,7 +33,8 @@ interface AgentsModalProps {
 }
 
 export const AgentsModal: React.FC<AgentsModalProps> = ({ open, onOpenChange }) => {
-  const [activeTab, setActiveTab] = useState('agents');
+  
+  const { t } = useTranslation();const [activeTab, setActiveTab] = useState('agents');
   const [agents, setAgents] = useState<Agent[]>([]);
   const [runningAgents, setRunningAgents] = useState<AgentRunWithMetrics[]>([]);
   const [loading, setLoading] = useState(true);

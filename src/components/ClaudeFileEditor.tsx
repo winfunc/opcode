@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useTranslation } from 'react-i18next';
 import MDEditor from "@uiw/react-md-editor";
 import { motion } from "framer-motion";
 import { ArrowLeft, Save, Loader2 } from "lucide-react";
@@ -36,7 +37,8 @@ export const ClaudeFileEditor: React.FC<ClaudeFileEditorProps> = ({
   onBack,
   className,
 }) => {
-  const [content, setContent] = useState<string>("");
+  
+  const { t } = useTranslation();const [content, setContent] = useState<string>("");
   const [originalContent, setOriginalContent] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

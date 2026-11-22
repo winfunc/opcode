@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Volume2, VolumeX, Github } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -22,7 +23,8 @@ interface NFOCreditsProps {
  * <NFOCredits onClose={() => setShowNFO(false)} />
  */
 export const NFOCredits: React.FC<NFOCreditsProps> = ({ onClose }) => {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  
+  const { t } = useTranslation();const audioRef = useRef<HTMLAudioElement | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [scrollPosition, setScrollPosition] = useState(0);

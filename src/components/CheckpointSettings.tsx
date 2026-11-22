@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useTranslation } from 'react-i18next';
 import { motion } from "framer-motion";
 import { 
   Wrench,
@@ -41,7 +42,8 @@ export const CheckpointSettings: React.FC<CheckpointSettingsProps> = ({
   projectPath,
   className,
 }) => {
-  const [autoCheckpointEnabled, setAutoCheckpointEnabled] = useState(true);
+  
+  const { t } = useTranslation();const [autoCheckpointEnabled, setAutoCheckpointEnabled] = useState(true);
   const [checkpointStrategy, setCheckpointStrategy] = useState<CheckpointStrategy>("smart");
   const [totalCheckpoints, setTotalCheckpoints] = useState(0);
   const [keepCount, setKeepCount] = useState(10);

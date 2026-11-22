@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { X, Plus, MessageSquare, Bot, AlertCircle, Loader2, Folder, BarChart, Server, Settings, FileText } from 'lucide-react';
 import { useTabState } from '@/hooks/useTabState';
@@ -134,7 +135,8 @@ interface TabManagerProps {
 }
 
 export const TabManager: React.FC<TabManagerProps> = ({ className }) => {
-  const {
+  
+  const { t } = useTranslation();const {
     tabs,
     activeTabId,
     createChatTab,

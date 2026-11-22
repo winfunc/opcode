@@ -1,3 +1,5 @@
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useState, useEffect } from "react";
 import { api, type ClaudeInstallation } from "@/lib/api";
 import { Button } from "@/components/ui/button";

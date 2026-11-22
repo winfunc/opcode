@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useTranslation } from 'react-i18next';
 import { Plus, Terminal, Globe, Trash2, Info, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,7 +35,8 @@ export const MCPAddServer: React.FC<MCPAddServerProps> = ({
   onServerAdded,
   onError,
 }) => {
-  const [transport, setTransport] = useState<"stdio" | "sse">("stdio");
+  
+  const { t } = useTranslation();const [transport, setTransport] = useState<"stdio" | "sse">("stdio");
   const [saving, setSaving] = useState(false);
   
   // Analytics tracking
