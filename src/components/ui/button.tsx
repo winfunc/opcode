@@ -39,24 +39,58 @@ export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   asChild?: boolean;
+  /**
+   * Loading state - sets aria-busy and disables the button
+   */
+  isLoading?: boolean;
 }
 
 /**
  * Button component with multiple variants and sizes
- * 
+ *
+ * ACCESSIBILITY REQUIREMENTS:
+ * - Icon-only buttons (size="icon") MUST have an aria-label prop
+ * - Use isLoading prop to indicate loading state to screen readers
+ *
  * @example
+ * // Standard button
  * <Button variant="outline" size="lg" onClick={() => console.log('clicked')}>
  *   Click me
  * </Button>
+ *
+ * @example
+ * // Icon-only button (requires aria-label)
+ * <Button variant="ghost" size="icon" aria-label="Close dialog">
+ *   <X className="h-4 w-4" />
+ * </Button>
+ *
+ * @example
+ * // Loading state
+ * <Button isLoading={isSubmitting}>
+ *   Submit
+ * </Button>
  */
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, ...props }, ref) => {
+  ({ className, variant, size, isLoading, disabled, children, ...props }, ref) => {
+    // Warn in development if icon-only button lacks aria-label
+    if (process.env.NODE_ENV === 'development' && size === 'icon') {
+      if (!props['aria-label'] && !props['aria-labelledby']) {
+        console.warn(
+          'Button: Icon-only buttons (size="icon") should have an aria-label or aria-labelledby for accessibility'
+        );
+      }
+    }
+
     return (
       <button
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
+        disabled={isLoading || disabled}
+        aria-busy={isLoading ? "true" : undefined}
         {...props}
-      />
+      >
+        {children}
+      </button>
     );
   }
 );

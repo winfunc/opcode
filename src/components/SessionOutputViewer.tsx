@@ -412,7 +412,17 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
                       onClick={() => setIsFullscreen(!isFullscreen)}
                       title="Fullscreen"
                     >
-                      {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                      {isFullscreen ? (
+                        <>
+                          <Minimize2 className="h-4 w-4" />
+                          <span className="sr-only">Exit fullscreen</span>
+                        </>
+                      ) : (
+                        <>
+                          <Maximize2 className="h-4 w-4" />
+                          <span className="sr-only">Enter fullscreen</span>
+                        </>
+                      )}
                     </Button>
                     <Popover
                       trigger={
@@ -460,9 +470,11 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
                   title="Refresh output"
                 >
                   <RotateCcw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+                  <span className="sr-only">Refresh output</span>
                 </Button>
                 <Button variant="outline" size="sm" onClick={onClose}>
                   <X className="h-4 w-4" />
+                  <span className="sr-only">Close output viewer</span>
                 </Button>
               </div>
             </div>

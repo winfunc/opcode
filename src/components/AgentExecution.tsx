@@ -549,6 +549,7 @@ export const AgentExecution: React.FC<AgentExecutionProps> = ({
                 title="Back"
               >
                 <ArrowLeft className="h-4 w-4" />
+                <span className="sr-only">Back</span>
               </Button>
               <div>
                 <h1 className="text-heading-1">{agent.name}</h1>
