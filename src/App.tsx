@@ -25,6 +25,7 @@ import { TabManager } from "@/components/TabManager";
 import { TabContent } from "@/components/TabContent";
 import { useTabState } from "@/hooks/useTabState";
 import { useAppLifecycle, useTrackEvent } from "@/hooks";
+import { AnalyticsConsent } from "@/components/AnalyticsConsent";
 import { StartupIntro } from "@/components/StartupIntro";
 
 type View = 
@@ -531,6 +532,7 @@ function App() {
       <OutputCacheProvider>
         <TabProvider>
           <AppContent />
+          <AnalyticsConsent />
           <StartupIntro visible={showIntro} />
         </TabProvider>
       </OutputCacheProvider>
