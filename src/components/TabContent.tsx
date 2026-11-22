@@ -212,6 +212,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ tab, isActive }) => {
                     {!loading && (
                       <SessionList
                         sessions={sessions}
+                        projectId={selectedProject.id}
                         projectPath={selectedProject.path}
                         onSessionClick={(session) => {
                           // Update current tab to show the selected session

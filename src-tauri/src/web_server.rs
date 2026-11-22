@@ -1,7 +1,7 @@
 use axum::extract::ws::{Message, WebSocket};
 use axum::http::Method;
 use axum::{
-    extract::{Path, State as AxumState, WebSocketUpgrade},
+    extract::{Path, Query, State as AxumState, WebSocketUpgrade},
     response::{Html, Json, Response},
     routing::get,
     Router,
@@ -124,6 +124,41 @@ async fn get_sessions(
     Path(project_id): Path<String>,
 ) -> Json<ApiResponse<Vec<commands::claude::Session>>> {
     match commands::claude::get_project_sessions(project_id).await {
+        Ok(sessions) => Json(ApiResponse::success(sessions)),
+        Err(e) => Json(ApiResponse::error(e.to_string())),
+    }
+}
+
+#[derive(Deserialize)]
+struct SearchQuery {
+    #[serde(default)]
+    query: String,
+}
+
+/// API endpoint to search sessions for a project (local-only web server)
+async fn search_sessions(
+    Path(project_id): Path<String>,
+    Query(params): Query<SearchQuery>,
+) -> Json<ApiResponse<Vec<commands::claude::SessionSearchResult>>> {
+    let query = params.query.trim().to_string();
+    if query.is_empty() {
+        return Json(ApiResponse::success(Vec::new()));
+    }
+    match commands::claude::search_project_sessions(project_id, query).await {
+        Ok(sessions) => Json(ApiResponse::success(sessions)),
+        Err(e) => Json(ApiResponse::error(e.to_string())),
+    }
+}
+
+/// API endpoint to search sessions across all projects
+async fn search_all_sessions_handler(
+    Query(params): Query<SearchQuery>,
+) -> Json<ApiResponse<Vec<commands::claude::SessionSearchResult>>> {
+    let query = params.query.trim().to_string();
+    if query.is_empty() {
+        return Json(ApiResponse::success(Vec::new()));
+    }
+    match commands::claude::search_all_sessions(query).await {
         Ok(sessions) => Json(ApiResponse::success(sessions)),
         Err(e) => Json(ApiResponse::error(e.to_string())),
     }
@@ -786,6 +821,14 @@ pub async fn create_web_server(port: u16) -> Result<(), Box<dyn std::error::Erro
         // API routes (REST API equivalent of Tauri commands)
         .route("/api/projects", get(get_projects))
         .route("/api/projects/{project_id}/sessions", get(get_sessions))
+        .route(
+            "/api/projects/{project_id}/sessions/search",
+            get(search_sessions),
+        )
+        .route(
+            "/api/sessions/search/global",
+            get(search_all_sessions_handler),
+        )
         .route("/api/agents", get(get_agents))
         .route("/api/usage", get(get_usage))
         // Settings and configuration
