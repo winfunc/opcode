@@ -3,6 +3,8 @@ import { motion } from 'framer-motion';
 import { Settings, Minus, Square, X, Bot, BarChart3, FileText, Network, Info, MoreVertical } from 'lucide-react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { TooltipProvider, TooltipSimple } from '@/components/ui/tooltip-modern';
+import { useTranslation } from 'react-i18next';
+import { LanguageSwitcher } from './LanguageSwitcher';
 
 interface CustomTitlebarProps {
   onSettingsClick?: () => void;
@@ -21,6 +23,7 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
   onMCPClick,
   onInfoClick
 }) => {
+  const { t } = useTranslation();
   const [isHovered, setIsHovered] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -140,7 +143,7 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
         {/* Primary actions group */}
         <div className="flex items-center gap-1">
           {onAgentsClick && (
-            <TooltipSimple content="Agents" side="bottom">
+            <TooltipSimple content={t("titlebar.agents")} side="bottom">
               <motion.button
                 onClick={onAgentsClick}
                 whileTap={{ scale: 0.97 }}
@@ -153,7 +156,7 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
           )}
           
           {onUsageClick && (
-            <TooltipSimple content="Usage Dashboard" side="bottom">
+            <TooltipSimple content={t("titlebar.usageDashboard")} side="bottom">
               <motion.button
                 onClick={onUsageClick}
                 whileTap={{ scale: 0.97 }}
@@ -172,7 +175,7 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
         {/* Secondary actions group */}
         <div className="flex items-center gap-1">
           {onSettingsClick && (
-            <TooltipSimple content="Settings" side="bottom">
+            <TooltipSimple content={t("titlebar.settings")} side="bottom">
               <motion.button
                 onClick={onSettingsClick}
                 whileTap={{ scale: 0.97 }}
@@ -184,9 +187,12 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
             </TooltipSimple>
           )}
 
+          {/* Language Switcher */}
+          <LanguageSwitcher className="tauri-no-drag" />
+
           {/* Dropdown menu for additional options */}
           <div className="relative" ref={dropdownRef}>
-            <TooltipSimple content="More options" side="bottom">
+            <TooltipSimple content={t("titlebar.moreOptions")} side="bottom">
               <motion.button
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                 whileTap={{ scale: 0.97 }}
@@ -222,7 +228,7 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
                       className="w-full px-4 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground transition-colors flex items-center gap-3"
                     >
                       <Network size={14} />
-                      <span>MCP Servers</span>
+                      <span>{t("titlebar.mcpServers")}</span>
                     </button>
                   )}
                   
@@ -235,7 +241,7 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
                       className="w-full px-4 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground transition-colors flex items-center gap-3"
                     >
                       <Info size={14} />
-                      <span>About</span>
+                      <span>{t("titlebar.about")}</span>
                     </button>
                   )}
                 </div>
