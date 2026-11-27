@@ -18,6 +18,18 @@
     <a href="#development"><img src="https://img.shields.io/badge/Develop-🛠️-orange?style=for-the-badge" alt="Development"></a>
     <a href="https://discord.com/invite/KYwhHVzUsY"><img src="https://img.shields.io/badge/Discord-Join-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord"></a>
   </p>
+
+  <p>
+    <!-- Keep these links. Translations will automatically update with the README. -->
+    <a href="https://zdoc.app/de/getAsterisk/opcode">Deutsch</a> | 
+    <a href="https://zdoc.app/es/getAsterisk/opcode">Español</a> | 
+    <a href="https://zdoc.app/fr/getAsterisk/opcode">français</a> | 
+    <a href="https://zdoc.app/ja/getAsterisk/opcode">日本語</a> | 
+    <a href="https://zdoc.app/ko/getAsterisk/opcode">한국어</a> | 
+    <a href="https://zdoc.app/pt/getAsterisk/opcode">Português</a> | 
+    <a href="https://zdoc.app/ru/getAsterisk/opcode">Русский</a> | 
+    <a href="https://zdoc.app/zh/getAsterisk/opcode">中文</a>
+  </p>
 </div>
 
 
